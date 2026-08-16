@@ -1,0 +1,166 @@
+{
+  "departments": [
+    {
+      "id": "DEPT001",
+      "name": "Engineering",
+      "head": "Ricardo Cruz",
+      "headId": "EMP010",
+      "employeeCount": 4,
+      "budget": 4500000,
+      "location": "Makati City - Tower A, Floor 12",
+      "description": "Responsible for software development, system architecture, quality assurance, and technical innovation across all products and platforms."
+    },
+    {
+      "id": "DEPT002",
+      "name": "Marketing",
+      "head": "Angela Santos",
+      "headId": "EMP002",
+      "employeeCount": 3,
+      "budget": 2200000,
+      "location": "Pasig City - Building B, Floor 8",
+      "description": "Manages brand strategy, digital marketing campaigns, content creation, market research, and public relations."
+    },
+    {
+      "id": "DEPT003",
+      "name": "HR",
+      "head": "Victoria Fernandez",
+      "headId": "EMP011",
+      "employeeCount": 3,
+      "budget": 1800000,
+      "location": "Makati City - Tower A, Floor 5",
+      "description": "Oversees talent acquisition, employee relations, compensation and benefits, training and development, and organizational culture."
+    },
+    {
+      "id": "DEPT004",
+      "name": "Finance",
+      "head": "Fernando Bautista",
+      "headId": "EMP012",
+      "employeeCount": 4,
+      "budget": 1500000,
+      "location": "Taguig City - BGC Center, Floor 10",
+      "description": "Manages financial planning, budgeting, accounting, tax compliance, audit, and treasury operations."
+    },
+    {
+      "id": "DEPT005",
+      "name": "Sales",
+      "head": "Adrian Soriano",
+      "headId": "EMP014",
+      "employeeCount": 3,
+      "budget": 2800000,
+      "location": "Makati City - Tower B, Floor 6",
+      "description": "Drives revenue growth through B2B and B2C sales, account management, client relations, and business development."
+    },
+    {
+      "id": "DEPT006",
+      "name": "Operations",
+      "head": "Grace Ong",
+      "headId": "EMP015",
+      "employeeCount": 3,
+      "budget": 2000000,
+      "location": "Mandaluyong City - Shangri-La Plaza, Floor 3",
+      "description": "Handles supply chain management, logistics, vendor relations, process optimization, and facility management."
+    },
+    {
+      "id": "DEPT007",
+      "name": "IT",
+      "head": "Benedict Castro",
+      "headId": "EMP016",
+      "employeeCount": 3,
+      "budget": 3200000,
+      "location": "Pasig City - Building A, Floor 11",
+      "description": "Manages IT infrastructure, cybersecurity, system administration, data analytics, and technical support services."
+    },
+    {
+      "id": "DEPT008",
+      "name": "Legal",
+      "head": "Jerome Villanueva",
+      "headId": "EMP009",
+      "employeeCount": 2,
+      "budget": 1200000,
+      "location": "Makati City - Tower A, Floor 15",
+      "description": "Provides legal counsel, contract management, regulatory compliance, intellectual property protection, and litigation support."
+    }
+  ],
+  "_default": [
+    {
+      "id": "DEPT001",
+      "name": "Engineering",
+      "head": "Ricardo Cruz",
+      "headId": "EMP010",
+      "employeeCount": 4,
+      "budget": 4500000,
+      "location": "Makati City - Tower A, Floor 12",
+      "description": "Responsible for software development, system architecture, quality assurance, and technical innovation across all products and platforms."
+    },
+    {
+      "id": "DEPT002",
+      "name": "Marketing",
+      "head": "Angela Santos",
+      "headId": "EMP002",
+      "employeeCount": 3,
+      "budget": 2200000,
+      "location": "Pasig City - Building B, Floor 8",
+      "description": "Manages brand strategy, digital marketing campaigns, content creation, market research, and public relations."
+    },
+    {
+      "id": "DEPT003",
+      "name": "HR",
+      "head": "Victoria Fernandez",
+      "headId": "EMP011",
+      "employeeCount": 3,
+      "budget": 1800000,
+      "location": "Makati City - Tower A, Floor 5",
+      "description": "Oversees talent acquisition, employee relations, compensation and benefits, training and development, and organizational culture."
+    },
+    {
+      "id": "DEPT004",
+      "name": "Finance",
+      "head": "Fernando Bautista",
+      "headId": "EMP012",
+      "employeeCount": 4,
+      "budget": 1500000,
+      "location": "Taguig City - BGC Center, Floor 10",
+      "description": "Manages financial planning, budgeting, accounting, tax compliance, audit, and treasury operations."
+    },
+    {
+      "id": "DEPT005",
+      "name": "Sales",
+      "head": "Adrian Soriano",
+      "headId": "EMP014",
+      "employeeCount": 3,
+      "budget": 2800000,
+      "location": "Makati City - Tower B, Floor 6",
+      "description": "Drives revenue growth through B2B and B2C sales, account management, client relations, and business development."
+    },
+    {
+      "id": "DEPT006",
+      "name": "Operations",
+      "head": "Grace Ong",
+      "headId": "EMP015",
+      "employeeCount": 3,
+      "budget": 2000000,
+      "location": "Mandaluyong City - Shangri-La Plaza, Floor 3",
+      "description": "Handles supply chain management, logistics, vendor relations, process optimization, and facility management."
+    },
+    {
+      "id": "DEPT007",
+      "name": "IT",
+      "head": "Benedict Castro",
+      "headId": "EMP016",
+      "employeeCount": 3,
+      "budget": 3200000,
+      "location": "Pasig City - Building A, Floor 11",
+      "description": "Manages IT infrastructure, cybersecurity, system administration, data analytics, and technical support services."
+    },
+    {
+      "id": "DEPT008",
+      "name": "Legal",
+      "head": "Jerome Villanueva",
+      "headId": "EMP009",
+      "employeeCount": 2,
+      "budget": 1200000,
+      "location": "Makati City - Tower A, Floor 15",
+      "description": "Provides legal counsel, contract management, regulatory compliance, intellectual property protection, and litigation support."
+    }
+  ]
+}

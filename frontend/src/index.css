@@ -1,0 +1,178 @@
+@import "tailwindcss";
+
+@custom-variant dark (&:where(.dark, .dark *));
+
+@theme {
+  --color-navy-50: #E8EDF4;
+  --color-navy-100: #C5D0E3;
+  --color-navy-200: #9FB2D1;
+  --color-navy-300: #7994BF;
+  --color-navy-400: #5C7EB1;
+  --color-navy-500: #4068A3;
+  --color-navy-600: #3A5F9B;
+  --color-navy-700: #325491;
+  --color-navy-800: #2B4A87;
+  --color-navy-900: #0B1F3A;
+  --font-family-poppins: 'Poppins', sans-serif;
+}
+
+/* Base layer: element styles that must not override Tailwind utilities */
+@layer base {
+  body {
+    font-family: 'Poppins', sans-serif;
+    background-color: #F8FAFC;
+    color: #1E293B;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    transition: background-color 0.2s ease, color 0.2s ease;
+  }
+
+  .dark body {
+    background-color: #0B1220;
+    color: #E2E8F0;
+  }
+
+  ::selection {
+    background-color: #3b82f6;
+    color: white;
+  }
+
+  :focus-visible {
+    outline: 2px solid #3b82f6;
+    outline-offset: 2px;
+    border-radius: 8px;
+  }
+}
+
+/* Scrollbar styles (pseudo-elements Tailwind doesn't target — safe outside layers) */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  background: #cbd5e1;
+  border-radius: 999px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: #94a3b8;
+}
+
+/* Keyframes */
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(8px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes slideIn {
+  from { opacity: 0; transform: translateX(-12px); }
+  to { opacity: 1; transform: translateX(0); }
+}
+
+@keyframes scaleIn {
+  from { opacity: 0; transform: scale(0.96) translateY(4px); }
+  to { opacity: 1; transform: scale(1) translateY(0); }
+}
+
+@keyframes slideUp {
+  from { opacity: 0; transform: translateY(16px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes slideDown {
+  from { opacity: 0; transform: translateY(-8px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes pulse-soft {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.7; }
+}
+
+@keyframes shimmer {
+  0% { background-position: 200% 0; }
+  100% { background-position: -200% 0; }
+}
+
+@keyframes scanline {
+  0%, 100% { top: 12%; }
+  50% { top: 86%; }
+}
+
+/* Utility layer: custom utility classes participate in Tailwind's cascade */
+@layer utilities {
+  .animate-fadeIn {
+    animation: fadeIn 0.3s ease-out forwards;
+  }
+
+  .animate-slideIn {
+    animation: slideIn 0.3s ease-out forwards;
+  }
+
+  .animate-scaleIn {
+    animation: scaleIn 0.2s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+  }
+
+  .animate-slideUp {
+    animation: slideUp 0.35s ease-out forwards;
+  }
+
+  .animate-slideDown {
+    animation: slideDown 0.25s ease-out forwards;
+  }
+
+  .animate-pulse-soft {
+    animation: pulse-soft 2s ease-in-out infinite;
+  }
+
+  .animate-scanline {
+    animation: scanline 2.4s ease-in-out infinite;
+  }
+}
+
+/* Component layer: reusable component classes */
+@layer components {
+  .skeleton {
+    background: linear-gradient(90deg, #e2e8f0 25%, #f1f5f9 50%, #e2e8f0 75%);
+    background-size: 200% 100%;
+    animation: shimmer 1.5s ease-in-out infinite;
+    border-radius: 8px;
+  }
+
+  .dark .skeleton {
+    background: linear-gradient(90deg, #1e293b 25%, #273449 50%, #1e293b 75%);
+    background-size: 200% 100%;
+  }
+}
+
+/*
+  Dark mode retrofit layer.
+  The app's pages/components consistently reuse the same small set of
+  Tailwind utility classes for surfaces, text, and borders (bg-white cards,
+  text-gray-900 headings, text-gray-500 subtext, bg-gray-50 tints, etc).
+  Rather than editing every page individually, we recolor those exact
+  utility classes when `.dark` is active on <html>, so the toggle applies
+  consistently everywhere those classes are used.
+*/
+.dark .bg-white { background-color: #111827 !important; }
+.dark .bg-gray-50 { background-color: #0F172A !important; }
+.dark .bg-gray-100 { background-color: #1E293B !important; }
+.dark .bg-\[\#F8FAFC\] { background-color: #0B1220 !important; }
+
+.dark .text-gray-900 { color: #F1F5F9 !important; }
+.dark .text-gray-700 { color: #CBD5E1 !important; }
+.dark .text-gray-600 { color: #94A3B8 !important; }
+.dark .text-gray-500 { color: #94A3B8 !important; }
+.dark .text-gray-400 { color: #64748B !important; }
+
+.dark .border-gray-50,
+.dark .border-gray-100,
+.dark .border-gray-200 { border-color: #1E293B !important; }
+
+.dark .hover\:bg-gray-50:hover { background-color: #1E293B !important; }
+.dark .hover\:bg-gray-100:hover { background-color: #273449 !important; }

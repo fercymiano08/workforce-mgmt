@@ -1,0 +1,1508 @@
+{
+  "shiftDefinitions": [
+    {
+      "id": "SHIFT001",
+      "name": "Morning Shift",
+      "startTime": "06:00",
+      "endTime": "14:00",
+      "color": "#22C55E"
+    },
+    {
+      "id": "SHIFT002",
+      "name": "Afternoon Shift",
+      "startTime": "14:00",
+      "endTime": "22:00",
+      "color": "#F59E0B"
+    },
+    {
+      "id": "SHIFT003",
+      "name": "Night Shift",
+      "startTime": "22:00",
+      "endTime": "06:00",
+      "color": "#8B5CF6"
+    },
+    {
+      "id": "SHIFT004",
+      "name": "Flexible Shift",
+      "startTime": "08:00",
+      "endTime": "17:00",
+      "color": "#3B82F6"
+    }
+  ],
+  "shiftSchedules": [
+    {
+      "id": "SCH001",
+      "employeeId": "EMP001",
+      "employeeName": "Juan Dela Cruz",
+      "shiftId": "SHIFT004",
+      "date": "2026-07-01",
+      "status": "Completed"
+    },
+    {
+      "id": "SCH002",
+      "employeeId": "EMP001",
+      "employeeName": "Juan Dela Cruz",
+      "shiftId": "SHIFT004",
+      "date": "2026-07-02",
+      "status": "Completed"
+    },
+    {
+      "id": "SCH003",
+      "employeeId": "EMP001",
+      "employeeName": "Juan Dela Cruz",
+      "shiftId": "SHIFT004",
+      "date": "2026-07-03",
+      "status": "Completed"
+    },
+    {
+      "id": "SCH004",
+      "employeeId": "EMP001",
+      "employeeName": "Juan Dela Cruz",
+      "shiftId": "SHIFT004",
+      "date": "2026-07-04",
+      "status": "Scheduled"
+    },
+    {
+      "id": "SCH005",
+      "employeeId": "EMP001",
+      "employeeName": "Juan Dela Cruz",
+      "shiftId": "SHIFT004",
+      "date": "2026-07-07",
+      "status": "Swapped"
+    },
+    {
+      "id": "SCH006",
+      "employeeId": "EMP001",
+      "employeeName": "Juan Dela Cruz",
+      "shiftId": "SHIFT004",
+      "date": "2026-07-08",
+      "status": "Completed"
+    },
+    {
+      "id": "SCH007",
+      "employeeId": "EMP001",
+      "employeeName": "Juan Dela Cruz",
+      "shiftId": "SHIFT004",
+      "date": "2026-07-09",
+      "status": "Completed"
+    },
+    {
+      "id": "SCH008",
+      "employeeId": "EMP001",
+      "employeeName": "Juan Dela Cruz",
+      "shiftId": "SHIFT004",
+      "date": "2026-07-10",
+      "status": "Completed"
+    },
+    {
+      "id": "SCH009",
+      "employeeId": "EMP001",
+      "employeeName": "Juan Dela Cruz",
+      "shiftId": "SHIFT004",
+      "date": "2026-07-11",
+      "status": "Completed"
+    },
+    {
+      "id": "SCH010",
+      "employeeId": "EMP001",
+      "employeeName": "Juan Dela Cruz",
+      "shiftId": "SHIFT004",
+      "date": "2026-07-14",
+      "status": "Scheduled"
+    },
+    {
+      "id": "SCH011",
+      "employeeId": "EMP001",
+      "employeeName": "Juan Dela Cruz",
+      "shiftId": "SHIFT004",
+      "date": "2026-07-15",
+      "status": "Cancelled"
+    },
+    {
+      "id": "SCH012",
+      "employeeId": "EMP001",
+      "employeeName": "Juan Dela Cruz",
+      "shiftId": "SHIFT004",
+      "date": "2026-07-16",
+      "status": "Completed"
+    },
+    {
+      "id": "SCH013",
+      "employeeId": "EMP001",
+      "employeeName": "Juan Dela Cruz",
+      "shiftId": "SHIFT004",
+      "date": "2026-07-17",
+      "status": "Completed"
+    },
+    {
+      "id": "SCH014",
+      "employeeId": "EMP001",
+      "employeeName": "Juan Dela Cruz",
+      "shiftId": "SHIFT004",
+      "date": "2026-07-18",
+      "status": "Completed"
+    },
+    {
+      "id": "SCH015",
+      "employeeId": "EMP001",
+      "employeeName": "Juan Dela Cruz",
+      "shiftId": "SHIFT004",
+      "date": "2026-07-21",
+      "status": "Completed"
+    },
+    {
+      "id": "SCH016",
+      "employeeId": "EMP001",
+      "employeeName": "Juan Dela Cruz",
+      "shiftId": "SHIFT004",
+      "date": "2026-07-22",
+      "status": "Scheduled"
+    },
+    {
+      "id": "SCH017",
+      "employeeId": "EMP001",
+      "employeeName": "Juan Dela Cruz",
+      "shiftId": "SHIFT004",
+      "date": "2026-07-23",
+      "status": "Swapped"
+    },
+    {
+      "id": "SCH018",
+      "employeeId": "EMP001",
+      "employeeName": "Juan Dela Cruz",
+      "shiftId": "SHIFT004",
+      "date": "2026-07-24",
+      "status": "Completed"
+    },
+    {
+      "id": "SCH019",
+      "employeeId": "EMP001",
+      "employeeName": "Juan Dela Cruz",
+      "shiftId": "SHIFT004",
+      "date": "2026-07-25",
+      "status": "Completed"
+    },
+    {
+      "id": "SCH020",
+      "employeeId": "EMP002",
+      "employeeName": "Angela Santos",
+      "shiftId": "SHIFT004",
+      "date": "2026-07-01",
+      "status": "Completed"
+    },
+    {
+      "id": "SCH021",
+      "employeeId": "EMP002",
+      "employeeName": "Angela Santos",
+      "shiftId": "SHIFT004",
+      "date": "2026-07-02",
+      "status": "Completed"
+    },
+    {
+      "id": "SCH022",
+      "employeeId": "EMP002",
+      "employeeName": "Angela Santos",
+      "shiftId": "SHIFT004",
+      "date": "2026-07-03",
+      "status": "Scheduled"
+    },
+    {
+      "id": "SCH023",
+      "employeeId": "EMP002",
+      "employeeName": "Angela Santos",
+      "shiftId": "SHIFT004",
+      "date": "2026-07-04",
+      "status": "Swapped"
+    },
+    {
+      "id": "SCH024",
+      "employeeId": "EMP002",
+      "employeeName": "Angela Santos",
+      "shiftId": "SHIFT004",
+      "date": "2026-07-07",
+      "status": "Completed"
+    },
+    {
+      "id": "SCH025",
+      "employeeId": "EMP002",
+      "employeeName": "Angela Santos",
+      "shiftId": "SHIFT004",
+      "date": "2026-07-08",
+      "status": "Completed"
+    },
+    {
+      "id": "SCH026",
+      "employeeId": "EMP002",
+      "employeeName": "Angela Santos",
+      "shiftId": "SHIFT004",
+      "date": "2026-07-09",
+      "status": "Cancelled"
+    },
+    {
+      "id": "SCH027",
+      "employeeId": "EMP002",
+      "employeeName": "Angela Santos",
+      "shiftId": "SHIFT004",
+      "date": "2026-07-10",
+      "status": "Completed"
+    },
+    {
+      "id": "SCH028",
+      "employeeId": "EMP002",
+      "employeeName": "Angela Santos",
+      "shiftId": "SHIFT004",
+      "date": "2026-07-11",
+      "status": "Cancelled"
+    },
+    {
+      "id": "SCH029",
+      "employeeId": "EMP002",
+      "employeeName": "Angela Santos",
+      "shiftId": "SHIFT004",
+      "date": "2026-07-14",
+      "status": "Swapped"
+    },
+    {
+      "id": "SCH030",
+      "employeeId": "EMP002",
+      "employeeName": "Angela Santos",
+      "shiftId": "SHIFT004",
+      "date": "2026-07-15",
+      "status": "Completed"
+    },
+    {
+      "id": "SCH031",
+      "employeeId": "EMP002",
+      "employeeName": "Angela Santos",
+      "shiftId": "SHIFT004",
+      "date": "2026-07-16",
+      "status": "Completed"
+    },
+    {
+      "id": "SCH032",
+      "employeeId": "EMP002",
+      "employeeName": "Angela Santos",
+      "shiftId": "SHIFT004",
+      "date": "2026-07-17",
+      "status": "Completed"
+    },
+    {
+      "id": "SCH033",
+      "employeeId": "EMP002",
+      "employeeName": "Angela Santos",
+      "shiftId": "SHIFT004",
+      "date": "2026-07-18",
+      "status": "Completed"
+    },
+    {
+      "id": "SCH034",
+      "employeeId": "EMP002",
+      "employeeName": "Angela Santos",
+      "shiftId": "SHIFT004",
+      "date": "2026-07-21",
+      "status": "Scheduled"
+    },
+    {
+      "id": "SCH035",
+      "employeeId": "EMP002",
+      "employeeName": "Angela Santos",
+      "shiftId": "SHIFT004",
+      "date": "2026-07-22",
+      "status": "Swapped"
+    },
+    {
+      "id": "SCH036",
+      "employeeId": "EMP002",
+      "employeeName": "Angela Santos",
+      "shiftId": "SHIFT004",
+      "date": "2026-07-23",
+      "status": "Completed"
+    },
+    {
+      "id": "SCH037",
+      "employeeId": "EMP002",
+      "employeeName": "Angela Santos",
+      "shiftId": "SHIFT004",
+      "date": "2026-07-24",
+      "status": "Completed"
+    },
+    {
+      "id": "SCH038",
+      "employeeId": "EMP002",
+      "employeeName": "Angela Santos",
+      "shiftId": "SHIFT004",
+      "date": "2026-07-25",
+      "status": "Completed"
+    },
+    {
+      "id": "SCH039",
+      "employeeId": "EMP003",
+      "employeeName": "Miguel Reyes",
+      "shiftId": "SHIFT004",
+      "date": "2026-07-01",
+      "status": "Completed"
+    },
+    {
+      "id": "SCH040",
+      "employeeId": "EMP003",
+      "employeeName": "Miguel Reyes",
+      "shiftId": "SHIFT004",
+      "date": "2026-07-02",
+      "status": "Scheduled"
+    },
+    {
+      "id": "SCH041",
+      "employeeId": "EMP003",
+      "employeeName": "Miguel Reyes",
+      "shiftId": "SHIFT004",
+      "date": "2026-07-03",
+      "status": "Swapped"
+    },
+    {
+      "id": "SCH042",
+      "employeeId": "EMP003",
+      "employeeName": "Miguel Reyes",
+      "shiftId": "SHIFT004",
+      "date": "2026-07-04",
+      "status": "Completed"
+    },
+    {
+      "id": "SCH043",
+      "employeeId": "EMP003",
+      "employeeName": "Miguel Reyes",
+      "shiftId": "SHIFT004",
+      "date": "2026-07-07",
+      "status": "Completed"
+    },
+    {
+      "id": "SCH044",
+      "employeeId": "EMP003",
+      "employeeName": "Miguel Reyes",
+      "shiftId": "SHIFT004",
+      "date": "2026-07-08",
+      "status": "Completed"
+    },
+    {
+      "id": "SCH045",
+      "employeeId": "EMP003",
+      "employeeName": "Miguel Reyes",
+      "shiftId": "SHIFT004",
+      "date": "2026-07-09",
+      "status": "Completed"
+    },
+    {
+      "id": "SCH046",
+      "employeeId": "EMP003",
+      "employeeName": "Miguel Reyes",
+      "shiftId": "SHIFT004",
+      "date": "2026-07-10",
+      "status": "Cancelled"
+    },
+    {
+      "id": "SCH047",
+      "employeeId": "EMP003",
+      "employeeName": "Miguel Reyes",
+      "shiftId": "SHIFT004",
+      "date": "2026-07-11",
+      "status": "Swapped"
+    },
+    {
+      "id": "SCH048",
+      "employeeId": "EMP003",
+      "employeeName": "Miguel Reyes",
+      "shiftId": "SHIFT004",
+      "date": "2026-07-14",
+      "status": "Completed"
+    },
+    {
+      "id": "SCH049",
+      "employeeId": "EMP003",
+      "employeeName": "Miguel Reyes",
+      "shiftId": "SHIFT004",
+      "date": "2026-07-15",
+      "status": "Completed"
+    },
+    {
+      "id": "SCH050",
+      "employeeId": "EMP003",
+      "employeeName": "Miguel Reyes",
+      "shiftId": "SHIFT004",
+      "date": "2026-07-16",
+      "status": "Completed"
+    },
+    {
+      "id": "SCH051",
+      "employeeId": "EMP003",
+      "employeeName": "Miguel Reyes",
+      "shiftId": "SHIFT004",
+      "date": "2026-07-17",
+      "status": "Completed"
+    },
+    {
+      "id": "SCH052",
+      "employeeId": "EMP003",
+      "employeeName": "Miguel Reyes",
+      "shiftId": "SHIFT004",
+      "date": "2026-07-18",
+      "status": "Scheduled"
+    },
+    {
+      "id": "SCH053",
+      "employeeId": "EMP003",
+      "employeeName": "Miguel Reyes",
+      "shiftId": "SHIFT004",
+      "date": "2026-07-21",
+      "status": "Swapped"
+    },
+    {
+      "id": "SCH054",
+      "employeeId": "EMP003",
+      "employeeName": "Miguel Reyes",
+      "shiftId": "SHIFT004",
+      "date": "2026-07-22",
+      "status": "Completed"
+    },
+    {
+      "id": "SCH055",
+      "employeeId": "EMP003",
+      "employeeName": "Miguel Reyes",
+      "shiftId": "SHIFT004",
+      "date": "2026-07-23",
+      "status": "Completed"
+    },
+    {
+      "id": "SCH056",
+      "employeeId": "EMP003",
+      "employeeName": "Miguel Reyes",
+      "shiftId": "SHIFT004",
+      "date": "2026-07-24",
+      "status": "Completed"
+    },
+    {
+      "id": "SCH057",
+      "employeeId": "EMP003",
+      "employeeName": "Miguel Reyes",
+      "shiftId": "SHIFT004",
+      "date": "2026-07-25",
+      "status": "Completed"
+    },
+    {
+      "id": "SCH058",
+      "employeeId": "EMP004",
+      "employeeName": "Patricia Garcia",
+      "shiftId": "SHIFT004",
+      "date": "2026-07-01",
+      "status": "Scheduled"
+    },
+    {
+      "id": "SCH059",
+      "employeeId": "EMP004",
+      "employeeName": "Patricia Garcia",
+      "shiftId": "SHIFT004",
+      "date": "2026-07-02",
+      "status": "Swapped"
+    },
+    {
+      "id": "SCH060",
+      "employeeId": "EMP004",
+      "employeeName": "Patricia Garcia",
+      "shiftId": "SHIFT004",
+      "date": "2026-07-03",
+      "status": "Completed"
+    },
+    {
+      "id": "SCH061",
+      "employeeId": "EMP004",
+      "employeeName": "Patricia Garcia",
+      "shiftId": "SHIFT004",
+      "date": "2026-07-04",
+      "status": "Completed"
+    },
+    {
+      "id": "SCH062",
+      "employeeId": "EMP004",
+      "employeeName": "Patricia Garcia",
+      "shiftId": "SHIFT004",
+      "date": "2026-07-07",
+      "status": "Completed"
+    },
+    {
+      "id": "SCH063",
+      "employeeId": "EMP004",
+      "employeeName": "Patricia Garcia",
+      "shiftId": "SHIFT004",
+      "date": "2026-07-08",
+      "status": "Completed"
+    },
+    {
+      "id": "SCH064",
+      "employeeId": "EMP004",
+      "employeeName": "Patricia Garcia",
+      "shiftId": "SHIFT004",
+      "date": "2026-07-09",
+      "status": "Scheduled"
+    },
+    {
+      "id": "SCH065",
+      "employeeId": "EMP004",
+      "employeeName": "Patricia Garcia",
+      "shiftId": "SHIFT004",
+      "date": "2026-07-10",
+      "status": "Swapped"
+    },
+    {
+      "id": "SCH066",
+      "employeeId": "EMP004",
+      "employeeName": "Patricia Garcia",
+      "shiftId": "SHIFT004",
+      "date": "2026-07-11",
+      "status": "Completed"
+    },
+    {
+      "id": "SCH067",
+      "employeeId": "EMP004",
+      "employeeName": "Patricia Garcia",
+      "shiftId": "SHIFT004",
+      "date": "2026-07-14",
+      "status": "Completed"
+    },
+    {
+      "id": "SCH068",
+      "employeeId": "EMP004",
+      "employeeName": "Patricia Garcia",
+      "shiftId": "SHIFT004",
+      "date": "2026-07-15",
+      "status": "Completed"
+    },
+    {
+      "id": "SCH069",
+      "employeeId": "EMP004",
+      "employeeName": "Patricia Garcia",
+      "shiftId": "SHIFT004",
+      "date": "2026-07-16",
+      "status": "Completed"
+    },
+    {
+      "id": "SCH070",
+      "employeeId": "EMP004",
+      "employeeName": "Patricia Garcia",
+      "shiftId": "SHIFT004",
+      "date": "2026-07-17",
+      "status": "Scheduled"
+    },
+    {
+      "id": "SCH071",
+      "employeeId": "EMP004",
+      "employeeName": "Patricia Garcia",
+      "shiftId": "SHIFT004",
+      "date": "2026-07-18",
+      "status": "Swapped"
+    },
+    {
+      "id": "SCH072",
+      "employeeId": "EMP004",
+      "employeeName": "Patricia Garcia",
+      "shiftId": "SHIFT004",
+      "date": "2026-07-21",
+      "status": "Completed"
+    },
+    {
+      "id": "SCH073",
+      "employeeId": "EMP004",
+      "employeeName": "Patricia Garcia",
+      "shiftId": "SHIFT004",
+      "date": "2026-07-22",
+      "status": "Completed"
+    },
+    {
+      "id": "SCH074",
+      "employeeId": "EMP004",
+      "employeeName": "Patricia Garcia",
+      "shiftId": "SHIFT004",
+      "date": "2026-07-23",
+      "status": "Completed"
+    },
+    {
+      "id": "SCH075",
+      "employeeId": "EMP004",
+      "employeeName": "Patricia Garcia",
+      "shiftId": "SHIFT004",
+      "date": "2026-07-24",
+      "status": "Completed"
+    },
+    {
+      "id": "SCH076",
+      "employeeId": "EMP004",
+      "employeeName": "Patricia Garcia",
+      "shiftId": "SHIFT004",
+      "date": "2026-07-25",
+      "status": "Scheduled"
+    },
+    {
+      "id": "SCH077",
+      "employeeId": "EMP005",
+      "employeeName": "Carlo Mendoza",
+      "shiftId": "SHIFT004",
+      "date": "2026-07-01",
+      "status": "Swapped"
+    },
+    {
+      "id": "SCH078",
+      "employeeId": "EMP005",
+      "employeeName": "Carlo Mendoza",
+      "shiftId": "SHIFT004",
+      "date": "2026-07-02",
+      "status": "Completed"
+    },
+    {
+      "id": "SCH079",
+      "employeeId": "EMP005",
+      "employeeName": "Carlo Mendoza",
+      "shiftId": "SHIFT004",
+      "date": "2026-07-03",
+      "status": "Completed"
+    },
+    {
+      "id": "SCH080",
+      "employeeId": "EMP005",
+      "employeeName": "Carlo Mendoza",
+      "shiftId": "SHIFT004",
+      "date": "2026-07-04",
+      "status": "Completed"
+    },
+    {
+      "id": "SCH081",
+      "employeeId": "EMP005",
+      "employeeName": "Carlo Mendoza",
+      "shiftId": "SHIFT004",
+      "date": "2026-07-07",
+      "status": "Completed"
+    },
+    {
+      "id": "SCH082",
+      "employeeId": "EMP005",
+      "employeeName": "Carlo Mendoza",
+      "shiftId": "SHIFT004",
+      "date": "2026-07-08",
+      "status": "Scheduled"
+    },
+    {
+      "id": "SCH083",
+      "employeeId": "EMP005",
+      "employeeName": "Carlo Mendoza",
+      "shiftId": "SHIFT004",
+      "date": "2026-07-09",
+      "status": "Swapped"
+    },
+    {
+      "id": "SCH084",
+      "employeeId": "EMP005",
+      "employeeName": "Carlo Mendoza",
+      "shiftId": "SHIFT004",
+      "date": "2026-07-10",
+      "status": "Completed"
+    },
+    {
+      "id": "SCH085",
+      "employeeId": "EMP005",
+      "employeeName": "Carlo Mendoza",
+      "shiftId": "SHIFT004",
+      "date": "2026-07-11",
+      "status": "Completed"
+    },
+    {
+      "id": "SCH086",
+      "employeeId": "EMP005",
+      "employeeName": "Carlo Mendoza",
+      "shiftId": "SHIFT004",
+      "date": "2026-07-14",
+      "status": "Completed"
+    },
+    {
+      "id": "SCH087",
+      "employeeId": "EMP005",
+      "employeeName": "Carlo Mendoza",
+      "shiftId": "SHIFT004",
+      "date": "2026-07-15",
+      "status": "Completed"
+    },
+    {
+      "id": "SCH088",
+      "employeeId": "EMP005",
+      "employeeName": "Carlo Mendoza",
+      "shiftId": "SHIFT004",
+      "date": "2026-07-16",
+      "status": "Scheduled"
+    },
+    {
+      "id": "SCH089",
+      "employeeId": "EMP005",
+      "employeeName": "Carlo Mendoza",
+      "shiftId": "SHIFT004",
+      "date": "2026-07-17",
+      "status": "Swapped"
+    },
+    {
+      "id": "SCH090",
+      "employeeId": "EMP005",
+      "employeeName": "Carlo Mendoza",
+      "shiftId": "SHIFT004",
+      "date": "2026-07-18",
+      "status": "Completed"
+    }
+  ],
+  "_default": {
+    "shiftDefinitions": [
+      {
+        "id": "SHIFT001",
+        "name": "Morning Shift",
+        "startTime": "06:00",
+        "endTime": "14:00",
+        "color": "#22C55E"
+      },
+      {
+        "id": "SHIFT002",
+        "name": "Afternoon Shift",
+        "startTime": "14:00",
+        "endTime": "22:00",
+        "color": "#F59E0B"
+      },
+      {
+        "id": "SHIFT003",
+        "name": "Night Shift",
+        "startTime": "22:00",
+        "endTime": "06:00",
+        "color": "#8B5CF6"
+      },
+      {
+        "id": "SHIFT004",
+        "name": "Flexible Shift",
+        "startTime": "08:00",
+        "endTime": "17:00",
+        "color": "#3B82F6"
+      }
+    ],
+    "shiftSchedules": [
+      {
+        "id": "SCH001",
+        "employeeId": "EMP001",
+        "employeeName": "Juan Dela Cruz",
+        "shiftId": "SHIFT004",
+        "date": "2026-07-01",
+        "status": "Completed"
+      },
+      {
+        "id": "SCH002",
+        "employeeId": "EMP001",
+        "employeeName": "Juan Dela Cruz",
+        "shiftId": "SHIFT004",
+        "date": "2026-07-02",
+        "status": "Completed"
+      },
+      {
+        "id": "SCH003",
+        "employeeId": "EMP001",
+        "employeeName": "Juan Dela Cruz",
+        "shiftId": "SHIFT004",
+        "date": "2026-07-03",
+        "status": "Completed"
+      },
+      {
+        "id": "SCH004",
+        "employeeId": "EMP001",
+        "employeeName": "Juan Dela Cruz",
+        "shiftId": "SHIFT004",
+        "date": "2026-07-04",
+        "status": "Scheduled"
+      },
+      {
+        "id": "SCH005",
+        "employeeId": "EMP001",
+        "employeeName": "Juan Dela Cruz",
+        "shiftId": "SHIFT004",
+        "date": "2026-07-07",
+        "status": "Swapped"
+      },
+      {
+        "id": "SCH006",
+        "employeeId": "EMP001",
+        "employeeName": "Juan Dela Cruz",
+        "shiftId": "SHIFT004",
+        "date": "2026-07-08",
+        "status": "Completed"
+      },
+      {
+        "id": "SCH007",
+        "employeeId": "EMP001",
+        "employeeName": "Juan Dela Cruz",
+        "shiftId": "SHIFT004",
+        "date": "2026-07-09",
+        "status": "Completed"
+      },
+      {
+        "id": "SCH008",
+        "employeeId": "EMP001",
+        "employeeName": "Juan Dela Cruz",
+        "shiftId": "SHIFT004",
+        "date": "2026-07-10",
+        "status": "Completed"
+      },
+      {
+        "id": "SCH009",
+        "employeeId": "EMP001",
+        "employeeName": "Juan Dela Cruz",
+        "shiftId": "SHIFT004",
+        "date": "2026-07-11",
+        "status": "Completed"
+      },
+      {
+        "id": "SCH010",
+        "employeeId": "EMP001",
+        "employeeName": "Juan Dela Cruz",
+        "shiftId": "SHIFT004",
+        "date": "2026-07-14",
+        "status": "Scheduled"
+      },
+      {
+        "id": "SCH011",
+        "employeeId": "EMP001",
+        "employeeName": "Juan Dela Cruz",
+        "shiftId": "SHIFT004",
+        "date": "2026-07-15",
+        "status": "Cancelled"
+      },
+      {
+        "id": "SCH012",
+        "employeeId": "EMP001",
+        "employeeName": "Juan Dela Cruz",
+        "shiftId": "SHIFT004",
+        "date": "2026-07-16",
+        "status": "Completed"
+      },
+      {
+        "id": "SCH013",
+        "employeeId": "EMP001",
+        "employeeName": "Juan Dela Cruz",
+        "shiftId": "SHIFT004",
+        "date": "2026-07-17",
+        "status": "Completed"
+      },
+      {
+        "id": "SCH014",
+        "employeeId": "EMP001",
+        "employeeName": "Juan Dela Cruz",
+        "shiftId": "SHIFT004",
+        "date": "2026-07-18",
+        "status": "Completed"
+      },
+      {
+        "id": "SCH015",
+        "employeeId": "EMP001",
+        "employeeName": "Juan Dela Cruz",
+        "shiftId": "SHIFT004",
+        "date": "2026-07-21",
+        "status": "Completed"
+      },
+      {
+        "id": "SCH016",
+        "employeeId": "EMP001",
+        "employeeName": "Juan Dela Cruz",
+        "shiftId": "SHIFT004",
+        "date": "2026-07-22",
+        "status": "Scheduled"
+      },
+      {
+        "id": "SCH017",
+        "employeeId": "EMP001",
+        "employeeName": "Juan Dela Cruz",
+        "shiftId": "SHIFT004",
+        "date": "2026-07-23",
+        "status": "Swapped"
+      },
+      {
+        "id": "SCH018",
+        "employeeId": "EMP001",
+        "employeeName": "Juan Dela Cruz",
+        "shiftId": "SHIFT004",
+        "date": "2026-07-24",
+        "status": "Completed"
+      },
+      {
+        "id": "SCH019",
+        "employeeId": "EMP001",
+        "employeeName": "Juan Dela Cruz",
+        "shiftId": "SHIFT004",
+        "date": "2026-07-25",
+        "status": "Completed"
+      },
+      {
+        "id": "SCH020",
+        "employeeId": "EMP002",
+        "employeeName": "Angela Santos",
+        "shiftId": "SHIFT004",
+        "date": "2026-07-01",
+        "status": "Completed"
+      },
+      {
+        "id": "SCH021",
+        "employeeId": "EMP002",
+        "employeeName": "Angela Santos",
+        "shiftId": "SHIFT004",
+        "date": "2026-07-02",
+        "status": "Completed"
+      },
+      {
+        "id": "SCH022",
+        "employeeId": "EMP002",
+        "employeeName": "Angela Santos",
+        "shiftId": "SHIFT004",
+        "date": "2026-07-03",
+        "status": "Scheduled"
+      },
+      {
+        "id": "SCH023",
+        "employeeId": "EMP002",
+        "employeeName": "Angela Santos",
+        "shiftId": "SHIFT004",
+        "date": "2026-07-04",
+        "status": "Swapped"
+      },
+      {
+        "id": "SCH024",
+        "employeeId": "EMP002",
+        "employeeName": "Angela Santos",
+        "shiftId": "SHIFT004",
+        "date": "2026-07-07",
+        "status": "Completed"
+      },
+      {
+        "id": "SCH025",
+        "employeeId": "EMP002",
+        "employeeName": "Angela Santos",
+        "shiftId": "SHIFT004",
+        "date": "2026-07-08",
+        "status": "Completed"
+      },
+      {
+        "id": "SCH026",
+        "employeeId": "EMP002",
+        "employeeName": "Angela Santos",
+        "shiftId": "SHIFT004",
+        "date": "2026-07-09",
+        "status": "Cancelled"
+      },
+      {
+        "id": "SCH027",
+        "employeeId": "EMP002",
+        "employeeName": "Angela Santos",
+        "shiftId": "SHIFT004",
+        "date": "2026-07-10",
+        "status": "Completed"
+      },
+      {
+        "id": "SCH028",
+        "employeeId": "EMP002",
+        "employeeName": "Angela Santos",
+        "shiftId": "SHIFT004",
+        "date": "2026-07-11",
+        "status": "Cancelled"
+      },
+      {
+        "id": "SCH029",
+        "employeeId": "EMP002",
+        "employeeName": "Angela Santos",
+        "shiftId": "SHIFT004",
+        "date": "2026-07-14",
+        "status": "Swapped"
+      },
+      {
+        "id": "SCH030",
+        "employeeId": "EMP002",
+        "employeeName": "Angela Santos",
+        "shiftId": "SHIFT004",
+        "date": "2026-07-15",
+        "status": "Completed"
+      },
+      {
+        "id": "SCH031",
+        "employeeId": "EMP002",
+        "employeeName": "Angela Santos",
+        "shiftId": "SHIFT004",
+        "date": "2026-07-16",
+        "status": "Completed"
+      },
+      {
+        "id": "SCH032",
+        "employeeId": "EMP002",
+        "employeeName": "Angela Santos",
+        "shiftId": "SHIFT004",
+        "date": "2026-07-17",
+        "status": "Completed"
+      },
+      {
+        "id": "SCH033",
+        "employeeId": "EMP002",
+        "employeeName": "Angela Santos",
+        "shiftId": "SHIFT004",
+        "date": "2026-07-18",
+        "status": "Completed"
+      },
+      {
+        "id": "SCH034",
+        "employeeId": "EMP002",
+        "employeeName": "Angela Santos",
+        "shiftId": "SHIFT004",
+        "date": "2026-07-21",
+        "status": "Scheduled"
+      },
+      {
+        "id": "SCH035",
+        "employeeId": "EMP002",
+        "employeeName": "Angela Santos",
+        "shiftId": "SHIFT004",
+        "date": "2026-07-22",
+        "status": "Swapped"
+      },
+      {
+        "id": "SCH036",
+        "employeeId": "EMP002",
+        "employeeName": "Angela Santos",
+        "shiftId": "SHIFT004",
+        "date": "2026-07-23",
+        "status": "Completed"
+      },
+      {
+        "id": "SCH037",
+        "employeeId": "EMP002",
+        "employeeName": "Angela Santos",
+        "shiftId": "SHIFT004",
+        "date": "2026-07-24",
+        "status": "Completed"
+      },
+      {
+        "id": "SCH038",
+        "employeeId": "EMP002",
+        "employeeName": "Angela Santos",
+        "shiftId": "SHIFT004",
+        "date": "2026-07-25",
+        "status": "Completed"
+      },
+      {
+        "id": "SCH039",
+        "employeeId": "EMP003",
+        "employeeName": "Miguel Reyes",
+        "shiftId": "SHIFT004",
+        "date": "2026-07-01",
+        "status": "Completed"
+      },
+      {
+        "id": "SCH040",
+        "employeeId": "EMP003",
+        "employeeName": "Miguel Reyes",
+        "shiftId": "SHIFT004",
+        "date": "2026-07-02",
+        "status": "Scheduled"
+      },
+      {
+        "id": "SCH041",
+        "employeeId": "EMP003",
+        "employeeName": "Miguel Reyes",
+        "shiftId": "SHIFT004",
+        "date": "2026-07-03",
+        "status": "Swapped"
+      },
+      {
+        "id": "SCH042",
+        "employeeId": "EMP003",
+        "employeeName": "Miguel Reyes",
+        "shiftId": "SHIFT004",
+        "date": "2026-07-04",
+        "status": "Completed"
+      },
+      {
+        "id": "SCH043",
+        "employeeId": "EMP003",
+        "employeeName": "Miguel Reyes",
+        "shiftId": "SHIFT004",
+        "date": "2026-07-07",
+        "status": "Completed"
+      },
+      {
+        "id": "SCH044",
+        "employeeId": "EMP003",
+        "employeeName": "Miguel Reyes",
+        "shiftId": "SHIFT004",
+        "date": "2026-07-08",
+        "status": "Completed"
+      },
+      {
+        "id": "SCH045",
+        "employeeId": "EMP003",
+        "employeeName": "Miguel Reyes",
+        "shiftId": "SHIFT004",
+        "date": "2026-07-09",
+        "status": "Completed"
+      },
+      {
+        "id": "SCH046",
+        "employeeId": "EMP003",
+        "employeeName": "Miguel Reyes",
+        "shiftId": "SHIFT004",
+        "date": "2026-07-10",
+        "status": "Cancelled"
+      },
+      {
+        "id": "SCH047",
+        "employeeId": "EMP003",
+        "employeeName": "Miguel Reyes",
+        "shiftId": "SHIFT004",
+        "date": "2026-07-11",
+        "status": "Swapped"
+      },
+      {
+        "id": "SCH048",
+        "employeeId": "EMP003",
+        "employeeName": "Miguel Reyes",
+        "shiftId": "SHIFT004",
+        "date": "2026-07-14",
+        "status": "Completed"
+      },
+      {
+        "id": "SCH049",
+        "employeeId": "EMP003",
+        "employeeName": "Miguel Reyes",
+        "shiftId": "SHIFT004",
+        "date": "2026-07-15",
+        "status": "Completed"
+      },
+      {
+        "id": "SCH050",
+        "employeeId": "EMP003",
+        "employeeName": "Miguel Reyes",
+        "shiftId": "SHIFT004",
+        "date": "2026-07-16",
+        "status": "Completed"
+      },
+      {
+        "id": "SCH051",
+        "employeeId": "EMP003",
+        "employeeName": "Miguel Reyes",
+        "shiftId": "SHIFT004",
+        "date": "2026-07-17",
+        "status": "Completed"
+      },
+      {
+        "id": "SCH052",
+        "employeeId": "EMP003",
+        "employeeName": "Miguel Reyes",
+        "shiftId": "SHIFT004",
+        "date": "2026-07-18",
+        "status": "Scheduled"
+      },
+      {
+        "id": "SCH053",
+        "employeeId": "EMP003",
+        "employeeName": "Miguel Reyes",
+        "shiftId": "SHIFT004",
+        "date": "2026-07-21",
+        "status": "Swapped"
+      },
+      {
+        "id": "SCH054",
+        "employeeId": "EMP003",
+        "employeeName": "Miguel Reyes",
+        "shiftId": "SHIFT004",
+        "date": "2026-07-22",
+        "status": "Completed"
+      },
+      {
+        "id": "SCH055",
+        "employeeId": "EMP003",
+        "employeeName": "Miguel Reyes",
+        "shiftId": "SHIFT004",
+        "date": "2026-07-23",
+        "status": "Completed"
+      },
+      {
+        "id": "SCH056",
+        "employeeId": "EMP003",
+        "employeeName": "Miguel Reyes",
+        "shiftId": "SHIFT004",
+        "date": "2026-07-24",
+        "status": "Completed"
+      },
+      {
+        "id": "SCH057",
+        "employeeId": "EMP003",
+        "employeeName": "Miguel Reyes",
+        "shiftId": "SHIFT004",
+        "date": "2026-07-25",
+        "status": "Completed"
+      },
+      {
+        "id": "SCH058",
+        "employeeId": "EMP004",
+        "employeeName": "Patricia Garcia",
+        "shiftId": "SHIFT004",
+        "date": "2026-07-01",
+        "status": "Scheduled"
+      },
+      {
+        "id": "SCH059",
+        "employeeId": "EMP004",
+        "employeeName": "Patricia Garcia",
+        "shiftId": "SHIFT004",
+        "date": "2026-07-02",
+        "status": "Swapped"
+      },
+      {
+        "id": "SCH060",
+        "employeeId": "EMP004",
+        "employeeName": "Patricia Garcia",
+        "shiftId": "SHIFT004",
+        "date": "2026-07-03",
+        "status": "Completed"
+      },
+      {
+        "id": "SCH061",
+        "employeeId": "EMP004",
+        "employeeName": "Patricia Garcia",
+        "shiftId": "SHIFT004",
+        "date": "2026-07-04",
+        "status": "Completed"
+      },
+      {
+        "id": "SCH062",
+        "employeeId": "EMP004",
+        "employeeName": "Patricia Garcia",
+        "shiftId": "SHIFT004",
+        "date": "2026-07-07",
+        "status": "Completed"
+      },
+      {
+        "id": "SCH063",
+        "employeeId": "EMP004",
+        "employeeName": "Patricia Garcia",
+        "shiftId": "SHIFT004",
+        "date": "2026-07-08",
+        "status": "Completed"
+      },
+      {
+        "id": "SCH064",
+        "employeeId": "EMP004",
+        "employeeName": "Patricia Garcia",
+        "shiftId": "SHIFT004",
+        "date": "2026-07-09",
+        "status": "Scheduled"
+      },
+      {
+        "id": "SCH065",
+        "employeeId": "EMP004",
+        "employeeName": "Patricia Garcia",
+        "shiftId": "SHIFT004",
+        "date": "2026-07-10",
+        "status": "Swapped"
+      },
+      {
+        "id": "SCH066",
+        "employeeId": "EMP004",
+        "employeeName": "Patricia Garcia",
+        "shiftId": "SHIFT004",
+        "date": "2026-07-11",
+        "status": "Completed"
+      },
+      {
+        "id": "SCH067",
+        "employeeId": "EMP004",
+        "employeeName": "Patricia Garcia",
+        "shiftId": "SHIFT004",
+        "date": "2026-07-14",
+        "status": "Completed"
+      },
+      {
+        "id": "SCH068",
+        "employeeId": "EMP004",
+        "employeeName": "Patricia Garcia",
+        "shiftId": "SHIFT004",
+        "date": "2026-07-15",
+        "status": "Completed"
+      },
+      {
+        "id": "SCH069",
+        "employeeId": "EMP004",
+        "employeeName": "Patricia Garcia",
+        "shiftId": "SHIFT004",
+        "date": "2026-07-16",
+        "status": "Completed"
+      },
+      {
+        "id": "SCH070",
+        "employeeId": "EMP004",
+        "employeeName": "Patricia Garcia",
+        "shiftId": "SHIFT004",
+        "date": "2026-07-17",
+        "status": "Scheduled"
+      },
+      {
+        "id": "SCH071",
+        "employeeId": "EMP004",
+        "employeeName": "Patricia Garcia",
+        "shiftId": "SHIFT004",
+        "date": "2026-07-18",
+        "status": "Swapped"
+      },
+      {
+        "id": "SCH072",
+        "employeeId": "EMP004",
+        "employeeName": "Patricia Garcia",
+        "shiftId": "SHIFT004",
+        "date": "2026-07-21",
+        "status": "Completed"
+      },
+      {
+        "id": "SCH073",
+        "employeeId": "EMP004",
+        "employeeName": "Patricia Garcia",
+        "shiftId": "SHIFT004",
+        "date": "2026-07-22",
+        "status": "Completed"
+      },
+      {
+        "id": "SCH074",
+        "employeeId": "EMP004",
+        "employeeName": "Patricia Garcia",
+        "shiftId": "SHIFT004",
+        "date": "2026-07-23",
+        "status": "Completed"
+      },
+      {
+        "id": "SCH075",
+        "employeeId": "EMP004",
+        "employeeName": "Patricia Garcia",
+        "shiftId": "SHIFT004",
+        "date": "2026-07-24",
+        "status": "Completed"
+      },
+      {
+        "id": "SCH076",
+        "employeeId": "EMP004",
+        "employeeName": "Patricia Garcia",
+        "shiftId": "SHIFT004",
+        "date": "2026-07-25",
+        "status": "Scheduled"
+      },
+      {
+        "id": "SCH077",
+        "employeeId": "EMP005",
+        "employeeName": "Carlo Mendoza",
+        "shiftId": "SHIFT004",
+        "date": "2026-07-01",
+        "status": "Swapped"
+      },
+      {
+        "id": "SCH078",
+        "employeeId": "EMP005",
+        "employeeName": "Carlo Mendoza",
+        "shiftId": "SHIFT004",
+        "date": "2026-07-02",
+        "status": "Completed"
+      },
+      {
+        "id": "SCH079",
+        "employeeId": "EMP005",
+        "employeeName": "Carlo Mendoza",
+        "shiftId": "SHIFT004",
+        "date": "2026-07-03",
+        "status": "Completed"
+      },
+      {
+        "id": "SCH080",
+        "employeeId": "EMP005",
+        "employeeName": "Carlo Mendoza",
+        "shiftId": "SHIFT004",
+        "date": "2026-07-04",
+        "status": "Completed"
+      },
+      {
+        "id": "SCH081",
+        "employeeId": "EMP005",
+        "employeeName": "Carlo Mendoza",
+        "shiftId": "SHIFT004",
+        "date": "2026-07-07",
+        "status": "Completed"
+      },
+      {
+        "id": "SCH082",
+        "employeeId": "EMP005",
+        "employeeName": "Carlo Mendoza",
+        "shiftId": "SHIFT004",
+        "date": "2026-07-08",
+        "status": "Scheduled"
+      },
+      {
+        "id": "SCH083",
+        "employeeId": "EMP005",
+        "employeeName": "Carlo Mendoza",
+        "shiftId": "SHIFT004",
+        "date": "2026-07-09",
+        "status": "Swapped"
+      },
+      {
+        "id": "SCH084",
+        "employeeId": "EMP005",
+        "employeeName": "Carlo Mendoza",
+        "shiftId": "SHIFT004",
+        "date": "2026-07-10",
+        "status": "Completed"
+      },
+      {
+        "id": "SCH085",
+        "employeeId": "EMP005",
+        "employeeName": "Carlo Mendoza",
+        "shiftId": "SHIFT004",
+        "date": "2026-07-11",
+        "status": "Completed"
+      },
+      {
+        "id": "SCH086",
+        "employeeId": "EMP005",
+        "employeeName": "Carlo Mendoza",
+        "shiftId": "SHIFT004",
+        "date": "2026-07-14",
+        "status": "Completed"
+      },
+      {
+        "id": "SCH087",
+        "employeeId": "EMP005",
+        "employeeName": "Carlo Mendoza",
+        "shiftId": "SHIFT004",
+        "date": "2026-07-15",
+        "status": "Completed"
+      },
+      {
+        "id": "SCH088",
+        "employeeId": "EMP005",
+        "employeeName": "Carlo Mendoza",
+        "shiftId": "SHIFT004",
+        "date": "2026-07-16",
+        "status": "Scheduled"
+      },
+      {
+        "id": "SCH089",
+        "employeeId": "EMP005",
+        "employeeName": "Carlo Mendoza",
+        "shiftId": "SHIFT004",
+        "date": "2026-07-17",
+        "status": "Swapped"
+      },
+      {
+        "id": "SCH090",
+        "employeeId": "EMP005",
+        "employeeName": "Carlo Mendoza",
+        "shiftId": "SHIFT004",
+        "date": "2026-07-18",
+        "status": "Completed"
+      }
+    ]
+  }
+}

@@ -1,0 +1,50 @@
+{
+  "company": {
+    "name": "WorkForce Pro Inc.",
+    "address": {
+      "street": "23rd Street, Bonifacio Global City",
+      "city": "Taguig",
+      "province": "Metro Manila",
+      "zipCode": "1634",
+      "country": "Philippines"
+    },
+    "phone": "+63 (02) 8888-7777",
+    "email": "info@workforcepro.com",
+    "website": "https://www.workforcepro.com",
+    "industry": "Human Capital Management Solutions",
+    "founded": 2015,
+    "employeeCount": 25,
+    "logo": null,
+    "departments": 8,
+    "locations": 3,
+    "locationsList": [
+      "BGC Tower A, Taguig City - Corporate HQ",
+      "Ortigas Center, Pasig City - Operations Center",
+      "Makati City, Metro Manila - Sales Office"
+    ]
+  },
+  "_default": {
+    "name": "WorkForce Pro Inc.",
+    "address": {
+      "street": "23rd Street, Bonifacio Global City",
+      "city": "Taguig",
+      "province": "Metro Manila",
+      "zipCode": "1634",
+      "country": "Philippines"
+    },
+    "phone": "+63 (02) 8888-7777",
+    "email": "info@workforcepro.com",
+    "website": "https://www.workforcepro.com",
+    "industry": "Human Capital Management Solutions",
+    "founded": 2015,
+    "employeeCount": 25,
+    "logo": null,
+    "departments": 8,
+    "locations": 3,
+    "locationsList": [
+      "BGC Tower A, Taguig City - Corporate HQ",
+      "Ortigas Center, Pasig City - Operations Center",
+      "Makati City, Metro Manila - Sales Office"
+    ]
+  }
+}

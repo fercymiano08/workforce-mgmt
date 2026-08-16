@@ -1,0 +1,57 @@
+HOW TO OPEN AND CLOSE THE SYSTEM
+================================
+(Workforce Management System - for VSCode terminal)
+
+
+OPENING THE SYSTEM (2 STEPS)
+----------------------------
+
+STEP 1 - Backend
+  In VSCode, open the terminal (menu: Terminal > New Terminal).
+  Paste this ENTIRE line, then press Enter:
+
+      cd "C:\Users\FERCY\OneDrive\Desktop\Workforce MGNT\backend"; php -d max_execution_time=0 artisan serve --port=8000
+
+  You should see:  Server running on [http://127.0.0.1:8000]
+  LEAVE THIS TERMINAL OPEN.
+
+STEP 2 - Frontend
+  Open a SECOND terminal inside VSCode (click the "+" or the split
+  icon at the top-right of the terminal area).
+  Paste this ENTIRE line, then press Enter:
+
+      cd "C:\Users\FERCY\OneDrive\Desktop\Workforce MGNT\frontend"; npm run dev
+
+  You should see:  Local: http://localhost:5173/
+  LEAVE THIS TERMINAL OPEN.
+
+Then open your browser and go to:  http://localhost:5173
+
+
+CLOSING THE SYSTEM
+------------------
+  Press Ctrl + C in each of the two terminals.
+  (Or just close the two terminal tabs.)
+
+
+RULES THAT MAKE THIS WORK EVERY TIME
+------------------------------------
+ 1. Paste the WHOLE line as one piece - do not type or paste only the
+    folder path by itself.
+ 2. The folder path stays inside quotes (it has a space: "Workforce MGNT").
+ 3. Two terminals, one command each. Both must stay open.
+ 4. If you only have ONE terminal tab, click the "+" icon to make a
+    second one for the frontend.
+
+
+QUICK CHECK
+-----------
+  - "can't be reached"? Both terminals must be open and waiting.
+  - "Server running on 8000" not shown? The backend did not start.
+  - Red error text in a terminal? Copy it and send it to me.
+
+
+EASY FALLBACK (NO TYPING AT ALL)
+--------------------------------
+  You can also just double-click the file  start.bat  in the
+  "Workforce MGNT" folder - it opens both servers and the browser for you.

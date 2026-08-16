@@ -1,0 +1,104 @@
+{
+  "settings": {
+    "profile": {
+      "name": "Victoria Fernandez",
+      "email": "victoria.fernandez@workforcepro.com",
+      "role": "Administrator",
+      "avatar": "https://api.dicebear.com/7.x/avataaars/svg?seed=Victoria",
+      "phone": "+63 927 123 4567",
+      "timezone": "Asia/Manila"
+    },
+    "appearance": {
+      "theme": "light",
+      "sidebarColor": "#0B1F3A",
+      "accentColor": "#3B82F6",
+      "fontSize": "medium",
+      "compactMode": false,
+      "showAvatars": true
+    },
+    "notifications": {
+      "emailAlerts": true,
+      "pushNotifications": true,
+      "smsAlerts": false,
+      "leaveRequestAlerts": true,
+      "attendanceAlerts": true,
+      "timesheetReminders": true,
+      "shiftChangeAlerts": true,
+      "announcementAlerts": true,
+      "systemAlerts": true,
+      "quietHoursEnabled": true,
+      "quietHoursStart": "22:00",
+      "quietHoursEnd": "06:00"
+    },
+    "security": {
+      "twoFactorEnabled": false,
+      "lastPasswordChange": "2026-06-15T10:30:00.000Z",
+      "sessionTimeout": 30,
+      "loginNotifications": true,
+      "trustedDevices": 2,
+      "passwordStrength": "Strong"
+    },
+    "system": {
+      "language": "English",
+      "dateFormat": "MM/DD/YYYY",
+      "timeFormat": "12h",
+      "weekStartsOn": "Monday",
+      "currency": "PHP",
+      "currencySymbol": "₱",
+      "fiscalYearStart": "January",
+      "autoLogout": true,
+      "maintenanceMode": false
+    }
+  },
+  "_default": {
+    "profile": {
+      "name": "Victoria Fernandez",
+      "email": "victoria.fernandez@workforcepro.com",
+      "role": "Administrator",
+      "avatar": "https://api.dicebear.com/7.x/avataaars/svg?seed=Victoria",
+      "phone": "+63 927 123 4567",
+      "timezone": "Asia/Manila"
+    },
+    "appearance": {
+      "theme": "light",
+      "sidebarColor": "#0B1F3A",
+      "accentColor": "#3B82F6",
+      "fontSize": "medium",
+      "compactMode": false,
+      "showAvatars": true
+    },
+    "notifications": {
+      "emailAlerts": true,
+      "pushNotifications": true,
+      "smsAlerts": false,
+      "leaveRequestAlerts": true,
+      "attendanceAlerts": true,
+      "timesheetReminders": true,
+      "shiftChangeAlerts": true,
+      "announcementAlerts": true,
+      "systemAlerts": true,
+      "quietHoursEnabled": true,
+      "quietHoursStart": "22:00",
+      "quietHoursEnd": "06:00"
+    },
+    "security": {
+      "twoFactorEnabled": false,
+      "lastPasswordChange": "2026-06-15T10:30:00.000Z",
+      "sessionTimeout": 30,
+      "loginNotifications": true,
+      "trustedDevices": 2,
+      "passwordStrength": "Strong"
+    },
+    "system": {
+      "language": "English",
+      "dateFormat": "MM/DD/YYYY",
+      "timeFormat": "12h",
+      "weekStartsOn": "Monday",
+      "currency": "PHP",
+      "currencySymbol": "₱",
+      "fiscalYearStart": "January",
+      "autoLogout": true,
+      "maintenanceMode": false
+    }
+  }
+}

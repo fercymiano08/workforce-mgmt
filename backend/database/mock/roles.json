@@ -1,0 +1,118 @@
+{
+  "currentRole": "Administrator",
+  "roles": [
+    {
+      "id": "ROLE001",
+      "name": "Administrator",
+      "permissions": [
+        "employees.view",
+        "employees.create",
+        "employees.edit",
+        "employees.delete",
+        "attendance.view",
+        "attendance.edit",
+        "attendance.approve",
+        "leaves.view",
+        "leaves.approve",
+        "leaves.reject",
+        "timesheets.view",
+        "timesheets.approve",
+        "timesheets.reject",
+        "shifts.view",
+        "shifts.create",
+        "shifts.edit",
+        "shifts.delete",
+        "reports.view",
+        "reports.generate",
+        "reports.export",
+        "departments.view",
+        "departments.edit",
+        "settings.view",
+        "settings.edit",
+        "roles.view",
+        "roles.manage",
+        "notifications.manage",
+        "analytics.view",
+        "analytics.export",
+        "payroll.view",
+        "payroll.process"
+      ]
+    },
+    {
+      "id": "ROLE003",
+      "name": "Employee",
+      "permissions": [
+        "employees.view_own",
+        "attendance.view_own",
+        "attendance.clock_in",
+        "attendance.clock_out",
+        "leaves.view_own",
+        "leaves.create",
+        "timesheets.view_own",
+        "timesheets.submit",
+        "shifts.view_own",
+        "reports.view_own",
+        "notifications.view_own"
+      ]
+    }
+  ],
+  "_default": {
+    "roles": [
+      {
+        "id": "ROLE001",
+        "name": "Administrator",
+        "permissions": [
+          "employees.view",
+          "employees.create",
+          "employees.edit",
+          "employees.delete",
+          "attendance.view",
+          "attendance.edit",
+          "attendance.approve",
+          "leaves.view",
+          "leaves.approve",
+          "leaves.reject",
+          "timesheets.view",
+          "timesheets.approve",
+          "timesheets.reject",
+          "shifts.view",
+          "shifts.create",
+          "shifts.edit",
+          "shifts.delete",
+          "reports.view",
+          "reports.generate",
+          "reports.export",
+          "departments.view",
+          "departments.edit",
+          "settings.view",
+          "settings.edit",
+          "roles.view",
+          "roles.manage",
+          "notifications.manage",
+          "analytics.view",
+          "analytics.export",
+          "payroll.view",
+          "payroll.process"
+        ]
+      },
+      {
+        "id": "ROLE003",
+        "name": "Employee",
+        "permissions": [
+          "employees.view_own",
+          "attendance.view_own",
+          "attendance.clock_in",
+          "attendance.clock_out",
+          "leaves.view_own",
+          "leaves.create",
+          "timesheets.view_own",
+          "timesheets.submit",
+          "shifts.view_own",
+          "reports.view_own",
+          "notifications.view_own"
+        ]
+      }
+    ],
+    "currentRole": "Administrator"
+  }
+}

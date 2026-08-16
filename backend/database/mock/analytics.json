@@ -1,0 +1,992 @@
+{
+  "attendanceTrend": [
+    {
+      "month": "Aug 2025",
+      "present": 465,
+      "absent": 18,
+      "late": 22,
+      "rate": 93
+    },
+    {
+      "month": "Sep 2025",
+      "present": 470,
+      "absent": 15,
+      "late": 19,
+      "rate": 94
+    },
+    {
+      "month": "Oct 2025",
+      "present": 468,
+      "absent": 20,
+      "late": 25,
+      "rate": 92.6
+    },
+    {
+      "month": "Nov 2025",
+      "present": 472,
+      "absent": 14,
+      "late": 18,
+      "rate": 94.4
+    },
+    {
+      "month": "Dec 2025",
+      "present": 420,
+      "absent": 45,
+      "late": 12,
+      "rate": 84
+    },
+    {
+      "month": "Jan 2026",
+      "present": 460,
+      "absent": 22,
+      "late": 20,
+      "rate": 92
+    },
+    {
+      "month": "Feb 2026",
+      "present": 475,
+      "absent": 12,
+      "late": 16,
+      "rate": 95
+    },
+    {
+      "month": "Mar 2026",
+      "present": 468,
+      "absent": 18,
+      "late": 21,
+      "rate": 93.6
+    },
+    {
+      "month": "Apr 2026",
+      "present": 471,
+      "absent": 16,
+      "late": 17,
+      "rate": 94.2
+    },
+    {
+      "month": "May 2026",
+      "present": 473,
+      "absent": 14,
+      "late": 15,
+      "rate": 94.6
+    },
+    {
+      "month": "Jun 2026",
+      "present": 469,
+      "absent": 19,
+      "late": 20,
+      "rate": 93.8
+    },
+    {
+      "month": "Jul 2026",
+      "present": 458,
+      "absent": 24,
+      "late": 18,
+      "rate": 91.6
+    }
+  ],
+  "departmentProductivity": [
+    {
+      "name": "Engineering",
+      "productivity": 92,
+      "attendance": 95.2,
+      "efficiency": 88
+    },
+    {
+      "name": "Marketing",
+      "productivity": 88,
+      "attendance": 93.5,
+      "efficiency": 85
+    },
+    {
+      "name": "HR",
+      "productivity": 95,
+      "attendance": 97.1,
+      "efficiency": 93
+    },
+    {
+      "name": "Finance",
+      "productivity": 90,
+      "attendance": 94.8,
+      "efficiency": 89
+    },
+    {
+      "name": "Sales",
+      "productivity": 86,
+      "attendance": 91.3,
+      "efficiency": 82
+    },
+    {
+      "name": "Operations",
+      "productivity": 89,
+      "attendance": 93,
+      "efficiency": 86
+    },
+    {
+      "name": "IT",
+      "productivity": 91,
+      "attendance": 96.5,
+      "efficiency": 90
+    },
+    {
+      "name": "Legal",
+      "productivity": 93,
+      "attendance": 95,
+      "efficiency": 91
+    }
+  ],
+  "leaveTrend": [
+    {
+      "month": "Feb 2026",
+      "vacation": 5,
+      "sick": 8,
+      "emergency": 3,
+      "total": 16
+    },
+    {
+      "month": "Mar 2026",
+      "vacation": 7,
+      "sick": 6,
+      "emergency": 2,
+      "total": 15
+    },
+    {
+      "month": "Apr 2026",
+      "vacation": 9,
+      "sick": 5,
+      "emergency": 4,
+      "total": 18
+    },
+    {
+      "month": "May 2026",
+      "vacation": 12,
+      "sick": 7,
+      "emergency": 2,
+      "total": 21
+    },
+    {
+      "month": "Jun 2026",
+      "vacation": 10,
+      "sick": 9,
+      "emergency": 5,
+      "total": 24
+    },
+    {
+      "month": "Jul 2026",
+      "vacation": 14,
+      "sick": 11,
+      "emergency": 4,
+      "total": 29
+    }
+  ],
+  "overtimeSummary": [
+    {
+      "department": "Engineering",
+      "avgOvertime": 4.2,
+      "totalOvertime": 16.8,
+      "maxOvertime": 8.5
+    },
+    {
+      "department": "Marketing",
+      "avgOvertime": 2.1,
+      "totalOvertime": 6.3,
+      "maxOvertime": 4
+    },
+    {
+      "department": "HR",
+      "avgOvertime": 0.5,
+      "totalOvertime": 1.5,
+      "maxOvertime": 1
+    },
+    {
+      "department": "Finance",
+      "avgOvertime": 3.8,
+      "totalOvertime": 15.2,
+      "maxOvertime": 7
+    },
+    {
+      "department": "Sales",
+      "avgOvertime": 5,
+      "totalOvertime": 15,
+      "maxOvertime": 9
+    },
+    {
+      "department": "Operations",
+      "avgOvertime": 1.5,
+      "totalOvertime": 4.5,
+      "maxOvertime": 3
+    },
+    {
+      "department": "IT",
+      "avgOvertime": 6,
+      "totalOvertime": 18,
+      "maxOvertime": 10.5
+    },
+    {
+      "department": "Legal",
+      "avgOvertime": 1,
+      "totalOvertime": 2,
+      "maxOvertime": 2
+    }
+  ],
+  "payrollDiscrepancy": [
+    {
+      "employeeId": "EMP001",
+      "employeeName": "Juan Dela Cruz",
+      "department": "Engineering",
+      "expectedPay": 85000,
+      "actualPay": 85250,
+      "difference": 250,
+      "status": "Overpaid",
+      "month": "Jun 2026"
+    },
+    {
+      "employeeId": "EMP002",
+      "employeeName": "Angela Santos",
+      "department": "Marketing",
+      "expectedPay": 72000,
+      "actualPay": 72000,
+      "difference": 0,
+      "status": "Correct",
+      "month": "Jun 2026"
+    },
+    {
+      "employeeId": "EMP003",
+      "employeeName": "Miguel Reyes",
+      "department": "Finance",
+      "expectedPay": 65000,
+      "actualPay": 63750,
+      "difference": -1250,
+      "status": "Underpaid",
+      "month": "Jun 2026"
+    },
+    {
+      "employeeId": "EMP005",
+      "employeeName": "Carlo Mendoza",
+      "department": "Sales",
+      "expectedPay": 50000,
+      "actualPay": 50000,
+      "difference": 0,
+      "status": "Correct",
+      "month": "Jun 2026"
+    },
+    {
+      "employeeId": "EMP007",
+      "employeeName": "Daniel Lim",
+      "department": "Operations",
+      "expectedPay": 48000,
+      "actualPay": 44000,
+      "difference": -4000,
+      "status": "Underpaid",
+      "month": "Jun 2026"
+    },
+    {
+      "employeeId": "EMP008",
+      "employeeName": "Rachel Aquino",
+      "department": "IT",
+      "expectedPay": 70000,
+      "actualPay": 72100,
+      "difference": 2100,
+      "status": "Overpaid",
+      "month": "Jun 2026"
+    },
+    {
+      "employeeId": "EMP010",
+      "employeeName": "Ricardo Cruz",
+      "department": "Engineering",
+      "expectedPay": 120000,
+      "actualPay": 123500,
+      "difference": 3500,
+      "status": "Overpaid",
+      "month": "Jun 2026"
+    },
+    {
+      "employeeId": "EMP017",
+      "employeeName": "Mia Gonzales",
+      "department": "Marketing",
+      "expectedPay": 30000,
+      "actualPay": 28750,
+      "difference": -1250,
+      "status": "Underpaid",
+      "month": "Jun 2026"
+    },
+    {
+      "employeeId": "EMP018",
+      "employeeName": "Kevin Diaz",
+      "department": "Engineering",
+      "expectedPay": 55000,
+      "actualPay": 55000,
+      "difference": 0,
+      "status": "Correct",
+      "month": "Jun 2026"
+    },
+    {
+      "employeeId": "EMP020",
+      "employeeName": "Rafael Mercado",
+      "department": "Sales",
+      "expectedPay": 45000,
+      "actualPay": 32500,
+      "difference": -12500,
+      "status": "Underpaid",
+      "month": "Jun 2026"
+    },
+    {
+      "employeeId": "EMP024",
+      "employeeName": "Marcus Santiago",
+      "department": "IT",
+      "expectedPay": 55000,
+      "actualPay": 56200,
+      "difference": 1200,
+      "status": "Overpaid",
+      "month": "Jun 2026"
+    },
+    {
+      "employeeId": "EMP004",
+      "employeeName": "Patricia Garcia",
+      "department": "HR",
+      "expectedPay": 58000,
+      "actualPay": 58000,
+      "difference": 0,
+      "status": "Correct",
+      "month": "Jun 2026"
+    },
+    {
+      "employeeId": "EMP019",
+      "employeeName": "Nina Pascual",
+      "department": "Finance",
+      "expectedPay": 60000,
+      "actualPay": 58750,
+      "difference": -1250,
+      "status": "Underpaid",
+      "month": "Jun 2026"
+    },
+    {
+      "employeeId": "EMP022",
+      "employeeName": "Luis Gomez",
+      "department": "Operations",
+      "expectedPay": 40000,
+      "actualPay": 40000,
+      "difference": 0,
+      "status": "Correct",
+      "month": "Jun 2026"
+    },
+    {
+      "employeeId": "EMP025",
+      "employeeName": "Chloe Torres",
+      "department": "Finance",
+      "expectedPay": 28000,
+      "actualPay": 27500,
+      "difference": -500,
+      "status": "Underpaid",
+      "month": "Jun 2026"
+    }
+  ],
+  "punctualityScore": [
+    {
+      "name": "Rachel Aquino",
+      "score": 98.5,
+      "department": "IT"
+    },
+    {
+      "name": "Patricia Garcia",
+      "score": 97.2,
+      "department": "HR"
+    },
+    {
+      "name": "Angela Santos",
+      "score": 96.8,
+      "department": "Marketing"
+    },
+    {
+      "name": "Ricardo Cruz",
+      "score": 96.5,
+      "department": "Engineering"
+    },
+    {
+      "name": "Jerome Villanueva",
+      "score": 95.9,
+      "department": "Legal"
+    },
+    {
+      "name": "Daniel Lim",
+      "score": 95.4,
+      "department": "Operations"
+    },
+    {
+      "name": "Isabelle Tan",
+      "score": 95.1,
+      "department": "Engineering"
+    },
+    {
+      "name": "Fernando Bautista",
+      "score": 94.7,
+      "department": "Finance"
+    },
+    {
+      "name": "Juan Dela Cruz",
+      "score": 94.3,
+      "department": "Engineering"
+    },
+    {
+      "name": "Nina Pascual",
+      "score": 93.8,
+      "department": "Finance"
+    },
+    {
+      "name": "Grace Ong",
+      "score": 93.5,
+      "department": "Operations"
+    },
+    {
+      "name": "Marcus Santiago",
+      "score": 93,
+      "department": "IT"
+    },
+    {
+      "name": "Chloe Torres",
+      "score": 92.6,
+      "department": "Finance"
+    },
+    {
+      "name": "Benedict Castro",
+      "score": 92.2,
+      "department": "IT"
+    },
+    {
+      "name": "Luis Gomez",
+      "score": 91.8,
+      "department": "Operations"
+    },
+    {
+      "name": "Carlo Mendoza",
+      "score": 90.5,
+      "department": "Sales"
+    },
+    {
+      "name": "Kevin Diaz",
+      "score": 90.1,
+      "department": "Engineering"
+    },
+    {
+      "name": "Hannah Lopez",
+      "score": 89.7,
+      "department": "Marketing"
+    },
+    {
+      "name": "Miguel Reyes",
+      "score": 88.3,
+      "department": "Finance"
+    },
+    {
+      "name": "Samantha Rivera",
+      "score": 87.9,
+      "department": "Legal"
+    },
+    {
+      "name": "Mia Gonzales",
+      "score": 87.2,
+      "department": "Marketing"
+    },
+    {
+      "name": "Rafael Mercado",
+      "score": 72.5,
+      "department": "Sales"
+    }
+  ],
+  "_default": {
+    "attendanceTrend": [
+      {
+        "month": "Aug 2025",
+        "present": 465,
+        "absent": 18,
+        "late": 22,
+        "rate": 93
+      },
+      {
+        "month": "Sep 2025",
+        "present": 470,
+        "absent": 15,
+        "late": 19,
+        "rate": 94
+      },
+      {
+        "month": "Oct 2025",
+        "present": 468,
+        "absent": 20,
+        "late": 25,
+        "rate": 92.6
+      },
+      {
+        "month": "Nov 2025",
+        "present": 472,
+        "absent": 14,
+        "late": 18,
+        "rate": 94.4
+      },
+      {
+        "month": "Dec 2025",
+        "present": 420,
+        "absent": 45,
+        "late": 12,
+        "rate": 84
+      },
+      {
+        "month": "Jan 2026",
+        "present": 460,
+        "absent": 22,
+        "late": 20,
+        "rate": 92
+      },
+      {
+        "month": "Feb 2026",
+        "present": 475,
+        "absent": 12,
+        "late": 16,
+        "rate": 95
+      },
+      {
+        "month": "Mar 2026",
+        "present": 468,
+        "absent": 18,
+        "late": 21,
+        "rate": 93.6
+      },
+      {
+        "month": "Apr 2026",
+        "present": 471,
+        "absent": 16,
+        "late": 17,
+        "rate": 94.2
+      },
+      {
+        "month": "May 2026",
+        "present": 473,
+        "absent": 14,
+        "late": 15,
+        "rate": 94.6
+      },
+      {
+        "month": "Jun 2026",
+        "present": 469,
+        "absent": 19,
+        "late": 20,
+        "rate": 93.8
+      },
+      {
+        "month": "Jul 2026",
+        "present": 458,
+        "absent": 24,
+        "late": 18,
+        "rate": 91.6
+      }
+    ],
+    "departmentProductivity": [
+      {
+        "name": "Engineering",
+        "productivity": 92,
+        "attendance": 95.2,
+        "efficiency": 88
+      },
+      {
+        "name": "Marketing",
+        "productivity": 88,
+        "attendance": 93.5,
+        "efficiency": 85
+      },
+      {
+        "name": "HR",
+        "productivity": 95,
+        "attendance": 97.1,
+        "efficiency": 93
+      },
+      {
+        "name": "Finance",
+        "productivity": 90,
+        "attendance": 94.8,
+        "efficiency": 89
+      },
+      {
+        "name": "Sales",
+        "productivity": 86,
+        "attendance": 91.3,
+        "efficiency": 82
+      },
+      {
+        "name": "Operations",
+        "productivity": 89,
+        "attendance": 93,
+        "efficiency": 86
+      },
+      {
+        "name": "IT",
+        "productivity": 91,
+        "attendance": 96.5,
+        "efficiency": 90
+      },
+      {
+        "name": "Legal",
+        "productivity": 93,
+        "attendance": 95,
+        "efficiency": 91
+      }
+    ],
+    "leaveTrend": [
+      {
+        "month": "Feb 2026",
+        "vacation": 5,
+        "sick": 8,
+        "emergency": 3,
+        "total": 16
+      },
+      {
+        "month": "Mar 2026",
+        "vacation": 7,
+        "sick": 6,
+        "emergency": 2,
+        "total": 15
+      },
+      {
+        "month": "Apr 2026",
+        "vacation": 9,
+        "sick": 5,
+        "emergency": 4,
+        "total": 18
+      },
+      {
+        "month": "May 2026",
+        "vacation": 12,
+        "sick": 7,
+        "emergency": 2,
+        "total": 21
+      },
+      {
+        "month": "Jun 2026",
+        "vacation": 10,
+        "sick": 9,
+        "emergency": 5,
+        "total": 24
+      },
+      {
+        "month": "Jul 2026",
+        "vacation": 14,
+        "sick": 11,
+        "emergency": 4,
+        "total": 29
+      }
+    ],
+    "overtimeSummary": [
+      {
+        "department": "Engineering",
+        "avgOvertime": 4.2,
+        "totalOvertime": 16.8,
+        "maxOvertime": 8.5
+      },
+      {
+        "department": "Marketing",
+        "avgOvertime": 2.1,
+        "totalOvertime": 6.3,
+        "maxOvertime": 4
+      },
+      {
+        "department": "HR",
+        "avgOvertime": 0.5,
+        "totalOvertime": 1.5,
+        "maxOvertime": 1
+      },
+      {
+        "department": "Finance",
+        "avgOvertime": 3.8,
+        "totalOvertime": 15.2,
+        "maxOvertime": 7
+      },
+      {
+        "department": "Sales",
+        "avgOvertime": 5,
+        "totalOvertime": 15,
+        "maxOvertime": 9
+      },
+      {
+        "department": "Operations",
+        "avgOvertime": 1.5,
+        "totalOvertime": 4.5,
+        "maxOvertime": 3
+      },
+      {
+        "department": "IT",
+        "avgOvertime": 6,
+        "totalOvertime": 18,
+        "maxOvertime": 10.5
+      },
+      {
+        "department": "Legal",
+        "avgOvertime": 1,
+        "totalOvertime": 2,
+        "maxOvertime": 2
+      }
+    ],
+    "punctualityScore": [
+      {
+        "name": "Rachel Aquino",
+        "score": 98.5,
+        "department": "IT"
+      },
+      {
+        "name": "Patricia Garcia",
+        "score": 97.2,
+        "department": "HR"
+      },
+      {
+        "name": "Angela Santos",
+        "score": 96.8,
+        "department": "Marketing"
+      },
+      {
+        "name": "Ricardo Cruz",
+        "score": 96.5,
+        "department": "Engineering"
+      },
+      {
+        "name": "Jerome Villanueva",
+        "score": 95.9,
+        "department": "Legal"
+      },
+      {
+        "name": "Daniel Lim",
+        "score": 95.4,
+        "department": "Operations"
+      },
+      {
+        "name": "Isabelle Tan",
+        "score": 95.1,
+        "department": "Engineering"
+      },
+      {
+        "name": "Fernando Bautista",
+        "score": 94.7,
+        "department": "Finance"
+      },
+      {
+        "name": "Juan Dela Cruz",
+        "score": 94.3,
+        "department": "Engineering"
+      },
+      {
+        "name": "Nina Pascual",
+        "score": 93.8,
+        "department": "Finance"
+      },
+      {
+        "name": "Grace Ong",
+        "score": 93.5,
+        "department": "Operations"
+      },
+      {
+        "name": "Marcus Santiago",
+        "score": 93,
+        "department": "IT"
+      },
+      {
+        "name": "Chloe Torres",
+        "score": 92.6,
+        "department": "Finance"
+      },
+      {
+        "name": "Benedict Castro",
+        "score": 92.2,
+        "department": "IT"
+      },
+      {
+        "name": "Luis Gomez",
+        "score": 91.8,
+        "department": "Operations"
+      },
+      {
+        "name": "Carlo Mendoza",
+        "score": 90.5,
+        "department": "Sales"
+      },
+      {
+        "name": "Kevin Diaz",
+        "score": 90.1,
+        "department": "Engineering"
+      },
+      {
+        "name": "Hannah Lopez",
+        "score": 89.7,
+        "department": "Marketing"
+      },
+      {
+        "name": "Miguel Reyes",
+        "score": 88.3,
+        "department": "Finance"
+      },
+      {
+        "name": "Samantha Rivera",
+        "score": 87.9,
+        "department": "Legal"
+      },
+      {
+        "name": "Mia Gonzales",
+        "score": 87.2,
+        "department": "Marketing"
+      },
+      {
+        "name": "Rafael Mercado",
+        "score": 72.5,
+        "department": "Sales"
+      }
+    ],
+    "payrollDiscrepancy": [
+      {
+        "employeeId": "EMP001",
+        "employeeName": "Juan Dela Cruz",
+        "department": "Engineering",
+        "expectedPay": 85000,
+        "actualPay": 85250,
+        "difference": 250,
+        "status": "Overpaid",
+        "month": "Jun 2026"
+      },
+      {
+        "employeeId": "EMP002",
+        "employeeName": "Angela Santos",
+        "department": "Marketing",
+        "expectedPay": 72000,
+        "actualPay": 72000,
+        "difference": 0,
+        "status": "Correct",
+        "month": "Jun 2026"
+      },
+      {
+        "employeeId": "EMP003",
+        "employeeName": "Miguel Reyes",
+        "department": "Finance",
+        "expectedPay": 65000,
+        "actualPay": 63750,
+        "difference": -1250,
+        "status": "Underpaid",
+        "month": "Jun 2026"
+      },
+      {
+        "employeeId": "EMP005",
+        "employeeName": "Carlo Mendoza",
+        "department": "Sales",
+        "expectedPay": 50000,
+        "actualPay": 50000,
+        "difference": 0,
+        "status": "Correct",
+        "month": "Jun 2026"
+      },
+      {
+        "employeeId": "EMP007",
+        "employeeName": "Daniel Lim",
+        "department": "Operations",
+        "expectedPay": 48000,
+        "actualPay": 44000,
+        "difference": -4000,
+        "status": "Underpaid",
+        "month": "Jun 2026"
+      },
+      {
+        "employeeId": "EMP008",
+        "employeeName": "Rachel Aquino",
+        "department": "IT",
+        "expectedPay": 70000,
+        "actualPay": 72100,
+        "difference": 2100,
+        "status": "Overpaid",
+        "month": "Jun 2026"
+      },
+      {
+        "employeeId": "EMP010",
+        "employeeName": "Ricardo Cruz",
+        "department": "Engineering",
+        "expectedPay": 120000,
+        "actualPay": 123500,
+        "difference": 3500,
+        "status": "Overpaid",
+        "month": "Jun 2026"
+      },
+      {
+        "employeeId": "EMP017",
+        "employeeName": "Mia Gonzales",
+        "department": "Marketing",
+        "expectedPay": 30000,
+        "actualPay": 28750,
+        "difference": -1250,
+        "status": "Underpaid",
+        "month": "Jun 2026"
+      },
+      {
+        "employeeId": "EMP018",
+        "employeeName": "Kevin Diaz",
+        "department": "Engineering",
+        "expectedPay": 55000,
+        "actualPay": 55000,
+        "difference": 0,
+        "status": "Correct",
+        "month": "Jun 2026"
+      },
+      {
+        "employeeId": "EMP020",
+        "employeeName": "Rafael Mercado",
+        "department": "Sales",
+        "expectedPay": 45000,
+        "actualPay": 32500,
+        "difference": -12500,
+        "status": "Underpaid",
+        "month": "Jun 2026"
+      },
+      {
+        "employeeId": "EMP024",
+        "employeeName": "Marcus Santiago",
+        "department": "IT",
+        "expectedPay": 55000,
+        "actualPay": 56200,
+        "difference": 1200,
+        "status": "Overpaid",
+        "month": "Jun 2026"
+      },
+      {
+        "employeeId": "EMP004",
+        "employeeName": "Patricia Garcia",
+        "department": "HR",
+        "expectedPay": 58000,
+        "actualPay": 58000,
+        "difference": 0,
+        "status": "Correct",
+        "month": "Jun 2026"
+      },
+      {
+        "employeeId": "EMP019",
+        "employeeName": "Nina Pascual",
+        "department": "Finance",
+        "expectedPay": 60000,
+        "actualPay": 58750,
+        "difference": -1250,
+        "status": "Underpaid",
+        "month": "Jun 2026"
+      },
+      {
+        "employeeId": "EMP022",
+        "employeeName": "Luis Gomez",
+        "department": "Operations",
+        "expectedPay": 40000,
+        "actualPay": 40000,
+        "difference": 0,
+        "status": "Correct",
+        "month": "Jun 2026"
+      },
+      {
+        "employeeId": "EMP025",
+        "employeeName": "Chloe Torres",
+        "department": "Finance",
+        "expectedPay": 28000,
+        "actualPay": 27500,
+        "difference": -500,
+        "status": "Underpaid",
+        "month": "Jun 2026"
+      }
+    ]
+  }
+}
