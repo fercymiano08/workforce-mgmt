@@ -258,7 +258,7 @@ export default function MySchedule() {
                     <button
                       key={period}
                       onClick={() => setPeriodFilter(period)}
-                      className={`px-3 py-1.5 text-xs font-medium rounded-lg transition-colors ${
+                      className={`px-3 py-1.5 pointer-coarse:py-2.5 text-xs font-medium rounded-lg transition-colors ${
                         periodFilter === period
                           ? 'bg-blue-50 text-blue-700'
                           : 'text-gray-500 hover:bg-gray-50 hover:text-gray-700'

@@ -486,7 +486,7 @@ export default function EmployeeRegistration() {
                     type="button"
                     tabIndex={-1}
                     onClick={() => setShowPassword((s) => !s)}
-                    className="p-1 text-gray-400 hover:text-gray-600 transition-colors"
+                    className="p-1 pointer-coarse:p-2 text-gray-400 hover:text-gray-600 transition-colors"
                     aria-label={showPassword ? 'Hide password' : 'Show password'}
                   >
                     {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
@@ -506,7 +506,7 @@ export default function EmployeeRegistration() {
                     type="button"
                     tabIndex={-1}
                     onClick={() => setShowConfirmPassword((s) => !s)}
-                    className="p-1 text-gray-400 hover:text-gray-600 transition-colors"
+                    className="p-1 pointer-coarse:p-2 text-gray-400 hover:text-gray-600 transition-colors"
                     aria-label={showConfirmPassword ? 'Hide password' : 'Show password'}
                   >
                     {showConfirmPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}

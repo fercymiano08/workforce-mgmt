@@ -495,9 +495,9 @@ export default function Employees() {
                     <td className="px-4 py-3.5"><Badge variant={statusVariant[emp.status]} dot size="xs">{emp.status}</Badge></td>
                     <td className="px-4 py-3.5">
                       <div className="flex items-center gap-1">
-                        <button onClick={() => openView(emp)} className="p-1.5 rounded-lg hover:bg-gray-100 text-gray-400 hover:text-blue-600 transition-colors"><Eye className="w-4 h-4" /></button>
-                        <button onClick={() => openEdit(emp)} className="p-1.5 rounded-lg hover:bg-gray-100 text-gray-400 hover:text-amber-600 transition-colors"><Edit className="w-4 h-4" /></button>
-                        <button onClick={() => openDelete(emp)} className="p-1.5 rounded-lg hover:bg-gray-100 text-gray-400 hover:text-red-600 transition-colors"><Trash2 className="w-4 h-4" /></button>
+                        <button onClick={() => openView(emp)} className="p-1.5 pointer-coarse:p-2.5 rounded-lg hover:bg-gray-100 text-gray-400 hover:text-blue-600 transition-colors"><Eye className="w-4 h-4" /></button>
+                        <button onClick={() => openEdit(emp)} className="p-1.5 pointer-coarse:p-2.5 rounded-lg hover:bg-gray-100 text-gray-400 hover:text-amber-600 transition-colors"><Edit className="w-4 h-4" /></button>
+                        <button onClick={() => openDelete(emp)} className="p-1.5 pointer-coarse:p-2.5 rounded-lg hover:bg-gray-100 text-gray-400 hover:text-red-600 transition-colors"><Trash2 className="w-4 h-4" /></button>
                       </div>
                     </td>
                   </tr>

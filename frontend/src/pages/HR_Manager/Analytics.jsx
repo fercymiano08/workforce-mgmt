@@ -101,7 +101,7 @@ export default function Analytics() {
         <div className="flex flex-wrap items-center gap-3">
           <div className="flex bg-gray-100 rounded-xl p-1">
             {['month', 'quarter', 'year'].map(r => (
-              <button key={r} onClick={() => setRange(r)} className={`px-3 sm:px-4 py-1.5 text-sm font-medium rounded-lg transition-all ${range === r ? 'bg-white text-gray-900 shadow-sm' : 'text-gray-500 hover:text-gray-700'}`}>
+              <button key={r} onClick={() => setRange(r)} className={`px-3 sm:px-4 py-1.5 pointer-coarse:py-2.5 text-sm font-medium rounded-lg transition-all ${range === r ? 'bg-white text-gray-900 shadow-sm' : 'text-gray-500 hover:text-gray-700'}`}>
                 {r === 'month' ? 'This Month' : r === 'quarter' ? 'This Quarter' : 'This Year'}
               </button>
             ))}

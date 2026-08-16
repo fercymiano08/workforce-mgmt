@@ -26,7 +26,7 @@ export default function Breadcrumbs() {
 
   return (
     <nav className="flex items-center gap-1.5 text-sm py-4" aria-label="Breadcrumb">
-      <Link to="/" className="text-gray-400 hover:text-gray-600 transition-colors">
+      <Link to="/" className="text-gray-400 hover:text-gray-600 transition-colors pointer-coarse:p-2 pointer-coarse:-m-2">
         <Home className="w-4 h-4" />
       </Link>
       {pathnames.map((name, index) => {

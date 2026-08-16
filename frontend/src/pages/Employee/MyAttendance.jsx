@@ -228,7 +228,7 @@ export default function MyAttendance() {
           <button
             key={tab.key}
             onClick={() => setActiveTab(tab.key)}
-            className={`px-4 py-2 text-[13px] font-semibold rounded-lg transition-colors ${
+            className={`px-4 py-2 pointer-coarse:py-2.5 text-[13px] font-semibold rounded-lg transition-colors ${
               activeTab === tab.key
                 ? 'bg-white text-gray-900 shadow-sm'
                 : 'text-gray-500 hover:text-gray-700'
@@ -348,7 +348,7 @@ export default function MyAttendance() {
                 <button
                   key={period}
                   onClick={() => setPeriodFilter(period)}
-                  className={`px-3 py-1.5 text-xs font-medium rounded-lg transition-colors ${
+                  className={`px-3 py-1.5 pointer-coarse:py-2.5 text-xs font-medium rounded-lg transition-colors ${
                     periodFilter === period
                       ? 'bg-blue-50 text-blue-700'
                       : 'text-gray-500 hover:bg-gray-50 hover:text-gray-700'

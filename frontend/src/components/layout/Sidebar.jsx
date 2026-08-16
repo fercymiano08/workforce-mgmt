@@ -167,7 +167,7 @@ export default function Sidebar({ isOpen, onClose }) {
             <button
               onClick={handleSignOut}
               title="Sign out"
-              className="p-1.5 rounded-lg text-slate-500 hover:text-white hover:bg-white/[0.06] transition-colors"
+              className="p-1.5 pointer-coarse:p-2.5 rounded-lg text-slate-500 hover:text-white hover:bg-white/[0.06] transition-colors"
             >
               <LogOut className="w-4 h-4" />
             </button>

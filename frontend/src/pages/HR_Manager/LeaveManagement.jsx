@@ -264,7 +264,7 @@ export default function LeaveManagement() {
                     <td className="px-4 py-3.5">
                       <button
                         onClick={() => openDetail(leave)}
-                        className="p-1.5 rounded-lg hover:bg-gray-100 text-gray-400 hover:text-blue-600 transition-colors"
+                        className="p-1.5 pointer-coarse:p-2.5 rounded-lg hover:bg-gray-100 text-gray-400 hover:text-blue-600 transition-colors"
                       >
                         <Eye className="w-4 h-4" />
                       </button>

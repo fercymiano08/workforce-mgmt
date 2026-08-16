@@ -57,7 +57,7 @@ export default function NotificationDropdown({ isOpen, onClose }) {
             key={tab}
             onClick={() => setFilter(tab)}
             className={clsx(
-              'px-3 py-1.5 rounded-lg text-xs font-medium transition-all duration-200 capitalize',
+              'px-3 py-1.5 pointer-coarse:py-2.5 rounded-lg text-xs font-medium transition-all duration-200 capitalize',
               filter === tab
                 ? 'bg-blue-50 text-blue-700'
                 : 'text-gray-500 hover:text-gray-700 hover:bg-gray-50'

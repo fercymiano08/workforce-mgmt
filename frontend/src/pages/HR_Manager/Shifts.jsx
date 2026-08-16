@@ -441,10 +441,10 @@ export default function Shifts() {
                     </td>
                     <td className="px-6 py-3.5">
                       <div className="flex items-center gap-1.5">
-                        <button onClick={() => openEdit(schedule)} className="p-1.5 rounded-lg hover:bg-gray-100 text-gray-400 hover:text-amber-600 transition-colors" title="Edit assignment">
+                        <button onClick={() => openEdit(schedule)} className="p-1.5 pointer-coarse:p-2.5 rounded-lg hover:bg-gray-100 text-gray-400 hover:text-amber-600 transition-colors" title="Edit assignment">
                           <Edit className="w-4 h-4" />
                         </button>
-                        <button onClick={() => openDeleteSchedule(schedule)} className="p-1.5 rounded-lg hover:bg-red-50 text-gray-400 hover:text-red-600 transition-colors" title="Delete assignment">
+                        <button onClick={() => openDeleteSchedule(schedule)} className="p-1.5 pointer-coarse:p-2.5 rounded-lg hover:bg-red-50 text-gray-400 hover:text-red-600 transition-colors" title="Delete assignment">
                           <Trash2 className="w-4 h-4" />
                         </button>
                       </div>

@@ -463,7 +463,7 @@ export default function AIDecisionSupport() {
                 key={f.key}
                 type="button"
                 onClick={() => setFilter(f.key)}
-                className={`px-3 py-1.5 rounded-full text-[12px] font-semibold border transition-colors ${
+                className={`px-3 py-1.5 pointer-coarse:py-2.5 rounded-full text-[12px] font-semibold border transition-colors ${
                   filter === f.key
                     ? 'bg-gray-900 text-white border-gray-900'
                     : 'bg-white text-gray-600 border-gray-200 hover:border-gray-300'

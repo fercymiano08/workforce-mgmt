@@ -218,7 +218,7 @@ function AdminTimesheetsView() {
                 <button
                   key={mode}
                   onClick={() => { setViewMode(mode); setCurrentPage(1); }}
-                  className={`px-3 py-2 text-xs font-medium transition-colors ${
+                  className={`px-3 py-2 pointer-coarse:py-2.5 text-xs font-medium transition-colors ${
                     viewMode === mode ? 'bg-blue-50 text-blue-600' : 'text-gray-500 hover:bg-gray-50'
                   }`}
                 >
@@ -310,7 +310,7 @@ function AdminTimesheetsView() {
                     <td className="px-4 py-3.5">
                       <button
                         onClick={() => openDetail(ts)}
-                        className="p-1.5 rounded-lg hover:bg-gray-100 text-gray-400 hover:text-blue-600 transition-colors"
+                        className="p-1.5 pointer-coarse:p-2.5 rounded-lg hover:bg-gray-100 text-gray-400 hover:text-blue-600 transition-colors"
                       >
                         <Eye className="w-4 h-4" />
                       </button>
@@ -632,7 +632,7 @@ function EmployeeTimesheetsView() {
                       <div className="flex items-center gap-2">
                         <button
                           onClick={() => openDetail(ts)}
-                          className="p-1.5 rounded-lg hover:bg-gray-100 text-gray-400 hover:text-blue-600 transition-colors"
+                          className="p-1.5 pointer-coarse:p-2.5 rounded-lg hover:bg-gray-100 text-gray-400 hover:text-blue-600 transition-colors"
                         >
                           <Eye className="w-4 h-4" />
                         </button>

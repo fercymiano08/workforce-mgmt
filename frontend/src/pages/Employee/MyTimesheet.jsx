@@ -272,7 +272,7 @@ export default function MyTimesheet() {
               <button
                 key={item}
                 onClick={() => setPeriod(item)}
-                className={`px-3 py-1.5 text-xs font-medium rounded-lg ${
+                className={`px-3 py-1.5 pointer-coarse:py-2.5 text-xs font-medium rounded-lg ${
                   period === item ? 'bg-blue-50 text-blue-700' : 'text-gray-500 hover:bg-gray-50'
                 }`}
               >
