@@ -56,14 +56,15 @@ export function Pagination({ currentPage, totalPages, onPageChange }) {
   if (totalPages <= 1) return null;
 
   return (
-    <div className="flex items-center justify-between px-2 py-4">
-      <p className="text-sm text-gray-500">
+    <div className="flex flex-wrap items-center justify-between gap-2 px-2 py-4">
+      <p className="text-sm text-gray-500 hidden sm:block">
         Page <span className="font-medium text-gray-700">{currentPage}</span> of <span className="font-medium text-gray-700">{totalPages}</span>
       </p>
       <div className="flex items-center gap-1">
         <button
           onClick={() => onPageChange(1)}
           disabled={currentPage === 1}
+          aria-label="First page"
           className="p-2 rounded-lg hover:bg-gray-100 disabled:opacity-30 text-gray-500 transition-colors"
         >
           <ChevronsLeft className="w-4 h-4" />
@@ -71,6 +72,7 @@ export function Pagination({ currentPage, totalPages, onPageChange }) {
         <button
           onClick={() => onPageChange(currentPage - 1)}
           disabled={currentPage === 1}
+          aria-label="Previous page"
           className="p-2 rounded-lg hover:bg-gray-100 disabled:opacity-30 text-gray-500 transition-colors"
         >
           <ChevronLeft className="w-4 h-4" />
@@ -86,7 +88,7 @@ export function Pagination({ currentPage, totalPages, onPageChange }) {
               key={page}
               onClick={() => onPageChange(page)}
               className={clsx(
-                'w-9 h-9 rounded-lg text-sm font-medium transition-all duration-200',
+                'w-9 h-9 rounded-lg text-sm font-medium transition-all duration-200 hidden sm:flex pointer-coarse:hidden items-center justify-center',
                 currentPage === page
                   ? 'bg-blue-600 text-white shadow-sm shadow-blue-600/20'
                   : 'text-gray-600 hover:bg-gray-100'
@@ -99,6 +101,7 @@ export function Pagination({ currentPage, totalPages, onPageChange }) {
         <button
           onClick={() => onPageChange(currentPage + 1)}
           disabled={currentPage === totalPages}
+          aria-label="Next page"
           className="p-2 rounded-lg hover:bg-gray-100 disabled:opacity-30 text-gray-500 transition-colors"
         >
           <ChevronRight className="w-4 h-4" />
@@ -106,6 +109,7 @@ export function Pagination({ currentPage, totalPages, onPageChange }) {
         <button
           onClick={() => onPageChange(totalPages)}
           disabled={currentPage === totalPages}
+          aria-label="Last page"
           className="p-2 rounded-lg hover:bg-gray-100 disabled:opacity-30 text-gray-500 transition-colors"
         >
           <ChevronsRight className="w-4 h-4" />

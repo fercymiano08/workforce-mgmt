@@ -28,7 +28,7 @@ export default function NotificationDropdown({ isOpen, onClose }) {
   const displayNotifications = filtered.slice(0, 8);
 
   return (
-    <div className="absolute right-0 top-full mt-2 w-[420px] bg-white rounded-2xl shadow-2xl border border-gray-100 z-50 animate-scaleIn overflow-hidden">
+    <div className="absolute right-0 top-full mt-2 w-[min(420px,calc(100vw-1.5rem))] bg-white rounded-2xl shadow-2xl border border-gray-100 z-50 animate-scaleIn overflow-hidden">
       {/* Header */}
       <div className="px-5 py-4 border-b border-gray-100 flex items-center justify-between">
         <div className="flex items-center gap-3">

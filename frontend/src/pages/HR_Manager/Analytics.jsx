@@ -98,10 +98,10 @@ export default function Analytics() {
           <h1 className="text-2xl font-bold text-gray-900">Workforce Analytics</h1>
           <p className="text-[14px] text-gray-500 mt-1">Comprehensive insights into your workforce performance</p>
         </div>
-        <div className="flex items-center gap-3">
+        <div className="flex flex-wrap items-center gap-3">
           <div className="flex bg-gray-100 rounded-xl p-1">
             {['month', 'quarter', 'year'].map(r => (
-              <button key={r} onClick={() => setRange(r)} className={`px-4 py-1.5 text-sm font-medium rounded-lg transition-all ${range === r ? 'bg-white text-gray-900 shadow-sm' : 'text-gray-500 hover:text-gray-700'}`}>
+              <button key={r} onClick={() => setRange(r)} className={`px-3 sm:px-4 py-1.5 text-sm font-medium rounded-lg transition-all ${range === r ? 'bg-white text-gray-900 shadow-sm' : 'text-gray-500 hover:text-gray-700'}`}>
                 {r === 'month' ? 'This Month' : r === 'quarter' ? 'This Quarter' : 'This Year'}
               </button>
             ))}

@@ -403,7 +403,7 @@ export default function AIDecisionSupport() {
             </div>
           </Card>
 
-          <div className="flex items-center justify-between">
+          <div className="flex flex-wrap items-center justify-between gap-2">
             <div className="flex items-center gap-2">
               <Inbox className="w-4.5 h-4.5 text-gray-400" />
               <h2 className="text-[15px] font-semibold text-gray-900">Decision Queue</h2>

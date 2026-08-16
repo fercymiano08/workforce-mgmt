@@ -195,8 +195,9 @@ export default function MyTimesheet() {
           </div>
         </div>
 
-        <div className="p-6 grid grid-cols-7 gap-2 sm:gap-3">
-          {thisWeek.days.map((day) => {
+        <div className="p-6 overflow-x-auto">
+          <div className="grid grid-cols-7 gap-2 min-w-[400px] sm:min-w-0 sm:gap-3">
+            {thisWeek.days.map((day) => {
             const rec = thisWeek.byDate[day.key];
             const worked = !!rec && (rec.clockIn || WORKED_STATUSES.includes(rec.status));
 
@@ -255,6 +256,7 @@ export default function MyTimesheet() {
               </div>
             );
           })}
+          </div>
         </div>
       </div>
 

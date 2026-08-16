@@ -246,14 +246,14 @@ export default function Attendance() {
         <div className="p-4 border-b border-gray-100">
           <div className="flex items-center justify-between flex-wrap gap-3">
             <h3 className="font-semibold text-gray-900">Attendance History</h3>
-            <div className="flex items-center gap-3">
-              <SearchBar value={search} onChange={(v) => { setSearch(v); setCurrentPage(1); }} placeholder="Search employee..." className="w-64" />
-              <Select value={periodFilter} onChange={e => { setPeriodFilter(e.target.value); setCurrentPage(1); }} containerClass="w-36">
+            <div className="flex flex-wrap items-center gap-3">
+              <SearchBar value={search} onChange={(v) => { setSearch(v); setCurrentPage(1); }} placeholder="Search employee..." className="w-full sm:w-64" />
+              <Select value={periodFilter} onChange={e => { setPeriodFilter(e.target.value); setCurrentPage(1); }} containerClass="w-full sm:w-36">
                 <option value="All">All Time</option>
                 <option value="Today">Today</option>
                 <option value="This Week">This Week</option>
               </Select>
-              <Select value={statusFilter} onChange={e => { setStatusFilter(e.target.value); setCurrentPage(1); }} containerClass="w-36">
+              <Select value={statusFilter} onChange={e => { setStatusFilter(e.target.value); setCurrentPage(1); }} containerClass="w-full sm:w-36">
                 <option value="All">All Status</option>
                 <option value="Present">Present</option>
                 <option value="Late">Late</option>
@@ -363,9 +363,9 @@ export default function Attendance() {
         <div className="p-4 border-b border-gray-100">
           <div className="flex items-center justify-between flex-wrap gap-3">
             <h3 className="font-semibold text-gray-900">Overtime Requests</h3>
-            <div className="flex items-center gap-3">
-              <SearchBar value={overtimeSearch} onChange={(v) => { setOvertimeSearch(v); setOvertimePage(1); }} placeholder="Search employee..." className="w-64" />
-              <Select value={overtimeStatusFilter} onChange={e => { setOvertimeStatusFilter(e.target.value); setOvertimePage(1); }} containerClass="w-36">
+            <div className="flex flex-wrap items-center gap-3">
+              <SearchBar value={overtimeSearch} onChange={(v) => { setOvertimeSearch(v); setOvertimePage(1); }} placeholder="Search employee..." className="w-full sm:w-64" />
+              <Select value={overtimeStatusFilter} onChange={e => { setOvertimeStatusFilter(e.target.value); setOvertimePage(1); }} containerClass="w-full sm:w-36">
                 <option value="All">All Status</option>
                 <option value="Pending">Pending</option>
                 <option value="Approved">Approved</option>
