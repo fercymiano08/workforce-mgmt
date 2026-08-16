@@ -19,7 +19,7 @@ const remove = (key) => {
 };
 
 const http = axios.create({
-  baseURL: import.meta.env.VITE_API_URL || '/api',
+  baseURL: '/api',
   headers: { 'Content-Type': 'application/json' },
 });
 
