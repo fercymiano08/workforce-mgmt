@@ -7,8 +7,12 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 
 COPY --from=composer:2 /usr/bin/composer /usr/bin/composer
 
+COPY . /app_src
+
 WORKDIR /app
-COPY backend/ .
+RUN if [ -f /app_src/composer.json ]; then cp -a /app_src/. /app/; \
+    elif [ -f /app_src/backend/composer.json ]; then cp -a /app_src/backend/. /app/; \
+    else echo "ERROR: composer.json not found in build context" && exit 1; fi
 
 RUN composer install --no-dev --optimize-autoloader --no-interaction --prefer-dist
 
