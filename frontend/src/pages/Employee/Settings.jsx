@@ -22,11 +22,27 @@ const NAV_ITEMS = [
 function MyProfileSection() {
   const { toast } = useToast();
   const fileInputRef = useRef(null);
-  const { data: employee, refresh } = useApiData(() => profileService.get(), []);
+  const { data: employee, loading, refresh } = useApiData(() => profileService.get(), []);
   const [form, setForm] = useState(null);
   const [saving, setSaving] = useState(false);
 
   const active = form || employee;
+
+  if (loading && !employee) {
+    return (
+      <div className="space-y-6">
+        {[1, 2, 3].map((i) => (
+          <Card key={i}>
+            <div className="space-y-4">
+              <div className="skeleton h-5 w-40 rounded-lg" />
+              <div className="skeleton h-4 w-64 rounded-lg" />
+              <div className="skeleton h-20 w-full rounded-xl" />
+            </div>
+          </Card>
+        ))}
+      </div>
+    );
+  }
 
   const startEditing = () => {
     if (!employee) return;
@@ -81,7 +97,7 @@ function MyProfileSection() {
     }
   };
 
-  const fullName = `${employee.firstName} ${employee.lastName}`.trim();
+  const fullName = `${employee?.firstName || ''} ${employee?.lastName || ''}`.trim();
 
   return (
     <div className="space-y-6">
@@ -94,7 +110,7 @@ function MyProfileSection() {
         </CardHeader>
 
         <div className="flex items-center gap-6">
-          <Avatar src={active?.avatar} firstName={employee.firstName} lastName={employee.lastName} size="2xl" />
+          <Avatar src={active?.avatar} firstName={employee?.firstName} lastName={employee?.lastName} size="2xl" />
           <div className="flex flex-col gap-2">
             <Button variant="outline" size="sm" icon={Camera} onClick={() => { if (!form) startEditing(); fileInputRef.current?.click(); }}>
               Change Photo
@@ -121,11 +137,11 @@ function MyProfileSection() {
         <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
           {[
             ['Full Name', fullName],
-            ['Employee ID', employee.id],
-            ['Department', employee.department],
-            ['Position', employee.position],
-            ['Employment Type', employee.employmentType],
-            ['Email', employee.email],
+            ['Employee ID', employee?.id],
+            ['Department', employee?.department],
+            ['Position', employee?.position],
+            ['Employment Type', employee?.employmentType],
+            ['Email', employee?.email],
           ].map(([label, value]) => (
             <div key={label} className="flex flex-col gap-1.5">
               <label className="text-sm font-medium text-gray-700">{label}</label>

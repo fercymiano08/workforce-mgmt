@@ -178,7 +178,46 @@
 .dark .hover\:bg-gray-100:hover { background-color: #273449 !important; }
 
 @media print {
-  aside, header, nav, .sidebar, .topbar, .breadcrumb { display: none !important; }
+  /* Kill everything except the report */
+  aside, header, nav, .sidebar, .topbar, .breadcrumb, .no-print,
+  .report-preview-container { display: none !important; }
+
+  body { background: white !important; margin: 0 !important; padding: 0 !important; }
   main { margin: 0 !important; padding: 0 !important; }
-  body { background: white !important; }
+
+  /* Break out of the modal — target its portal structure */
+  body > div.fixed { position: static !important; inset: auto !important; padding: 0 !important; display: block !important; background: none !important; backdrop-filter: none !important; }
+  body > div.fixed > div:first-child { display: none !important; } /* backdrop */
+  body > div.fixed > div:last-child {
+    position: static !important; max-height: none !important; overflow: visible !important;
+    border-radius: 0 !important; box-shadow: none !important; border: none !important;
+    margin: 0 !important; padding: 0 !important; width: 100% !important; max-width: none !important;
+    transform: none !important;
+  }
+  body > div.fixed > div:last-child > div:first-child { display: none !important; } /* modal header */
+  body > div.fixed > div:last-child > div:last-child {
+    overflow: visible !important; max-height: none !important; padding: 0 !important;
+  }
+
+  /* The report fills the page */
+  .report-document {
+    position: static !important; width: 100% !important; max-width: none !important;
+    border: none !important; box-shadow: none !important; border-radius: 0 !important;
+    margin: 0 !important;
+  }
+
+  .report-header {
+    -webkit-print-color-adjust: exact; print-color-adjust: exact;
+    background: #0B1F3A !important;
+  }
+
+  .report-page-break { page-break-inside: avoid; }
+  .report-section-title { page-break-after: avoid; }
+  .report-footer { page-break-inside: avoid; }
+
+  table { page-break-inside: auto; width: 100% !important; }
+  tr { page-break-inside: avoid; }
+  td, th { padding: 6px 10px !important; font-size: 11px !important; }
+
+  @page { margin: 1cm; size: A4; }
 }
