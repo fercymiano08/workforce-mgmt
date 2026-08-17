@@ -9,7 +9,6 @@ import Badge from '../../components/ui/Badge';
 import Avatar from '../../components/ui/Avatar';
 import Modal from '../../components/ui/Modal';
 import Input, { Select, Textarea } from '../../components/ui/Input';
-import { SkeletonCard, SkeletonTable } from '../../components/ui/LoadingSkeleton';
 import { employeeService, shiftService } from '../../services/api';
 import { formatDate, formatTime } from '../../utils/helpers';
 import { useToast } from '../../context/ToastContext';
@@ -46,11 +45,9 @@ export default function Shifts() {
   const { toast } = useToast();
   const {
     data: shiftDefs,
-    loading: loadingDefs,
   } = useApiData(() => shiftService.getAllShifts(), []);
   const {
     data: shiftSchedules,
-    loading: loadingSchedules,
     refresh: refreshSchedules,
   } = useApiData(() => shiftService.getSchedules(), []);
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -313,22 +310,6 @@ export default function Shifts() {
   ];
   const colorMap = { blue: 'bg-blue-50 text-blue-600', emerald: 'bg-emerald-50 text-emerald-600', amber: 'bg-amber-50 text-amber-600', purple: 'bg-purple-50 text-purple-600' };
   const barMap = { blue: 'bg-blue-500', emerald: 'bg-emerald-500', amber: 'bg-amber-500', purple: 'bg-purple-500' };
-
-  const loading = loadingDefs || loadingSchedules;
-
-  if (loading) {
-    return (
-      <div className="space-y-6 animate-fadeIn">
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-          <SkeletonCard lines={1} />
-          <SkeletonCard lines={1} />
-          <SkeletonCard lines={1} />
-          <SkeletonCard lines={1} />
-        </div>
-        <SkeletonTable rows={8} cols={6} />
-      </div>
-    );
-  }
 
   return (
     <div className="space-y-6 animate-fadeIn">

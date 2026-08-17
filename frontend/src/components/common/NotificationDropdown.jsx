@@ -1,5 +1,4 @@
 import { useState } from 'react';
-import { Link } from 'react-router-dom';
 import { Bell, CheckCheck, X } from 'lucide-react';
 import clsx from 'clsx';
 import { useNotifications } from '../../context/NotificationContext';
@@ -13,7 +12,7 @@ import EmptyState from '../ui/EmptyState';
 // the panel's own "click outside" listener and the trigger button's onClick
 // toggle both fired on the same click, so closing via the bell button would
 // instantly reopen the dropdown.
-export default function NotificationDropdown({ isOpen, onClose }) {
+export default function NotificationDropdown({ isOpen }) {
   const { notifications, unreadCount, markAsRead, markAllAsRead, deleteNotification } = useNotifications();
   const [filter, setFilter] = useState('all');
 
@@ -131,18 +130,7 @@ export default function NotificationDropdown({ isOpen, onClose }) {
         )}
       </div>
 
-      {/* Footer */}
-      {displayNotifications.length > 0 && (
-        <div className="px-5 py-3 border-t border-gray-100 bg-gray-50/50">
-          <Link
-            to="/notifications"
-            onClick={onClose}
-            className="block w-full text-center text-xs font-medium text-blue-600 hover:text-blue-700 transition-colors py-1"
-          >
-            View all notifications
-          </Link>
-        </div>
-      )}
+
     </div>
   );
 }

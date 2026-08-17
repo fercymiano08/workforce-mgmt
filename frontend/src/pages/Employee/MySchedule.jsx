@@ -4,7 +4,6 @@ import {
   Clock, MapPin, Filter, CalendarOff, CalendarPlus,
 } from 'lucide-react';
 import Badge from '../../components/ui/Badge';
-import { SkeletonCard, SkeletonTable } from '../../components/ui/LoadingSkeleton';
 import { useAuth } from '../../context/AuthContext';
 import useApiData from '../../hooks/useApiData';
 import { attendanceService, overtimeService, shiftService } from '../../services/api';
@@ -31,15 +30,15 @@ export default function MySchedule() {
   const employeeId = user?.id || 'EMP001';
   const [periodFilter, setPeriodFilter] = useState('This Week');
 
-  const { data: schedules, loading: loadingSchedules } = useApiData(
+  const { data: schedules } = useApiData(
     () => shiftService.getScheduleByEmployeeId(employeeId),
     [employeeId]
   );
-  const { data: definitions, loading: loadingDefs } = useApiData(
+  const { data: definitions } = useApiData(
     () => shiftService.getAllShifts(),
     []
   );
-  const { data: attendanceRecords, loading: loadingAttendance } = useApiData(
+  const { data: attendanceRecords } = useApiData(
     () => attendanceService.getByEmployeeId(employeeId),
     [employeeId]
   );
@@ -173,18 +172,7 @@ export default function MySchedule() {
     );
   };
 
-  const loading = loadingSchedules || loadingDefs || loadingAttendance;
-
-  return loading ? (
-    <div className="max-w-7xl mx-auto space-y-6">
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-5">
-        <SkeletonCard lines={2} />
-        <SkeletonCard lines={2} />
-        <SkeletonCard lines={2} />
-      </div>
-      <SkeletonTable rows={6} cols={5} />
-    </div>
-  ) : (
+  return (
     <div className="max-w-7xl mx-auto space-y-6">
       {/* Header */}
       <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">

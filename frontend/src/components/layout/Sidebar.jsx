@@ -4,7 +4,7 @@ import {
   LayoutDashboard, Users, Clock, Calendar, FileText,
   CalendarDays, BarChart3, FileBarChart, Settings,
   LogOut, AlertTriangle, Fingerprint, CalendarClock, FileClock,
-  Brain, SlidersHorizontal, Bell
+  Brain, SlidersHorizontal
 } from 'lucide-react';
 import clsx from 'clsx';
 import Avatar from '../ui/Avatar';
@@ -49,7 +49,6 @@ const adminMenuGroups = [
     label: 'nav.group.system',
     items: [
       { path: '/kiosk-setup', key: 'nav.kioskSetup', icon: SlidersHorizontal },
-      { path: '/notifications', key: 'nav.notifications', icon: Bell },
       { path: '/settings', key: 'nav.settings', icon: Settings },
     ],
   },
@@ -61,7 +60,6 @@ const employeeMenuItems = [
   { path: '/my-schedule', key: 'nav.mySchedule', icon: CalendarClock },
   { path: '/leave', key: 'nav.leave', icon: Calendar },
   { path: '/my-timesheet', key: 'nav.timesheets', icon: FileClock },
-  { path: '/notifications', key: 'nav.notifications', icon: Bell },
   { path: '/settings', key: 'nav.settings', icon: Settings },
 ];
 

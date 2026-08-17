@@ -7,7 +7,7 @@ import Badge from '../../components/ui/Badge';
 import Button from '../../components/ui/Button';
 import Modal from '../../components/ui/Modal';
 import Input, { Textarea } from '../../components/ui/Input';
-import { SkeletonCard, SkeletonTable } from '../../components/ui/LoadingSkeleton';
+import { SkeletonTable } from '../../components/ui/LoadingSkeleton';
 import KpiCard from '../../components/dashboard/KpiCard';
 import LiveClock from '../../components/attendance/LiveClock';
 import ShiftTimer from '../../components/attendance/ShiftTimer';
@@ -41,7 +41,7 @@ export default function MyAttendance() {
   const { toast } = useToast();
   const employeeId = user?.id || 'EMP001';
 
-  const { data: records, loading } = useApiData(
+  const { data: records } = useApiData(
     () => attendanceService.getByEmployeeId(employeeId),
     [employeeId]
   );
@@ -183,17 +183,7 @@ export default function MyAttendance() {
     return filtered.reduce((sum, a) => sum + (a.totalHours || 0), 0);
   }, [filtered]);
 
-  return loading ? (
-    <div className="max-w-7xl mx-auto space-y-6">
-      <SkeletonCard lines={2} />
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-5">
-        <SkeletonCard lines={1} />
-        <SkeletonCard lines={1} />
-        <SkeletonCard lines={1} />
-      </div>
-      <SkeletonTable rows={6} cols={5} />
-    </div>
-  ) : (
+  return (
     <div className="max-w-7xl mx-auto space-y-6">
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">

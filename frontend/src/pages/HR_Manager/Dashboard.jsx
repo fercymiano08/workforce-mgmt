@@ -14,7 +14,6 @@ import Badge from '../../components/ui/Badge';
 import Button from '../../components/ui/Button';
 import KpiCard from '../../components/dashboard/KpiCard';
 import ChartCard from '../../components/dashboard/ChartCard';
-import { SkeletonCard, SkeletonTable } from '../../components/ui/LoadingSkeleton';
 import { useLanguage } from '../../context/LanguageContext';
 import { useAuth } from '../../context/AuthContext';
 import { useToast } from '../../context/ToastContext';
@@ -90,7 +89,7 @@ export default function Dashboard() {
   const { toast } = useToast();
   const { refresh: refreshNotifications } = useNotifications();
 
-  const [loading, setLoading] = useState(true);
+  const [, setLoading] = useState(true);
   const [employees, setEmployees] = useState([]);
   const [attendance, setAttendance] = useState([]);
   const [leaves, setLeaves] = useState([]);
@@ -256,21 +255,6 @@ export default function Dashboard() {
 
   const visibleLeaveRequests = pendingLeaveRequests.slice(0, 5);
   const visibleSchedule = todaySchedule.slice(0, 5);
-
-  if (loading) {
-    return (
-      <div className="max-w-7xl mx-auto space-y-7">
-        <div className="space-y-2">
-          <SkeletonCard lines={1} />
-          <SkeletonCard lines={1} />
-        </div>
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-6">
-          {[1, 2, 3, 4, 5].map((i) => <SkeletonCard key={i} lines={2} />)}
-        </div>
-        <SkeletonTable rows={6} cols={5} />
-      </div>
-    );
-  }
 
   return (
     <div className="max-w-7xl mx-auto space-y-7">

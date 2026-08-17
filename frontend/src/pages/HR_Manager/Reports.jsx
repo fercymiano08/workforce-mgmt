@@ -5,13 +5,13 @@ import Button from '../../components/ui/Button';
 import Badge from '../../components/ui/Badge';
 import { Select } from '../../components/ui/Input';
 import Modal from '../../components/ui/Modal';
-import { SkeletonCard } from '../../components/ui/LoadingSkeleton';
 import {
   employeeService,
   attendanceService,
   leaveService,
   timesheetService,
   shiftService,
+  overtimeService,
 } from '../../services/api';
 import useApiData from '../../hooks/useApiData';
 import { formatDate } from '../../utils/helpers';
@@ -19,18 +19,18 @@ import { downloadCSV, downloadFile, toHTMLTable } from '../../utils/export';
 import { useToast } from '../../context/ToastContext';
 
 const reportTypes = [
-  { name: 'Monthly Attendance Summary', type: 'attendance' },
-  { name: 'Department Attendance Breakdown', type: 'attendance' },
-  { name: 'Leave Utilization Report', type: 'leave' },
-  { name: 'Pending Leave Requests', type: 'leave' },
-  { name: 'Weekly Timesheet Summary', type: 'timesheet' },
-  { name: 'Overtime Analysis Report', type: 'timesheet' },
-  { name: 'Shift Coverage Report', type: 'shift' },
-  { name: 'Shift Swap History', type: 'shift' },
-  { name: 'Workforce Headcount Report', type: 'workforce_analytics' },
-  { name: 'Employee Turnover Analysis', type: 'workforce_analytics' },
-  { name: 'Absenteeism Trend Report', type: 'attendance' },
-  { name: 'Payroll Discrepancy Report', type: 'timesheet' },
+  { name: 'Monthly Attendance Summary', label: 'Attendance', type: 'attendance' },
+  { name: 'Department Attendance Breakdown', label: 'Attendance', type: 'attendance' },
+  { name: 'Leave Utilization Report', label: 'Leave', type: 'leave' },
+  { name: 'Pending Leave Requests', label: 'Leave', type: 'leave' },
+  { name: 'Weekly Timesheet Summary', label: 'Timesheet', type: 'timesheet' },
+  { name: 'Overtime Analysis Report', label: 'Timesheet', type: 'timesheet' },
+  { name: 'Shift Coverage Report', label: 'Shift', type: 'shift' },
+  { name: 'Shift Swap History', label: 'Shift', type: 'shift' },
+  { name: 'Workforce Headcount Report', label: 'Headcount', type: 'workforce_analytics' },
+  { name: 'Employee Turnover Analysis', label: 'Turnover', type: 'workforce_analytics' },
+  { name: 'Absenteeism Trend Report', label: 'Absenteeism', type: 'attendance' },
+  { name: 'Payroll Discrepancy Report', label: 'Payroll', type: 'timesheet' },
 ];
 
 const emptyPreview = { cols: [], rows: [], message: 'No records found for the selected period.' };
@@ -43,7 +43,7 @@ export default function Reports() {
   const [generateForm, setGenerateForm] = useState({ reportType: '', startDate: '', endDate: '', format: 'pdf' });
   const [generateErrors, setGenerateErrors] = useState({});
 
-  const { data: employeesData, loading } = useApiData(() => employeeService.getAll(), []);
+  const { data: employeesData } = useApiData(() => employeeService.getAll(), []);
 
   const nameOf = (id) => {
     const emp = employeesData?.find((e) => e.id === id);
@@ -58,46 +58,132 @@ export default function Reports() {
     return true;
   };
 
-  const generateRows = async (type) => {
-    switch (type) {
-      case 'attendance': {
+  const generateRows = async (reportName) => {
+    switch (reportName) {
+      case 'Monthly Attendance Summary': {
         const records = await attendanceService.getAll();
         const rows = records
           .filter((r) => inRange(r.date))
-          .map((r) => [nameOf(r.employeeId), formatDate(r.date) || r.date, r.status || '—']);
-        return { cols: ['Employee', 'Date', 'Status'], rows };
+          .map((r) => [nameOf(r.employeeId), formatDate(r.date) || r.date, r.clockIn || '—', r.clockOut || '—', r.status || '—', `${Number(r.regularHours || 0).toFixed(1)}h`, `${Number(r.overtime || 0).toFixed(1)}h`]);
+        return { cols: ['Employee', 'Date', 'Clock In', 'Clock Out', 'Status', 'Regular Hrs', 'OT Hrs'], rows };
       }
-      case 'leave': {
+      case 'Department Attendance Breakdown': {
+        const [records, employees] = await Promise.all([attendanceService.getAll(), employeeService.getAll()]);
+        const deptMap = {};
+        (employees || []).forEach((e) => { deptMap[e.id] = e.department || 'Unassigned'; });
+        const filtered = records.filter((r) => inRange(r.date));
+        const byDept = {};
+        filtered.forEach((r) => {
+          const dept = deptMap[r.employeeId] || 'Unassigned';
+          if (!byDept[dept]) byDept[dept] = { present: 0, late: 0, absent: 0, total: 0 };
+          byDept[dept].total++;
+          if (r.status === 'Present') byDept[dept].present++;
+          else if (r.status === 'Late') byDept[dept].late++;
+          else if (r.status === 'Absent') byDept[dept].absent++;
+        });
+        const rows = Object.entries(byDept).map(([dept, s]) => [dept, String(s.present), String(s.late), String(s.absent), s.total ? `${Math.round(((s.present + s.late) / s.total) * 100)}%` : '—']);
+        return { cols: ['Department', 'Present', 'Late', 'Absent', 'Attendance Rate'], rows };
+      }
+      case 'Leave Utilization Report': {
         const records = await leaveService.getAll();
         const rows = records
           .filter((r) => inRange(r.startDate))
-          .map((r) => [r.employeeName || nameOf(r.employeeId), r.type || '—', `${r.startDate || ''} to ${r.endDate || ''}`, r.status || '—']);
-        return { cols: ['Employee', 'Type', 'Dates', 'Status'], rows };
+          .map((r) => [r.employeeName || nameOf(r.employeeId), r.leaveType || r.type || '—', r.startDate || '—', r.endDate || '—', r.status || '—']);
+        return { cols: ['Employee', 'Leave Type', 'Start Date', 'End Date', 'Status'], rows };
       }
-      case 'timesheet': {
+      case 'Pending Leave Requests': {
+        const records = await leaveService.getAll();
+        const rows = records
+          .filter((r) => r.status === 'Pending' && inRange(r.startDate))
+          .map((r) => [r.employeeName || nameOf(r.employeeId), r.leaveType || r.type || '—', r.startDate || '—', r.endDate || '—', r.reason || '—']);
+        return { cols: ['Employee', 'Type', 'Start', 'End', 'Reason'], rows };
+      }
+      case 'Weekly Timesheet Summary': {
         const records = await timesheetService.getAll();
         const rows = records
-          .filter((r) => inRange(r.periodStart))
-          .map((r) => [r.employeeName || nameOf(r.employeeId), r.periodStart || '—', r.hours != null ? r.hours : '—', r.status || '—']);
-        return { cols: ['Employee', 'Period', 'Hours', 'Status'], rows };
+          .filter((r) => inRange(r.weekStart || r.periodStart))
+          .map((r) => [r.employeeName || nameOf(r.employeeId), `${formatDate(r.weekStart || r.periodStart)} – ${formatDate(r.weekEnd)}`, `${Number(r.regularHours || 0).toFixed(1)}h`, `${Number(r.overtimeHours || 0).toFixed(1)}h`, `${Number(r.breakHours || 0).toFixed(1)}h`, `${Number(r.totalHours || 0).toFixed(1)}h`]);
+        return { cols: ['Employee', 'Week', 'Regular Hrs', 'OT Hrs', 'Break', 'Total'], rows };
       }
-      case 'shift': {
-        const records = await shiftService.getSchedules();
-        const rows = records
+      case 'Overtime Analysis Report': {
+        const [otRecords, attRecords] = await Promise.all([overtimeService.getAll(), attendanceService.getAll()]);
+        const rows = (otRecords || [])
           .filter((r) => inRange(r.date))
-          .map((r) => [r.employeeName || nameOf(r.employeeId), formatDate(r.date) || r.date, r.shiftName || r.shiftType || '—', r.status || 'Scheduled']);
+          .map((r) => {
+            const att = (attRecords || []).find((a) => a.employeeId === r.employeeId && a.date === r.date);
+            const requested = Number(r.expectedHours || 0);
+            const approved = Number(r.approvedHours || 0);
+            const actual = Number(att?.overtime || 0);
+            const variance = actual - approved;
+            return [r.employeeName || nameOf(r.employeeId), formatDate(r.date), requested ? `${requested}h` : '—', approved ? `${approved}h` : '—', actual ? `${actual}h` : '0h', variance !== 0 ? `${variance > 0 ? '+' : ''}${variance.toFixed(1)}h` : '—'];
+          });
+        return { cols: ['Employee', 'Date', 'Requested', 'Approved', 'Actual', 'Variance'], rows };
+      }
+      case 'Shift Coverage Report': {
+        const records = await shiftService.getSchedules();
+        const rows = (records || [])
+          .filter((r) => inRange(r.date))
+          .map((r) => [r.employeeName || nameOf(r.employeeId), formatDate(r.date), r.shiftId || '—', r.status || 'Scheduled']);
         return { cols: ['Employee', 'Date', 'Shift', 'Status'], rows };
       }
-      case 'workforce_analytics':
-      default: {
-        const rows = (employeesData || []).map((e) => [
-          `${e.firstName} ${e.lastName}`.trim(),
-          e.department || '—',
-          e.position || '—',
-          e.employmentType || '—',
-        ]);
-        return { cols: ['Employee', 'Department', 'Position', 'Type'], rows };
+      case 'Shift Swap History': {
+        const records = await shiftService.getSchedules();
+        const rows = (records || [])
+          .filter((r) => r.status === 'Swapped' && inRange(r.date))
+          .map((r) => [r.employeeName || nameOf(r.employeeId), formatDate(r.date), r.shiftId || '—', r.status]);
+        return { cols: ['Employee', 'Date', 'Shift', 'Status'], rows };
       }
+      case 'Workforce Headcount Report': {
+        const employees = await employeeService.getAll();
+        const byDept = {};
+        (employees || []).forEach((e) => {
+          const dept = e.department || 'Unassigned';
+          if (!byDept[dept]) byDept[dept] = { active: 0, onLeave: 0, inactive: 0, total: 0 };
+          byDept[dept].total++;
+          if (e.status === 'Active') byDept[dept].active++;
+          else if (e.status === 'On Leave') byDept[dept].onLeave++;
+          else byDept[dept].inactive++;
+        });
+        const rows = Object.entries(byDept).map(([dept, s]) => [dept, String(s.active), String(s.onLeave), String(s.inactive), String(s.total)]);
+        return { cols: ['Department', 'Active', 'On Leave', 'Inactive', 'Total'], rows };
+      }
+      case 'Employee Turnover Analysis': {
+        const employees = await employeeService.getAll();
+        const rows = (employees || []).map((e) => {
+          const hired = e.dateHired || e.hireDate || '—';
+          const tenure = hired !== '—' ? `${Math.floor((Date.now() - new Date(hired).getTime()) / (1000 * 60 * 60 * 24 * 30))}mo` : '—';
+          return [e.firstName ? `${e.firstName} ${e.lastName}` : e.id, e.department || '—', hired, e.status || '—', tenure];
+        });
+        return { cols: ['Employee', 'Department', 'Date Hired', 'Status', 'Tenure'], rows };
+      }
+      case 'Absenteeism Trend Report': {
+        const records = await attendanceService.getAll();
+        const byEmp = {};
+        (records || []).forEach((r) => {
+          if (!inRange(r.date)) return;
+          if (!byEmp[r.employeeId]) byEmp[r.employeeId] = { absent: 0, total: 0 };
+          byEmp[r.employeeId].total++;
+          if (r.status === 'Absent') byEmp[r.employeeId].absent++;
+        });
+        const rows = Object.entries(byEmp).map(([empId, s]) => [nameOf(empId), String(s.absent), String(s.total), s.total ? `${Math.round((s.absent / s.total) * 100)}%` : '—']);
+        return { cols: ['Employee', 'Absences', 'Total Scheduled', 'Absenteeism Rate'], rows };
+      }
+      case 'Payroll Discrepancy Report': {
+        const records = await timesheetService.getAll();
+        const rows = (records || [])
+          .filter((r) => inRange(r.weekStart || r.periodStart))
+          .map((r) => {
+            const regular = Number(r.regularHours || 0);
+            const ot = Number(r.overtimeHours || 0);
+            const total = Number(r.totalHours || 0);
+            const expected = regular + ot;
+            const discrepancy = total !== expected ? `${(total - expected).toFixed(1)}h` : '—';
+            return [r.employeeName || nameOf(r.employeeId), `${regular.toFixed(1)}h`, `${ot.toFixed(1)}h`, `${total.toFixed(1)}h`, discrepancy];
+          });
+        return { cols: ['Employee', 'Regular Hrs', 'OT Hrs', 'Total', 'Discrepancy'], rows };
+      }
+      default:
+        return { cols: [], rows: [], message: 'Unknown report type.' };
     }
   };
 
@@ -120,7 +206,7 @@ export default function Reports() {
     if (!validateGenerate()) return;
     const selected = reportTypes.find((r) => r.name === generateForm.reportType);
     try {
-      const result = await generateRows(selected.type);
+      const result = await generateRows(selected.name);
       setPreview({
         ...result,
         message: result.rows.length === 0 ? emptyPreview.message : undefined,
@@ -150,19 +236,6 @@ export default function Reports() {
     }
     toast.success('Export Complete', `Report exported as ${generateForm.format.toUpperCase()}.`);
   };
-
-  if (loading) {
-    return (
-      <div className="space-y-6 animate-fadeIn">
-        <SkeletonCard lines={1} />
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-          <SkeletonCard lines={2} />
-          <SkeletonCard lines={2} />
-          <SkeletonCard lines={2} />
-        </div>
-      </div>
-    );
-  }
 
   return (
     <div className="space-y-6 animate-fadeIn">

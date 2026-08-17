@@ -1,5 +1,5 @@
 import { useState, useMemo, useEffect, useCallback } from 'react';
-import { Calendar, CheckCircle, Clock, FileText, Eye, Plus, XCircle } from 'lucide-react';
+import { Calendar, CheckCircle, Clock, FileText, Eye, Plus, XCircle, Palmtree, Heart, AlertTriangle, Star, Baby, Users, Flower2, Wallet } from 'lucide-react';
 import Card from '../../components/ui/Card';
 import Button from '../../components/ui/Button';
 import Badge from '../../components/ui/Badge';
@@ -8,7 +8,6 @@ import { Select, Textarea } from '../../components/ui/Input';
 import Input from '../../components/ui/Input';
 import Modal from '../../components/ui/Modal';
 import { Pagination } from '../../components/ui/Table';
-import { SkeletonCard, SkeletonTable } from '../../components/ui/LoadingSkeleton';
 import { leaveService } from '../../services/api';
 import { formatDate } from '../../utils/helpers';
 import { useToast } from '../../context/ToastContext';
@@ -35,14 +34,14 @@ const leaveTypeVariant = {
 };
 
 const leaveBalanceStyle = {
-  Vacation: { text: 'text-blue-600', barBg: 'bg-blue-100', color: 'bg-blue-500' },
-  Sick: { text: 'text-red-600', barBg: 'bg-red-100', color: 'bg-red-500' },
-  Emergency: { text: 'text-amber-600', barBg: 'bg-amber-100', color: 'bg-amber-500' },
-  Special: { text: 'text-purple-600', barBg: 'bg-purple-100', color: 'bg-purple-500' },
-  Maternity: { text: 'text-pink-600', barBg: 'bg-pink-100', color: 'bg-pink-500' },
-  Paternity: { text: 'text-sky-600', barBg: 'bg-sky-100', color: 'bg-sky-500' },
-  Bereavement: { text: 'text-gray-600', barBg: 'bg-gray-100', color: 'bg-gray-500' },
-  Unpaid: { text: 'text-slate-600', barBg: 'bg-slate-100', color: 'bg-slate-500' },
+  Vacation: { text: 'text-blue-600', barBg: 'bg-blue-100', color: 'bg-blue-500', icon: Palmtree, iconBg: 'bg-blue-50' },
+  Sick: { text: 'text-red-600', barBg: 'bg-red-100', color: 'bg-red-500', icon: Heart, iconBg: 'bg-red-50' },
+  Emergency: { text: 'text-amber-600', barBg: 'bg-amber-100', color: 'bg-amber-500', icon: AlertTriangle, iconBg: 'bg-amber-50' },
+  Special: { text: 'text-purple-600', barBg: 'bg-purple-100', color: 'bg-purple-500', icon: Star, iconBg: 'bg-purple-50' },
+  Maternity: { text: 'text-pink-600', barBg: 'bg-pink-100', color: 'bg-pink-500', icon: Baby, iconBg: 'bg-pink-50' },
+  Paternity: { text: 'text-sky-600', barBg: 'bg-sky-100', color: 'bg-sky-500', icon: Users, iconBg: 'bg-sky-50' },
+  Bereavement: { text: 'text-gray-600', barBg: 'bg-gray-100', color: 'bg-gray-500', icon: Flower2, iconBg: 'bg-gray-50' },
+  Unpaid: { text: 'text-slate-600', barBg: 'bg-slate-100', color: 'bg-slate-500', icon: Wallet, iconBg: 'bg-slate-50' },
 };
 
 const leaveTypes = ['Vacation', 'Sick', 'Emergency', 'Special', 'Maternity', 'Paternity', 'Bereavement', 'Unpaid'];
@@ -57,7 +56,7 @@ export default function Leave() {
 
   // Employees may only ever see and work with their own leave requests -
   // the page lives behind an Employee-only route, so it never renders for HR.
-  const { data: leaves, setData: setLeaves, loading: leavesLoading } = useApiData(
+  const { data: leaves, setData: setLeaves } = useApiData(
     () => (currentUser.id ? leaveService.getByEmployeeId(currentUser.id) : Promise.resolve([])),
     [currentUser.id]
   );
@@ -183,20 +182,6 @@ export default function Leave() {
     setIsApplyOpen(false);
   };
 
-  if (leavesLoading) {
-    return (
-      <div className="space-y-6 animate-fadeIn">
-        <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
-          <SkeletonCard lines={1} />
-          <SkeletonCard lines={1} />
-          <SkeletonCard lines={1} />
-          <SkeletonCard lines={1} />
-        </div>
-        <SkeletonTable rows={6} cols={6} />
-      </div>
-    );
-  }
-
   return (
     <div className="space-y-6 animate-fadeIn">
       {/* Header */}
@@ -217,6 +202,9 @@ export default function Leave() {
           const pct = b.total > 0 ? Math.max((b.remaining / b.total) * 100, 0) : 0;
           return (
             <Card key={b.type} className="overflow-hidden" hover>
+              <div className={`w-10 h-10 rounded-xl flex items-center justify-center mb-3 ${style.iconBg}`}>
+                {style.icon && <style.icon className={`w-5 h-5 ${style.text}`} />}
+              </div>
               <p className={`text-xs font-semibold uppercase tracking-wide ${style.text}`}>{b.type} Leave</p>
               <p className="text-2xl font-bold text-gray-900 mt-2">
                 {b.remaining} <span className="text-sm font-normal text-gray-400">/ {b.total}</span>

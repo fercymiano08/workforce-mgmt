@@ -8,7 +8,7 @@ import SearchBar from '../../components/ui/SearchBar';
 import Modal from '../../components/ui/Modal';
 import Input, { Select, Textarea } from '../../components/ui/Input';
 import { Pagination } from '../../components/ui/Table';
-import { SkeletonCard, SkeletonTable } from '../../components/ui/LoadingSkeleton';
+import { SkeletonTable } from '../../components/ui/LoadingSkeleton';
 import { attendanceService, employeeService, overtimeService } from '../../services/api';
 import { formatHours, toDateKey } from '../../services/attendanceService';
 import { formatDate, formatTime } from '../../utils/helpers';
@@ -31,7 +31,7 @@ export default function Attendance() {
   const [currentPage, setCurrentPage] = useState(1);
   const PAGE_SIZE = 12;
 
-  const { data: attendanceRecords, loading } = useApiData(
+  const { data: attendanceRecords } = useApiData(
     () => attendanceService.getAll(),
     []
   );
@@ -161,20 +161,6 @@ export default function Attendance() {
     downloadCSV('attendance.csv', rows);
     toast.success('Export Complete', `Exported ${rows.length} attendance record${rows.length === 1 ? '' : 's'} to CSV.`);
   };
-
-  if (loading) {
-    return (
-      <div className="space-y-6 animate-fadeIn">
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-          <SkeletonCard lines={1} />
-          <SkeletonCard lines={1} />
-          <SkeletonCard lines={1} />
-          <SkeletonCard lines={1} />
-        </div>
-        <SkeletonTable rows={8} cols={6} />
-      </div>
-    );
-  }
 
   return (
     <div className="space-y-6 animate-fadeIn">

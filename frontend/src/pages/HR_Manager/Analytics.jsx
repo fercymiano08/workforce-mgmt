@@ -9,7 +9,6 @@ import {
 import Card, { CardHeader, CardTitle, CardDescription } from '../../components/ui/Card';
 import Button from '../../components/ui/Button';
 import Badge from '../../components/ui/Badge';
-import { SkeletonCard, SkeletonTable } from '../../components/ui/LoadingSkeleton';
 import { analyticsService } from '../../services/api';
 import { formatCurrency } from '../../utils/helpers';
 import { downloadCSV } from '../../utils/export';
@@ -28,7 +27,7 @@ const kpiBar = { blue: 'bg-blue-500', emerald: 'bg-emerald-500', amber: 'bg-ambe
 export default function Analytics() {
   const { toast } = useToast();
   const [range, setRange] = useState('month');
-  const { data: analyticsData, loading } = useApiData(
+  const { data: analyticsData } = useApiData(
     () => analyticsService.getAll(),
     []
   );
@@ -72,24 +71,6 @@ export default function Analytics() {
     downloadCSV('payroll-discrepancies.csv', payrollRows);
     toast.success('Export Complete', `Exported ${payrollRows.length} discrepancy records to CSV.`);
   };
-
-  if (loading) {
-    return (
-      <div className="space-y-6 animate-fadeIn">
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-          <SkeletonCard lines={1} />
-          <SkeletonCard lines={1} />
-          <SkeletonCard lines={1} />
-          <SkeletonCard lines={1} />
-        </div>
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-          <SkeletonCard lines={4} />
-          <SkeletonCard lines={4} />
-        </div>
-        <SkeletonTable rows={5} cols={4} />
-      </div>
-    );
-  }
 
   return (
     <div className="space-y-6 animate-fadeIn">

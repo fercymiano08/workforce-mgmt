@@ -6,7 +6,6 @@ import {
 import Card, { CardHeader, CardTitle, CardDescription } from '../../components/ui/Card';
 import Button from '../../components/ui/Button';
 import Input, { Select } from '../../components/ui/Input';
-import { SkeletonCard } from '../../components/ui/LoadingSkeleton';
 import { InfoNote, AccountSection, AppearanceSection } from '../../components/settings/SharedSections';
 import { settingsService, employeeService, departmentService } from '../../services/api';
 import { useToast } from '../../context/ToastContext';
@@ -185,7 +184,7 @@ export default function Settings() {
   const [reloadKey, setReloadKey] = useState(0);
   const { t } = useLanguage();
 
-  const { data: settingsData, loading, refresh } = useApiData(() => settingsService.get(), []);
+  const { data: settingsData, refresh } = useApiData(() => settingsService.get(), []);
 
   const handleSaved = () => {
     refresh();
@@ -206,21 +205,6 @@ export default function Settings() {
         return <CompanySection {...props} />;
     }
   };
-
-  if (loading || !settingsData) {
-    return (
-      <div className="space-y-6 animate-fadeIn">
-        <div className="flex flex-col lg:flex-row gap-6">
-          <div className="w-full lg:w-64 shrink-0">
-            <SkeletonCard lines={6} />
-          </div>
-          <div className="flex-1 min-w-0">
-            <SkeletonCard lines={4} />
-          </div>
-        </div>
-      </div>
-    );
-  }
 
   return (
     <div className="space-y-6 animate-fadeIn">

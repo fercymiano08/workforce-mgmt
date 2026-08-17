@@ -11,7 +11,6 @@ import {
 import { useAuth } from '../../context/AuthContext';
 import Badge from '../../components/ui/Badge';
 import Button from '../../components/ui/Button';
-import { SkeletonCard, SkeletonTable } from '../../components/ui/LoadingSkeleton';
 import KpiCard from '../../components/dashboard/KpiCard';
 import ChartCard from '../../components/dashboard/ChartCard';
 import useApiData from '../../hooks/useApiData';
@@ -64,27 +63,27 @@ export default function EmployeeDashboard() {
   const navigate = useNavigate();
   const employeeId = user?.id || 'EMP001';
 
-  const { data: attendanceRecords, loading: loadingAttendance } = useApiData(
+  const { data: attendanceRecords } = useApiData(
     () => attendanceService.getByEmployeeId(employeeId),
     [employeeId]
   );
-  const { data: leavesRecords, loading: loadingLeaves } = useApiData(
+  const { data: leavesRecords } = useApiData(
     () => leaveService.getByEmployeeId(employeeId),
     [employeeId]
   );
-  const { data: schedules, loading: loadingSchedules } = useApiData(
+  const { data: schedules } = useApiData(
     () => shiftService.getScheduleByEmployeeId(employeeId),
     [employeeId]
   );
-  const { data: shiftDefs, loading: loadingShifts } = useApiData(
+  const { data: shiftDefs } = useApiData(
     () => shiftService.getAllShifts(),
     []
   );
-  const { data: timesheetRecords, loading: loadingTimesheets } = useApiData(
+  const { data: timesheetRecords } = useApiData(
     () => timesheetService.getByEmployeeId(employeeId),
     [employeeId]
   );
-  const { data: leaveBalances, loading: loadingBalances } = useApiData(
+  const { data: leaveBalances } = useApiData(
     () => leaveService.getBalances(employeeId),
     [employeeId]
   );
@@ -140,20 +139,7 @@ export default function EmployeeDashboard() {
     ? Math.round((myAttendance.filter((a) => a.status === 'Present').length / myAttendance.length) * 100)
     : 0;
 
-  const loading = loadingAttendance || loadingLeaves || loadingSchedules || loadingShifts || loadingTimesheets || loadingBalances;
-
-  return loading ? (
-    <div className="max-w-7xl mx-auto space-y-7">
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
-        <SkeletonCard lines={1} />
-        <SkeletonCard lines={1} />
-        <SkeletonCard lines={1} />
-        <SkeletonCard lines={1} />
-      </div>
-      <SkeletonCard lines={4} />
-      <SkeletonTable rows={4} cols={4} />
-    </div>
-  ) : (
+  return (
     <div className="max-w-7xl mx-auto space-y-7">
       {/* Page Header */}
       <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-5">

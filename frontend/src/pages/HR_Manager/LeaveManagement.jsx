@@ -11,7 +11,6 @@ import SearchBar from '../../components/ui/SearchBar';
 import { Select, Textarea } from '../../components/ui/Input';
 import Modal from '../../components/ui/Modal';
 import { Pagination } from '../../components/ui/Table';
-import { SkeletonTable } from '../../components/ui/LoadingSkeleton';
 import { leaveService } from '../../services/api';
 import { formatDate } from '../../utils/helpers';
 import { useToast } from '../../context/ToastContext';
@@ -52,7 +51,7 @@ export default function LeaveManagement() {
   const { toast } = useToast();
   const { user } = useAuth();
 
-  const { data: leaves, setData: setLeaves, loading } = useApiData(() => leaveService.getAll(), []);
+  const { data: leaves, setData: setLeaves } = useApiData(() => leaveService.getAll(), []);
 
   const [activeTab, setActiveTab] = useState('All Requests');
   const [search, setSearch] = useState('');
@@ -128,14 +127,6 @@ export default function LeaveManagement() {
     { label: 'Approved', value: summary.approved, icon: ThumbsUp, accent: 'text-emerald-600 bg-emerald-50' },
     { label: 'Rejected', value: summary.rejected, icon: ThumbsDown, accent: 'text-red-600 bg-red-50' },
   ];
-
-  if (loading) {
-    return (
-      <div className="space-y-6 animate-fadeIn">
-        <SkeletonTable rows={8} cols={6} />
-      </div>
-    );
-  }
 
   return (
     <div className="space-y-6 animate-fadeIn">

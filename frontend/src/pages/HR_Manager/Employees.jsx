@@ -4,7 +4,7 @@ import {
   Grid3X3, List, Mail, Phone, MapPin, User,
   Building, Briefcase, Calendar, Clock, Eye, Edit,
   Upload, Plus, Users, RefreshCw, Camera, CheckCircle2,
-  CheckCircle, CalendarOff, UserX, Loader2, ScanFace, Trash2, AlertTriangle
+  CheckCircle, CalendarOff, UserX, ScanFace, Trash2, AlertTriangle
 } from 'lucide-react';
 import Card from '../../components/ui/Card';
 import Button from '../../components/ui/Button';
@@ -418,11 +418,7 @@ export default function Employees() {
           </div>
         </div>
 
-        {loading ? (
-          <div className="flex items-center justify-center py-20">
-            <Loader2 className="w-8 h-8 text-blue-500 animate-spin" />
-          </div>
-        ) : filtered.length === 0 ? (
+        {filtered.length === 0 ? (
           <EmptyState title="No employees found" description="Try adjusting your search or filters" />
         ) : viewMode === 'grid' ? (
           <div className="p-4">

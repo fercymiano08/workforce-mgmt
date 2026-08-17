@@ -7,7 +7,6 @@ import Card, { CardHeader, CardTitle, CardDescription } from '../../components/u
 import Button from '../../components/ui/Button';
 import Input from '../../components/ui/Input';
 import Avatar from '../../components/ui/Avatar';
-import { SkeletonCard } from '../../components/ui/LoadingSkeleton';
 import { AccountSection, AppearanceSection } from '../../components/settings/SharedSections';
 import { profileService } from '../../services/api';
 import { useToast } from '../../context/ToastContext';
@@ -23,7 +22,7 @@ const NAV_ITEMS = [
 function MyProfileSection() {
   const { toast } = useToast();
   const fileInputRef = useRef(null);
-  const { data: employee, loading, refresh } = useApiData(() => profileService.get(), []);
+  const { data: employee, refresh } = useApiData(() => profileService.get(), []);
   const [form, setForm] = useState(null);
   const [saving, setSaving] = useState(false);
 
@@ -81,14 +80,6 @@ function MyProfileSection() {
       setSaving(false);
     }
   };
-
-  if (loading || !employee) {
-    return (
-      <div className="space-y-6">
-        <SkeletonCard lines={4} />
-      </div>
-    );
-  }
 
   const fullName = `${employee.firstName} ${employee.lastName}`.trim();
 

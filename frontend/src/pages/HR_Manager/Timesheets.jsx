@@ -8,8 +8,7 @@ import SearchBar from '../../components/ui/SearchBar';
 import { Select } from '../../components/ui/Input';
 import Modal from '../../components/ui/Modal';
 import { Pagination } from '../../components/ui/Table';
-import { SkeletonCard, SkeletonTable } from '../../components/ui/LoadingSkeleton';
-import { useTimesheets, useTimesheetsLoaded, approveTimesheet, rejectTimesheet, submitTimesheet, refreshTimesheets } from '../../hooks/useTimesheets';
+import { useTimesheets, approveTimesheet, rejectTimesheet, submitTimesheet, refreshTimesheets } from '../../hooks/useTimesheets';
 import { formatDate } from '../../utils/helpers';
 import { downloadCSV } from '../../utils/export';
 import { useAuth } from '../../context/AuthContext';
@@ -39,7 +38,6 @@ function AdminTimesheetsView() {
   const [confirmReject, setConfirmReject] = useState(false);
 
   const data = useTimesheets();
-  const loaded = useTimesheetsLoaded();
 
   const departments = useMemo(() => ['All', ...new Set(data.map(t => t.department))], [data]);
   const statuses = ['All', 'Draft', 'Submitted', 'Approved', 'Rejected'];
@@ -139,20 +137,6 @@ function AdminTimesheetsView() {
     amber: 'bg-amber-500',
     purple: 'bg-purple-500',
   };
-
-  if (!loaded) {
-    return (
-      <div className="space-y-6 animate-fadeIn">
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-          <SkeletonCard lines={1} />
-          <SkeletonCard lines={1} />
-          <SkeletonCard lines={1} />
-          <SkeletonCard lines={1} />
-        </div>
-        <SkeletonTable rows={8} cols={6} />
-      </div>
-    );
-  }
 
   return (
     <div className="space-y-6 animate-fadeIn">
@@ -450,7 +434,6 @@ function EmployeeTimesheetsView() {
   const [isDetailOpen, setIsDetailOpen] = useState(false);
 
   const data = useTimesheets();
-  const loaded = useTimesheetsLoaded();
 
   const records = useMemo(
     () => data.filter((t) => t.employeeId === employeeId),
@@ -509,20 +492,6 @@ function EmployeeTimesheetsView() {
       toast.error('Error', 'Failed to submit timesheet.');
     }
   };
-
-  if (!loaded) {
-    return (
-      <div className="space-y-6 animate-fadeIn">
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-          <SkeletonCard lines={1} />
-          <SkeletonCard lines={1} />
-          <SkeletonCard lines={1} />
-          <SkeletonCard lines={1} />
-        </div>
-        <SkeletonTable rows={8} cols={5} />
-      </div>
-    );
-  }
 
   return (
     <div className="space-y-6 animate-fadeIn">

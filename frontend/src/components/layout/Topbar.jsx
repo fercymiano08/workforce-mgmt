@@ -6,7 +6,6 @@ import {
   Sun, Moon, AlertTriangle
 } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
-import { useNotifications } from '../../context/NotificationContext';
 import { useLanguage } from '../../context/LanguageContext';
 import { useTheme } from '../../context/ThemeContext';
 import Avatar from '../ui/Avatar';
@@ -16,7 +15,6 @@ import NotificationDropdown from '../common/NotificationDropdown';
 
 export default function Topbar({ onMenuToggle }) {
   const { user, logout } = useAuth();
-  const { unreadCount } = useNotifications();
   const { t } = useLanguage();
   const { toggleTheme, isDark } = useTheme();
   const navigate = useNavigate();
@@ -79,15 +77,9 @@ export default function Topbar({ onMenuToggle }) {
             className="relative p-2.5 rounded-xl hover:bg-gray-100 transition-colors text-gray-500 hover:text-gray-700"
           >
             <Bell className="w-5 h-5" />
-            {unreadCount > 0 && (
-              <span className="absolute top-1.5 right-1.5 w-[18px] h-[18px] bg-red-500 text-white text-[10px] font-bold rounded-full flex items-center justify-center ring-2 ring-white">
-                {unreadCount > 9 ? '9+' : unreadCount}
-              </span>
-            )}
           </button>
           <NotificationDropdown
             isOpen={showNotifications}
-            onClose={() => setShowNotifications(false)}
           />
         </div>
 

@@ -15,7 +15,6 @@ const routeNames = {
   '/reports': 'Reports',
   '/settings': 'Settings',
   '/kiosk-setup': 'Kiosk Setup',
-  '/notifications': 'Notifications',
 };
 
 export default function Breadcrumbs() {

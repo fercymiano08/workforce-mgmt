@@ -29,8 +29,7 @@ import AIDecisionSupport from './pages/HR_Manager/AIDecisionSupport';
 import MyAttendance from './pages/Employee/MyAttendance';
 import MySchedule from './pages/Employee/MySchedule';
 import MyTimesheet from './pages/Employee/MyTimesheet';
-import HRNotifications from './pages/HR_Manager/Notifications';
-import EmployeeNotifications from './pages/Employee/Notifications';
+
 
 // Renders the right dashboard for whoever is logged in, without needing a
 // separate route for each role.
@@ -45,11 +44,6 @@ function HomeRoute() {
 function SettingsRoute() {
   const { isAdmin } = useAuth();
   return isAdmin ? <HRSettings /> : <EmployeeSettings />;
-}
-
-function NotificationsRoute() {
-  const { isAdmin } = useAuth();
-  return isAdmin ? <HRNotifications /> : <EmployeeNotifications />;
 }
 
 // Leave is a shared path too: HR gets the management/approval console,
@@ -88,7 +82,6 @@ function AppRoutes() {
       <Route path="/reports" element={<PrivateLayout adminOnly><Reports /></PrivateLayout>} />
       <Route path="/ai-decision-support" element={<PrivateLayout adminOnly><AIDecisionSupport /></PrivateLayout>} />
       <Route path="/settings" element={<PrivateLayout><SettingsRoute /></PrivateLayout>} />
-      <Route path="/notifications" element={<PrivateLayout><NotificationsRoute /></PrivateLayout>} />
 
       <Route path="*" element={<Navigate to="/" replace />} />
     </Routes>

@@ -1,26 +1,19 @@
 import { useMemo, useState } from 'react';
-import clsx from 'clsx';
 import {
-  CalendarDays, Clock3, Timer, Coffee, Filter, Send, CheckCircle, AlertTriangle, XCircle, BarChart3,
+  CalendarDays, Clock3, Timer, Coffee, Send, BarChart3, ChevronRight,
 } from 'lucide-react';
 import { useTimesheets, useTimesheetsLoaded, submitTimesheet, refreshTimesheets } from '../../hooks/useTimesheets';
 import { useAuth } from '../../context/AuthContext';
 import { useToast } from '../../context/ToastContext';
 import Badge from '../../components/ui/Badge';
 import Button from '../../components/ui/Button';
+import Modal from '../../components/ui/Modal';
 import KpiCard from '../../components/dashboard/KpiCard';
 import { SkeletonCard, SkeletonTable } from '../../components/ui/LoadingSkeleton';
 import useApiData from '../../hooks/useApiData';
 import { attendanceService } from '../../services/api';
-import { formatHours, toDateKey } from '../../services/attendanceService';
+import { toDateKey } from '../../services/attendanceService';
 import { formatDate, formatTime } from '../../utils/helpers';
-
-const statusVariant = {
-  Draft: 'default',
-  Submitted: 'warning',
-  Approved: 'success',
-  Rejected: 'danger',
-};
 
 const hours = (value) => `${Number(value || 0).toFixed(1)}h`;
 
@@ -41,7 +34,7 @@ export default function MyTimesheet() {
   const { user } = useAuth();
   const { toast } = useToast();
   const employeeId = user?.id || 'EMP001';
-  const [period, setPeriod] = useState('All');
+  const [selectedWeek, setSelectedWeek] = useState(null);
   const data = useTimesheets();
   const loaded = useTimesheetsLoaded();
 
@@ -57,7 +50,6 @@ export default function MyTimesheet() {
     [data, employeeId]
   );
 
-  const filtered = period === 'All' ? records : records.slice(0, period === 'Latest' ? 1 : 2);
   const latest = records[0];
 
   // The current calendar week (Mon–Sun) built from this week's attendance, so
@@ -168,168 +160,129 @@ export default function MyTimesheet() {
         ))}
       </div>
 
-      {/* This Week Overview */}
-      <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
-        <div className="p-6 border-b border-gray-100 flex items-center justify-between flex-wrap gap-3">
-          <div className="flex items-center gap-3">
-            <div className="w-9 h-9 rounded-xl bg-blue-50 flex items-center justify-center">
-              <BarChart3 className="w-5 h-5 text-blue-600" />
+      {/* Single Summary Card */}
+      <div
+        onClick={() => setSelectedWeek(latest || (records[0]))}
+        className="bg-white rounded-2xl border border-gray-100 shadow-sm p-6 cursor-pointer hover:border-blue-300 hover:shadow-md transition-all"
+      >
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-4">
+            <div className="w-12 h-12 rounded-2xl bg-gradient-to-br from-blue-500 to-blue-600 flex items-center justify-center shadow-lg shadow-blue-500/20">
+              <BarChart3 className="w-6 h-6 text-white" />
             </div>
             <div>
-              <h3 className="text-[15px] font-semibold text-gray-900">This Week Overview</h3>
-              <p className="text-xs text-gray-400 mt-0.5">
-                {formatDate(thisWeek.monday.toISOString())} – {formatDate(thisWeek.sunday.toISOString())}
+              <p className="text-sm font-semibold text-gray-900">
+                {latest ? `${formatDate(latest.weekStart)} – ${formatDate(latest.weekEnd)}` : 'This Week'}
+              </p>
+              <p className="text-xs text-gray-500 mt-0.5">
+                {latest ? `Regular ${Number(latest.regularHours || 0).toFixed(1)}h · OT ${Number(latest.overtimeHours || 0).toFixed(1)}h · Total ${Number(latest.totalHours || 0).toFixed(1)}h` : 'No timesheet yet'}
               </p>
             </div>
           </div>
-          <div className="flex items-center gap-4 text-xs text-gray-500">
-            <span>
-              <span className="font-bold text-gray-900">{thisWeek.workedDays}</span> days worked
-            </span>
-            <span>
-              <span className="font-bold text-gray-900">{formatHours(thisWeek.totalHours)}</span> total hours
-            </span>
-            <span className={clsx('font-semibold', thisWeek.lateCount ? 'text-amber-600' : 'text-gray-400')}>
-              {thisWeek.lateCount} late
-            </span>
+          <div className="flex items-center gap-3">
+            {latest && (
+              <Badge variant={latest.status === 'Approved' ? 'success' : latest.status === 'Submitted' ? 'warning' : 'default'} size="sm">
+                {latest.status}
+              </Badge>
+            )}
+            <ChevronRight className="w-5 h-5 text-gray-400" />
           </div>
         </div>
+      </div>
 
-        <div className="p-6 overflow-x-auto">
-          <div className="grid grid-cols-7 gap-2 min-w-[400px] sm:min-w-0 sm:gap-3">
-            {thisWeek.days.map((day) => {
-            const rec = thisWeek.byDate[day.key];
-            const worked = !!rec && (rec.clockIn || WORKED_STATUSES.includes(rec.status));
-
-            let tile;
-            if (worked) {
-              const isLate = rec.status === 'Late';
-              tile = (
-                <>
-                  <span className={clsx(
-                    'flex items-center justify-center gap-1 text-[11px] font-semibold',
-                    isLate ? 'text-amber-600' : rec.status === 'Half Day' ? 'text-blue-600' : 'text-emerald-600'
-                  )}>
-                    {isLate ? <AlertTriangle className="w-3.5 h-3.5" /> : <CheckCircle className="w-3.5 h-3.5" />}
-                    {formatHours(rec.totalHours)}
-                  </span>
-                  {rec.clockIn && (
-                    <span className="text-[10px] text-gray-400">{formatTime(rec.clockIn)}</span>
-                  )}
-                </>
-              );
-            } else if (rec?.status === 'On Leave') {
-              tile = (
-                <span className="flex items-center gap-1 text-[11px] font-semibold text-purple-600">
-                  <CalendarDays className="w-3.5 h-3.5" />
-                  Leave
-                </span>
-              );
-            } else if (rec?.status === 'Absent' || (!rec && day.isWeekend === false && !day.isFuture && !day.isToday)) {
-              tile = (
-                <span className="flex items-center gap-1 text-[11px] font-semibold text-red-500">
-                  <XCircle className="w-3.5 h-3.5" />
-                  Absent
-                </span>
-              );
-            } else if (day.isFuture) {
-              tile = <span className="text-[11px] text-gray-300">—</span>;
-            } else if (day.isWeekend) {
-              tile = <span className="text-[11px] text-gray-400 font-medium">Off</span>;
-            } else {
-              tile = <span className="text-[11px] text-gray-400">Pending</span>;
-            }
-
-            return (
-              <div
-                key={day.key}
-                className={clsx(
-                  'rounded-2xl border p-3 flex flex-col items-center gap-1.5 text-center transition-colors',
-                  day.isToday ? 'border-blue-300 bg-blue-50/70 ring-1 ring-blue-200' : 'border-gray-100 bg-gray-50/60'
-                )}
+      <Modal
+        isOpen={!!selectedWeek}
+        onClose={() => setSelectedWeek(null)}
+        title={`Week of ${formatDate(selectedWeek?.weekStart)} – ${formatDate(selectedWeek?.weekEnd)}`}
+        size="xl"
+      >
+        {selectedWeek && (
+          <div className="space-y-6">
+            {/* Status & Metadata */}
+            <div className="flex items-center gap-3 flex-wrap">
+              <Badge
+                variant={selectedWeek.status === 'Approved' ? 'success' : selectedWeek.status === 'Submitted' ? 'warning' : 'default'}
+                size="sm"
               >
-                <span className="text-[10px] font-bold uppercase tracking-wider text-gray-400">{day.label}</span>
-                <span className={clsx('text-sm font-semibold', day.isToday ? 'text-blue-700' : 'text-gray-600')}>
-                  {day.date.getDate()}
-                </span>
-                {tile}
+                {selectedWeek.status}
+              </Badge>
+              {selectedWeek.approvedBy && (
+                <span className="text-xs text-gray-500">Approved by {selectedWeek.approvedBy}</span>
+              )}
+            </div>
+
+            {/* KPI Summary */}
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
+              <div className="bg-blue-50 rounded-xl p-3 text-center">
+                <p className="text-[11px] text-blue-600 font-medium uppercase">Regular</p>
+                <p className="text-lg font-bold text-blue-700 mt-0.5">{Number(selectedWeek.regularHours || 0).toFixed(1)}h</p>
               </div>
-            );
-          })}
-          </div>
-        </div>
-      </div>
+              <div className="bg-purple-50 rounded-xl p-3 text-center">
+                <p className="text-[11px] text-purple-600 font-medium uppercase">Overtime</p>
+                <p className="text-lg font-bold text-purple-700 mt-0.5">{Number(selectedWeek.overtimeHours || 0).toFixed(1)}h</p>
+              </div>
+              <div className="bg-amber-50 rounded-xl p-3 text-center">
+                <p className="text-[11px] text-amber-600 font-medium uppercase">Break</p>
+                <p className="text-lg font-bold text-amber-700 mt-0.5">{Number(selectedWeek.breakHours || 0).toFixed(1)}h</p>
+              </div>
+              <div className="bg-emerald-50 rounded-xl p-3 text-center">
+                <p className="text-[11px] text-emerald-600 font-medium uppercase">Total</p>
+                <p className="text-lg font-bold text-emerald-700 mt-0.5">{Number(selectedWeek.totalHours || 0).toFixed(1)}h</p>
+              </div>
+            </div>
 
-      <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
-        <div className="p-6 border-b border-gray-100 flex items-center justify-between gap-3 flex-wrap">
-          <div>
-            <h3 className="text-[15px] font-semibold text-gray-900">Timesheet History</h3>
-            <p className="text-xs text-gray-400 mt-1">Only your timesheets are shown.</p>
-          </div>
-          <div className="flex items-center gap-1">
-            <Filter className="w-4 h-4 text-gray-400 mr-1" />
-            {['All', 'Latest', 'Recent'].map((item) => (
-              <button
-                key={item}
-                onClick={() => setPeriod(item)}
-                className={`px-3 py-1.5 pointer-coarse:py-2.5 text-xs font-medium rounded-lg ${
-                  period === item ? 'bg-blue-50 text-blue-700' : 'text-gray-500 hover:bg-gray-50'
-                }`}
-              >
-                {item}
-              </button>
-            ))}
-          </div>
-        </div>
+            {/* 7-Day Grid */}
+            <div>
+              <p className="text-sm font-semibold text-gray-900 mb-3">Daily Breakdown</p>
+              <div className="grid grid-cols-7 gap-2">
+                {['M', 'T', 'W', 'T', 'F', 'S', 'S'].map((dayLabel, i) => {
+                  const dayDate = new Date(selectedWeek.weekStart);
+                  dayDate.setDate(dayDate.getDate() + i);
+                  const dateKey = toDateKey(dayDate);
+                  const dayRec = thisWeek?.byDate?.[dateKey];
+                  const isToday = dateKey === toDateKey(new Date());
+                  return (
+                    <div
+                      key={i}
+                      className={`rounded-xl p-2 text-center border ${
+                        isToday ? 'border-blue-400 ring-2 ring-blue-100' : 'border-gray-100'
+                      }`}
+                    >
+                      <p className="text-[10px] font-semibold text-gray-400 uppercase">{dayLabel}</p>
+                      <p className="text-xs font-bold text-gray-900 mt-0.5">{dayDate.getDate()}</p>
+                      {dayRec?.status === 'Present' || dayRec?.status === 'Late' ? (
+                        <>
+                          <p className="text-[10px] font-semibold text-emerald-600 mt-1">{dayRec.hours?.toFixed(1) || '—'}h</p>
+                          <p className="text-[9px] text-gray-400">{dayRec.clockIn ? formatTime(dayRec.clockIn) : '—'}</p>
+                        </>
+                      ) : dayRec?.status === 'Leave' ? (
+                        <p className="text-[10px] font-medium text-purple-600 mt-1">Leave</p>
+                      ) : (
+                        <p className="text-[10px] text-gray-300 mt-1">—</p>
+                      )}
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
 
-        <div className="overflow-auto">
-          <table className="w-full min-w-[760px]">
-            <thead>
-              <tr className="border-b border-gray-100 bg-gray-50">
-                {['Week', 'Regular Hours', 'Overtime', 'Break', 'Total Hours', 'Status'].map((head) => (
-                  <th key={head} className="px-5 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">
-                    {head}
-                  </th>
-                ))}
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-gray-50">
-              {filtered.length === 0 ? (
-                <tr>
-                  <td colSpan={6} className="px-5 py-12 text-center">
-                    <p className="text-sm text-gray-400">No timesheet records yet.</p>
-                    <p className="text-xs text-gray-300 mt-1">
-                      Timesheets are generated weekly once your attendance is complete. Your current week is shown above.
-                    </p>
-                  </td>
-                </tr>
-              ) : filtered.map((row) => (
-                <tr key={row.id} className="hover:bg-gray-50/50">
-                  <td className="px-5 py-4 text-sm font-medium text-gray-900">
-                    {formatDate(row.weekStart)} – {formatDate(row.weekEnd)}
-                  </td>
-                  <td className="px-5 py-4 text-sm text-gray-700">{hours(row.regularHours)}</td>
-                  <td className="px-5 py-4 text-sm text-gray-700">
-                    {row.overtimeHours > 0 ? (
-                      <span className="text-purple-600 font-medium">
-                        {hours(row.overtimeHours)}
-                        {row.approvedOtHours > 0 && (
-                          <span className="text-xs text-gray-400 font-normal ml-1">· {row.approvedOtHours}h approved</span>
-                        )}
-                      </span>
-                    ) : hours(row.overtimeHours)}
-                  </td>
-                  <td className="px-5 py-4 text-sm text-gray-700">{hours(row.breakHours)}</td>
-                  <td className="px-5 py-4 text-sm font-semibold text-gray-900">{hours(row.totalHours)}</td>
-                  <td className="px-5 py-4">
-                    <Badge variant={statusVariant[row.status] || 'default'} dot size="xs">{row.status}</Badge>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-      </div>
+            {/* Notes */}
+            {selectedWeek.notes && (
+              <div>
+                <p className="text-sm font-semibold text-gray-900 mb-1">Notes</p>
+                <p className="text-sm text-gray-600">{selectedWeek.notes}</p>
+              </div>
+            )}
+
+            {/* Submit button */}
+            {selectedWeek.status === 'Draft' && (
+              <Button onClick={() => { submitTimesheet(selectedWeek.id); setSelectedWeek(null); }}>
+                Submit Timesheet
+              </Button>
+            )}
+          </div>
+        )}
+      </Modal>
     </div>
   );
 }

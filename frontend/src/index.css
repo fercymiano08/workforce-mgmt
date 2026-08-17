@@ -176,3 +176,9 @@
 
 .dark .hover\:bg-gray-50:hover { background-color: #1E293B !important; }
 .dark .hover\:bg-gray-100:hover { background-color: #273449 !important; }
+
+@media print {
+  aside, header, nav, .sidebar, .topbar, .breadcrumb { display: none !important; }
+  main { margin: 0 !important; padding: 0 !important; }
+  body { background: white !important; }
+}
