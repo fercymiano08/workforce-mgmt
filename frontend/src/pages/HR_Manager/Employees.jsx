@@ -430,7 +430,7 @@ export default function Employees() {
                     <Badge variant={statusVariant[emp.status]} dot size="xs">{emp.status}</Badge>
                   </div>
                   <h3 className="font-semibold text-gray-900">{emp.firstName} {emp.lastName}</h3>
-                  <p className="text-xs text-gray-400">{emp.id}</p>
+                  <span className="inline-flex items-center gap-1 text-[11px] font-bold text-blue-600 font-mono">{emp.id}</span>
                   <p className="text-sm text-gray-500 mt-0.5 mb-2">{emp.position}</p>
                   <div className="flex items-center gap-1.5 flex-wrap">
                     <Badge variant="primary" size="xs">{emp.department}</Badge>
@@ -628,8 +628,12 @@ export default function Employees() {
             <div className="flex items-center gap-4">
               <Avatar firstName={selectedEmployee.firstName} lastName={selectedEmployee.lastName} size="2xl" src={selectedEmployee.avatar} />
               <div>
-                <h3 className="text-xl font-bold text-gray-900">{selectedEmployee.firstName} {selectedEmployee.lastName}</h3>
-                <p className="text-xs text-gray-400">{selectedEmployee.id}</p>
+                <div className="flex items-center gap-3 flex-wrap">
+                  <h3 className="text-xl font-bold text-gray-900">{selectedEmployee.firstName} {selectedEmployee.lastName}</h3>
+                  <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-blue-50 border border-blue-100 text-[12px] font-bold text-blue-700 font-mono">
+                    {selectedEmployee.id}
+                  </span>
+                </div>
                 <p className="text-gray-500 mt-0.5">{selectedEmployee.position}</p>
                 <div className="flex gap-2 mt-2 flex-wrap">
                   <Badge variant={statusVariant[selectedEmployee.status]} dot>{selectedEmployee.status}</Badge>

@@ -3,11 +3,12 @@ import { useNavigate } from 'react-router-dom';
 import {
   Search, Bell, ChevronDown,
   LogOut, User, Settings, HelpCircle, Menu,
-  Sun, Moon, AlertTriangle
+  Sun, Moon, AlertTriangle, WifiOff, Wifi
 } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 import { useLanguage } from '../../context/LanguageContext';
 import { useTheme } from '../../context/ThemeContext';
+import useNetworkStatus from '../../hooks/useNetworkStatus';
 import Avatar from '../ui/Avatar';
 import Modal from '../ui/Modal';
 import Button from '../ui/Button';
@@ -18,6 +19,7 @@ export default function Topbar({ onMenuToggle }) {
   const { t } = useLanguage();
   const { toggleTheme, isDark } = useTheme();
   const navigate = useNavigate();
+  const isOnline = useNetworkStatus();
   const [showProfile, setShowProfile] = useState(false);
   const [showNotifications, setShowNotifications] = useState(false);
   const [showLogoutModal, setShowLogoutModal] = useState(false);
@@ -94,6 +96,19 @@ export default function Topbar({ onMenuToggle }) {
           <Moon className={`w-5 h-5 transition-all duration-300 ${isDark ? 'scale-100 rotate-0' : 'scale-0 rotate-90 absolute'}`} />
         </button>
 
+        {/* Network Status */}
+        <div
+          className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl text-[11px] font-semibold transition-colors ${
+            isOnline
+              ? 'bg-emerald-50 text-emerald-700'
+              : 'bg-red-50 text-red-600'
+          }`}
+          title={isOnline ? 'Internet connected' : 'No internet connection — AI features require internet'}
+        >
+          {isOnline ? <Wifi className="w-3.5 h-3.5" /> : <WifiOff className="w-3.5 h-3.5" />}
+          <span className="hidden sm:inline">{isOnline ? 'Online' : 'Offline'}</span>
+        </div>
+
         {/* Divider */}
         <div className="w-px h-8 bg-gray-200 hidden md:block" />
 
@@ -103,7 +118,7 @@ export default function Topbar({ onMenuToggle }) {
             onClick={() => setShowProfile(!showProfile)}
             className="flex items-center gap-2.5 pl-2 pr-3 py-1.5 rounded-xl hover:bg-gray-50 transition-colors"
           >
-            <Avatar firstName={user?.firstName} lastName={user?.lastName} size="sm" online />
+            <Avatar firstName={user?.firstName} lastName={user?.lastName} size="sm" online={isOnline} />
             <div className="text-left hidden md:block">
               <p className="text-[13px] font-semibold text-gray-900 leading-tight">{user?.firstName} {user?.lastName}</p>
               <p className="text-[11px] text-gray-500">{user?.roleLabel}</p>

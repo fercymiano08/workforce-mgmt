@@ -4,7 +4,7 @@ import { UserPlus, ArrowLeft, ScanFace, CheckCircle2, RefreshCw, Camera, Eye, Ey
 import Card from '../../components/ui/Card';
 import Button from '../../components/ui/Button';
 import Badge from '../../components/ui/Badge';
-import Input, { Select } from '../../components/ui/Input';
+import Input, { Select, Textarea } from '../../components/ui/Input';
 import FaceCaptureModal from '../../components/employees/FaceCaptureModal';
 import { departmentService, employeeService, roleService } from '../../services/api';
 import { EMPLOYMENT_TYPES } from '../../utils/constants';
@@ -13,6 +13,8 @@ import { useToast } from '../../context/ToastContext';
 const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 const PHONE_REGEX = /^[+\d][\d\s\-()]{6,}$/;
 const PASSWORD_REGEX = /^(?=.*[A-Za-z])(?=.*\d)[A-Za-z\d@$!%*#?&._-]{8,}$/;
+const genders = ['Male', 'Female'];
+const statuses = ['Active', 'On Leave', 'Inactive'];
 
 const TODAY = new Date().toISOString().split('T')[0];
 
@@ -40,13 +42,16 @@ const createEmptyForm = (suggestedId = '') => ({
   email: '',
   phone: '',
   department: '',
-  role: '',
+  position: '',
   employmentType: 'Full-time',
   dateHired: '',
   dateOfBirth: '',
+  gender: '',
   address: '',
   emergencyContact: '',
   emergencyPhone: '',
+  salary: '',
+  status: 'Active',
   password: '',
   confirmPassword: '',
   faceRegistered: false,
@@ -148,7 +153,7 @@ export default function EmployeeRegistration() {
     }
 
     if (!formData.department) errs.department = 'Department is required.';
-    if (!formData.role) errs.role = 'Role is required.';
+    if (!formData.position) errs.position = 'Position is required.';
     if (!formData.employmentType) errs.employmentType = 'Employment type is required.';
 
     if (!formData.dateHired) {
@@ -188,8 +193,8 @@ export default function EmployeeRegistration() {
   };
 
   const handleDepartmentChange = (value) => {
-    setFormData((prev) => ({ ...prev, department: value, role: '' }));
-    setFormErrors((prev) => ({ ...prev, department: undefined, role: undefined }));
+    setFormData((prev) => ({ ...prev, department: value, position: '' }));
+    setFormErrors((prev) => ({ ...prev, department: undefined, position: undefined }));
   };
 
   const handleFaceCapture = (dataUrl, descriptor) => {
@@ -212,18 +217,18 @@ export default function EmployeeRegistration() {
         email: formData.email.trim(),
         phone: formData.phone.trim(),
         department: formData.department,
-        position: formData.role,
+        position: formData.position,
         employmentType: formData.employmentType,
-        status: 'Active',
+        status: formData.status || 'Active',
         hireDate: formData.dateHired,
-        salary: 0,
+        salary: formData.salary ? Number(formData.salary) : 0,
         manager: '',
         avatar: '',
         address: formData.address,
         dateOfBirth: formData.dateOfBirth,
+        gender: formData.gender,
         emergencyContact: formData.emergencyContact,
         emergencyPhone: formData.emergencyPhone,
-        gender: '',
         assignedShift: '',
         skills: [],
         password: formData.password,
@@ -337,13 +342,21 @@ export default function EmployeeRegistration() {
                 placeholder="Enter last name"
               />
               <Input
-                label="Birthday"
+                label="Date of Birth"
                 type="date"
                 max={TODAY}
                 value={formData.dateOfBirth}
                 onChange={(e) => setField('dateOfBirth', e.target.value)}
                 error={formErrors.dateOfBirth}
               />
+              <Select
+                label="Gender"
+                value={formData.gender}
+                onChange={(e) => setField('gender', e.target.value)}
+              >
+                <option value="">Select gender</option>
+                {genders.map((g) => <option key={g} value={g}>{g}</option>)}
+              </Select>
               <Input
                 label="Phone Number"
                 required
@@ -375,13 +388,14 @@ export default function EmployeeRegistration() {
               subtitle="Home address and emergency contact for quick reach during incidents."
             />
             <div className="mt-5 grid grid-cols-1 md:grid-cols-2 gap-4">
-              <Input
+              <Textarea
                 label="Home Address"
                 containerClass="md:col-span-2"
                 value={formData.address}
                 onChange={(e) => setField('address', e.target.value)}
                 error={formErrors.address}
                 placeholder="Street, Barangay, City"
+                rows={2}
               />
               <Input
                 label="Emergency Contact Name"
@@ -429,15 +443,15 @@ export default function EmployeeRegistration() {
                 {departments.map((d) => <option key={d.id} value={d.name}>{d.name}</option>)}
               </Select>
               <Select
-                label="Role"
+                label="Position"
                 required
-                value={formData.role}
-                onChange={(e) => setField('role', e.target.value)}
-                error={formErrors.role}
+                value={formData.position}
+                onChange={(e) => setField('position', e.target.value)}
+                error={formErrors.position}
                 disabled={!formData.department}
               >
                 <option value="">
-                  {formData.department ? 'Select Role' : 'Select a department first'}
+                  {formData.department ? 'Select Position' : 'Select a department first'}
                 </option>
                 {rolesForDepartment(formData.department).map((r) => <option key={r.id} value={r.name}>{r.name}</option>)}
               </Select>
@@ -459,6 +473,20 @@ export default function EmployeeRegistration() {
                 onChange={(e) => setField('dateHired', e.target.value)}
                 error={formErrors.dateHired}
               />
+              <Input
+                label="Monthly Salary"
+                type="number"
+                value={formData.salary}
+                onChange={(e) => setField('salary', e.target.value)}
+                placeholder="Monthly salary (₱)"
+              />
+              <Select
+                label="Status"
+                value={formData.status}
+                onChange={(e) => setField('status', e.target.value)}
+              >
+                {statuses.map((s) => <option key={s} value={s}>{s}</option>)}
+              </Select>
             </div>
           </section>
 

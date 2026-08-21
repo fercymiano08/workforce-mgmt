@@ -2,7 +2,7 @@ import { useState } from 'react';
 import {
   Brain, AlertTriangle, AlertCircle, Info, CheckCircle2, XCircle,
   CalendarCheck, Clock, Timer, Palmtree, CalendarDays, Users,
-  Sparkles, RefreshCw, Inbox, ShieldAlert, Lock,
+  Sparkles, RefreshCw, Inbox, ShieldAlert, Lock, WifiOff, Wifi,
 } from 'lucide-react';
 import Card from '../../components/ui/Card';
 import Button from '../../components/ui/Button';
@@ -10,6 +10,7 @@ import Modal from '../../components/ui/Modal';
 import { SkeletonCard } from '../../components/ui/LoadingSkeleton';
 import { analyticsService } from '../../services/api';
 import useApiData from '../../hooks/useApiData';
+import useNetworkStatus from '../../hooks/useNetworkStatus';
 import { useLanguage } from '../../context/LanguageContext';
 import { useToast } from '../../context/ToastContext';
 
@@ -66,6 +67,7 @@ function fmtTime(iso) {
 export default function AIDecisionSupport() {
   const { t } = useLanguage();
   const { toast } = useToast();
+  const isOnline = useNetworkStatus();
   const [filter, setFilter] = useState('all');
   const [pending, setPending] = useState(null);
   const [running, setRunning] = useState(false);
@@ -329,6 +331,35 @@ export default function AIDecisionSupport() {
         </Button>
       </div>
 
+      {!isOnline && (
+        <div className="flex items-start gap-3 p-4 rounded-2xl bg-red-50 border border-red-200 animate-fadeIn">
+          <div className="w-10 h-10 rounded-xl bg-red-100 flex items-center justify-center shrink-0">
+            <WifiOff className="w-5 h-5 text-red-600" />
+          </div>
+          <div className="flex-1">
+            <p className="text-sm font-semibold text-red-800">No internet connection detected</p>
+            <p className="text-sm text-red-600 mt-0.5">
+              AI-powered insights require an active internet connection. Rule-based fallback insights are shown below instead. Connect to Wi-Fi or mobile data to enable full Gemini AI analysis.
+            </p>
+          </div>
+          <WifiOff className="w-5 h-5 text-red-300 shrink-0 mt-0.5" />
+        </div>
+      )}
+
+      {isOnline && data?.source !== 'ai' && !loading && (
+        <div className="flex items-start gap-3 p-4 rounded-2xl bg-amber-50 border border-amber-200 animate-fadeIn">
+          <div className="w-10 h-10 rounded-xl bg-amber-100 flex items-center justify-center shrink-0">
+            <AlertTriangle className="w-5 h-5 text-amber-600" />
+          </div>
+          <div className="flex-1">
+            <p className="text-sm font-semibold text-amber-800">Gemini AI unavailable</p>
+            <p className="text-sm text-amber-600 mt-0.5">
+              Connected to the internet, but Gemini AI could not be reached. This may be due to an invalid API key or a temporary service issue. Rule-based insights are shown below.
+            </p>
+          </div>
+        </div>
+      )}
+
       {loading && !data ? (
         <div className="grid md:grid-cols-2 gap-4">
           <SkeletonCard lines={4} />
@@ -377,10 +408,15 @@ export default function AIDecisionSupport() {
                       <Sparkles className="w-3.5 h-3.5" />
                       Powered by Gemini AI
                     </span>
+                  ) : !isOnline ? (
+                    <span className="inline-flex items-center gap-1.5 text-[12px] font-semibold px-2.5 py-1 rounded-full bg-red-50 text-red-700">
+                      <WifiOff className="w-3.5 h-3.5" />
+                      Offline — Rule-based insights only
+                    </span>
                   ) : (
                     <span className="inline-flex items-center gap-1.5 text-[12px] font-semibold px-2.5 py-1 rounded-full bg-amber-50 text-amber-700">
                       <AlertTriangle className="w-3.5 h-3.5" />
-                      Offline rules fallback
+                      Rule-based insights (Gemini unavailable)
                     </span>
                   )}
                   {totalPending > 0 ? (
