@@ -1,0 +1,472 @@
+<mxfile host="app.diagrams.net" agent="generated" version="24.0.0">
+  <diagram id="bpmn-legend" name="0 - Legend (Read Me)">
+    <mxGraphModel dx="1200" dy="800" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="1100" pageHeight="850" math="0" shadow="0">
+      <root>
+        <mxCell id="lg_title" value="BPMN LEGEND — Workforce Mgt BPMN Flowchart Reference" style="text;html=1;fontSize=20;fontStyle=1;align=center;" vertex="1" parent="1">
+          <mxGeometry x="150" y="20" width="800" height="40" as="geometry" />
+        </mxCell>
+        <mxCell id="lg_note" value="This file is a REFERENCE for the team. Redraw / improve each process on your own pages when making the official BPMN diagrams.&#xa;Each tab above contains one business process drawn with swimlanes (who does what) and standard BPMN symbols." style="text;html=1;fontSize=12;align=center;whiteSpace=wrap;" vertex="1" parent="1">
+          <mxGeometry x="200" y="60" width="700" height="60" as="geometry" />
+        </mxCell>
+        <mxCell id="lg_s" value="" style="ellipse;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;" vertex="1" parent="1">
+          <mxGeometry x="120" y="170" width="44" height="44" as="geometry" />
+        </mxCell>
+        <mxCell id="lg_s_t" value="START EVENT — thin circle, green.&#xa;Where the process begins." style="text;html=1;fontSize=11;align=left;whiteSpace=wrap;" vertex="1" parent="1">
+          <mxGeometry x="190" y="165" width="260" height="50" as="geometry" />
+        </mxCell>
+        <mxCell id="lg_e" value="" style="ellipse;whiteSpace=wrap;html=1;fillColor=#f8cecc;strokeColor=#b85450;strokeWidth=3;" vertex="1" parent="1">
+          <mxGeometry x="120" y="250" width="44" height="44" as="geometry" />
+        </mxCell>
+        <mxCell id="lg_e_t" value="END EVENT — thick circle, red.&#xa;Where the process finishes (there can be several)." style="text;html=1;fontSize=11;align=left;whiteSpace=wrap;" vertex="1" parent="1">
+          <mxGeometry x="190" y="245" width="300" height="50" as="geometry" />
+        </mxCell>
+        <mxCell id="lg_t" value="Task / Activity" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;fontSize=11;" vertex="1" parent="1">
+          <mxGeometry x="110" y="335" width="140" height="60" as="geometry" />
+        </mxCell>
+        <mxCell id="lg_t_t" value="TASK — rounded rectangle.&#xa;One action performed by whoever owns the lane it sits in." style="text;html=1;fontSize=11;align=left;whiteSpace=wrap;" vertex="1" parent="1">
+          <mxGeometry x="280" y="330" width="320" height="50" as="geometry" />
+        </mxCell>
+        <mxCell id="lg_g" value="?" style="rhombus;whiteSpace=wrap;html=1;fillColor=#fff2cc;strokeColor=#d6b656;fontSize=14;fontStyle=1;" vertex="1" parent="1">
+          <mxGeometry x="130" y="430" width="56" height="56" as="geometry" />
+        </mxCell>
+        <mxCell id="lg_g_t" value="GATEWAY (decision) — diamond.&#xa;A yes/no or choice point. Each outgoing arrow is labeled with its condition." style="text;html=1;fontSize=11;align=left;whiteSpace=wrap;" vertex="1" parent="1">
+          <mxGeometry x="220" y="425" width="380" height="50" as="geometry" />
+        </mxCell>
+        <mxCell id="lg_a" value="" style="endArrow=open;endFill=0;strokeWidth=2;html=1;" edge="1" parent="1">
+          <mxGeometry relative="1" as="geometry"><mxPoint x="120" y="540" as="sourcePoint" /><mxPoint x="240" y="540" as="targetPoint" /></mxGeometry>
+        </mxCell>
+        <mxCell id="lg_a_t" value="SEQUENCE FLOW — solid arrow.&#xa;The normal order of steps." style="text;html=1;fontSize=11;align=left;whiteSpace=wrap;" vertex="1" parent="1">
+          <mxGeometry x="270" y="520" width="300" height="40" as="geometry" />
+        </mxCell>
+        <mxCell id="lg_pool" value="PROCESS POOL" style="swimlane;html=1;horizontal=0;startSize=28;fontSize=12;fontStyle=1;fillColor=none;strokeColor=#333333;" vertex="1" parent="1">
+          <mxGeometry x="620" y="160" width="420" height="420" as="geometry" />
+        </mxCell>
+        <mxCell id="lg_lane1" value="EMPLOYEE lane" style="swimlane;html=1;horizontal=0;startSize=26;fontSize=11;fillColor=#ffffff;strokeColor=#666666;" vertex="1" parent="lg_pool">
+          <mxGeometry x="28" y="0" width="392" height="140" as="geometry" />
+        </mxCell>
+        <mxCell id="lg_lane2" value="SYSTEM / BACKEND lane" style="swimlane;html=1;horizontal=0;startSize=26;fontSize=11;fillColor=#f7f7f7;strokeColor=#666666;" vertex="1" parent="lg_pool">
+          <mxGeometry x="28" y="140" width="392" height="140" as="geometry" />
+        </mxCell>
+        <mxCell id="lg_lane3" value="HR MANAGER lane" style="swimlane;html=1;horizontal=0;startSize=26;fontSize=11;fillColor=#ffffff;strokeColor=#666666;" vertex="1" parent="lg_pool">
+          <mxGeometry x="28" y="280" width="392" height="140" as="geometry" />
+        </mxCell>
+        <mxCell id="lg_p_t" value="POOL + LANES — the big container is one process; each horizontal band (lane) belongs to one actor. A task placed inside a lane means THAT actor performs it. Arrows crossing lanes = hand-offs between people/systems." style="text;html=1;fontSize=11;align=left;whiteSpace=wrap;" vertex="1" parent="1">
+          <mxGeometry x="1060" y="200" width="-10" height="10" as="geometry" />
+        </mxCell>
+        <mxCell id="lg_p_t2" value="POOL + LANES — the big container is one process;&#xa;each horizontal band (lane) belongs to one actor.&#xa;A task inside a lane = THAT actor performs it.&#xa;Arrows crossing lanes = hand-offs between actors." style="text;html=1;fontSize=11;align=left;whiteSpace=wrap;verticalAlign=top;" vertex="1" parent="1">
+          <mxGeometry x="620" y="600" width="420" height="90" as="geometry" />
+        </mxCell>
+      </root>
+    </mxGraphModel>
+  </diagram>
+
+  <diagram id="bpmn-clockin" name="1 - Kiosk Clock In-Out">
+    <mxGraphModel dx="1400" dy="900" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="1350" pageHeight="900" math="0" shadow="0">
+      <root>
+        <mxCell id="p1_pool" value="BUSINESS PROCESS: Employee Clock-In / Clock-Out at Kiosk" style="swimlane;html=1;horizontal=0;startSize=28;fontSize=13;fontStyle=1;fillColor=none;strokeColor=#333333;" vertex="1" parent="1">
+          <mxGeometry x="20" y="20" width="1280" height="800" as="geometry" />
+        </mxCell>
+        <mxCell id="p1_laneE" value="EMPLOYEE" style="swimlane;html=1;horizontal=0;startSize=26;fontSize=12;fillColor=#ffffff;strokeColor=#666666;" vertex="1" parent="p1_pool">
+          <mxGeometry x="28" y="0" width="1252" height="240" as="geometry" />
+        </mxCell>
+        <mxCell id="p1_laneK" value="KIOSK TERMINAL (device)" style="swimlane;html=1;horizontal=0;startSize=26;fontSize=12;fillColor=#f7f7f7;strokeColor=#666666;" vertex="1" parent="p1_pool">
+          <mxGeometry x="28" y="240" width="1252" height="290" as="geometry" />
+        </mxCell>
+        <mxCell id="p1_laneB" value="BACKEND SYSTEM (Laravel)" style="swimlane;html=1;horizontal=0;startSize=26;fontSize=12;fillColor=#ffffff;strokeColor=#666666;" vertex="1" parent="p1_pool">
+          <mxGeometry x="28" y="530" width="1252" height="270" as="geometry" />
+        </mxCell>
+        <mxCell id="p1_s" value="Arrives at work" style="ellipse;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;fontSize=9;" vertex="1" parent="p1_laneE">
+          <mxGeometry x="46" y="100" width="64" height="64" as="geometry" />
+        </mxCell>
+        <mxCell id="p1_conf" value="Confirm &quot;Is this you?&quot;" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;fontSize=11;" vertex="1" parent="p1_laneE">
+          <mxGeometry x="580" y="88" width="130" height="70" as="geometry" />
+        </mxCell>
+        <mxCell id="p1_eok" value="Clocked in" style="ellipse;whiteSpace=wrap;html=1;fillColor=#f8cecc;strokeColor=#b85450;strokeWidth=3;fontSize=9;" vertex="1" parent="p1_laneE">
+          <mxGeometry x="1150" y="100" width="60" height="60" as="geometry" />
+        </mxCell>
+        <mxCell id="p1_enter" value="Enter Employee ID" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;fontSize=11;" vertex="1" parent="p1_laneK">
+          <mxGeometry x="60" y="105" width="130" height="70" as="geometry" />
+        </mxCell>
+        <mxCell id="p1_gfound" value="ID found?" style="rhombus;whiteSpace=wrap;html=1;fillColor=#fff2cc;strokeColor=#d6b656;fontSize=10;" vertex="1" parent="p1_laneK">
+          <mxGeometry x="236" y="117" width="56" height="56" as="geometry" />
+        </mxCell>
+        <mxCell id="p1_show" value="Show photo, name &amp; department" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;fontSize=11;" vertex="1" parent="p1_laneK">
+          <mxGeometry x="330" y="105" width="130" height="70" as="geometry" />
+        </mxCell>
+        <mxCell id="p1_scan" value="Camera face scan (face-api.js)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;fontSize=11;" vertex="1" parent="p1_laneK">
+          <mxGeometry x="500" y="105" width="140" height="70" as="geometry" />
+        </mxCell>
+        <mxCell id="p1_gface" value="Face matches descriptor?" style="rhombus;whiteSpace=wrap;html=1;fillColor=#fff2cc;strokeColor=#d6b656;fontSize=10;" vertex="1" parent="p1_laneK">
+          <mxGeometry x="686" y="112" width="66" height="66" as="geometry" />
+        </mxCell>
+        <mxCell id="p1_strike" value="Log security event + add strike" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;fontSize=11;" vertex="1" parent="p1_laneK">
+          <mxGeometry x="790" y="34" width="140" height="62" as="geometry" />
+        </mxCell>
+        <mxCell id="p1_gthree" value="3rd strike?" style="rhombus;whiteSpace=wrap;html=1;fillColor=#fff2cc;strokeColor=#d6b656;fontSize=10;" vertex="1" parent="p1_laneK">
+          <mxGeometry x="976" y="42" width="56" height="56" as="geometry" />
+        </mxCell>
+        <mxCell id="p1_lock" value="Lock terminal 60 seconds" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;fontSize=11;" vertex="1" parent="p1_laneK">
+          <mxGeometry x="1064" y="38" width="120" height="64" as="geometry" />
+        </mxCell>
+        <mxCell id="p1_elock" value="Locked out" style="ellipse;whiteSpace=wrap;html=1;fillColor=#f8cecc;strokeColor=#b85450;strokeWidth=3;fontSize=9;" vertex="1" parent="p1_laneK">
+          <mxGeometry x="1196" y="48" width="44" height="44" as="geometry" />
+        </mxCell>
+        <mxCell id="p1_post" value="Send verified clock-in request" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;fontSize=11;" vertex="1" parent="p1_laneK">
+          <mxGeometry x="790" y="180" width="140" height="66" as="geometry" />
+        </mxCell>
+        <mxCell id="p1_scr" value="Success screen (time + status)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;fontSize=11;" vertex="1" parent="p1_laneK">
+          <mxGeometry x="970" y="182" width="130" height="62" as="geometry" />
+        </mxCell>
+        <mxCell id="p1_dup" value="Duplicate check: already clocked today?" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffe6cc;strokeColor=#d79b00;fontSize=11;" vertex="1" parent="p1_laneB">
+          <mxGeometry x="60" y="95" width="160" height="76" as="geometry" />
+        </mxCell>
+        <mxCell id="p1_edup" value="Rejected" style="ellipse;whiteSpace=wrap;html=1;fillColor=#f8cecc;strokeColor=#b85450;strokeWidth=3;fontSize=9;" vertex="1" parent="p1_laneB">
+          <mxGeometry x="260" y="196" width="52" height="52" as="geometry" />
+        </mxCell>
+        <mxCell id="p1_glate" value="Before shift start?" style="rhombus;whiteSpace=wrap;html=1;fillColor=#fff2cc;strokeColor=#d6b656;fontSize=10;" vertex="1" parent="p1_laneB">
+          <mxGeometry x="266" y="100" width="70" height="70" as="geometry" />
+        </mxCell>
+        <mxCell id="p1_calc" value="Compute status, regular hours, OT" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffe6cc;strokeColor=#d79b00;fontSize=11;" vertex="1" parent="p1_laneB">
+          <mxGeometry x="376" y="95" width="150" height="76" as="geometry" />
+        </mxCell>
+        <mxCell id="p1_ins" value="INSERT row into attendance table" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffe6cc;strokeColor=#d79b00;fontSize=11;" vertex="1" parent="p1_laneB">
+          <mxGeometry x="566" y="98" width="150" height="70" as="geometry" />
+        </mxCell>
+        <mxCell id="p1_seclog" value="Record event in security_events table" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffe6cc;strokeColor=#d79b00;fontSize=11;" vertex="1" parent="p1_laneB">
+          <mxGeometry x="790" y="30" width="150" height="70" as="geometry" />
+        </mxCell>
+        <mxCell id="p1_f1" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;endArrow=open;endFill=0;" edge="1" parent="1" source="p1_s" target="p1_enter"><mxGeometry relative="1" as="geometry" /></mxCell>
+        <mxCell id="p1_f2" value="No" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;endArrow=open;endFill=0;fontSize=10;" edge="1" parent="1" source="p1_enter" target="p1_gfound"><mxGeometry relative="1" as="geometry" /></mxCell>
+        <mxCell id="p1_f3" value="Yes" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;endArrow=open;endFill=0;fontSize=10;" edge="1" parent="1" source="p1_gfound" target="p1_show"><mxGeometry relative="1" as="geometry" /></mxCell>
+        <mxCell id="p1_f4" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;endArrow=open;endFill=0;" edge="1" parent="1" source="p1_show" target="p1_conf"><mxGeometry relative="1" as="geometry" /></mxCell>
+        <mxCell id="p1_f5" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;endArrow=open;endFill=0;" edge="1" parent="1" source="p1_conf" target="p1_scan"><mxGeometry relative="1" as="geometry" /></mxCell>
+        <mxCell id="p1_f6" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;endArrow=open;endFill=0;" edge="1" parent="1" source="p1_scan" target="p1_gface"><mxGeometry relative="1" as="geometry" /></mxCell>
+        <mxCell id="p1_f7" value="No" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;endArrow=open;endFill=0;fontSize=10;" edge="1" parent="1" source="p1_gface" target="p1_strike"><mxGeometry relative="1" as="geometry" /></mxCell>
+        <mxCell id="p1_f8" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;endArrow=open;endFill=0;" edge="1" parent="1" source="p1_strike" target="p1_seclog"><mxGeometry relative="1" as="geometry" /></mxCell>
+        <mxCell id="p1_f9" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;endArrow=open;endFill=0;" edge="1" parent="1" source="p1_strike" target="p1_gthree"><mxGeometry relative="1" as="geometry" /></mxCell>
+        <mxCell id="p1_f10" value="Yes" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;endArrow=open;endFill=0;fontSize=10;" edge="1" parent="1" source="p1_gthree" target="p1_lock"><mxGeometry relative="1" as="geometry" /></mxCell>
+        <mxCell id="p1_f11" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;endArrow=open;endFill=0;" edge="1" parent="1" source="p1_lock" target="p1_elock"><mxGeometry relative="1" as="geometry" /></mxCell>
+        <mxCell id="p1_f12" value="Not yet - retry scan" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;endArrow=open;endFill=0;fontSize=10;dashed=1;" edge="1" parent="1" source="p1_gthree" target="p1_scan"><mxGeometry relative="1" as="geometry" /></mxCell>
+        <mxCell id="p1_f13" value="Yes - verified" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;endArrow=open;endFill=0;fontSize=10;" edge="1" parent="1" source="p1_gface" target="p1_post"><mxGeometry relative="1" as="geometry" /></mxCell>
+        <mxCell id="p1_f14" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;endArrow=open;endFill=0;" edge="1" parent="1" source="p1_post" target="p1_dup"><mxGeometry relative="1" as="geometry" /></mxCell>
+        <mxCell id="p1_f15" value="Already exists" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;endArrow=open;endFill=0;fontSize=10;" edge="1" parent="1" source="p1_dup" target="p1_edup"><mxGeometry relative="1" as="geometry" /></mxCell>
+        <mxCell id="p1_f16" value="New day" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;endArrow=open;endFill=0;fontSize=10;" edge="1" parent="1" source="p1_dup" target="p1_glate"><mxGeometry relative="1" as="geometry" /></mxCell>
+        <mxCell id="p1_f17" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;endArrow=open;endFill=0;" edge="1" parent="1" source="p1_glate" target="p1_calc"><mxGeometry relative="1" as="geometry" /></mxCell>
+        <mxCell id="p1_f18" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;endArrow=open;endFill=0;" edge="1" parent="1" source="p1_calc" target="p1_ins"><mxGeometry relative="1" as="geometry" /></mxCell>
+        <mxCell id="p1_f19" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;endArrow=open;endFill=0;" edge="1" parent="1" source="p1_ins" target="p1_scr"><mxGeometry relative="1" as="geometry" /></mxCell>
+        <mxCell id="p1_f20" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;endArrow=open;endFill=0;" edge="1" parent="1" source="p1_scr" target="p1_eok"><mxGeometry relative="1" as="geometry" /></mxCell>
+      </root>
+    </mxGraphModel>
+  </diagram>
+
+  <diagram id="bpmn-leave" name="2 - Leave Management">
+    <mxGraphModel dx="1200" dy="800" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="1200" pageHeight="750" math="0" shadow="0">
+      <root>
+        <mxCell id="p2_pool" value="BUSINESS PROCESS: Leave Application and Approval" style="swimlane;html=1;horizontal=0;startSize=28;fontSize=13;fontStyle=1;fillColor=none;strokeColor=#333333;" vertex="1" parent="1">
+          <mxGeometry x="20" y="20" width="1160" height="660" as="geometry" />
+        </mxCell>
+        <mxCell id="p2_laneE" value="EMPLOYEE" style="swimlane;html=1;horizontal=0;startSize=26;fontSize=12;fillColor=#ffffff;strokeColor=#666666;" vertex="1" parent="p2_pool">
+          <mxGeometry x="28" y="0" width="1132" height="220" as="geometry" />
+        </mxCell>
+        <mxCell id="p2_laneB" value="BACKEND SYSTEM" style="swimlane;html=1;horizontal=0;startSize=26;fontSize=12;fillColor=#f7f7f7;strokeColor=#666666;" vertex="1" parent="p2_pool">
+          <mxGeometry x="28" y="220" width="1132" height="210" as="geometry" />
+        </mxCell>
+        <mxCell id="p2_laneH" value="HR MANAGER" style="swimlane;html=1;horizontal=0;startSize=26;fontSize=12;fillColor=#ffffff;strokeColor=#666666;" vertex="1" parent="p2_pool">
+          <mxGeometry x="28" y="430" width="1132" height="230" as="geometry" />
+        </mxCell>
+        <mxCell id="p2_s" value="Needs leave" style="ellipse;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;fontSize=9;" vertex="1" parent="p2_laneE">
+          <mxGeometry x="46" y="78" width="64" height="64" as="geometry" />
+        </mxCell>
+        <mxCell id="p2_form" value="Fill form: leave type, dates, reason" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;fontSize=11;" vertex="1" parent="p2_laneE">
+          <mxGeometry x="150" y="75" width="160" height="70" as="geometry" />
+        </mxCell>
+        <mxCell id="p2_gvalid" value="End date before start date?" style="rhombus;whiteSpace=wrap;html=1;fillColor=#fff2cc;strokeColor=#d6b656;fontSize=10;" vertex="1" parent="p2_laneE">
+          <mxGeometry x="356" y="72" width="86" height="76" as="geometry" />
+        </mxCell>
+        <mxCell id="p2_submit" value="Submit application" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;fontSize=11;" vertex="1" parent="p2_laneE">
+          <mxGeometry x="486" y="78" width="130" height="64" as="geometry" />
+        </mxCell>
+        <mxCell id="p2_eerr" value="Fix dates" style="text;html=1;fontSize=10;fontColor=#999999;" vertex="1" parent="p2_laneE">
+          <mxGeometry x="360" y="170" width="80" height="30" as="geometry" />
+        </mxCell>
+        <mxCell id="p2_val" value="Re-validate + INSERT into leaves (status Pending)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#e1d5e7;strokeColor=#9673a6;fontSize=11;" vertex="1" parent="p2_laneB">
+          <mxGeometry x="150" y="72" width="180" height="70" as="geometry" />
+        </mxCell>
+        <mxCell id="p2_nhr" value="Notify HR (notification created)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#e1d5e7;strokeColor=#9673a6;fontSize=11;" vertex="1" parent="p2_laneB">
+          <mxGeometry x="380" y="74" width="150" height="66" as="geometry" />
+        </mxCell>
+        <mxCell id="p2_rev" value="Review request details" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;fontSize=11;" vertex="1" parent="p2_laneH">
+          <mxGeometry x="150" y="85" width="150" height="66" as="geometry" />
+        </mxCell>
+        <mxCell id="p2_gapp" value="Approve?" style="rhombus;whiteSpace=wrap;html=1;fillColor=#fff2cc;strokeColor=#d6b656;fontSize=11;fontStyle=1;" vertex="1" parent="p2_laneH">
+          <mxGeometry x="350" y="92" width="66" height="56" as="geometry" />
+        </mxCell>
+        <mxCell id="p2_deduct" value="Deduct employees.leave_balances" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#e1d5e7;strokeColor=#9673a6;fontSize=11;" vertex="1" parent="p2_laneB">
+          <mxGeometry x="480" y="30" width="180" height="60" as="geometry" />
+        </mxCell>
+        <mxCell id="p2_rej" value="Set status Rejected (+ comments)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#e1d5e7;strokeColor=#9673a6;fontSize=11;" vertex="1" parent="p2_laneH">
+          <mxGeometry x="480" y="150" width="170" height="62" as="geometry" />
+        </mxCell>
+        <mxCell id="p2_appset" value="Set status Approved, approved_by, dates" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#e1d5e7;strokeColor=#9673a6;fontSize=11;" vertex="1" parent="p2_laneB">
+          <mxGeometry x="700" y="30" width="170" height="62" as="geometry" />
+        </mxCell>
+        <mxCell id="p2_nemp" value="Notify employee of decision" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#e1d5e7;strokeColor=#9673a6;fontSize=11;" vertex="1" parent="p2_laneB">
+          <mxGeometry x="700" y="120" width="170" height="60" as="geometry" />
+        </mxCell>
+        <mxCell id="p2_end" value="Leave resolved" style="ellipse;whiteSpace=wrap;html=1;fillColor=#f8cecc;strokeColor=#b85450;strokeWidth=3;fontSize=9;" vertex="1" parent="p2_laneE">
+          <mxGeometry x="940" y="80" width="60" height="60" as="geometry" />
+        </mxCell>
+        <mxCell id="p2_f1" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;endArrow=open;endFill=0;" edge="1" parent="1" source="p2_s" target="p2_form"><mxGeometry relative="1" as="geometry" /></mxCell>
+        <mxCell id="p2_f2" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;endArrow=open;endFill=0;" edge="1" parent="1" source="p2_form" target="p2_gvalid"><mxGeometry relative="1" as="geometry" /></mxCell>
+        <mxCell id="p2_f3" value="Yes - invalid" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;endArrow=open;endFill=0;fontSize=10;dashed=1;" edge="1" parent="1" source="p2_gvalid" target="p2_eerr"><mxGeometry relative="1" as="geometry" /></mxCell>
+        <mxCell id="p2_f4" value="No - valid" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;endArrow=open;endFill=0;fontSize=10;" edge="1" parent="1" source="p2_gvalid" target="p2_submit"><mxGeometry relative="1" as="geometry" /></mxCell>
+        <mxCell id="p2_f5" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;endArrow=open;endFill=0;" edge="1" parent="1" source="p2_submit" target="p2_val"><mxGeometry relative="1" as="geometry" /></mxCell>
+        <mxCell id="p2_f6" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;endArrow=open;endFill=0;" edge="1" parent="1" source="p2_val" target="p2_nhr"><mxGeometry relative="1" as="geometry" /></mxCell>
+        <mxCell id="p2_f7" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;endArrow=open;endFill=0;" edge="1" parent="1" source="p2_nhr" target="p2_rev"><mxGeometry relative="1" as="geometry" /></mxCell>
+        <mxCell id="p2_f8" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;endArrow=open;endFill=0;" edge="1" parent="1" source="p2_rev" target="p2_gapp"><mxGeometry relative="1" as="geometry" /></mxCell>
+        <mxCell id="p2_f9" value="Yes" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;endArrow=open;endFill=0;fontSize=10;" edge="1" parent="1" source="p2_gapp" target="p2_deduct"><mxGeometry relative="1" as="geometry" /></mxCell>
+        <mxCell id="p2_f10" value="No" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;endArrow=open;endFill=0;fontSize=10;" edge="1" parent="1" source="p2_gapp" target="p2_rej"><mxGeometry relative="1" as="geometry" /></mxCell>
+        <mxCell id="p2_f11" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;endArrow=open;endFill=0;" edge="1" parent="1" source="p2_deduct" target="p2_appset"><mxGeometry relative="1" as="geometry" /></mxCell>
+        <mxCell id="p2_f12" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;endArrow=open;endFill=0;" edge="1" parent="1" source="p2_rej" target="p2_nemp"><mxGeometry relative="1" as="geometry" /></mxCell>
+        <mxCell id="p2_f13" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;endArrow=open;endFill=0;" edge="1" parent="1" source="p2_appset" target="p2_nemp"><mxGeometry relative="1" as="geometry" /></mxCell>
+        <mxCell id="p2_f14" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;endArrow=open;endFill=0;" edge="1" parent="1" source="p2_nemp" target="p2_end"><mxGeometry relative="1" as="geometry" /></mxCell>
+      </root>
+    </mxGraphModel>
+  </diagram>
+
+  <diagram id="bpmn-overtime" name="3 - Overtime Request">
+    <mxGraphModel dx="1200" dy="800" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="1200" pageHeight="720" math="0" shadow="0">
+      <root>
+        <mxCell id="p3_pool" value="BUSINESS PROCESS: Overtime Request and Approval" style="swimlane;html=1;horizontal=0;startSize=28;fontSize=13;fontStyle=1;fillColor=none;strokeColor=#333333;" vertex="1" parent="1">
+          <mxGeometry x="20" y="20" width="1140" height="620" as="geometry" />
+        </mxCell>
+        <mxCell id="p3_laneE" value="EMPLOYEE" style="swimlane;html=1;horizontal=0;startSize=26;fontSize=12;fillColor=#ffffff;strokeColor=#666666;" vertex="1" parent="p3_pool">
+          <mxGeometry x="28" y="0" width="1112" height="200" as="geometry" />
+        </mxCell>
+        <mxCell id="p3_laneH" value="HR MANAGER" style="swimlane;html=1;horizontal=0;startSize=26;fontSize=12;fillColor=#f7f7f7;strokeColor=#666666;" vertex="1" parent="p3_pool">
+          <mxGeometry x="28" y="200" width="1112" height="200" as="geometry" />
+        </mxCell>
+        <mxCell id="p3_laneB" value="BACKEND SYSTEM" style="swimlane;html=1;horizontal=0;startSize=26;fontSize=12;fillColor=#ffffff;strokeColor=#666666;" vertex="1" parent="p3_pool">
+          <mxGeometry x="28" y="400" width="1112" height="220" as="geometry" />
+        </mxCell>
+        <mxCell id="p3_s" value="Works past 5 PM needed" style="ellipse;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;fontSize=9;" vertex="1" parent="p3_laneE">
+          <mxGeometry x="46" y="68" width="70" height="64" as="geometry" />
+        </mxCell>
+        <mxCell id="p3_req" value="File request: date, expected hours, reason" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;fontSize=11;" vertex="1" parent="p3_laneE">
+          <mxGeometry x="160" y="65" width="170" height="70" as="geometry" />
+        </mxCell>
+        <mxCell id="p3_rev" value="Review OT queue (also suggested by AI Decision Support)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;fontSize=11;" vertex="1" parent="p3_laneH">
+          <mxGeometry x="160" y="70" width="190" height="70" as="geometry" />
+        </mxCell>
+        <mxCell id="p3_gapp" value="Approve?" style="rhombus;whiteSpace=wrap;html=1;fillColor=#fff2cc;strokeColor=#d6b656;fontSize=11;fontStyle=1;" vertex="1" parent="p3_laneH">
+          <mxGeometry x="410" y="77" width="66" height="56" as="geometry" />
+        </mxCell>
+        <mxCell id="p3_hours" value="Set approved_hours + approved_at" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffe6cc;strokeColor=#d79b00;fontSize=11;" vertex="1" parent="p3_laneB">
+          <mxGeometry x="530" y="24" width="180" height="62" as="geometry" />
+        </mxCell>
+        <mxCell id="p3_rej" value="Set status Rejected (+ comments)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffe6cc;strokeColor=#d79b00;fontSize=11;" vertex="1" parent="p3_laneH">
+          <mxGeometry x="530" y="118" width="170" height="62" as="geometry" />
+        </mxCell>
+        <mxCell id="p3_store" value="UPDATE overtime_requests row" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffe6cc;strokeColor=#d79b00;fontSize=11;" vertex="1" parent="p3_laneB">
+          <mxGeometry x="750" y="60" width="170" height="62" as="geometry" />
+        </mxCell>
+        <mxCell id="p3_ntf" value="Notify employee of decision" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffe6cc;strokeColor=#d79b00;fontSize=11;" vertex="1" parent="p3_laneB">
+          <mxGeometry x="750" y="146" width="170" height="58" as="geometry" />
+        </mxCell>
+        <mxCell id="p3_end" value="OT resolved" style="ellipse;whiteSpace=wrap;html=1;fillColor=#f8cecc;strokeColor=#b85450;strokeWidth=3;fontSize=9;" vertex="1" parent="p3_laneE">
+          <mxGeometry x="980" y="70" width="60" height="60" as="geometry" />
+        </mxCell>
+        <mxCell id="p3_f1" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;endArrow=open;endFill=0;" edge="1" parent="1" source="p3_s" target="p3_req"><mxGeometry relative="1" as="geometry" /></mxCell>
+        <mxCell id="p3_f2" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;endArrow=open;endFill=0;" edge="1" parent="1" source="p3_req" target="p3_rev"><mxGeometry relative="1" as="geometry" /></mxCell>
+        <mxCell id="p3_f3" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;endArrow=open;endFill=0;" edge="1" parent="1" source="p3_rev" target="p3_gapp"><mxGeometry relative="1" as="geometry" /></mxCell>
+        <mxCell id="p3_f4" value="Yes" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;endArrow=open;endFill=0;fontSize=10;" edge="1" parent="1" source="p3_gapp" target="p3_hours"><mxGeometry relative="1" as="geometry" /></mxCell>
+        <mxCell id="p3_f5" value="No" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;endArrow=open;endFill=0;fontSize=10;" edge="1" parent="1" source="p3_gapp" target="p3_rej"><mxGeometry relative="1" as="geometry" /></mxCell>
+        <mxCell id="p3_f6" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;endArrow=open;endFill=0;" edge="1" parent="1" source="p3_hours" target="p3_store"><mxGeometry relative="1" as="geometry" /></mxCell>
+        <mxCell id="p3_f7" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;endArrow=open;endFill=0;" edge="1" parent="1" source="p3_rej" target="p3_ntf"><mxGeometry relative="1" as="geometry" /></mxCell>
+        <mxCell id="p3_f8" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;endArrow=open;endFill=0;" edge="1" parent="1" source="p3_store" target="p3_end"><mxGeometry relative="1" as="geometry" /></mxCell>
+      </root>
+    </mxGraphModel>
+  </diagram>
+
+  <diagram id="bpmn-timesheet" name="4 - Weekly Timesheet Cycle">
+    <mxGraphModel dx="1200" dy="800" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="1200" pageHeight="720" math="0" shadow="0">
+      <root>
+        <mxCell id="p4_pool" value="BUSINESS PROCESS: Weekly Timesheet Generation and Approval" style="swimlane;html=1;horizontal=0;startSize=28;fontSize=13;fontStyle=1;fillColor=none;strokeColor=#333333;" vertex="1" parent="1">
+          <mxGeometry x="20" y="20" width="1140" height="620" as="geometry" />
+        </mxCell>
+        <mxCell id="p4_laneS" value="BACKEND SYSTEM (automatic)" style="swimlane;html=1;horizontal=0;startSize=26;fontSize=12;fillColor=#f7f7f7;strokeColor=#666666;" vertex="1" parent="p4_pool">
+          <mxGeometry x="28" y="0" width="1112" height="200" as="geometry" />
+        </mxCell>
+        <mxCell id="p4_laneE" value="EMPLOYEE" style="swimlane;html=1;horizontal=0;startSize=26;fontSize=12;fillColor=#ffffff;strokeColor=#666666;" vertex="1" parent="p4_pool">
+          <mxGeometry x="28" y="200" width="1112" height="200" as="geometry" />
+        </mxCell>
+        <mxCell id="p4_laneH" value="HR MANAGER" style="swimlane;html=1;horizontal=0;startSize=26;fontSize=12;fillColor=#f7f7f7;strokeColor=#666666;" vertex="1" parent="p4_pool">
+          <mxGeometry x="28" y="400" width="1112" height="220" as="geometry" />
+        </mxCell>
+        <mxCell id="p4_s" value="Week ends" style="ellipse;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;fontSize=9;" vertex="1" parent="p4_laneS">
+          <mxGeometry x="46" y="68" width="60" height="60" as="geometry" />
+        </mxCell>
+        <mxCell id="p4_gen" value="Aggregate attendance rows into weekly timesheet (regular / OT / break hours)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffe6cc;strokeColor=#d79b00;fontSize=11;" vertex="1" parent="p4_laneS">
+          <mxGeometry x="150" y="60" width="220" height="76" as="geometry" />
+        </mxCell>
+        <mxCell id="p4_rev" value="Review my weekly hours" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;fontSize=11;" vertex="1" parent="p4_laneE">
+          <mxGeometry x="150" y="68" width="150" height="62" as="geometry" />
+        </mxCell>
+        <mxCell id="p4_sub" value="Submit timesheet (status Submitted)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;fontSize=11;" vertex="1" parent="p4_laneE">
+          <mxGeometry x="340" y="68" width="170" height="62" as="geometry" />
+        </mxCell>
+        <mxCell id="p4_chk" value="Check totals incl. approved OT vs attendance records" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;fontSize=11;" vertex="1" parent="p4_laneH">
+          <mxGeometry x="150" y="75" width="200" height="70" as="geometry" />
+        </mxCell>
+        <mxCell id="p4_gok" value="Figures correct?" style="rhombus;whiteSpace=wrap;html=1;fillColor=#fff2cc;strokeColor=#d6b656;fontSize=10;" vertex="1" parent="p4_laneH">
+          <mxGeometry x="400" y="82" width="76" height="56" as="geometry" />
+        </mxCell>
+        <mxCell id="p4_fix" value="Employee files correction / note" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;fontSize=11;" vertex="1" parent="p4_laneE">
+          <mxGeometry x="560" y="68" width="170" height="62" as="geometry" />
+        </mxCell>
+        <mxCell id="p4_appr" value="Approve (status Approved, approved_by)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;fontSize=11;" vertex="1" parent="p4_laneH">
+          <mxGeometry x="560" y="140" width="200" height="62" as="geometry" />
+        </mxCell>
+        <mxCell id="p4_end" value="Timesheet locked for payroll" style="ellipse;whiteSpace=wrap;html=1;fillColor=#f8cecc;strokeColor=#b85450;strokeWidth=3;fontSize=9;" vertex="1" parent="p4_laneH">
+          <mxGeometry x="820" y="148" width="64" height="60" as="geometry" />
+        </mxCell>
+        <mxCell id="p4_f1" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;endArrow=open;endFill=0;" edge="1" parent="1" source="p4_s" target="p4_gen"><mxGeometry relative="1" as="geometry" /></mxCell>
+        <mxCell id="p4_f2" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;endArrow=open;endFill=0;" edge="1" parent="1" source="p4_gen" target="p4_rev"><mxGeometry relative="1" as="geometry" /></mxCell>
+        <mxCell id="p4_f3" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;endArrow=open;endFill=0;" edge="1" parent="1" source="p4_rev" target="p4_sub"><mxGeometry relative="1" as="geometry" /></mxCell>
+        <mxCell id="p4_f4" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;endArrow=open;endFill=0;" edge="1" parent="1" source="p4_sub" target="p4_chk"><mxGeometry relative="1" as="geometry" /></mxCell>
+        <mxCell id="p4_f5" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;endArrow=open;endFill=0;" edge="1" parent="1" source="p4_chk" target="p4_gok"><mxGeometry relative="1" as="geometry" /></mxCell>
+        <mxCell id="p4_f6" value="No" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;endArrow=open;endFill=0;fontSize=10;" edge="1" parent="1" source="p4_gok" target="p4_fix"><mxGeometry relative="1" as="geometry" /></mxCell>
+        <mxCell id="p4_f7" value="Corrected" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;endArrow=open;endFill=0;fontSize=10;dashed=1;" edge="1" parent="1" source="p4_fix" target="p4_chk"><mxGeometry relative="1" as="geometry" /></mxCell>
+        <mxCell id="p4_f8" value="Yes" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;endArrow=open;endFill=0;fontSize=10;" edge="1" parent="1" source="p4_gok" target="p4_appr"><mxGeometry relative="1" as="geometry" /></mxCell>
+        <mxCell id="p4_f9" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;endArrow=open;endFill=0;" edge="1" parent="1" source="p4_appr" target="p4_end"><mxGeometry relative="1" as="geometry" /></mxCell>
+      </root>
+    </mxGraphModel>
+  </diagram>
+
+  <diagram id="bpmn-shifts" name="5 - Shift Scheduling">
+    <mxGraphModel dx="1200" dy="800" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="1200" pageHeight="720" math="0" shadow="0">
+      <root>
+        <mxCell id="p5_pool" value="BUSINESS PROCESS: Weekly Shift Scheduling" style="swimlane;html=1;horizontal=0;startSize=28;fontSize=13;fontStyle=1;fillColor=none;strokeColor=#333333;" vertex="1" parent="1">
+          <mxGeometry x="20" y="20" width="1140" height="620" as="geometry" />
+        </mxCell>
+        <mxCell id="p5_laneH" value="HR MANAGER" style="swimlane;html=1;horizontal=0;startSize=26;fontSize=12;fillColor=#ffffff;strokeColor=#666666;" vertex="1" parent="p5_pool">
+          <mxGeometry x="28" y="0" width="1112" height="210" as="geometry" />
+        </mxCell>
+        <mxCell id="p5_laneB" value="BACKEND SYSTEM" style="swimlane;html=1;horizontal=0;startSize=26;fontSize=12;fillColor=#f7f7f7;strokeColor=#666666;" vertex="1" parent="p5_pool">
+          <mxGeometry x="28" y="210" width="1112" height="200" as="geometry" />
+        </mxCell>
+        <mxCell id="p5_laneE" value="EMPLOYEES" style="swimlane;html=1;horizontal=0;startSize=26;fontSize=12;fillColor=#ffffff;strokeColor=#666666;" vertex="1" parent="p5_pool">
+          <mxGeometry x="28" y="410" width="1112" height="210" as="geometry" />
+        </mxCell>
+        <mxCell id="p5_s" value="New week approaching" style="ellipse;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;fontSize=9;" vertex="1" parent="p5_laneH">
+          <mxGeometry x="46" y="72" width="70" height="64" as="geometry" />
+        </mxCell>
+        <mxCell id="p5_def" value="Maintain shift templates (SHIFT001-004)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#fff2cc;strokeColor=#d6b656;fontSize=11;" vertex="1" parent="p5_laneH">
+          <mxGeometry x="156" y="70" width="170" height="68" as="geometry" />
+        </mxCell>
+        <mxCell id="p5_wiz" value="Use generate-schedule wizard (range + template)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#fff2cc;strokeColor=#d6b656;fontSize=11;" vertex="1" parent="p5_laneH">
+          <mxGeometry x="370" y="70" width="180" height="68" as="geometry" />
+        </mxCell>
+        <mxCell id="p5_assign" value="Create shift_schedules rows (employee + shift + date)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffe6cc;strokeColor=#d79b00;fontSize=11;" vertex="1" parent="p5_laneB">
+          <mxGeometry x="370" y="66" width="190" height="72" as="geometry" />
+        </mxCell>
+        <mxCell id="p5_gconf" value="Coverage conflicts?" style="rhombus;whiteSpace=wrap;html=1;fillColor=#fff2cc;strokeColor=#d6b656;fontSize=10;" vertex="1" parent="p5_laneB">
+          <mxGeometry x="610" y="74" width="80" height="56" as="geometry" />
+        </mxCell>
+        <mxCell id="p5_adj" value="Adjust assignments / swap shifts" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#fff2cc;strokeColor=#d6b656;fontSize=11;" vertex="1" parent="p5_laneH">
+          <mxGeometry x="610" y="70" width="170" height="66" as="geometry" />
+        </mxCell>
+        <mxCell id="p5_pub" value="Publish schedule" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffe6cc;strokeColor=#d79b00;fontSize=11;" vertex="1" parent="p5_laneB">
+          <mxGeometry x="740" y="120" width="140" height="56" as="geometry" />
+        </mxCell>
+        <mxCell id="p5_view" value="See My Schedule for upcoming shifts" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;fontSize=11;" vertex="1" parent="p5_laneE">
+          <mxGeometry x="740" y="72" width="170" height="62" as="geometry" />
+        </mxCell>
+        <mxCell id="p5_end" value="Week scheduled" style="ellipse;whiteSpace=wrap;html=1;fillColor=#f8cecc;strokeColor=#b85450;strokeWidth=3;fontSize=9;" vertex="1" parent="p5_laneE">
+          <mxGeometry x="960" y="74" width="60" height="60" as="geometry" />
+        </mxCell>
+        <mxCell id="p5_f1" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;endArrow=open;endFill=0;" edge="1" parent="1" source="p5_s" target="p5_def"><mxGeometry relative="1" as="geometry" /></mxCell>
+        <mxCell id="p5_f2" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;endArrow=open;endFill=0;" edge="1" parent="1" source="p5_def" target="p5_wiz"><mxGeometry relative="1" as="geometry" /></mxCell>
+        <mxCell id="p5_f3" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;endArrow=open;endFill=0;" edge="1" parent="1" source="p5_wiz" target="p5_assign"><mxGeometry relative="1" as="geometry" /></mxCell>
+        <mxCell id="p5_f4" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;endArrow=open;endFill=0;" edge="1" parent="1" source="p5_assign" target="p5_gconf"><mxGeometry relative="1" as="geometry" /></mxCell>
+        <mxCell id="p5_f5" value="Yes" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;endArrow=open;endFill=0;fontSize=10;" edge="1" parent="1" source="p5_gconf" target="p5_adj"><mxGeometry relative="1" as="geometry" /></mxCell>
+        <mxCell id="p5_f6" value="Fixed" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;endArrow=open;endFill=0;fontSize=10;dashed=1;" edge="1" parent="1" source="p5_adj" target="p5_assign"><mxGeometry relative="1" as="geometry" /></mxCell>
+        <mxCell id="p5_f7" value="No" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;endArrow=open;endFill=0;fontSize=10;" edge="1" parent="1" source="p5_gconf" target="p5_pub"><mxGeometry relative="1" as="geometry" /></mxCell>
+        <mxCell id="p5_f8" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;endArrow=open;endFill=0;" edge="1" parent="1" source="p5_pub" target="p5_view"><mxGeometry relative="1" as="geometry" /></mxCell>
+        <mxCell id="p5_f9" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;endArrow=open;endFill=0;" edge="1" parent="1" source="p5_view" target="p5_end"><mxGeometry relative="1" as="geometry" /></mxCell>
+      </root>
+    </mxGraphModel>
+  </diagram>
+
+  <diagram id="bpmn-ai" name="6 - AI Decision Support">
+    <mxGraphModel dx="1300" dy="850" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="1300" pageHeight="780" math="0" shadow="0">
+      <root>
+        <mxCell id="p6_pool" value="BUSINESS PROCESS: AI Decision Support Analysis" style="swimlane;html=1;horizontal=0;startSize=28;fontSize=13;fontStyle=1;fillColor=none;strokeColor=#333333;" vertex="1" parent="1">
+          <mxGeometry x="20" y="20" width="1240" height="700" as="geometry" />
+        </mxCell>
+        <mxCell id="p6_laneH" value="HR MANAGER" style="swimlane;html=1;horizontal=0;startSize=26;fontSize=12;fillColor=#ffffff;strokeColor=#666666;" vertex="1" parent="p6_pool">
+          <mxGeometry x="28" y="0" width="1212" height="200" as="geometry" />
+        </mxCell>
+        <mxCell id="p6_laneB" value="BACKEND SYSTEM (Laravel)" style="swimlane;html=1;horizontal=0;startSize=26;fontSize=12;fillColor=#f7f7f7;strokeColor=#666666;" vertex="1" parent="p6_pool">
+          <mxGeometry x="28" y="200" width="1212" height="280" as="geometry" />
+        </mxCell>
+        <mxCell id="p6_laneX" value="EXTERNAL - GOOGLE GEMINI API" style="swimlane;html=1;horizontal=0;startSize=26;fontSize=12;fillColor=#ffffff;strokeColor=#666666;" vertex="1" parent="p6_pool">
+          <mxGeometry x="28" y="480" width="1212" height="220" as="geometry" />
+        </mxCell>
+        <mxCell id="p6_s" value="Opens AI Decision Support page" style="ellipse;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;fontSize=9;" vertex="1" parent="p6_laneH">
+          <mxGeometry x="46" y="68" width="80" height="64" as="geometry" />
+        </mxCell>
+        <mxCell id="p6_req" value="GET /api/analytics/ai/insights" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;fontSize=11;" vertex="1" parent="p6_laneH">
+          <mxGeometry x="170" y="70" width="160" height="60" as="geometry" />
+        </mxCell>
+        <mxCell id="p6_gather" value="Gather last 30 days: attendance, leaves, OT, coverage, security events" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffe6cc;strokeColor=#d79b00;fontSize=11;" vertex="1" parent="p6_laneB">
+          <mxGeometry x="170" y="60" width="200" height="80" as="geometry" />
+        </mxCell>
+        <mxCell id="p6_gnet" value="Internet + GEMINI_API_KEY available?" style="rhombus;whiteSpace=wrap;html=1;fillColor=#fff2cc;strokeColor=#d6b656;fontSize=10;" vertex="1" parent="p6_laneB">
+          <mxGeometry x="420" y="62" width="96" height="76" as="geometry" />
+        </mxCell>
+        <mxCell id="p6_gemini" value="Send structured workforce data to Gemini" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffe6cc;strokeColor=#d79b00;fontSize=11;" vertex="1" parent="p6_laneX">
+          <mxGeometry x="420" y="76" width="180" height="70" as="geometry" />
+        </mxCell>
+        <mxCell id="p6_gjson" value="Valid JSON reply?" style="rhombus;whiteSpace=wrap;html=1;fillColor=#fff2cc;strokeColor=#d6b656;fontSize=10;" vertex="1" parent="p6_laneX">
+          <mxGeometry x="650" y="84" width="70" height="56" as="geometry" />
+        </mxCell>
+        <mxCell id="p6_rules" value="Run PHP rule-based engine (thresholds)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffe6cc;strokeColor=#d79b00;fontSize=11;" vertex="1" parent="p6_laneB">
+          <mxGeometry x="420" y="180" width="180" height="66" as="geometry" />
+        </mxCell>
+        <mxCell id="p6_parse" value="Parse insights (source = ai)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffe6cc;strokeColor=#d79b00;fontSize=11;" vertex="1" parent="p6_laneB">
+          <mxGeometry x="650" y="30" width="160" height="56" as="geometry" />
+        </mxCell>
+        <mxCell id="p6_ret" value="Return unified JSON: health score + insights + decision queue" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffe6cc;strokeColor=#d79b00;fontSize=11;" vertex="1" parent="p6_laneB">
+          <mxGeometry x="870" y="90" width="190" height="80" as="geometry" />
+        </mxCell>
+        <mxCell id="p6_view" value="View health score ring + insight cards (badge shows which engine ran)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;fontSize=11;" vertex="1" parent="p6_laneH">
+          <mxGeometry x="420" y="62" width="190" height="76" as="geometry" />
+        </mxCell>
+        <mxCell id="p6_act" value="Act on decision queue: approve/reject leave &amp; OT, resolve/escalate security events" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;fontSize=11;" vertex="1" parent="p6_laneH">
+          <mxGeometry x="660" y="58" width="210" height="84" as="geometry" />
+        </mxCell>
+        <mxCell id="p6_exec" value="Execute actions, persist resolved insight keys in settings" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffe6cc;strokeColor=#d79b00;fontSize=11;" vertex="1" parent="p6_laneB">
+          <mxGeometry x="660" y="200" width="200" height="66" as="geometry" />
+        </mxCell>
+        <mxCell id="p6_end" value="Workforce decisions updated" style="ellipse;whiteSpace=wrap;html=1;fillColor=#f8cecc;strokeColor=#b85450;strokeWidth=3;fontSize=9;" vertex="1" parent="p6_laneH">
+          <mxGeometry x="940" y="70" width="70" height="60" as="geometry" />
+        </mxCell>
+        <mxCell id="p6_f1" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;endArrow=open;endFill=0;" edge="1" parent="1" source="p6_s" target="p6_req"><mxGeometry relative="1" as="geometry" /></mxCell>
+        <mxCell id="p6_f2" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;endArrow=open;endFill=0;" edge="1" parent="1" source="p6_req" target="p6_gather"><mxGeometry relative="1" as="geometry" /></mxCell>
+        <mxCell id="p6_f3" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;endArrow=open;endFill=0;" edge="1" parent="1" source="p6_gather" target="p6_gnet"><mxGeometry relative="1" as="geometry" /></mxCell>
+        <mxCell id="p6_f4" value="Yes" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;endArrow=open;endFill=0;fontSize=10;" edge="1" parent="1" source="p6_gnet" target="p6_gemini"><mxGeometry relative="1" as="geometry" /></mxCell>
+        <mxCell id="p6_f5" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;endArrow=open;endFill=0;" edge="1" parent="1" source="p6_gemini" target="p6_gjson"><mxGeometry relative="1" as="geometry" /></mxCell>
+        <mxCell id="p6_f6" value="Valid" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;endArrow=open;endFill=0;fontSize=10;" edge="1" parent="1" source="p6_gjson" target="p6_parse"><mxGeometry relative="1" as="geometry" /></mxCell>
+        <mxCell id="p6_f7" value="Invalid / timeout" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;endArrow=open;endFill=0;fontSize=10;dashed=1;" edge="1" parent="1" source="p6_gjson" target="p6_rules"><mxGeometry relative="1" as="geometry" /></mxCell>
+        <mxCell id="p6_f8" value="No" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;endArrow=open;endFill=0;fontSize=10;" edge="1" parent="1" source="p6_gnet" target="p6_rules"><mxGeometry relative="1" as="geometry" /></mxCell>
+        <mxCell id="p6_f9" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;endArrow=open;endFill=0;" edge="1" parent="1" source="p6_parse" target="p6_ret"><mxGeometry relative="1" as="geometry" /></mxCell>
+        <mxCell id="p6_f10" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;endArrow=open;endFill=0;" edge="1" parent="1" source="p6_rules" target="p6_ret"><mxGeometry relative="1" as="geometry" /></mxCell>
+        <mxCell id="p6_f11" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;endArrow=open;endFill=0;" edge="1" parent="1" source="p6_ret" target="p6_view"><mxGeometry relative="1" as="geometry" /></mxCell>
+        <mxCell id="p6_f12" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;endArrow=open;endFill=0;" edge="1" parent="1" source="p6_view" target="p6_act"><mxGeometry relative="1" as="geometry" /></mxCell>
+        <mxCell id="p6_f13" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;endArrow=open;endFill=0;" edge="1" parent="1" source="p6_act" target="p6_exec"><mxGeometry relative="1" as="geometry" /></mxCell>
+        <mxCell id="p6_f14" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;endArrow=open;endFill=0;" edge="1" parent="1" source="p6_exec" target="p6_end"><mxGeometry relative="1" as="geometry" /></mxCell>
+      </root>
+    </mxGraphModel>
+  </diagram>
+</mxfile>
