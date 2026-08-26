@@ -4,7 +4,7 @@ import {
   XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend, AreaChart, Area
 } from 'recharts';
 import {
-  Clock, PhilippinePeso, Download, Award, Percent
+  Clock, PhilippinePeso, Download, Award, Percent, TrendingUp
 } from 'lucide-react';
 import Card, { CardHeader, CardTitle, CardDescription } from '../../components/ui/Card';
 import Button from '../../components/ui/Button';
@@ -23,6 +23,23 @@ const kpiColors = {
   red: 'bg-red-50 text-red-600',
 };
 const kpiBar = { blue: 'bg-blue-500', emerald: 'bg-emerald-500', amber: 'bg-amber-500', purple: 'bg-purple-500', red: 'bg-red-500' };
+
+// Charts only ever show real recorded activity. Until employees start clocking
+// in, filing leave, etc., each chart shows this honest placeholder instead of
+// an empty axis frame.
+function ChartEmpty() {
+  return (
+    <div className="h-72 flex flex-col items-center justify-center text-center px-4">
+      <div className="w-14 h-14 rounded-2xl bg-gray-100 flex items-center justify-center mb-3">
+        <TrendingUp className="w-7 h-7 text-gray-300" />
+      </div>
+      <p className="text-sm font-semibold text-gray-900">No data yet</p>
+      <p className="text-xs text-gray-500 mt-1 max-w-xs leading-relaxed">
+        This chart fills in automatically as attendance and leave activity are recorded in the system.
+      </p>
+    </div>
+  );
+}
 
 export default function Analytics() {
   const { toast } = useToast();
@@ -46,10 +63,10 @@ export default function Analytics() {
   const overtimeHours = overtimeSummary.reduce((s, d) => s + (d.avgOvertime ?? 0), 0);
 
   const kpis = [
-    { label: 'Overall Attendance Rate', value: `${lastRate.toFixed(1)}%`, icon: Percent, color: 'blue' },
-    { label: 'Total Overtime Hours', value: `${overtimeHours.toFixed(0)}h`, icon: Clock, color: 'amber' },
-    { label: 'Discrepancy Records', value: String(totalDiscrepancies), icon: Award, color: 'purple' },
-    { label: 'Payroll Discrepancy', value: formatCurrency(totalOverpaid + totalUnderpaid), sub: `${totalDiscrepancies} discrepancies`, icon: PhilippinePeso, color: 'red' },
+    { label: 'Overall Attendance Rate', value: attendanceTrend.length > 0 ? `${lastRate.toFixed(1)}%` : '—', icon: Percent, color: 'blue' },
+    { label: 'Total Overtime Hours', value: overtimeSummary.length > 0 ? `${overtimeHours.toFixed(0)}h` : '—', icon: Clock, color: 'amber' },
+    { label: 'Discrepancy Records', value: payrollDiscrepancy.length > 0 ? String(totalDiscrepancies) : '—', icon: Award, color: 'purple' },
+    { label: 'Payroll Discrepancy', value: payrollDiscrepancy.length > 0 ? formatCurrency(totalOverpaid + totalUnderpaid) : '—', sub: payrollDiscrepancy.length > 0 ? `${totalDiscrepancies} discrepancies` : undefined, icon: PhilippinePeso, color: 'red' },
   ];
 
   const payrollRows = payrollDiscrepancy.map(d => ({
@@ -117,6 +134,9 @@ export default function Analytics() {
             <CardTitle>Attendance Trend</CardTitle>
             <CardDescription>Monthly attendance rate over the year</CardDescription>
           </CardHeader>
+          {attendanceTrend.length === 0 ? (
+            <ChartEmpty />
+          ) : (
           <div className="h-72">
             <ResponsiveContainer width="100%" height="100%">
               <AreaChart data={attendanceTrend}>
@@ -134,6 +154,7 @@ export default function Analytics() {
               </AreaChart>
             </ResponsiveContainer>
           </div>
+          )}
         </Card>
 
         <Card>
@@ -141,6 +162,9 @@ export default function Analytics() {
             <CardTitle>Department Productivity</CardTitle>
             <CardDescription>Productivity scores by department</CardDescription>
           </CardHeader>
+          {departmentProductivity.length === 0 ? (
+            <ChartEmpty />
+          ) : (
           <div className="h-72">
             <ResponsiveContainer width="100%" height="100%">
               <BarChart data={departmentProductivity} layout="vertical" margin={{ left: 20 }}>
@@ -156,6 +180,7 @@ export default function Analytics() {
               </BarChart>
             </ResponsiveContainer>
           </div>
+          )}
         </Card>
       </div>
 
@@ -166,6 +191,9 @@ export default function Analytics() {
             <CardTitle>Leave Trends</CardTitle>
             <CardDescription>Leave usage over the past 6 months</CardDescription>
           </CardHeader>
+          {leaveTrend.length === 0 ? (
+            <ChartEmpty />
+          ) : (
           <div className="h-72">
             <ResponsiveContainer width="100%" height="100%">
               <AreaChart data={leaveTrend}>
@@ -180,6 +208,7 @@ export default function Analytics() {
               </AreaChart>
             </ResponsiveContainer>
           </div>
+          )}
         </Card>
 
         <Card>
@@ -187,6 +216,9 @@ export default function Analytics() {
             <CardTitle>Overtime by Department</CardTitle>
             <CardDescription>Average overtime hours per department</CardDescription>
           </CardHeader>
+          {overtimeSummary.length === 0 ? (
+            <ChartEmpty />
+          ) : (
           <div className="h-72">
             <ResponsiveContainer width="100%" height="100%">
               <BarChart data={overtimeSummary}>
@@ -198,6 +230,7 @@ export default function Analytics() {
               </BarChart>
             </ResponsiveContainer>
           </div>
+          )}
         </Card>
       </div>
 
@@ -241,7 +274,14 @@ export default function Analytics() {
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-50">
-              {payrollDiscrepancy.map((row, i) => (
+              {payrollDiscrepancy.length === 0 ? (
+                <tr>
+                  <td colSpan={6} className="px-4 py-12 text-center">
+                    <p className="text-sm font-medium text-gray-500">No payroll data for this period yet</p>
+                    <p className="text-xs text-gray-400 mt-1">Discrepancies appear here once approved timesheets exist to compare against expected pay.</p>
+                  </td>
+                </tr>
+              ) : payrollDiscrepancy.map((row, i) => (
                 <tr key={i} className="hover:bg-gray-50/50 transition-colors">
                   <td className="px-4 py-3.5 text-sm font-medium text-gray-900">{row.employeeName}</td>
                   <td className="px-4 py-3.5 text-sm text-gray-600">{row.department}</td>
