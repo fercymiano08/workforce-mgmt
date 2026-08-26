@@ -1,11 +1,11 @@
 import { useState, useMemo, useEffect, useCallback } from 'react';
-import { Calendar, CheckCircle, Clock, FileText, Eye, Plus, XCircle, Palmtree, Heart, AlertTriangle, Star, Baby, Users, Flower2, Wallet } from 'lucide-react';
+import { Calendar, CheckCircle, Clock, FileText, Plus, XCircle, Palmtree, Heart, AlertTriangle, Star, Baby, Users, Flower2, Wallet, Hourglass, ThumbsUp, ThumbsDown, ChevronRight } from 'lucide-react';
 import Card from '../../components/ui/Card';
 import Button from '../../components/ui/Button';
 import Badge from '../../components/ui/Badge';
 import SearchBar from '../../components/ui/SearchBar';
-import { Select, Textarea } from '../../components/ui/Input';
-import Input from '../../components/ui/Input';
+import EmptyState from '../../components/ui/EmptyState';
+import Input, { Select, Textarea } from '../../components/ui/Input';
 import Modal from '../../components/ui/Modal';
 import { Pagination } from '../../components/ui/Table';
 import { leaveService } from '../../services/api';
@@ -46,7 +46,15 @@ const leaveBalanceStyle = {
 
 const leaveTypes = ['Vacation', 'Sick', 'Emergency', 'Special', 'Maternity', 'Paternity', 'Bereavement', 'Unpaid'];
 
-const ROWS_PER_PAGE = 8;
+// Inclusive calendar-day count of a leave range, e.g. Jan 01 - Jan 03 = 3 days.
+const countDays = (start, end) => {
+  if (!start || !end || end < start) return 1;
+  const [sy, sm, sd] = start.split('-').map(Number);
+  const [ey, em, ed] = end.split('-').map(Number);
+  return Math.round((new Date(ey, em - 1, ed) - new Date(sy, sm - 1, sd)) / 86400000) + 1;
+};
+
+const ROWS_PER_PAGE = 6;
 
 export default function Leave() {
   const { toast } = useToast();
@@ -123,6 +131,16 @@ export default function Leave() {
     });
   }, [leaves, search, statusFilter, typeFilter]);
 
+  const summary = useMemo(() => {
+    const all = leaves || [];
+    return {
+      total: all.length,
+      pending: all.filter((l) => l.status === 'Pending').length,
+      approved: all.filter((l) => l.status === 'Approved').length,
+      rejected: all.filter((l) => l.status === 'Rejected').length,
+    };
+  }, [leaves]);
+
   const totalPages = Math.ceil(filtered.length / ROWS_PER_PAGE);
   const paginated = filtered.slice((currentPage - 1) * ROWS_PER_PAGE, currentPage * ROWS_PER_PAGE);
 
@@ -195,108 +213,145 @@ export default function Leave() {
         </Button>
       </div>
 
-      {/* Leave Balance Cards */}
+      {/* Summary Cards */}
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
-        {leaveBalances.map((b) => {
-          const style = leaveBalanceStyle[b.type] || { text: 'text-gray-600', barBg: 'bg-gray-100', color: 'bg-gray-500' };
-          const pct = b.total > 0 ? Math.max((b.remaining / b.total) * 100, 0) : 0;
-          return (
-            <Card key={b.type} className="overflow-hidden" hover>
-              <div className={`w-10 h-10 rounded-xl flex items-center justify-center mb-3 ${style.iconBg}`}>
-                {style.icon && <style.icon className={`w-5 h-5 ${style.text}`} />}
+        {[
+          { label: 'Total Requests', value: summary.total, icon: FileText, accent: 'text-blue-600 bg-blue-50' },
+          { label: 'Pending', value: summary.pending, icon: Hourglass, accent: 'text-amber-600 bg-amber-50' },
+          { label: 'Approved', value: summary.approved, icon: ThumbsUp, accent: 'text-emerald-600 bg-emerald-50' },
+          { label: 'Rejected', value: summary.rejected, icon: ThumbsDown, accent: 'text-red-600 bg-red-50' },
+        ].map((s) => (
+          <Card key={s.label} className="overflow-hidden" hover>
+            <div className="flex items-center gap-3">
+              <div className={`w-10 h-10 rounded-xl flex items-center justify-center shrink-0 ${s.accent}`}>
+                <s.icon className="w-5 h-5" />
               </div>
-              <p className={`text-xs font-semibold uppercase tracking-wide ${style.text}`}>{b.type} Leave</p>
-              <p className="text-2xl font-bold text-gray-900 mt-2">
-                {b.remaining} <span className="text-sm font-normal text-gray-400">/ {b.total}</span>
-              </p>
-              <div className={`w-full h-1.5 rounded-full mt-3 ${style.barBg}`}>
-                <div className={`h-1.5 rounded-full transition-all duration-500 ${style.color}`} style={{ width: `${pct}%` }} />
+              <div>
+                <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide">{s.label}</p>
+                <p className="text-2xl font-bold text-gray-900">{s.value}</p>
               </div>
-              <p className="text-xs text-gray-500 mt-1.5">{b.remaining === 0 ? 'All used' : `${b.remaining} days remaining`}</p>
-            </Card>
-          );
-        })}
+            </div>
+          </Card>
+        ))}
       </div>
 
-      {/* Filters */}
-      <div className="flex items-center gap-3 flex-wrap">
-        <SearchBar
-          value={search}
-          onChange={(v) => { setSearch(v); setCurrentPage(1); }}
-          placeholder="Search leave type or reason..."
-          className="flex-1 min-w-[240px]"
-        />
-        <Select value={statusFilter} onChange={(e) => { setStatusFilter(e.target.value); setCurrentPage(1); }} containerClass="w-40">
-          {statuses.map((s) => (
-            <option key={s} value={s}>{s === 'All' ? 'All Statuses' : s}</option>
-          ))}
-        </Select>
-        <Select value={typeFilter} onChange={(e) => { setTypeFilter(e.target.value); setCurrentPage(1); }} containerClass="w-44">
-          {types.map((t) => (
-            <option key={t} value={t}>{t === 'All' ? 'All Leave Types' : t}</option>
-          ))}
-        </Select>
+      {/* Leave Balances */}
+      <div>
+        <h2 className="text-sm font-semibold text-gray-900 uppercase tracking-wide mb-3">Leave Balances</h2>
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
+          {leaveBalances.map((b) => {
+            const style = leaveBalanceStyle[b.type] || { text: 'text-gray-600', barBg: 'bg-gray-100', color: 'bg-gray-500' };
+            const pct = b.total > 0 ? Math.max((b.remaining / b.total) * 100, 0) : 0;
+            return (
+              <Card key={b.type} className="overflow-hidden" hover>
+                <div className={`w-10 h-10 rounded-xl flex items-center justify-center mb-3 ${style.iconBg || 'bg-gray-50'}`}>
+                  {style.icon && <style.icon className={`w-5 h-5 ${style.text}`} />}
+                </div>
+                <p className={`text-xs font-semibold uppercase tracking-wide ${style.text}`}>{b.type} Leave</p>
+                <p className="text-2xl font-bold text-gray-900 mt-2">
+                  {b.remaining} <span className="text-sm font-normal text-gray-400">/ {b.total}</span>
+                </p>
+                <div className={`w-full h-1.5 rounded-full mt-3 ${style.barBg}`}>
+                  <div className={`h-1.5 rounded-full transition-all duration-500 ${style.color}`} style={{ width: `${pct}%` }} />
+                </div>
+                <p className="text-xs text-gray-500 mt-1.5">{b.remaining === 0 ? 'All used' : `${b.remaining} days remaining`}</p>
+              </Card>
+            );
+          })}
+        </div>
       </div>
 
-      {/* Table */}
-      <Card padding={false}>
-        <div className="overflow-x-auto">
-          <table className="w-full">
-            <thead>
-              <tr className="border-b border-gray-100 bg-gray-50/50">
-                {['Leave Type', 'Duration', 'Reason', 'Status', 'Applied Date', 'Approved By', 'Actions'].map((h) => (
-                  <th key={h} className="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">{h}</th>
-                ))}
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-gray-50">
-              {paginated.length === 0 ? (
-                <tr>
-                  <td colSpan={7} className="px-4 py-12 text-center text-sm text-gray-400">
-                    No leave requests found.
-                  </td>
-                </tr>
-              ) : (
-                paginated.map((leave) => (
-                  <tr key={leave.id} className="hover:bg-gray-50/50 transition-colors">
-                    <td className="px-4 py-3.5">
-                      <Badge variant={leaveTypeVariant[leave.leaveType] || 'default'} size="xs">
-                        {leave.leaveType}
-                      </Badge>
-                    </td>
-                    <td className="px-4 py-3.5">
-                      <div className="flex items-center gap-1.5 text-sm text-gray-700">
-                        <Calendar className="w-3.5 h-3.5 text-gray-400" />
-                        {formatDate(leave.startDate)} {leave.startDate !== leave.endDate && `– ${formatDate(leave.endDate)}`}
-                      </div>
-                    </td>
-                    <td className="px-4 py-3.5 text-sm text-gray-600 max-w-[200px] truncate">{leave.reason}</td>
-                    <td className="px-4 py-3.5">
-                      <Badge variant={statusVariant[leave.status]} dot size="xs">{leave.status}</Badge>
-                    </td>
-                    <td className="px-4 py-3.5 text-sm text-gray-500">{formatDate(leave.appliedDate)}</td>
-                    <td className="px-4 py-3.5 text-sm text-gray-500">{leave.approvedBy || '-'}</td>
-                    <td className="px-4 py-3.5">
-                      <button
-                        onClick={() => openDetail(leave)}
-                        className="p-1.5 pointer-coarse:p-2.5 rounded-lg hover:bg-gray-100 text-gray-400 hover:text-blue-600 transition-colors"
-                      >
-                        <Eye className="w-4 h-4" />
-                      </button>
-                    </td>
-                  </tr>
-                ))
-              )}
-            </tbody>
-          </table>
+      {/* My Requests */}
+      <div>
+        <h2 className="text-sm font-semibold text-gray-900 uppercase tracking-wide mb-3">My Requests</h2>
+
+        <div className="flex items-center gap-3 flex-wrap mb-4">
+          <SearchBar
+            value={search}
+            onChange={(v) => { setSearch(v); setCurrentPage(1); }}
+            placeholder="Search leave type or reason..."
+            className="flex-1 min-w-[240px]"
+          />
+          <Select value={statusFilter} onChange={(e) => { setStatusFilter(e.target.value); setCurrentPage(1); }} containerClass="w-40">
+            {statuses.map((s) => (
+              <option key={s} value={s}>{s === 'All' ? 'All Statuses' : s}</option>
+            ))}
+          </Select>
+          <Select value={typeFilter} onChange={(e) => { setTypeFilter(e.target.value); setCurrentPage(1); }} containerClass="w-44">
+            {types.map((t) => (
+              <option key={t} value={t}>{t === 'All' ? 'All Leave Types' : t}</option>
+            ))}
+          </Select>
         </div>
 
-        {totalPages > 1 && (
-          <div className="px-4 border-t border-gray-100">
-            <Pagination currentPage={currentPage} totalPages={totalPages} onPageChange={setCurrentPage} />
-          </div>
+        {paginated.length === 0 ? (
+          <Card>
+            {(leaves || []).length === 0 ? (
+              <EmptyState
+                icon={Palmtree}
+                title="No leave requests yet"
+                description="You have not filed any leave request. When you need time off, submit a request and HR will review it."
+                action={
+                  <Button icon={Plus} onClick={() => setIsApplyOpen(true)}>
+                    Apply for Leave
+                  </Button>
+                }
+              />
+            ) : (
+              <EmptyState
+                title="No requests match your filters"
+                description="Try a different status, leave type, or search term to find what you are looking for."
+              />
+            )}
+          </Card>
+        ) : (
+          <>
+            <div className="space-y-3">
+              {paginated.map((leave) => {
+                const style = leaveBalanceStyle[leave.leaveType] || {};
+                const TypeIcon = style.icon || Calendar;
+                const days = countDays(leave.startDate, leave.endDate);
+                return (
+                  <button
+                    key={leave.id}
+                    onClick={() => openDetail(leave)}
+                    className="w-full text-left bg-white rounded-2xl border border-gray-100 shadow-sm hover:shadow-md hover:border-blue-200 transition-all p-4 sm:p-5 flex flex-col sm:flex-row sm:items-center gap-4 group"
+                  >
+                    <div className={`w-11 h-11 rounded-xl flex items-center justify-center shrink-0 ${style.iconBg || 'bg-gray-50'}`}>
+                      <TypeIcon className={`w-5 h-5 ${style.text || 'text-gray-500'}`} />
+                    </div>
+
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center gap-2 flex-wrap">
+                        <p className="font-semibold text-gray-900">{leave.leaveType} Leave</p>
+                        <Badge variant={statusVariant[leave.status]} dot size="xs">{leave.status}</Badge>
+                      </div>
+                      <div className="flex items-center gap-1.5 text-sm text-gray-600 mt-1">
+                        <Calendar className="w-3.5 h-3.5 text-gray-400 shrink-0" />
+                        {formatDate(leave.startDate)}
+                        {leave.startDate !== leave.endDate && ` – ${formatDate(leave.endDate)}`}
+                        <span className="text-gray-400">· {days} {days === 1 ? 'day' : 'days'}</span>
+                      </div>
+                      <p className="text-xs text-gray-400 mt-1 truncate">Applied {formatDate(leave.appliedDate)} · {leave.reason}</p>
+                    </div>
+
+                    <div className="flex items-center justify-between sm:justify-end gap-3 shrink-0">
+                      <span className="text-xs font-medium text-gray-500 hidden sm:inline group-hover:text-blue-600 transition-colors">View details</span>
+                      <ChevronRight className="w-5 h-5 text-gray-300 group-hover:text-blue-500 transition-colors" />
+                    </div>
+                  </button>
+                );
+              })}
+            </div>
+
+            {totalPages > 1 && (
+              <div className="mt-4">
+                <Pagination currentPage={currentPage} totalPages={totalPages} onPageChange={setCurrentPage} />
+              </div>
+            )}
+          </>
         )}
-      </Card>
+      </div>
 
       {/* Leave Detail Modal */}
       <Modal isOpen={isDetailOpen} onClose={() => setIsDetailOpen(false)} title="Leave Request Details" size="lg">
