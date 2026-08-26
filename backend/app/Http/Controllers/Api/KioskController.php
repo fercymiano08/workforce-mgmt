@@ -6,6 +6,7 @@ use App\Http\Controllers\Api\Concerns\GeneratesSequentialIds;
 use App\Http\Controllers\Controller;
 use App\Models\Attendance;
 use App\Models\Employee;
+use App\Models\Leave;
 use App\Models\OvertimeRequest;
 use App\Models\SecurityEvent;
 use App\Models\Setting;
@@ -279,10 +280,37 @@ class KioskController extends Controller
             ->first();
 
         if (! $schedule || ! $schedule->shift) {
-            return response()->json(['data' => ['hasShift' => false]]);
+            $leave = $this->approvedLeaveOn($employeeId, $dateKey);
+
+            return response()->json([
+                'data' => [
+                    'hasShift' => false,
+                    'onApprovedLeave' => (bool) $leave,
+                    'approvedLeaveType' => $leave?->leave_type,
+                    'approvedLeaveStart' => $leave?->start_date?->toDateString(),
+                    'approvedLeaveEnd' => $leave?->end_date?->toDateString(),
+                ],
+            ]);
         }
 
         $shift = $schedule->shift;
+
+        $leave = $this->approvedLeaveOn($employeeId, $dateKey);
+        if ($leave) {
+            return response()->json([
+                'data' => [
+                    'hasShift' => true,
+                    'onApprovedLeave' => true,
+                    'approvedLeaveType' => $leave->leave_type,
+                    'approvedLeaveStart' => $leave->start_date->toDateString(),
+                    'approvedLeaveEnd' => $leave->end_date->toDateString(),
+                    'shiftId' => $shift->id,
+                    'shiftName' => $shift->name,
+                    'startTime' => $shift->start_time,
+                    'endTime' => $shift->end_time,
+                ],
+            ]);
+        }
 
         $approvedOtHours = OvertimeRequest::where('employee_id', $employeeId)
             ->where('date', $dateKey)
@@ -320,6 +348,13 @@ class KioskController extends Controller
             return response()->json(['message' => 'This employee already has an attendance record for today.'], 409);
         }
 
+        if ($leave = $this->approvedLeaveOn($data['employee_id'], $data['date'])) {
+            return response()->json([
+                'message' => 'You are on approved '.$leave->leave_type.' leave from '.$leave->start_date->format('M j').' to '.$leave->end_date->format('M j, Y').'. Clocking in during your approved leave is not allowed.',
+                'data' => ['reason' => 'on_approved_leave'],
+            ], 422);
+        }
+
         $record = Attendance::create([
             ...$data,
             'id' => $this->nextIdFor(Attendance::class, 'ATT'),
@@ -352,6 +387,13 @@ class KioskController extends Controller
 
         if (! $record->clock_in || $record->clock_out) {
             return response()->json(['message' => 'This attendance record cannot be clocked out.'], 409);
+        }
+
+        if ($leave = $this->approvedLeaveOn($record->employee_id, $record->date->toDateString())) {
+            return response()->json([
+                'message' => 'You are on approved '.$leave->leave_type.' leave ('.$leave->start_date->format('M j').' - '.$leave->end_date->format('M j, Y').'). This clock-in should not exist; please contact HR.',
+                'data' => ['reason' => 'on_approved_leave'],
+            ], 422);
         }
 
         // Employees may not clock out before their shift - including any
@@ -428,6 +470,20 @@ class KioskController extends Controller
         }
 
         return $shiftEnds;
+    }
+
+    /**
+     * The employee's Approved leave covering the given date, if any. Used to
+     * refuse clock-in/clock-out during an approved absence - the kiosk must
+     * never record attendance for someone who is legitimately away.
+     */
+    private function approvedLeaveOn(string $employeeId, string $dateKey): ?Leave
+    {
+        return Leave::where('employee_id', $employeeId)
+            ->where('status', 'Approved')
+            ->whereDate('start_date', '<=', $dateKey)
+            ->whereDate('end_date', '>=', $dateKey)
+            ->first();
     }
 
     /**

@@ -272,6 +272,28 @@ export default function AttendanceTerminal() {
     }
     setShiftInfo(shift || null);
 
+    // Approved leave = no attendance at all. The backend enforces this too,
+    // but catching it here means the camera never even opens.
+    if (shift?.onApprovedLeave) {
+      const fmtDay = (key) => {
+        if (!key) return '';
+        const [y, m, d] = key.split('-').map(Number);
+        return new Date(y, m - 1, d).toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+      };
+      const range = shift.approvedLeaveEnd && shift.approvedLeaveEnd !== shift.approvedLeaveStart
+        ? `${fmtDay(shift.approvedLeaveStart)} to ${fmtDay(shift.approvedLeaveEnd)}, ${new Date(shift.approvedLeaveEnd).getFullYear()}`
+        : fmtDay(shift.approvedLeaveStart);
+      setNotice({
+        tone: 'danger',
+        title: 'On Approved Leave',
+        message: `${candidate.firstName} ${candidate.lastName} is on approved ${shift.approvedLeaveType || ''} leave (${range}). Clocking in or out during an approved leave period is not allowed. Please see HR if this is a mistake.`,
+        confirmLabel: 'Back to Home',
+        onConfirm: resetToMode,
+      });
+      setPhase('notice');
+      return;
+    }
+
     if (today && today.clockIn && today.clockOut) {
       setConflict(null);
       setPhase('completed');
@@ -283,8 +305,8 @@ export default function AttendanceTerminal() {
       setConflict({
         type: 'already-clocked-in',
         suggested: 'clock-out',
-        title: 'Already Clocked In',
-        message: `${candidate.firstName} is already clocked in at ${formatTime(today.clockIn)}. Did you mean Clock Out?`,
+        title: 'Already Clocked In Today',
+        message: `${candidate.firstName} already clocked in at ${formatTime(today.clockIn)}. A second clock-in is blocked - attendance can only be recorded once per day. If they are leaving work now, continue to Clock Out instead.`,
       });
       setPhase('conflict');
       return;
@@ -295,7 +317,7 @@ export default function AttendanceTerminal() {
         type: 'no-clock-in',
         suggested: 'clock-in',
         title: 'No Clock-In Found',
-        message: `No clock-in was found for ${candidate.firstName} today. Did you mean Clock In?`,
+        message: `No clock-in was found for ${candidate.firstName} today. Clock-out requires a matching clock-in record first. Did they mean to Clock In?`,
       });
       setPhase('conflict');
       return;
