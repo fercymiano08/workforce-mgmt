@@ -73,7 +73,7 @@ export default function Shifts() {
   const [isGenerateModalOpen, setIsGenerateModalOpen] = useState(false);
   const [generateStep, setGenerateStep] = useState(1);
   const [generateForm, setGenerateForm] = useState({
-    startDate: '', endDate: '', shiftId: '', skipWeekends: true, allActive: true, employeeIds: [],
+    startDate: '', endDate: '', shiftId: '', skipWeekends: true, scope: 'all', scopeDepartment: '', employeeIds: [],
   });
   const [generateErrors, setGenerateErrors] = useState({});
   const [generating, setGenerating] = useState(false);
@@ -215,7 +215,7 @@ export default function Shifts() {
 
   const openGenerate = () => {
     setGenerateSearch('');
-    setGenerateForm({ startDate: '', endDate: '', shiftId: standardShift?.id || '', skipWeekends: true, allActive: true, employeeIds: [] });
+    setGenerateForm({ startDate: '', endDate: '', shiftId: standardShift?.id || '', skipWeekends: true, scope: 'all', scopeDepartment: '', employeeIds: [] });
     setGenerateErrors({});
     setGenerateStep(1);
     setIsGenerateModalOpen(true);
@@ -256,7 +256,11 @@ export default function Shifts() {
   };
 
   const workdayCount = countWorkdays(generateForm.startDate, generateForm.endDate, generateForm.skipWeekends);
-  const targetCount = generateForm.allActive ? employees.filter(e => e.status === 'Active').length : generateForm.employeeIds.length;
+  const targetCount = generateForm.scope === 'all'
+    ? employees.filter(e => e.status === 'Active').length
+    : generateForm.scope === 'department'
+    ? employees.filter(e => e.status === 'Active' && e.department === generateForm.scopeDepartment).length
+    : generateForm.employeeIds.length;
   const estimate = workdayCount * targetCount;
   const selectedEmployee = employees.find(e => e.id === formData.employeeId);
   const selectedGenShift = (shiftDefs || []).find(s => s.id === generateForm.shiftId);
@@ -273,7 +277,8 @@ export default function Shifts() {
     if (!generateForm.endDate) errs.endDate = 'Required';
     if (generateForm.startDate && generateForm.endDate && generateForm.endDate < generateForm.startDate) errs.endDate = 'Must be on or after the start date';
     if (!generateForm.shiftId) errs.shiftId = 'Required';
-    if (!generateForm.allActive && generateForm.employeeIds.length === 0) errs.employeeIds = 'Select at least one employee';
+    if (generateForm.scope === 'department' && !generateForm.scopeDepartment) errs.scopeDepartment = 'Select a department';
+    if (generateForm.scope === 'individual' && generateForm.employeeIds.length === 0) errs.employeeIds = 'Select at least one employee';
     setGenerateErrors(errs);
     if (Object.keys(errs).length > 0) return;
     setGenerating(true);
@@ -281,7 +286,7 @@ export default function Shifts() {
       const payload = {
         startDate: generateForm.startDate, endDate: generateForm.endDate, shiftId: generateForm.shiftId,
         skipWeekends: generateForm.skipWeekends,
-        ...(generateForm.allActive ? {} : { employeeIds: generateForm.employeeIds }),
+        ...(generateForm.scope === 'individual' ? { employeeIds: generateForm.employeeIds } : generateForm.scope === 'department' ? { employeeIds: employees.filter(e => e.status === 'Active' && e.department === generateForm.scopeDepartment).map(e => e.id) } : {}),
       };
       const result = await shiftService.generateSchedule(payload);
       await refreshSchedules();
@@ -677,18 +682,36 @@ export default function Shifts() {
 
             <div>
               <span className="text-[13px] font-semibold text-gray-700 block mb-3">Choose Employees</span>
-              <div className="flex items-center justify-between gap-3 flex-wrap">
-                <label className="flex items-center gap-2.5 cursor-pointer">
-                  <input type="checkbox" checked={generateForm.allActive} onChange={e => setGenerateForm({ ...generateForm, allActive: e.target.checked, employeeIds: [] })} className="w-4 h-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500" />
-                  <span className="text-sm text-gray-700">Include all active employees</span>
-                </label>
-                <span className="text-xs font-semibold text-gray-500 bg-gray-100 rounded-full px-2.5 py-1">
-                  {generateForm.allActive ? `${employees.filter(e => e.status === 'Active').length} selected` : `${generateForm.employeeIds.length} selected`}
-                </span>
+              <div className="grid grid-cols-3 gap-2 p-1 bg-gray-100 rounded-xl mb-4">
+                {[
+                  { key: 'all', label: 'All Active' },
+                  { key: 'department', label: 'By Department' },
+                  { key: 'individual', label: 'Select Individuals' },
+                ].map(opt => (
+                  <button key={opt.key} onClick={() => setGenerateForm(p => ({ ...p, scope: opt.key, scopeDepartment: p.scopeDepartment || '', employeeIds: [] }))} className={`py-2 px-3 text-xs font-semibold rounded-lg transition-all ${generateForm.scope === opt.key ? 'bg-white text-blue-700 shadow-sm' : 'text-gray-500 hover:text-gray-700'}`}>{opt.label}</button>
+                ))}
               </div>
 
-              {!generateForm.allActive && (
-                <div className="mt-3 border border-gray-200 rounded-xl">
+              {generateForm.scope === 'all' && (
+                <p className="text-sm text-gray-500">All <span className="font-semibold text-gray-900">{employees.filter(e => e.status === 'Active').length}</span> active employees will be scheduled automatically.</p>
+              )}
+
+              {generateForm.scope === 'department' && (
+                <div>
+                  <Select label="Department" value={generateForm.scopeDepartment} onChange={e => setGenerateForm(p => ({ ...p, scopeDepartment: e.target.value }))} error={generateErrors.scopeDepartment}>
+                    <option value="">Select a department...</option>
+                    {departments.map(d => <option key={d} value={d}>{d}</option>)}
+                  </Select>
+                  {generateForm.scopeDepartment && (
+                    <p className="text-xs text-gray-500 mt-1.5">
+                      <span className="font-semibold text-gray-900">{employees.filter(e => e.status === 'Active' && e.department === generateForm.scopeDepartment).length}</span> active employee{employees.filter(e => e.status === 'Active' && e.department === generateForm.scopeDepartment).length === 1 ? '' : 's'} in this department
+                    </p>
+                  )}
+                </div>
+              )}
+
+              {generateForm.scope === 'individual' && (
+                <div className="mt-2 border border-gray-200 rounded-xl">
                   <div className="p-2.5 border-b border-gray-100 flex items-center gap-2">
                     <Input icon={Search} placeholder="Search employees..." value={generateSearch} onChange={e => setGenerateSearch(e.target.value)} className="py-2" />
                     <label className="flex items-center gap-1.5 px-2 cursor-pointer whitespace-nowrap">
@@ -722,7 +745,7 @@ export default function Shifts() {
                 </p>
                 <p className="text-xs text-emerald-600 pl-6">
                   {selectedGenShift?.name} · {generateForm.skipWeekends ? 'Weekdays only' : 'Including weekends'}
-                  {generateForm.allActive ? ` · All ${targetCount} active employees` : ` · ${targetCount} selected employees`}
+                  {generateForm.scope === 'all' ? ` · All ${targetCount} active employees` : generateForm.scope === 'department' ? ` · ${targetCount} employees in ${generateForm.scopeDepartment}` : ` · ${targetCount} selected employees`}
                 </p>
               </div>
             )}
