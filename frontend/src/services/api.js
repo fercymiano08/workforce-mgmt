@@ -316,10 +316,10 @@ export const authService = {
   forgotPassword: async (email) => {
     return http.post('/auth/forgot-password', { email });
   },
-  resetPassword: async ({ email, token, password, passwordConfirmation }) => {
+  resetPassword: async ({ email, otp, password, passwordConfirmation }) => {
     return http.post('/auth/reset-password', {
       email,
-      token,
+      otp,
       password,
       password_confirmation: passwordConfirmation,
     });

@@ -4,11 +4,11 @@ namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
 use App\Models\User;
-use Illuminate\Auth\Passwords\PasswordBroker;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
-use Illuminate\Support\Facades\Password;
+use Illuminate\Support\Facades\Mail;
 use Illuminate\Validation\ValidationException;
 use Laravel\Sanctum\PersonalAccessToken;
 
@@ -84,36 +84,63 @@ class AuthController extends Controller
     {
         $request->validate(['email' => 'required|email']);
 
-        // Always respond with the same generic message whether or not the
-        // account exists, so this endpoint can't be used to enumerate emails.
-        Password::sendResetLink($request->only('email'));
+        $user = User::where('email', $request->email)->first();
+
+        if ($user) {
+            $otp = str_pad((string) random_int(0, 999999), 6, '0', STR_PAD_LEFT);
+
+            DB::table('password_reset_tokens')->where('email', $request->email)->delete();
+            DB::table('password_reset_tokens')->insert([
+                'email' => $request->email,
+                'token' => Hash::make($otp),
+                'created_at' => now(),
+            ]);
+
+            $name = $user->firstName ?? $user->name ?? 'there';
+            Mail::raw(
+                "Hi {$name},\n\n"
+                . "Your WorkForce Pro password reset code is:\n\n"
+                . "   {$otp}\n\n"
+                . "This code expires in 10 minutes. If you did not request a reset, ignore this email.",
+                fn ($m) => $m->to($request->email)->subject('WorkForce Pro — Password Reset Code')
+            );
+        }
 
         return response()->json([
             'success' => true,
-            'message' => 'If an account exists for that email, password reset instructions have been sent.',
+            'message' => 'If an account exists for that email, a reset code has been sent.',
         ]);
     }
 
     public function resetPassword(Request $request): JsonResponse
     {
         $request->validate([
-            'token' => 'required|string',
             'email' => 'required|email',
+            'otp' => 'required|string',
             'password' => 'required|string|min:8|confirmed',
         ]);
 
-        $status = Password::reset(
-            $request->only('email', 'password', 'password_confirmation', 'token'),
-            function (User $user, string $password): void {
-                $user->update(['password' => $password]);
-            }
-        );
+        $record = DB::table('password_reset_tokens')->where('email', $request->email)->first();
 
-        if ($status !== PasswordBroker::PASSWORD_RESET) {
+        if (
+            ! $record
+            || now()->diffInMinutes($record->created_at) > 10
+            || ! Hash::check($request->otp, $record->token)
+        ) {
             throw ValidationException::withMessages([
-                'email' => [__($status)],
+                'otp' => ['This code is invalid or has expired. Please request a new one.'],
             ]);
         }
+
+        $user = User::where('email', $request->email)->first();
+        if (! $user) {
+            throw ValidationException::withMessages([
+                'email' => ['No account found for that email.'],
+            ]);
+        }
+
+        $user->update(['password' => $request->password]);
+        DB::table('password_reset_tokens')->where('email', $request->email)->delete();
 
         return response()->json([
             'success' => true,
