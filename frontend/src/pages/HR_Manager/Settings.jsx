@@ -184,7 +184,7 @@ export default function Settings() {
   const [reloadKey, setReloadKey] = useState(0);
   const { t } = useLanguage();
 
-  const { data: settingsData, refresh } = useApiData(() => settingsService.get(), []);
+  const { data: settingsData, loading, refresh } = useApiData(() => settingsService.get(), []);
 
   const handleSaved = () => {
     refresh();
@@ -192,7 +192,7 @@ export default function Settings() {
   };
 
   const renderSection = () => {
-    const props = { settingsData, onSaved: handleSaved };
+    const props = { settingsData: settingsData || {}, onSaved: handleSaved };
     switch (activeTab) {
       case 'regional':
         return <RegionalSection {...props} />;
@@ -243,9 +243,23 @@ export default function Settings() {
         </div>
 
         <div className="flex-1 min-w-0">
-          <div key={`${reloadKey}-${activeTab}`}>
-            {renderSection()}
-          </div>
+          {loading && !settingsData ? (
+            <div className="space-y-6">
+              {[1, 2].map((i) => (
+                <Card key={i}>
+                  <div className="space-y-4">
+                    <div className="skeleton h-5 w-40 rounded-lg" />
+                    <div className="skeleton h-4 w-64 rounded-lg" />
+                    <div className="skeleton h-20 w-full rounded-xl" />
+                  </div>
+                </Card>
+              ))}
+            </div>
+          ) : (
+            <div key={`${reloadKey}-${activeTab}`}>
+              {renderSection()}
+            </div>
+          )}
         </div>
       </div>
     </div>
