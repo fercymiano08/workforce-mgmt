@@ -6,7 +6,6 @@ use App\Http\Controllers\Controller;
 use App\Models\Employee;
 use App\Models\Role;
 use App\Models\User;
-use App\Services\NotificationService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -66,14 +65,6 @@ class EmployeeController extends Controller
 
             return $employee;
         });
-
-        NotificationService::notifyAdmins(
-            'employee_added',
-            'New Employee Added',
-            "{$employee->first_name} {$employee->last_name} ({$employee->id}) was added to the workforce.",
-            'low',
-            '/employees'
-        );
 
         return response()->json(['data' => $employee->toApiArray()], 201);
     }

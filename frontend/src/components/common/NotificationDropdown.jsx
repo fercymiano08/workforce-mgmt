@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { Bell, CheckCheck, X } from 'lucide-react';
 import clsx from 'clsx';
 import { useNotifications } from '../../context/NotificationContext';
@@ -14,9 +15,15 @@ import EmptyState from '../ui/EmptyState';
 // instantly reopen the dropdown.
 export default function NotificationDropdown({ isOpen }) {
   const { notifications, unreadCount, markAsRead, markAllAsRead, deleteNotification } = useNotifications();
+  const navigate = useNavigate();
   const [filter, setFilter] = useState('all');
 
   if (!isOpen) return null;
+
+  const handleItemClick = (notification) => {
+    markAsRead(notification.id);
+    if (notification.actionUrl) navigate(notification.actionUrl);
+  };
 
   const filtered = filter === 'unread'
     ? notifications.filter(n => !n.read)
@@ -87,7 +94,7 @@ export default function NotificationDropdown({ isOpen }) {
             return (
               <div
                 key={notification.id}
-                onClick={() => markAsRead(notification.id)}
+                onClick={() => handleItemClick(notification)}
                 className={clsx(
                   'group px-5 py-3.5 flex items-start gap-3 cursor-pointer transition-colors border-l-2 hover:bg-gray-50/50',
                   !notification.read ? 'bg-blue-50/30 border-l-blue-500' : 'border-l-transparent'

@@ -3,6 +3,7 @@ import { useLocation } from 'react-router-dom';
 import Sidebar from './Sidebar';
 import Topbar from './Topbar';
 import Breadcrumbs from './Breadcrumb';
+import NotificationToasts from '../common/NotificationToasts';
 import { settingsService } from '../../services/api';
 import { applySystemSettings } from '../../utils/appSettings';
 
@@ -47,6 +48,7 @@ export default function MainLayout({ children }) {
           {children}
         </main>
       </div>
+      <NotificationToasts />
     </div>
   );
 }

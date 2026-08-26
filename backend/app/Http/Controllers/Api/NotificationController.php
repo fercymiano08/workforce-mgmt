@@ -14,9 +14,26 @@ class NotificationController extends Controller
 {
     use AuthorizesEmployeeScope, GeneratesSequentialIds;
 
+    /**
+     * Employees only ever see the OUTCOME of their own requests
+     * (approved / rejected / cancelled). Internal chatter like request
+     * submissions and reminders is admin-side only. Legacy 'employee_added'
+     * rows are hidden everywhere: account creation is no longer announced.
+     */
+    private const EMPLOYEE_VISIBLE_TYPES = [
+        'leave_approved', 'leave_rejected', 'leave_cancelled',
+        'overtime_approved', 'overtime_rejected', 'overtime_cancelled',
+        'timesheet_approved', 'timesheet_rejected',
+    ];
+
+    private const RETIRED_TYPES = ['employee_added'];
+
     public function index(): JsonResponse
     {
-        $records = Notification::orderBy('timestamp', 'desc')->orderBy('id')->get();
+        $records = Notification::whereNotIn('type', self::RETIRED_TYPES)
+            ->orderBy('timestamp', 'desc')
+            ->orderBy('id')
+            ->get();
 
         return response()->json(['data' => $records->map->toApiArray()->values()]);
     }
@@ -67,6 +84,7 @@ class NotificationController extends Controller
         $this->assertSelfOrAdmin($request, $employeeId);
 
         $records = Notification::where('employee_id', $employeeId)
+            ->whereIn('type', self::EMPLOYEE_VISIBLE_TYPES)
             ->orderBy('timestamp', 'desc')
             ->get();
 
@@ -134,10 +152,12 @@ class NotificationController extends Controller
     {
         $user = $request->user();
         if ($user?->role === 'Administrator') {
-            $query->whereNull('employee_id');
+            $query->whereNull('employee_id')
+                ->whereNotIn('type', self::RETIRED_TYPES);
             return;
         }
 
-        $query->where('employee_id', $user?->employee_id);
+        $query->where('employee_id', $user?->employee_id)
+            ->whereIn('type', self::EMPLOYEE_VISIBLE_TYPES);
     }
 }

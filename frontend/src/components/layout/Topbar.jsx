@@ -13,6 +13,7 @@ import Avatar from '../ui/Avatar';
 import Modal from '../ui/Modal';
 import Button from '../ui/Button';
 import NotificationDropdown from '../common/NotificationDropdown';
+import { useNotifications } from '../../context/NotificationContext';
 
 export default function Topbar({ onMenuToggle }) {
   const { user, logout } = useAuth();
@@ -20,6 +21,7 @@ export default function Topbar({ onMenuToggle }) {
   const { toggleTheme, isDark } = useTheme();
   const navigate = useNavigate();
   const isOnline = useNetworkStatus();
+  const { unreadCount } = useNotifications();
   const [showProfile, setShowProfile] = useState(false);
   const [showNotifications, setShowNotifications] = useState(false);
   const [showLogoutModal, setShowLogoutModal] = useState(false);
@@ -77,8 +79,14 @@ export default function Topbar({ onMenuToggle }) {
           <button
             onClick={() => setShowNotifications((prev) => !prev)}
             className="relative p-2.5 rounded-xl hover:bg-gray-100 transition-colors text-gray-500 hover:text-gray-700"
+            title={unreadCount > 0 ? `${unreadCount} unread notification${unreadCount === 1 ? '' : 's'}` : 'Notifications'}
           >
             <Bell className="w-5 h-5" />
+            {unreadCount > 0 && (
+              <span className="absolute -top-0.5 -right-0.5 min-w-[18px] h-[18px] px-1 inline-flex items-center justify-center rounded-full bg-red-500 text-white text-[10px] font-bold ring-2 ring-white">
+                {unreadCount > 99 ? '99+' : unreadCount}
+              </span>
+            )}
           </button>
           <NotificationDropdown
             isOpen={showNotifications}
