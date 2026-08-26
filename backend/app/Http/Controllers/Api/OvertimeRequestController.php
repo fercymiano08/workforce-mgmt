@@ -174,4 +174,57 @@ class OvertimeRequestController extends Controller
 
         return response()->json(['success' => true]);
     }
+
+    public function bulkUpdateStatus(Request $request): JsonResponse
+    {
+        $request->validate([
+            'ids' => 'required|array|min:1',
+            'ids.*' => 'required|string',
+            'status' => 'required|string|in:Approved,Rejected',
+            'approvedBy' => 'nullable|string|max:150',
+            'approvedHours' => 'nullable|numeric|min:0|max:24',
+        ]);
+
+        $status = $request->input('status');
+        $approvedBy = $request->input('approvedBy');
+        $records = OvertimeRequest::whereIn('id', $request->input('ids'))
+            ->where('status', 'Pending')
+            ->get();
+
+        $updated = 0;
+        foreach ($records as $record) {
+            $record->update([
+                'status' => $status,
+                'approved_by' => $approvedBy ?? $record->approved_by,
+                'approved_hours' => $status === 'Approved'
+                    ? ($request->input('approvedHours') ?? $record->expected_hours)
+                    : null,
+                'approved_at' => $status === 'Approved' ? now() : null,
+            ]);
+
+            if ($status === 'Approved') {
+                NotificationService::notifyEmployee(
+                    $record->employee_id,
+                    'overtime_approved',
+                    'Overtime Approved',
+                    'Your overtime request for '.$record->date->format('M d, Y').' has been approved.',
+                    'medium',
+                    '/attendance'
+                );
+            } else {
+                NotificationService::notifyEmployee(
+                    $record->employee_id,
+                    'overtime_rejected',
+                    'Overtime Rejected',
+                    'Your overtime request for '.$record->date->format('M d, Y').' has been rejected.',
+                    'high',
+                    '/attendance'
+                );
+            }
+
+            $updated++;
+        }
+
+        return response()->json(['success' => true, 'updated' => $updated]);
+    }
 }

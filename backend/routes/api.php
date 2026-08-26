@@ -80,6 +80,7 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::prefix('overtime')->group(function () {
         Route::middleware('admin')->group(function () {
             Route::get('/', [OvertimeRequestController::class, 'index']);
+            Route::patch('/bulk-status', [OvertimeRequestController::class, 'bulkUpdateStatus']);
             Route::delete('/{id}', [OvertimeRequestController::class, 'destroy']);
         });
         // Dual rule enforced inline: admin can set any status, employee can

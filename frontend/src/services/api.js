@@ -114,6 +114,10 @@ export const overtimeService = {
     const { data } = await http.delete(`/overtime/${id}`);
     return data;
   },
+  bulkUpdateStatus: async (ids, status, approvedBy, approvedHours) => {
+    const { data } = await http.patch('/overtime/bulk-status', { ids, status, approvedBy, approvedHours });
+    return data;
+  },
 };
 
 export const leaveService = {

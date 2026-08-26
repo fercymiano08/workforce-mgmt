@@ -1,5 +1,5 @@
 import { useState, useMemo, useEffect } from 'react';
-import { CheckCircle, AlertTriangle, Timer, Download, Coffee, MapPin, Clock, X, Check } from 'lucide-react';
+import { CheckCircle, AlertTriangle, Timer, Download, Coffee, MapPin, Clock, X, Check, CheckCheck, ChevronDown, ChevronRight } from 'lucide-react';
 import Card from '../../components/ui/Card';
 import Button from '../../components/ui/Button';
 import Badge from '../../components/ui/Badge';
@@ -48,6 +48,9 @@ export default function Attendance() {
   const [selectedOvertime, setSelectedOvertime] = useState(null);
   const [approveHours, setApproveHours] = useState('');
   const [approveComment, setApproveComment] = useState('');
+  const [selectedOtIds, setSelectedOtIds] = useState(new Set());
+  const [bulkLoading, setBulkLoading] = useState(false);
+  const [collapsedDepts, setCollapsedDepts] = useState(new Set());
   const OT_PAGE_SIZE = 12;
 
   useEffect(() => {
@@ -85,6 +88,69 @@ export default function Attendance() {
     setApproveHours(req.expectedHours ? String(req.expectedHours) : '');
     setApproveComment(req.comments || '');
     setSelectedOvertime(req);
+  };
+
+  const otDepartments = useMemo(() => {
+    const groups = {};
+    for (const r of filteredOvertime) {
+      const dept = r.department || 'Unassigned';
+      if (!groups[dept]) groups[dept] = [];
+      groups[dept].push(r);
+    }
+    return Object.entries(groups).sort((a, b) => a[0].localeCompare(b[0]));
+  }, [filteredOvertime]);
+
+  const pendingOtIds = useMemo(
+    () => new Set(filteredOvertime.filter(r => r.status === 'Pending').map(r => r.id)),
+    [filteredOvertime],
+  );
+
+  const isAllPendingSelected = pendingOtIds.size > 0 && [...pendingOtIds].every(id => selectedOtIds.has(id));
+  const anySelected = selectedOtIds.size > 0;
+
+  const toggleSelectAll = (ids) => {
+    setSelectedOtIds(prev => {
+      const next = new Set(prev);
+      const allSelected = ids.every(id => next.has(id));
+      for (const id of ids) { allSelected ? next.delete(id) : next.add(id); }
+      return next;
+    });
+  };
+
+  const toggleSelectOne = (id) => {
+    setSelectedOtIds(prev => {
+      const next = new Set(prev);
+      next.has(id) ? next.delete(id) : next.add(id);
+      return next;
+    });
+  };
+
+  const toggleDeptCollapse = (dept) => {
+    setCollapsedDepts(prev => {
+      const next = new Set(prev);
+      next.has(dept) ? next.delete(dept) : next.add(dept);
+      return next;
+    });
+  };
+
+  const handleBulkDecision = async (status) => {
+    const ids = [...selectedOtIds].filter(id => pendingOtIds.has(id));
+    if (ids.length === 0) return;
+    setBulkLoading(true);
+    try {
+      const approvedBy = user ? `${user.firstName} ${user.lastName}` : 'HR Admin';
+      await overtimeService.bulkUpdateStatus(ids, status, approvedBy);
+      await refreshOvertime();
+      setSelectedOtIds(new Set());
+      toast.success(
+        status === 'Approved' ? 'Overtime Approved' : 'Overtime Rejected',
+        `${ids.length} overtime request${ids.length === 1 ? '' : 's'} ${status.toLowerCase()}.`,
+      );
+    } catch {
+      toast.error('Error', `Failed to bulk ${status.toLowerCase()} overtime requests.`);
+    } finally {
+      setBulkLoading(false);
+    }
   };
 
   const handleOvertimeDecision = async (status) => {
@@ -344,14 +410,13 @@ export default function Attendance() {
         })}
       </div>
 
-      {/* Overtime Requests */}
+      {/* Filters + Bulk Actions */}
       <Card padding={false}>
         <div className="p-4 border-b border-gray-100">
           <div className="flex items-center justify-between flex-wrap gap-3">
-            <h3 className="font-semibold text-gray-900">Overtime Requests</h3>
             <div className="flex flex-wrap items-center gap-3">
-              <SearchBar value={overtimeSearch} onChange={(v) => { setOvertimeSearch(v); setOvertimePage(1); }} placeholder="Search employee..." className="w-full sm:w-64" />
-              <Select value={overtimeStatusFilter} onChange={e => { setOvertimeStatusFilter(e.target.value); setOvertimePage(1); }} containerClass="w-full sm:w-36">
+              <SearchBar value={overtimeSearch} onChange={(v) => { setOvertimeSearch(v); setOvertimePage(1); setSelectedOtIds(new Set()); }} placeholder="Search employee..." className="w-full sm:w-64" />
+              <Select value={overtimeStatusFilter} onChange={e => { setOvertimeStatusFilter(e.target.value); setOvertimePage(1); setSelectedOtIds(new Set()); }} containerClass="w-full sm:w-36">
                 <option value="All">All Status</option>
                 <option value="Pending">Pending</option>
                 <option value="Approved">Approved</option>
@@ -359,66 +424,115 @@ export default function Attendance() {
                 <option value="Cancelled">Cancelled</option>
               </Select>
             </div>
+            <div className="flex items-center gap-3">
+              {pendingOtIds.size > 0 && (
+                <label className="flex items-center gap-2 text-sm cursor-pointer select-none">
+                  <input type="checkbox" checked={isAllPendingSelected} onChange={() => toggleSelectAll([...pendingOtIds])} className="w-4 h-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500" />
+                  <span className="text-gray-600">Select all pending</span>
+                </label>
+              )}
+            </div>
           </div>
         </div>
 
         {loadingOvertime ? (
           <div className="p-4"><SkeletonTable rows={6} cols={6} /></div>
+        ) : filteredOvertime.length === 0 ? (
+          <div className="px-4 py-12 text-center text-gray-400 text-sm">No overtime requests found</div>
         ) : (
-        <div className="overflow-x-auto">
-          <table className="w-full">
-            <thead>
-              <tr className="border-b border-gray-100 bg-gray-50/50">
-                {['Employee', 'Date', 'Expected Hours', 'Reason', 'Status', ''].map(h => (
-                  <th key={h} className="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">{h}</th>
-                ))}
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-gray-50">
-              {filteredOvertime.length === 0 ? (
-                <tr><td colSpan={6} className="px-4 py-12 text-center text-gray-400 text-sm">No overtime requests found</td></tr>
-              ) : (
-                overtimePaginated.map((r) => (
-                  <tr key={r.id} className="hover:bg-gray-50/50 transition-colors">
-                    <td className="px-4 py-3.5">
-                      <div className="flex items-center gap-3">
-                        <Avatar firstName={r.firstName} lastName={r.lastName} size="sm" src={r.avatar} />
-                        <div>
-                          <p className="font-medium text-sm text-gray-900">{r.firstName} {r.lastName}</p>
-                          <p className="text-xs text-gray-500">{r.department}</p>
-                        </div>
-                      </div>
-                    </td>
-                    <td className="px-4 py-3.5 text-sm text-gray-700">{formatDate(r.date)}</td>
-                    <td className="px-4 py-3.5 text-sm text-gray-700">
-                      {r.status === 'Approved' && r.approvedHours != null
-                        ? <span><span className="font-medium text-gray-900">{formatHours(r.approvedHours)}h</span> <span className="text-gray-400">(of {r.expectedHours ? `${formatHours(r.expectedHours)}h` : '-'})</span></span>
-                        : r.expectedHours ? `${formatHours(r.expectedHours)}h` : '-'}
-                    </td>
-                    <td className="px-4 py-3.5 text-sm text-gray-600 max-w-xs truncate">{r.reason}</td>
-                    <td className="px-4 py-3.5"><Badge variant={overtimeStatusVariant[r.status] || 'default'} dot size="xs">{r.status}</Badge></td>
-                    <td className="px-4 py-3.5">
-                      <button
-                        onClick={() => openOvertime(r)}
-                        className="text-xs font-semibold text-blue-600 hover:text-blue-700 transition-colors"
-                      >
-                        View
-                      </button>
-                    </td>
-                  </tr>
-                ))
-              )}
-            </tbody>
-          </table>
-        </div>
-        )}
-
-        {overtimeTotalPages > 1 && (
-          <div className="px-4 border-t border-gray-100">
-            <Pagination currentPage={overtimePage} totalPages={overtimeTotalPages} onPageChange={setOvertimePage} />
+          <div className="divide-y divide-gray-50">
+            {otDepartments.map(([dept, rows]) => {
+              const deptPendingIds = rows.filter(r => r.status === 'Pending').map(r => r.id);
+              const deptAllSelected = deptPendingIds.length > 0 && deptPendingIds.every(id => selectedOtIds.has(id));
+              const collapsed = collapsedDepts.has(dept);
+              return (
+                <div key={dept}>
+                  <div className="flex items-center gap-3 px-4 py-3 bg-gray-50/80">
+                    <button onClick={() => toggleDeptCollapse(dept)} className="text-gray-400 hover:text-gray-600 transition-colors">
+                      {collapsed ? <ChevronRight className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
+                    </button>
+                    <p className="font-semibold text-sm text-gray-800 flex-1">{dept}</p>
+                    <span className="text-xs font-medium text-gray-400 bg-white border border-gray-200 rounded-full px-2.5 py-0.5">
+                      {rows.length} request{rows.length === 1 ? '' : 's'}
+                    </span>
+                    {deptPendingIds.length > 0 && (
+                      <label className="flex items-center gap-1.5 text-xs cursor-pointer select-none ml-1">
+                        <input type="checkbox" checked={deptAllSelected} onChange={() => toggleSelectAll(deptPendingIds)} className="w-3.5 h-3.5 rounded border-gray-300 text-blue-600 focus:ring-blue-500" />
+                        <span className="text-gray-500">All pending</span>
+                      </label>
+                    )}
+                  </div>
+                  {!collapsed && (
+                    <div className="overflow-x-auto">
+                      <table className="w-full">
+                        <thead>
+                          <tr className="border-b border-gray-100 bg-gray-50/30">
+                            <th className="w-10 px-4 py-2.5" />
+                            {['Employee', 'Date', 'Expected Hours', 'Reason', 'Status', ''].map(h => (
+                              <th key={h} className="px-4 py-2.5 text-left text-[10px] font-semibold text-gray-400 uppercase tracking-wider">{h}</th>
+                            ))}
+                          </tr>
+                        </thead>
+                        <tbody className="divide-y divide-gray-50">
+                          {rows.map((r) => (
+                            <tr key={r.id} className={`transition-colors ${selectedOtIds.has(r.id) ? 'bg-blue-50/50' : 'hover:bg-gray-50/50'}`}>
+                              <td className="px-4 py-3">
+                                {r.status === 'Pending' && (
+                                  <input
+                                    type="checkbox"
+                                    checked={selectedOtIds.has(r.id)}
+                                    onChange={() => toggleSelectOne(r.id)}
+                                    className="w-4 h-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+                                  />
+                                )}
+                              </td>
+                              <td className="px-4 py-3.5">
+                                <div className="flex items-center gap-3">
+                                  <Avatar firstName={r.firstName} lastName={r.lastName} size="sm" src={r.avatar} />
+                                  <div>
+                                    <p className="font-medium text-sm text-gray-900">{r.firstName} {r.lastName}</p>
+                                    <p className="text-xs text-gray-500">{r.department}</p>
+                                  </div>
+                                </div>
+                              </td>
+                              <td className="px-4 py-3.5 text-sm text-gray-700">{formatDate(r.date)}</td>
+                              <td className="px-4 py-3.5 text-sm text-gray-700">
+                                {r.status === 'Approved' && r.approvedHours != null
+                                  ? <span><span className="font-medium text-gray-900">{formatHours(r.approvedHours)}h</span> <span className="text-gray-400">(of {r.expectedHours ? `${formatHours(r.expectedHours)}h` : '-'})</span></span>
+                                  : r.expectedHours ? `${formatHours(r.expectedHours)}h` : '-'}
+                              </td>
+                              <td className="px-4 py-3.5 text-sm text-gray-600 max-w-xs truncate">{r.reason}</td>
+                              <td className="px-4 py-3.5"><Badge variant={overtimeStatusVariant[r.status] || 'default'} dot size="xs">{r.status}</Badge></td>
+                              <td className="px-4 py-3.5">
+                                <button onClick={() => openOvertime(r)} className="text-xs font-semibold text-blue-600 hover:text-blue-700 transition-colors">View</button>
+                              </td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+                  )}
+                </div>
+              );
+            })}
           </div>
         )}
       </Card>
+
+      {/* Bulk Action Bar */}
+      {anySelected && (
+        <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-40 flex items-center gap-3 bg-gray-900 text-white rounded-2xl shadow-2xl px-6 py-3 animate-fadeIn">
+          <span className="text-sm font-medium">{selectedOtIds.size} selected</span>
+          <div className="w-px h-5 bg-gray-700" />
+          <Button variant="success" size="sm" icon={CheckCheck} loading={bulkLoading} onClick={() => handleBulkDecision('Approved')}>
+            Approve
+          </Button>
+          <Button variant="danger" size="sm" icon={X} loading={bulkLoading} onClick={() => handleBulkDecision('Rejected')}>
+            Reject
+          </Button>
+          <button onClick={() => setSelectedOtIds(new Set())} className="ml-1 text-gray-400 hover:text-white transition-colors text-xs">Clear</button>
+        </div>
+      )}
       </>
       )}
 
