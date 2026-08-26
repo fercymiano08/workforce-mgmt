@@ -13,11 +13,24 @@ import { useLanguage, LANGUAGE_OPTIONS } from '../../context/LanguageContext';
 import { applySystemSettings } from '../../utils/appSettings';
 import useApiData from '../../hooks/useApiData';
 
-const NAV_ITEMS = [
-  { id: 'company', key: 'settings.company', icon: Building },
-  { id: 'regional', key: 'settings.regional', icon: Globe },
-  { id: 'account', key: 'settings.account', icon: Shield },
-  { id: 'appearance', key: 'settings.appearance', icon: Palette },
+// Two clearly separated scopes: everything under COMPANY CONFIGURATION only
+// exists once for the whole organization and is managed exclusively by the
+// HR Manager; MY ACCOUNT holds this user's own password and look-and-feel.
+const NAV_GROUPS = [
+  {
+    label: 'Company Configuration',
+    items: [
+      { id: 'company', key: 'settings.company', icon: Building },
+      { id: 'regional', key: 'settings.regional', icon: Globe },
+    ],
+  },
+  {
+    label: 'My Account',
+    items: [
+      { id: 'account', key: 'settings.account', icon: Shield },
+      { id: 'appearance', key: 'settings.appearance', icon: Palette },
+    ],
+  },
 ];
 
 function CompanySection({ settingsData, onSaved }) {
@@ -215,7 +228,7 @@ export default function Settings() {
           </div>
           <div>
             <h1 className="text-2xl font-bold text-gray-900">{t('settings.title')}</h1>
-            <p className="text-[14px] text-gray-500 mt-1">Company-wide configuration and your account</p>
+            <p className="text-[14px] text-gray-500 mt-1">Company configuration for the organization - your personal account below</p>
           </div>
         </div>
       </div>
@@ -224,19 +237,26 @@ export default function Settings() {
         <div className="w-full lg:w-64 shrink-0">
           <Card padding={false}>
             <nav className="p-2">
-              {NAV_ITEMS.map((item) => (
-                <button
-                  key={item.id}
-                  onClick={() => setActiveTab(item.id)}
-                  className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-all duration-200 ${
-                    activeTab === item.id
-                      ? 'bg-blue-50 text-blue-700'
-                      : 'text-gray-600 hover:bg-gray-50 hover:text-gray-900'
-                  }`}
-                >
-                  <item.icon className={`w-4.5 h-4.5 ${activeTab === item.id ? 'text-blue-600' : 'text-gray-400'}`} />
-                  {t(item.key)}
-                </button>
+              {NAV_GROUPS.map((group) => (
+                <div key={group.label} className={group.label === NAV_GROUPS[0].label ? '' : 'mt-3 pt-3 border-t border-gray-100'}>
+                  <p className="px-3 pt-2 pb-1.5 text-[10px] font-semibold uppercase tracking-wider text-gray-400">
+                    {group.label}
+                  </p>
+                  {group.items.map((item) => (
+                    <button
+                      key={item.id}
+                      onClick={() => setActiveTab(item.id)}
+                      className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-all duration-200 ${
+                        activeTab === item.id
+                          ? 'bg-blue-50 text-blue-700'
+                          : 'text-gray-600 hover:bg-gray-50 hover:text-gray-900'
+                      }`}
+                    >
+                      <item.icon className={`w-4.5 h-4.5 ${activeTab === item.id ? 'text-blue-600' : 'text-gray-400'}`} />
+                      {t(item.key)}
+                    </button>
+                  ))}
+                </div>
               ))}
             </nav>
           </Card>
