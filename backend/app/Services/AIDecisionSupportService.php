@@ -321,6 +321,7 @@ PROMPT;
                     ? (string) $insight['metric']
                     : null,
                 'resolveKey' => 'ai:'.$category.':'.$title,
+                ...$this->aiApplyMeta($category, $title, $severity),
             ];
         }
 
@@ -425,7 +426,10 @@ PROMPT;
                     "Repeated late arrivals - {$stat['name']}",
                     "{$stat['name']} clocked in late {$stat['late']} time".($stat['late'] === 1 ? '' : 's').' in the last '.self::WINDOW_DAYS.' days.',
                     "Have a brief one-on-one with {$stat['name']} to understand the cause and reinforce the attendance policy.",
-                    "{$stat['late']} late · last ".self::WINDOW_DAYS.' days'
+                    "{$stat['late']} late · last ".self::WINDOW_DAYS.' days',
+                    'navigate_attendance',
+                    'View Attendance',
+                    ['employeeId' => $id, 'filter' => 'late']
                 );
             }
 
@@ -438,7 +442,10 @@ PROMPT;
                     "Repeated absences - {$stat['name']}",
                     "{$stat['name']} has {$stat['absent']} absence".($stat['absent'] === 1 ? '' : 's').' in the last '.self::WINDOW_DAYS.' days.',
                     "Check in on {$stat['name']} - repeated absences may signal burnout, illness, or personal issues that need support.",
-                    "{$stat['absent']} absent · last ".self::WINDOW_DAYS.' days'
+                    "{$stat['absent']} absent · last ".self::WINDOW_DAYS.' days',
+                    'navigate_attendance',
+                    'View Attendance',
+                    ['employeeId' => $id, 'filter' => 'absent']
                 );
             }
 
@@ -454,7 +461,10 @@ PROMPT;
                     "Punctuality below target - {$stat['name']}",
                     "{$stat['name']}'s punctuality score is {$punctuality}%, below the ".self::LOW_PUNCTUALITY.'% target.',
                     'Reinforce start-time expectations with the team and monitor next week.',
-                    "{$punctuality}% · {$stat['late']} late"
+                    "{$punctuality}% · {$stat['late']} late",
+                    'navigate_attendance',
+                    'View Attendance',
+                    ['employeeId' => $id, 'filter' => 'late']
                 );
             }
 
@@ -469,7 +479,10 @@ PROMPT;
                         "Heavy overtime load - {$stat['name']}",
                         "{$stat['name']} averages {$avgOvertime}h of overtime per logged day - above the 1h/day comfort line.",
                         "Review {$stat['name']}'s workload. Sustained overtime risks burnout and raises labor costs.",
-                        "{$avgOvertime}h/day avg"
+                        "{$avgOvertime}h/day avg",
+                        'navigate_overtime',
+                        'Review Overtime',
+                        ['employeeId' => $id]
                     );
                 }
             }
@@ -524,7 +537,10 @@ PROMPT;
             $faceMismatch > 0 ? 'Unrecognized faces at the entrance kiosk' : 'Failed kiosk access attempts',
             $message,
             $recommendation,
-            ($faceMismatch + $pinFailed).' open'
+            ($faceMismatch + $pinFailed).' open',
+            'resolve_all_security',
+            'Resolve All Security Events',
+            ['count' => $faceMismatch + $pinFailed]
         );
     }
 
@@ -547,7 +563,10 @@ PROMPT;
                 'Potential no-shows today',
                 $noShows->count().' scheduled employee'.($noShows->count() === 1 ? '' : 's').' ha'.($noShows->count() === 1 ? 's' : 've').' not clocked in yet today.',
                 'Reach out to them now to confirm whether they will report for their shift.',
-                $noShows->count().' scheduled · today'
+                $noShows->count().' scheduled · today',
+                'navigate_attendance',
+                'View Today\'s Attendance',
+                ['date' => $today]
             );
         }
     }
@@ -566,7 +585,10 @@ PROMPT;
                 'Approval queue needs attention',
                 "{$pendingLeave} leave request".($pendingLeave === 1 ? '' : 's').' and '.$pendingOvertime.' overtime request'.($pendingOvertime === 1 ? '' : 's').' are waiting for approval.',
                 'Clearing the queue quickly keeps the team informed and planning accurate.',
-                ($pendingLeave + $pendingOvertime).' pending'
+                ($pendingLeave + $pendingOvertime).' pending',
+                'scroll_to_queue',
+                'Review Approval Queue',
+                ['pendingLeave' => $pendingLeave, 'pendingOvertime' => $pendingOvertime]
             );
         } else {
             $insights[] = $this->make(
@@ -594,7 +616,9 @@ PROMPT;
                 'Leave requests are trending up',
                 "Approved leave jumped from {$lastMonth} last month to {$thisMonth} this month.",
                 'Confirm staffing coverage for the coming weeks if the trend continues.',
-                "{$lastMonth} → {$thisMonth} approved"
+                "{$lastMonth} → {$thisMonth} approved",
+                'navigate_leave',
+                'Review Leave Requests'
             );
         }
     }
@@ -633,7 +657,10 @@ PROMPT;
         string $title,
         string $message,
         string $recommendation,
-        ?string $metric
+        ?string $metric,
+        ?string $applyAction = null,
+        ?string $applyLabel = null,
+        ?array $applyPayload = null,
     ): array {
         return [
             'id' => $id,
@@ -644,6 +671,9 @@ PROMPT;
             'recommendation' => $recommendation,
             'metric' => $metric,
             'resolveKey' => $id,
+            'applyAction' => $applyAction,
+            'applyLabel' => $applyLabel,
+            'applyPayload' => $applyPayload,
         ];
     }
 
@@ -695,5 +725,52 @@ PROMPT;
             return 'Overall things look solid, but a few employees need attention.';
         }
         return 'There are issues to address - review the flagged insights below.';
+    }
+
+    private function aiApplyMeta(string $category, string $title, string $severity): array
+    {
+        $titleLower = strtolower($title);
+
+        if ($category === 'Security') {
+            return [
+                'applyAction' => 'resolve_all_security',
+                'applyLabel' => 'Resolve All Security Events',
+                'applyPayload' => ['count' => 1],
+            ];
+        }
+
+        if ($category === 'Leave' && str_contains($titleLower, 'pending')) {
+            return [
+                'applyAction' => 'scroll_to_queue',
+                'applyLabel' => 'Review Approval Queue',
+                'applyPayload' => [],
+            ];
+        }
+
+        if ($category === 'Overtime' && str_contains($titleLower, 'overtime')) {
+            return [
+                'applyAction' => 'navigate_overtime',
+                'applyLabel' => 'Review Overtime',
+                'applyPayload' => [],
+            ];
+        }
+
+        if ($category === 'Attendance' || $category === 'Punctuality') {
+            return [
+                'applyAction' => 'navigate_attendance',
+                'applyLabel' => 'View Attendance',
+                'applyPayload' => [],
+            ];
+        }
+
+        if ($category === 'Scheduling') {
+            return [
+                'applyAction' => 'navigate_shifts',
+                'applyLabel' => 'View Shifts',
+                'applyPayload' => [],
+            ];
+        }
+
+        return ['applyAction' => null, 'applyLabel' => null, 'applyPayload' => null];
     }
 }

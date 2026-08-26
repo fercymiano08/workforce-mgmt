@@ -35,6 +35,7 @@ class AIDecisionSupportController extends Controller
             'flag_security_event' => $this->resolveSecurityEvent($request, 'Flagged'),
             'resolve_insight' => $this->toggleInsightResolution($request, true),
             'unresolve_insight' => $this->toggleInsightResolution($request, false),
+            'resolve_all_security' => $this->resolveAllSecurity(),
             default => response()->json(['message' => 'Unsupported AI action.'], 422),
         };
     }
@@ -172,6 +173,30 @@ class AIDecisionSupportController extends Controller
             'success' => true,
             'action' => $status === 'Approved' ? 'approved' : 'rejected',
             'id' => $record->id,
+            'queue' => app(AIDecisionSupportService::class)->approvalQueue(),
+        ]);
+    }
+
+    private function resolveAllSecurity(): JsonResponse
+    {
+        $openEvents = SecurityEvent::where('status', 'Open')->get();
+        $count = $openEvents->count();
+
+        if ($count === 0) {
+            return response()->json(['success' => true, 'resolved' => 0, 'message' => 'No open security events to resolve.']);
+        }
+
+        $openEvents->each(function (SecurityEvent $event) {
+            $event->update([
+                'status' => 'Resolved',
+                'resolved_at' => now(),
+                'resolved_by' => 'AI Decision Support (bulk)',
+            ]);
+        });
+
+        return response()->json([
+            'success' => true,
+            'resolved' => $count,
             'queue' => app(AIDecisionSupportService::class)->approvalQueue(),
         ]);
     }

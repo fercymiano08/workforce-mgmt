@@ -1,8 +1,10 @@
 import { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import {
   Brain, AlertTriangle, AlertCircle, Info, CheckCircle2, XCircle,
   CalendarCheck, Clock, Timer, Palmtree, CalendarDays, Users,
   Sparkles, RefreshCw, Inbox, ShieldAlert, Lock, WifiOff, Wifi,
+  Zap,
 } from 'lucide-react';
 import Card from '../../components/ui/Card';
 import Button from '../../components/ui/Button';
@@ -67,11 +69,13 @@ function fmtTime(iso) {
 export default function AIDecisionSupport() {
   const { t } = useLanguage();
   const { toast } = useToast();
+  const navigate = useNavigate();
   const isOnline = useNetworkStatus();
   const [filter, setFilter] = useState('all');
   const [pending, setPending] = useState(null);
   const [running, setRunning] = useState(false);
   const [showHandled, setShowHandled] = useState(false);
+  const [applyPending, setApplyPending] = useState(null);
   const { data, loading, error, refresh, setData } = useApiData(() => analyticsService.getAiInsights(), []);
 
   const insights = data?.insights ?? [];
@@ -168,6 +172,142 @@ export default function AIDecisionSupport() {
     } catch (err) {
       toast.error('Action Failed', err?.response?.data?.message || 'The request could not be completed.');
       setPending(null);
+    } finally {
+      setRunning(false);
+    }
+  };
+
+  const applyDecision = (insight) => {
+    const action = insight.applyAction;
+    const label = insight.applyLabel || 'Apply';
+    const payload = insight.applyPayload || {};
+
+    if (action === 'navigate_attendance') {
+      const params = new URLSearchParams();
+      if (payload.employeeId) params.set('employee', payload.employeeId);
+      if (payload.filter) params.set('filter', payload.filter);
+      if (payload.date) params.set('date', payload.date);
+      const qs = params.toString();
+      return {
+        title: label,
+        body: `Open the Attendance page${payload.employeeId ? ' for this employee' : ''}?`,
+        detail: insight.category,
+        note: 'You will be redirected to take action on this recommendation.',
+        confirmLabel: 'Open Attendance',
+        confirmVariant: 'primary',
+        action: 'navigate',
+        navigateTo: `/hr/attendance${qs ? '?' + qs : ''}`,
+      };
+    }
+
+    if (action === 'navigate_overtime') {
+      const params = new URLSearchParams();
+      if (payload.employeeId) params.set('employee', payload.employeeId);
+      const qs = params.toString();
+      return {
+        title: label,
+        body: `Open the Attendance page to review overtime?`,
+        detail: insight.category,
+        note: 'Navigate to the overtime tab to review and approve/reject requests.',
+        confirmLabel: 'Open Overtime',
+        confirmVariant: 'primary',
+        action: 'navigate',
+        navigateTo: `/hr/attendance?tab=overtime${payload.employeeId ? '&employee=' + payload.employeeId : ''}`,
+      };
+    }
+
+    if (action === 'navigate_leave') {
+      return {
+        title: label,
+        body: 'Open the Leave Management page?',
+        detail: insight.category,
+        note: 'Review and manage leave requests.',
+        confirmLabel: 'Open Leave',
+        confirmVariant: 'primary',
+        action: 'navigate',
+        navigateTo: '/hr/leave',
+      };
+    }
+
+    if (action === 'navigate_shifts') {
+      return {
+        title: label,
+        body: 'Open the Shift Scheduling page?',
+        detail: insight.category,
+        note: 'View and manage shift schedules.',
+        confirmLabel: 'Open Shifts',
+        confirmVariant: 'primary',
+        action: 'navigate',
+        navigateTo: '/hr/shifts',
+      };
+    }
+
+    if (action === 'resolve_all_security') {
+      return {
+        title: label,
+        body: `Resolve all ${payload.count || ''} open security event${(payload.count || 0) === 1 ? '' : 's'}?`,
+        detail: 'All open face mismatch and failed PIN events will be marked as resolved.',
+        note: 'This action will be logged. You can review resolved events in the Security page.',
+        confirmLabel: 'Resolve All',
+        confirmVariant: 'success',
+        action: 'resolve_all_security',
+        payload: {},
+        successTitle: 'Security Events Resolved',
+        successMessage: 'All open security events have been resolved.',
+        resolveKey: insight.resolveKey,
+      };
+    }
+
+    if (action === 'scroll_to_queue') {
+      return {
+        title: label,
+        body: 'Scroll to the Decision Queue?',
+        detail: `${payload.pendingLeave || 0} leave + ${payload.pendingOvertime || 0} overtime pending.`,
+        note: 'The queue is shown above this insight section.',
+        confirmLabel: 'Scroll Up',
+        confirmVariant: 'primary',
+        action: 'scroll_to_queue',
+      };
+    }
+
+    return null;
+  };
+
+  const handleApplyAction = async () => {
+    if (!applyPending) return;
+    const { action, payload, resolveKey, navigateTo, successTitle, successMessage } = applyPending;
+
+    if (action === 'navigate' && navigateTo) {
+      setApplyPending(null);
+      navigate(navigateTo);
+      return;
+    }
+
+    if (action === 'scroll_to_queue') {
+      setApplyPending(null);
+      document.getElementById('decision-queue')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      return;
+    }
+
+    setRunning(true);
+    try {
+      const res = await analyticsService.runAiAction(action, payload || {});
+      if (res.queue) {
+        setData((prev) => (prev ? { ...prev, queue: res.queue } : prev));
+      }
+      if (resolveKey) {
+        setData((prev) => prev ? {
+          ...prev,
+          insights: prev.insights.map((i) => (
+            i.resolveKey === resolveKey ? { ...i, resolved: true } : i
+          )),
+        } : prev);
+      }
+      toast.success(successTitle, successMessage);
+      setApplyPending(null);
+    } catch (err) {
+      toast.error('Action Failed', err?.response?.data?.message || 'The request could not be completed.');
+      setApplyPending(null);
     } finally {
       setRunning(false);
     }
@@ -439,7 +579,7 @@ export default function AIDecisionSupport() {
             </div>
           </Card>
 
-          <div className="flex flex-wrap items-center justify-between gap-2">
+          <div id="decision-queue" className="flex flex-wrap items-center justify-between gap-2">
             <div className="flex items-center gap-2">
               <Inbox className="w-4.5 h-4.5 text-gray-400" />
               <h2 className="text-[15px] font-semibold text-gray-900">Decision Queue</h2>
@@ -561,7 +701,21 @@ export default function AIDecisionSupport() {
                             <p className="text-[13px] text-blue-800 mt-0.5">{insight.recommendation}</p>
                           </div>
                         </div>
-                        <div className="mt-2 flex items-center justify-end">
+                        <div className="mt-2 flex items-center justify-end gap-2">
+                          {insight.applyAction && !insight.resolved ? (
+                            <Button
+                              variant="primary"
+                              size="xs"
+                              icon={Zap}
+                              onClick={() => {
+                                const decision = applyDecision(insight);
+                                if (decision) setApplyPending(decision);
+                              }}
+                              disabled={running}
+                            >
+                              {insight.applyLabel || 'Apply'}
+                            </Button>
+                          ) : null}
                           <Button
                             variant={insight.resolved ? 'outline' : 'ghost'}
                             size="xs"
@@ -620,6 +774,51 @@ export default function AIDecisionSupport() {
                 loading={running}
               >
                 {pending.confirmLabel}
+              </Button>
+            </div>
+          </div>
+        )}
+      </Modal>
+
+      <Modal
+        isOpen={!!applyPending}
+        onClose={() => { if (!running) setApplyPending(null); }}
+        title={applyPending?.title ?? ''}
+        size="sm"
+      >
+        {applyPending && (
+          <div className="space-y-4">
+            <div className="flex items-start gap-3">
+              <div className={`w-10 h-10 rounded-xl flex items-center justify-center shrink-0 ${
+                applyPending.confirmVariant === 'danger'
+                  ? 'bg-red-50'
+                  : applyPending.confirmVariant === 'warning'
+                    ? 'bg-amber-50'
+                    : 'bg-blue-50'
+              }`}>
+                {applyPending.confirmVariant === 'danger' ? (
+                  <XCircle className="w-5 h-5 text-red-500" />
+                ) : applyPending.confirmVariant === 'warning' ? (
+                  <ShieldAlert className="w-5 h-5 text-amber-600" />
+                ) : (
+                  <Zap className="w-5 h-5 text-blue-600" />
+                )}
+              </div>
+              <div>
+                <p className="text-sm text-gray-700">{applyPending.body}</p>
+                <p className="text-xs text-gray-500 mt-1">{applyPending.detail}</p>
+                <p className="text-xs text-gray-500 mt-1">{applyPending.note}</p>
+              </div>
+            </div>
+            <div className="flex justify-end gap-2 pt-2 border-t border-gray-100">
+              <Button variant="outline" onClick={() => setApplyPending(null)} disabled={running}>Cancel</Button>
+              <Button
+                variant={applyPending.confirmVariant}
+                onClick={handleApplyAction}
+                loading={running}
+                icon={Zap}
+              >
+                {applyPending.confirmLabel}
               </Button>
             </div>
           </div>
