@@ -1,10 +1,11 @@
 import * as faceapi from 'face-api.js';
 
-// Model weights are loaded at runtime from a public CDN rather than bundled
-// into the repo (they're several MB of binary TensorFlow.js weight files).
-// Trade-off: the first load needs internet access; the browser caches the
-// files after that. Self-host this folder instead for a fully offline kiosk.
-const MODEL_URL = 'https://cdn.jsdelivr.net/npm/@vladmandic/face-api/model';
+// Model weights are self-hosted from frontend/public/models and served at
+// /models (Vite copies public/ into the build output). This keeps facial
+// recognition fully functional offline - only the one-time download of these
+// files ever needed the internet, and that already happened when they were
+// vendored into the repository.
+const MODEL_URL = '/models';
 
 // Tuned for speed: this app only ever detects one close-up face (a webcam
 // selfie, an uploaded ID-style photo, or a kiosk camera frame) - never a

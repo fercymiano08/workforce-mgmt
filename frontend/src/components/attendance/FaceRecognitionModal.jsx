@@ -144,7 +144,7 @@ export default function FaceRecognitionModal({ isOpen, employeeName, employeeId,
             await new Promise((resolve) => setTimeout(resolve, 400));
           }
         } catch {
-          setVerifyError('Face recognition models could not be loaded. Check your internet connection and try again.');
+          setVerifyError('Face recognition models could not be loaded. Refresh the page and try again.');
           setPhase('error');
           return;
         }
