@@ -158,7 +158,10 @@ export default function ReportPreview({ report }) {
     printWin.document.write(`<!DOCTYPE html><html><head><title>${report.title}</title>
       <meta charset="UTF-8">
       <style>
-        @import url('https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700&display=swap');
+        @font-face{font-family:'Poppins';font-style:normal;font-weight:400;src:url('/fonts/Poppins-Regular.woff2') format('woff2')}
+        @font-face{font-family:'Poppins';font-style:normal;font-weight:500;src:url('/fonts/Poppins-Medium.woff2') format('woff2')}
+        @font-face{font-family:'Poppins';font-style:normal;font-weight:600;src:url('/fonts/Poppins-SemiBold.woff2') format('woff2')}
+        @font-face{font-family:'Poppins';font-style:normal;font-weight:700;src:url('/fonts/Poppins-Bold.woff2') format('woff2')}
         *{margin:0;padding:0;box-sizing:border-box}
         html,body{width:100%;height:100%}
         body{font-family:'Poppins',sans-serif;color:#1e293b;font-size:11px;-webkit-print-color-adjust:exact;print-color-adjust:exact;background:white}

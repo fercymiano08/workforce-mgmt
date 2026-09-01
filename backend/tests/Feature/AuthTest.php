@@ -3,10 +3,10 @@
 namespace Tests\Feature;
 
 use App\Models\User;
-use App\Notifications\ResetPasswordNotification;
 use Illuminate\Foundation\Testing\RefreshDatabase;
-use Illuminate\Support\Facades\Notification;
-use Illuminate\Support\Facades\Password;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Facades\Mail;
 use Tests\TestCase;
 
 class AuthTest extends TestCase
@@ -129,51 +129,62 @@ class AuthTest extends TestCase
 
     public function test_forgot_password_sends_a_reset_link_for_a_known_email(): void
     {
-        Notification::fake();
-        $user = $this->adminUser();
+        Mail::fake();
+        $this->adminUser();
 
         $this->postJson('/api/auth/forgot-password', ['email' => 'admin@workforcepro.com'])
             ->assertOk()
             ->assertJsonPath('success', true);
 
-        Notification::assertSentTo($user, ResetPasswordNotification::class);
+        $record = DB::table('password_reset_tokens')->where('email', 'admin@workforcepro.com')->first();
+        $this->assertNotNull($record);
+        $this->assertTrue(Hash::isHashed($record->token));
     }
 
     public function test_forgot_password_gives_the_same_response_for_an_unknown_email(): void
     {
-        Notification::fake();
+        Mail::fake();
 
         $this->postJson('/api/auth/forgot-password', ['email' => 'nobody@example.com'])
             ->assertOk()
             ->assertJsonPath('success', true);
 
-        Notification::assertNothingSent();
+        $this->assertSame(
+            0,
+            DB::table('password_reset_tokens')->where('email', 'nobody@example.com')->count()
+        );
     }
 
-    public function test_reset_password_updates_the_password_with_a_valid_token(): void
+    public function test_reset_password_updates_the_password_with_a_valid_otp(): void
     {
-        $user = $this->adminUser();
-        $token = Password::createToken($user);
+        $this->adminUser();
+
+        DB::table('password_reset_tokens')->insert([
+            'email' => 'admin@workforcepro.com',
+            'token' => Hash::make('123456'),
+            'created_at' => now(),
+        ]);
 
         $this->postJson('/api/auth/reset-password', [
             'email' => 'admin@workforcepro.com',
-            'token' => $token,
+            'otp' => '123456',
             'password' => 'BrandNew@123',
             'password_confirmation' => 'BrandNew@123',
         ])->assertOk()->assertJsonPath('success', true);
 
-        $this->assertTrue(password_verify('BrandNew@123', $user->fresh()->password));
+        $user = User::where('email', 'admin@workforcepro.com')->first();
+        $this->assertTrue(password_verify('BrandNew@123', $user->password));
     }
 
-    public function test_reset_password_rejects_an_invalid_token(): void
+    public function test_reset_password_rejects_an_invalid_otp(): void
     {
         $this->adminUser();
 
         $this->postJson('/api/auth/reset-password', [
             'email' => 'admin@workforcepro.com',
-            'token' => 'not-a-real-token',
+            'otp' => '000000',
             'password' => 'BrandNew@123',
             'password_confirmation' => 'BrandNew@123',
-        ])->assertStatus(422)->assertJsonValidationErrors('email');
+        ])->assertStatus(422)->assertJsonValidationErrors('otp');
     }
 }
