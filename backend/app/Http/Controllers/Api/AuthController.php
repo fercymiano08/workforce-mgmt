@@ -97,13 +97,20 @@ class AuthController extends Controller
             ]);
 
             $name = $user->firstName ?? $user->name ?? 'there';
-            Mail::raw(
-                "Hi {$name},\n\n"
-                . "Your WorkForce Pro password reset code is:\n\n"
-                . "   {$otp}\n\n"
-                . "This code expires in 10 minutes. If you did not request a reset, ignore this email.",
-                fn ($m) => $m->to($request->email)->subject('WorkForce Pro — Password Reset Code')
-            );
+            try {
+                Mail::raw(
+                    "Hi {$name},\n\n"
+                    . "Your WorkForce Pro password reset code is:\n\n"
+                    . "   {$otp}\n\n"
+                    . "This code expires in 10 minutes. If you did not request a reset, ignore this email.",
+                    fn ($m) => $m->to($request->email)->subject('WorkForce Pro — Password Reset Code')
+                );
+            } catch (\Throwable $e) {
+                \Illuminate\Support\Facades\Log::warning('Password reset email could not be sent.', [
+                    'email' => $request->email,
+                    'reason' => $e->getMessage(),
+                ]);
+            }
         }
 
         return response()->json([

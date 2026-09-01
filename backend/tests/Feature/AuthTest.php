@@ -141,6 +141,21 @@ class AuthTest extends TestCase
         $this->assertTrue(Hash::isHashed($record->token));
     }
 
+    public function test_forgot_password_does_not_crash_when_mail_fails(): void
+    {
+        Mail::shouldReceive('raw')->andThrow(new \RuntimeException('SMTP unreachable'));
+        $this->adminUser();
+
+        // Should still return 200 + success (OTP stored) even if the email cannot be sent.
+        $this->postJson('/api/auth/forgot-password', ['email' => 'admin@workforcepro.com'])
+            ->assertOk()
+            ->assertJsonPath('success', true);
+
+        $this->assertNotNull(
+            DB::table('password_reset_tokens')->where('email', 'admin@workforcepro.com')->first()
+        );
+    }
+
     public function test_forgot_password_gives_the_same_response_for_an_unknown_email(): void
     {
         Mail::fake();
