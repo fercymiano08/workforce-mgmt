@@ -86,7 +86,10 @@ class AuthController extends Controller
 
         $user = User::where('email', $request->email)->first();
 
-        if ($user) {
+        // Admin accounts are reserved, fixed credentials (not real mailboxes),
+        // so password reset is employee-only. We no-op silently and return the
+        // same generic message to avoid leaking which accounts are admin.
+        if ($user && $user->role !== 'Administrator') {
             $otp = str_pad((string) random_int(0, 999999), 6, '0', STR_PAD_LEFT);
 
             DB::table('password_reset_tokens')->where('email', $request->email)->delete();
@@ -143,6 +146,14 @@ class AuthController extends Controller
         if (! $user) {
             throw ValidationException::withMessages([
                 'email' => ['No account found for that email.'],
+            ]);
+        }
+
+        // Admin accounts are reserved fixed credentials and cannot be reset
+        // through the self-service flow. Treat any admin OTP as invalid.
+        if ($user->role === 'Administrator') {
+            throw ValidationException::withMessages([
+                'otp' => ['This code is invalid or has expired. Please request a new one.'],
             ]);
         }
 

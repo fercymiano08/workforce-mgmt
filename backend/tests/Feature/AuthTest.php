@@ -130,29 +130,68 @@ class AuthTest extends TestCase
     public function test_forgot_password_sends_a_reset_link_for_a_known_email(): void
     {
         Mail::fake();
+        $this->otpEmployeeUser();
+
+        $this->postJson('/api/auth/forgot-password', ['email' => 'employee@workforcepro.com'])
+            ->assertOk()
+            ->assertJsonPath('success', true);
+
+        $record = DB::table('password_reset_tokens')->where('email', 'employee@workforcepro.com')->first();
+        $this->assertNotNull($record);
+        $this->assertTrue(Hash::isHashed($record->token));
+    }
+
+    public function test_forgot_password_is_a_no_op_for_admin_accounts(): void
+    {
+        Mail::fake();
         $this->adminUser();
 
         $this->postJson('/api/auth/forgot-password', ['email' => 'admin@workforcepro.com'])
             ->assertOk()
             ->assertJsonPath('success', true);
 
-        $record = DB::table('password_reset_tokens')->where('email', 'admin@workforcepro.com')->first();
-        $this->assertNotNull($record);
-        $this->assertTrue(Hash::isHashed($record->token));
+        // No reset token should be created for the reserved admin account.
+        $this->assertSame(
+            0,
+            DB::table('password_reset_tokens')->where('email', 'admin@workforcepro.com')->count()
+        );
+    }
+
+    public function test_reset_password_rejects_admin_accounts(): void
+    {
+        $this->adminUser();
+
+        // A stale token might exist; place one to prove reset is still refused.
+        DB::table('password_reset_tokens')->insert([
+            'email' => 'admin@workforcepro.com',
+            'token' => Hash::make('123456'),
+            'created_at' => now(),
+        ]);
+
+        $this->postJson('/api/auth/reset-password', [
+            'email' => 'admin@workforcepro.com',
+            'otp' => '123456',
+            'password' => 'BrandNew@123',
+            'password_confirmation' => 'BrandNew@123',
+        ])->assertStatus(422)->assertJsonValidationErrors('otp');
+
+        $this->assertTrue(
+            password_verify('password', User::where('email', 'admin@workforcepro.com')->first()->password)
+        );
     }
 
     public function test_forgot_password_does_not_crash_when_mail_fails(): void
     {
         Mail::shouldReceive('raw')->andThrow(new \RuntimeException('SMTP unreachable'));
-        $this->adminUser();
+        $this->otpEmployeeUser();
 
         // Should still return 200 + success (OTP stored) even if the email cannot be sent.
-        $this->postJson('/api/auth/forgot-password', ['email' => 'admin@workforcepro.com'])
+        $this->postJson('/api/auth/forgot-password', ['email' => 'employee@workforcepro.com'])
             ->assertOk()
             ->assertJsonPath('success', true);
 
         $this->assertNotNull(
-            DB::table('password_reset_tokens')->where('email', 'admin@workforcepro.com')->first()
+            DB::table('password_reset_tokens')->where('email', 'employee@workforcepro.com')->first()
         );
     }
 
@@ -172,31 +211,31 @@ class AuthTest extends TestCase
 
     public function test_reset_password_updates_the_password_with_a_valid_otp(): void
     {
-        $this->adminUser();
+        $this->otpEmployeeUser();
 
         DB::table('password_reset_tokens')->insert([
-            'email' => 'admin@workforcepro.com',
+            'email' => 'employee@workforcepro.com',
             'token' => Hash::make('123456'),
             'created_at' => now(),
         ]);
 
         $this->postJson('/api/auth/reset-password', [
-            'email' => 'admin@workforcepro.com',
+            'email' => 'employee@workforcepro.com',
             'otp' => '123456',
             'password' => 'BrandNew@123',
             'password_confirmation' => 'BrandNew@123',
         ])->assertOk()->assertJsonPath('success', true);
 
-        $user = User::where('email', 'admin@workforcepro.com')->first();
+        $user = User::where('email', 'employee@workforcepro.com')->first();
         $this->assertTrue(password_verify('BrandNew@123', $user->password));
     }
 
     public function test_reset_password_rejects_an_invalid_otp(): void
     {
-        $this->adminUser();
+        $this->otpEmployeeUser();
 
         $this->postJson('/api/auth/reset-password', [
-            'email' => 'admin@workforcepro.com',
+            'email' => 'employee@workforcepro.com',
             'otp' => '000000',
             'password' => 'BrandNew@123',
             'password_confirmation' => 'BrandNew@123',

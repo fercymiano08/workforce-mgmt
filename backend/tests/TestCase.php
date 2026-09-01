@@ -21,6 +21,18 @@ abstract class TestCase extends BaseTestCase
         ]);
     }
 
+    protected function otpEmployeeUser(): User
+    {
+        return User::factory()->create([
+            'employee_id' => 'EMP-OTP',
+            'name' => 'Juan Dela Cruz',
+            'email' => 'employee@workforcepro.com',
+            'role' => 'Employee',
+            'role_label' => 'Employee',
+            'avatar_seed' => 'Juan',
+        ]);
+    }
+
     protected function seedOrgStructure(): void
     {
         Department::create([
