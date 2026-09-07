@@ -12,7 +12,7 @@ import { useToast } from '../../context/ToastContext';
 
 const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 const PHONE_REGEX = /^[+\d][\d\s\-()]{6,}$/;
-const PASSWORD_REGEX = /^(?=.*[A-Za-z])(?=.*\d)[A-Za-z\d@$!%*#?&._-]{8,}$/;
+const PASSWORD_REGEX = /^(?=.*[A-Z])(?=.*[a-z])(?=.*\d)[A-Za-z\d@$!%*#?&._-]{8,}$/;
 const genders = ['Male', 'Female'];
 const statuses = ['Active', 'On Leave', 'Inactive'];
 
@@ -169,7 +169,7 @@ export default function EmployeeRegistration() {
     if (!formData.password) {
       errs.password = 'Password is required.';
     } else if (!PASSWORD_REGEX.test(formData.password)) {
-      errs.password = 'Password must be at least 8 characters and include a letter and a number.';
+      errs.password = 'Password must be at least 8 characters long with uppercase, lowercase, and a number.';
     }
 
     if (!formData.confirmPassword) {
@@ -544,7 +544,7 @@ export default function EmployeeRegistration() {
             </div>
             <div className="mt-3 flex items-start gap-2 rounded-xl bg-gray-50 border border-gray-100 px-4 py-3">
               <p className="text-xs text-gray-500">
-                Password must be at least 8 characters and include at least one letter and one number.
+                Password must be at least 8 characters long and include an uppercase letter, a lowercase letter, and a number.
               </p>
             </div>
           </section>

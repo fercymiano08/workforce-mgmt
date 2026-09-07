@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useNavigate, Link, useLocation } from 'react-router-dom';
 import { Mail, Lock, Eye, EyeOff, AlertCircle } from 'lucide-react';
 import BrandLogo from '../../components/ui/BrandLogo';
@@ -18,6 +18,13 @@ export default function Login() {
   const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
+  const [lockout, setLockout] = useState(0);
+
+  useEffect(() => {
+    if (lockout <= 0) return;
+    const t = setInterval(() => setLockout((s) => Math.max(0, s - 1)), 1000);
+    return () => clearInterval(t);
+  }, [lockout]);
 
   const from = location.state?.from?.pathname;
 
@@ -34,7 +41,12 @@ export default function Login() {
     try {
       const result = await login(email, password);
       if (!result.success) {
-        setError(result.message || 'Invalid email or password. Please try again.');
+        if (result.lockout) {
+          setLockout(result.retryAfter || 60);
+          setError(result.message || 'Too many login attempts. Please try again later.');
+        } else {
+          setError(result.message || 'Invalid email or password. Please try again.');
+        }
         return;
       }
       toast.success('Welcome back!', `Signed in as ${result.user.firstName} ${result.user.lastName}`);
@@ -142,8 +154,8 @@ export default function Login() {
               </div>
             </div>
 
-            <Button type="submit" className="w-full mt-2" size="lg" loading={loading}>
-              Sign In
+            <Button type="submit" className="w-full mt-2" size="lg" loading={loading} disabled={lockout > 0}>
+              {lockout > 0 ? `Try again in ${lockout}s` : 'Sign In'}
             </Button>
           </form>
         </div>

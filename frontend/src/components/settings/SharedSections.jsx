@@ -28,6 +28,8 @@ export function AccountSection() {
   const [passwords, setPasswords] = useState({ current: '', newPass: '', confirm: '' });
   const [saving, setSaving] = useState(false);
 
+  const PASSWORD_REGEX = /^(?=.*[A-Z])(?=.*[a-z])(?=.*\d)[A-Za-z\d@$!%*#?&._-]{8,}$/;
+
   const handlePassChange = (field, value) => {
     setPasswords((prev) => ({ ...prev, [field]: value }));
   };
@@ -35,6 +37,10 @@ export function AccountSection() {
   const handleSavePassword = async () => {
     if (!passwords.current || !passwords.newPass || !passwords.confirm) {
       toast.error('Missing fields', 'Please fill in all password fields.');
+      return;
+    }
+    if (!PASSWORD_REGEX.test(passwords.newPass)) {
+      toast.error('Weak password', 'Password must be at least 8 characters with an uppercase letter, a lowercase letter, and a number.');
       return;
     }
     if (passwords.newPass !== passwords.confirm) {
@@ -52,6 +58,7 @@ export function AccountSection() {
       setPasswords({ current: '', newPass: '', confirm: '' });
     } catch (error) {
       const message = error.response?.data?.errors?.current_password?.[0]
+        || error.response?.data?.errors?.new_password?.[0]
         || error.response?.data?.message
         || 'Failed to change password.';
       toast.error('Password not changed', message);
@@ -97,6 +104,9 @@ export function AccountSection() {
           {passwordField('Current Password', 'current', showCurrentPass, setShowCurrentPass, <Lock className="w-4 h-4" />)}
           {passwordField('New Password', 'newPass', showNewPass, setShowNewPass, <Key className="w-4 h-4" />)}
           {passwordField('Confirm New Password', 'confirm', showConfirmPass, setShowConfirmPass, <Key className="w-4 h-4" />)}
+          <p className="text-xs text-gray-400 mt-1">
+            Password must be at least 8 characters long and include an uppercase letter, a lowercase letter, and a number.
+          </p>
         </div>
 
         <div className="flex justify-end mt-6">

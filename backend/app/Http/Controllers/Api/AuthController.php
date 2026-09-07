@@ -9,11 +9,17 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Mail;
+use Illuminate\Support\Facades\RateLimiter;
+use Illuminate\Validation\Rules\Password;
 use Illuminate\Validation\ValidationException;
 use Laravel\Sanctum\PersonalAccessToken;
 
 class AuthController extends Controller
 {
+    private const MAX_LOGIN_ATTEMPTS = 5;
+
+    private const LOGIN_LOCKOUT_SECONDS = 60;
+
     public function login(Request $request): JsonResponse
     {
         $request->validate([
@@ -21,13 +27,37 @@ class AuthController extends Controller
             'password' => 'required',
         ]);
 
+        // Slow down brute-force attempts: after several failed logins for the
+        // same email the account is locked out briefly (cool-down period).
+        $lockoutKey = 'login:'.strtolower($request->input('email'));
+
+        if (RateLimiter::tooManyAttempts($lockoutKey, self::MAX_LOGIN_ATTEMPTS)) {
+            $seconds = RateLimiter::availableIn($lockoutKey);
+
+            return response()->json([
+                'success' => false,
+                'message' => 'Too many login attempts. Please try again in '.$seconds.' seconds.',
+                'retry_after' => $seconds,
+                'errors' => ['email' => ['Too many login attempts. Please try again in '.$seconds.' seconds.']],
+            ], 429);
+        }
+
         $user = User::where('email', $request->email)->first();
 
         if (! $user || ! Hash::check($request->password, $user->password)) {
+            RateLimiter::hit($lockoutKey, self::LOGIN_LOCKOUT_SECONDS);
+
+            $remaining = self::MAX_LOGIN_ATTEMPTS - RateLimiter::attempts($lockoutKey);
+
             throw ValidationException::withMessages([
-                'email' => ['Invalid email or password. Please try again.'],
+                'email' => [
+                    'Invalid email or password. Please try again.'
+                    .($remaining > 0 ? " (You have {$remaining} attempt(s) remaining.)" : ''),
+                ],
             ]);
         }
+
+        RateLimiter::clear($lockoutKey);
 
         $token = $user->createToken('workforce-token')->plainTextToken;
 
@@ -60,7 +90,7 @@ class AuthController extends Controller
     {
         $request->validate([
             'current_password' => 'required|string',
-            'new_password' => 'required|string|min:8|confirmed',
+            'new_password' => ['required', 'confirmed', Password::min(8)->mixedCase()->numbers()],
         ]);
 
         $user = $request->user();
@@ -127,7 +157,7 @@ class AuthController extends Controller
         $request->validate([
             'email' => 'required|email',
             'otp' => 'required|string',
-            'password' => 'required|string|min:8|confirmed',
+            'password' => ['required', 'confirmed', Password::min(8)->mixedCase()->numbers()],
         ]);
 
         $record = DB::table('password_reset_tokens')->where('email', $request->email)->first();

@@ -7,6 +7,7 @@ use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Mail;
+use Illuminate\Support\Facades\RateLimiter;
 use Tests\TestCase;
 
 class AuthTest extends TestCase
@@ -240,5 +241,94 @@ class AuthTest extends TestCase
             'password' => 'BrandNew@123',
             'password_confirmation' => 'BrandNew@123',
         ])->assertStatus(422)->assertJsonValidationErrors('otp');
+    }
+
+    public function test_change_password_enforces_the_password_policy(): void
+    {
+        $user = $this->adminUser();
+
+        foreach (['password', 'Password', 'password1', 'PASSWORD1'] as $weak) {
+            $this->actingAs($user)
+                ->postJson('/api/auth/change-password', [
+                    'current_password' => 'password',
+                    'new_password' => $weak,
+                    'new_password_confirmation' => $weak,
+                ])->assertStatus(422)->assertJsonValidationErrors('new_password');
+        }
+    }
+
+    public function test_change_password_accepts_a_policy_compliant_password(): void
+    {
+        $user = $this->adminUser();
+
+        $this->actingAs($user)
+            ->postJson('/api/auth/change-password', [
+                'current_password' => 'password',
+                'new_password' => 'PolicyPass1',
+                'new_password_confirmation' => 'PolicyPass1',
+            ])->assertOk()->assertJsonPath('success', true);
+    }
+
+    public function test_reset_password_enforces_the_password_policy(): void
+    {
+        $this->otpEmployeeUser();
+
+        DB::table('password_reset_tokens')->insert([
+            'email' => 'employee@workforcepro.com',
+            'token' => Hash::make('123456'),
+            'created_at' => now(),
+        ]);
+
+        $this->postJson('/api/auth/reset-password', [
+            'email' => 'employee@workforcepro.com',
+            'otp' => '123456',
+            'password' => 'password',
+            'password_confirmation' => 'password',
+        ])->assertStatus(422)->assertJsonValidationErrors('password');
+    }
+
+    public function test_login_lockout_after_five_failed_attempts(): void
+    {
+        $this->adminUser();
+        RateLimiter::clear('login:admin@workforcepro.com');
+
+        for ($i = 0; $i < 5; $i++) {
+            $this->postJson('/api/auth/login', [
+                'email' => 'admin@workforcepro.com',
+                'password' => 'wrong-password',
+            ])->assertStatus(422);
+        }
+
+        $this->postJson('/api/auth/login', [
+            'email' => 'admin@workforcepro.com',
+            'password' => 'password',
+        ])->assertStatus(429)
+            ->assertJsonPath('success', false)
+            ->assertJsonStructure(['message', 'retry_after']);
+    }
+
+    public function test_successful_login_resets_the_attempt_counter(): void
+    {
+        $this->adminUser();
+        RateLimiter::clear('login:admin@workforcepro.com');
+
+        for ($i = 0; $i < 4; $i++) {
+            $this->postJson('/api/auth/login', [
+                'email' => 'admin@workforcepro.com',
+                'password' => 'wrong-password',
+            ])->assertStatus(422);
+        }
+
+        // A correct password now succeeds and clears the counter.
+        $this->postJson('/api/auth/login', [
+            'email' => 'admin@workforcepro.com',
+            'password' => 'password',
+        ])->assertOk()->assertJsonPath('success', true);
+
+        // Another correct login still works (counter was cleared).
+        $this->postJson('/api/auth/login', [
+            'email' => 'admin@workforcepro.com',
+            'password' => 'password',
+        ])->assertOk()->assertJsonPath('success', true);
     }
 }

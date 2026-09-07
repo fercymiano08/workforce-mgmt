@@ -12,6 +12,7 @@ use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\Rule;
 use Illuminate\Validation\ValidationException;
 use Illuminate\Support\Facades\Validator;
+use Illuminate\Validation\Rules\Password;
 
 class EmployeeController extends Controller
 {
@@ -212,7 +213,7 @@ class EmployeeController extends Controller
             'skills' => 'nullable|array',
             'education' => 'nullable|array',
             'leaveBalances' => 'nullable|array',
-            'password' => 'nullable|string|min:8',
+            'password' => ['nullable', Password::min(8)->mixedCase()->numbers()],
         ];
 
         $validator = Validator::make($request->all(), $rules);

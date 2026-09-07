@@ -59,11 +59,13 @@ export default function ForgotPassword() {
     }
   };
 
+  const PASSWORD_REGEX = /^(?=.*[A-Z])(?=.*[a-z])(?=.*\d)[A-Za-z\d@$!%*#?&._-]{8,}$/;
+
   const handleReset = async (e) => {
     e.preventDefault();
     setError('');
     if (otp.trim().length !== 6) { setError('Please enter the 6-digit code.'); return; }
-    if (password.length < 8) { setError('Password must be at least 8 characters.'); return; }
+    if (!PASSWORD_REGEX.test(password)) { setError('Password must be at least 8 characters with an uppercase letter, a lowercase letter, and a number.'); return; }
     if (password !== confirmPassword) { setError('Passwords do not match.'); return; }
     setLoading(true);
     try {
@@ -151,6 +153,9 @@ export default function ForgotPassword() {
                 <Input label="Reset Code" placeholder="000000" value={otp} onChange={(e) => setOtp(e.target.value.replace(/\D/g, '').slice(0, 6))} className="text-center text-lg tracking-[0.35em] font-mono" required autoFocus />
                 <PasswordField label="New Password" value={password} onChange={(e) => setPassword(e.target.value)} autoComplete="new-password" />
                 <PasswordField label="Confirm New Password" value={confirmPassword} onChange={(e) => setConfirmPassword(e.target.value)} autoComplete="new-password" />
+                <p className="text-xs text-gray-400 mt-1">
+                  Password must be at least 8 characters long and include an uppercase letter, a lowercase letter, and a number.
+                </p>
                 <Button type="submit" className="w-full mt-2" size="lg" loading={loading}>Reset Password</Button>
               </form>
               <button type="button" onClick={() => { setError(''); setStep('request'); setOtp(''); }} className="mt-4 w-full text-center text-sm text-gray-500 hover:text-gray-700 font-medium">

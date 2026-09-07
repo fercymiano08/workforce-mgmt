@@ -38,6 +38,13 @@ export function AuthProvider({ children }) {
       }
       return { success: true, user: sessionUser };
     } catch (error) {
+      if (error.response?.status === 429) {
+        const wait = error.response?.data?.retry_after ?? 60;
+        const message = error.response?.data?.message
+          || `Too many login attempts. Please try again in ${wait} seconds.`;
+        setAuthError(message);
+        return { success: false, message, lockout: true, retryAfter: wait };
+      }
       const message = error.response?.data?.errors?.email?.[0]
         || 'Invalid email or password. Please try again.';
       setAuthError(message);

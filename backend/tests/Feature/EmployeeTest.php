@@ -272,4 +272,24 @@ class EmployeeTest extends TestCase
 
         $this->assertSame('Juan Changed', User::where('employee_id', $id)->value('name'));
     }
+
+    public function test_create_employee_rejects_a_weak_password(): void
+    {
+        foreach (['password', 'Password', 'password1', 'PASSWORD1'] as $weak) {
+            $this->actingAs($this->user)
+                ->postJson('/api/employees', $this->employeePayload(['password' => $weak]))
+                ->assertStatus(422)
+                ->assertJsonValidationErrors('password');
+        }
+    }
+
+    public function test_update_employee_rejects_a_weak_password(): void
+    {
+        $id = $this->actingAs($this->user)->postJson('/api/employees', $this->employeePayload())->json('data.id');
+
+        $this->actingAs($this->user)
+            ->putJson("/api/employees/{$id}", $this->employeePayload(['password' => 'password']))
+            ->assertStatus(422)
+            ->assertJsonValidationErrors('password');
+    }
 }
