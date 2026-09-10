@@ -246,3 +246,100 @@ A: In a single PostgreSQL database with tables for users, employees, attendance,
 
 > The biggest secret: **the panel wants to hear you tell the story, not quote code.**
 > Master the story and you've already passed.
+
+---
+
+# PART 11 - Monolith vs Microservices (you WILL be asked this)
+
+The "scariest" architecture question. Your answer is simple and true:
+**we are a monolith, on purpose - and there's a real plan to migrate after this stage.**
+
+## What our system looks like today (a MONOLITH)
+
+```
+                ┌──────────────────────────────────────────────┐
+                │                 BROWSER                      │
+                │        React SPA  (localhost:5173)           │
+                │   HR pages · Employee pages · Kiosk pages    │
+                └───────────────────┬──────────────────────────┘
+                                    │  EVERY call goes to the same place:
+                                    │  /api/auth  /api/employees  /api/attendance
+                                    │  /api/leaves  /api/timesheets  /api/analytics ...
+                                    ▼
+    ┌──────────────────────────────────────────────────────────────────┐
+    │                 ONE LARAVEL APPLICATION  (one server)           │
+    │                                                                  │
+    │    Auth       Employees     Attendance     Leave     Overtime    │
+    │    Shifts     Timesheets    Notifications   Analytics  AI        │
+    │    Settings   Kiosk                                              │
+    │                                                                  │
+    │   → all modules are FILES in the SAME codebase (routes/api.php)  │
+    │   → they call each other directly, in one process                │
+    └──────────────────────────────────┬───────────────────────────────┘
+                                       │  direct SQL (no network between modules)
+                                       ▼
+    ┌──────────────────────────────────────────────────────────────────┐
+    │                     ONE POSTGRESQL DATABASE                      │
+    │  users · employees · departments · roles · attendance · leaves   │
+    │  overtime_requests · shift_definitions · shift_schedules          │
+    │  timesheets · notifications · analytics · security_events        │
+    │                                                                  │
+    │   → all tables connected by employee_id (one big family)         │
+    └──────────────────────────────────────────────────────────────────┘
+```
+
+## What it would look like if we converted (MICROSERVICES)
+
+```
+                ┌──────────────────────────────────────────────┐
+                │                 BROWSER                      │
+                │        React SPA  (localhost:5173)           │
+                └───────────────────┬──────────────────────────┘
+                                    │  now calls DIFFERENT urls:
+                                    │  auth.wfp.com · emp.wfp.com · att.wfp.com
+                                    ▼
+                ┌──────────────────────────────────────────────┐
+                │               API GATEWAY                    │
+                │   one doorway → checks the token → forwards  │
+                │   to the right service                       │
+                └──┬─────────┬─────────┬─────────┬─────────┬───┘
+                   │         │         │         │         │
+    ┌──────────────▼───┐ ┌───▼─────────▼──┐ ┌───▼─────────▼──┐
+    │   AUTH SERVICE    │ │ EMPLOYEE ...   │ │  ... and many  │
+    │   OWN SERVER      │ │ more services  │ │  more: shifts, │
+    │   OWN DATABASE    │ │ each with its  │ │  timesheets,   │
+    │   users, tokens   │ │ OWN database:  │ │  notifications,│
+    └───────────────────┘ │ employees,     │ │  analytics, ...│
+                          │ departments    │ └────────────────┘
+                          └────────────────┘
+
+    The services must then TALK over the network (HTTP) to share data:
+
+       ┌──────────────────┐  "give me raw attendance hours"  ┌────────────────┐
+       │  TIMESHEET SRV   │ ────────────────────────────────▶ │ ATTENDANCE SRV │
+       │  own timesheets  │ ◀──────────────────────────────── │ own attendance │
+       └──────────────────┘        returns the data          └────────────────┘
+
+       ┌──────────────────┐  "reserve 1 day of leave balance" ┌───────────────┐
+       │   LEAVE SERVICE  │ ─────────────────────────────────▶ │ EMPLOYEE SRV  │
+       └──────────────────┘ ◀───────────────────────────────── └───────────────┘
+```
+
+## The one-line difference (memorize this)
+
+> A monolith is **one app, one database, everything in one place**.
+> Microservices are **many small apps, each with its own database, talking over the network**.
+
+## Why we chose a monolith (your honest engineering answer)
+
+- Every module needs the **same employee data** - `employee_id` connects attendance, leave, schedules, timesheets. Sharing one database directly is simpler than syncing data across services.
+- A monolith is **easier to build, deploy, and demo** - which matters for this project.
+- Microservices add network calls, distributed transactions, and many running servers - **complexity with no real benefit at this size**.
+
+## If anyone says "you'll have to use microservices" or "why aren't you microservices?"
+
+Use the **Strangler Fig** answer (this is a real industry pattern, not an excuse):
+
+> "It's possible, and there's a proven way to do it - the Strangler Fig pattern: pick one module, give it its own app and its own database, then have the main system call it over HTTP, one module at a time. That's exactly our plan: finish this stage as a monolith, then migrate module by module afterward. We will only do it if traffic, teams, or independent scaling actually require it - never 'just because it's trendy.'"
+
+---
