@@ -26,6 +26,63 @@ Every module section follows the same pattern:
 
 ---
 
+# PART 0 — START HERE: THE ABSOLUTE BEGINNER PRIMER
+
+> If you have never seen code in your life, read this first. It turns the whole project into a story you can tell with your eyes closed. After this part, ANY of the other parts will make sense.
+
+## 0.1 Imagine the system as a restaurant
+
+| System piece | Restaurant role | Why |
+|--------------|-----------------|-----|
+| **Frontend** (React — `http://localhost:5173`) | The waiters and the menu on the table | Shows you the food, takes your order, makes it look nice. Knows NOTHING about the kitchen's storage room. |
+| **Backend** (Laravel — `http://127.0.0.1:8000`) | The kitchen + the manager | Receives the order, decides if it's allowed, does the real cooking, follows the rules. |
+| **Database** (PostgreSQL) | The storage room / filing cabinet | Holds every ingredient and every record permanently. |
+| **API** (the `/api/...` URLs) | The order ticket & the pass-through window | The only way the waiter can talk to the kitchen. |
+
+**The one sentence that explains everything:**
+> The waiter (frontend) never runs into the storage room. It writes an order ticket (API request) and hands it to the kitchen (backend); the kitchen pulls ingredients from the storage room (database), cooks, and returns the dish (JSON data) to the waiter.
+
+## 0.2 The 12 words you MUST know before tomorrow
+
+1. **Frontend** — everything you SEE (buttons, tables, charts). Built with **React + Vite + Tailwind**.
+2. **Backend** — everything you DON'T see (rules, security, math). Built with **Laravel (PHP)**.
+3. **Database** — where data is SAVED. We use **PostgreSQL**, database name `workforce_mgnt`.
+4. **API** — Application Programming Interface. A set of URLs (`/api/employees`, `/api/attendance`) that the frontend calls to get or send data.
+5. **HTTP Request** — "please give me your employees" — the frontend's message to the backend.
+6. **JSON** — the message's language. Looks like `{"name": "Fercy", "status": "Present"}`. Both sides understand it.
+7. **Token** — a digital ID badge. After login the backend gives the browser a token; the browser shows it on every request so the backend knows who's asking.
+8. **Middleware** — a bouncer. Before a request reaches the code, middleware checks "do you have a valid token? are you allowed here?"
+9. **Controller** — the chef in the kitchen. Receives the request, decides, calls the database, returns JSON.
+10. **Model** — the "shape" of a table in code (e.g., `Attendance` model = `attendance` table). Controllers use models to talk to the database without writing raw SQL everywhere.
+11. **Migration** — a recipe file that creates/edits table structures (`database/migrations/`). Run once, they build tables.
+12. **Seeder** — a script that FILLS tables with data (`database/seeders/DatabaseSeeder.php`). Our demo data came from the JSON files in `backend/database/mock/`.
+
+> **Panel killer sentence:** "Migrations build the tables, seeders fill them with demo data, and every module talks to the database through its Model — that's why adding a feature is always consistent."
+
+## 0.3 What actually runs on your laptop
+
+Three programs must be running at the same time (see **activator-deactivator.md**):
+
+| Program | Address | What it does |
+|---------|---------|--------------|
+| PostgreSQL database | `127.0.0.1:5432` | Stores everything (usually running as a Windows service — you don't open it) |
+| Laravel backend | `127.0.0.1:8000` | Terminal 1 → `php -d max_execution_time=0 artisan serve --port=8000` |
+| React frontend | `localhost:5173` | Terminal 2 → `npm run dev` |
+
+You open `http://localhost:5173` in the browser. That page secretly talks to the backend at port 8000. The backend talks to PostgreSQL. That's the whole machine.
+
+## 0.4 "What/How/Why" for the three big technologies
+
+| Tech | What it is | How we use it | Why we picked it |
+|------|-----------|---------------|------------------|
+| **React** | A JavaScript library for building web screens | 22 page files under `frontend/src/pages/` | Fast, component-based, huge ecosystem; runs in any browser |
+| **Laravel** | A PHP web framework | All API endpoints, auth, business rules in `backend/app/` | Secure by default (hashing, validation), clean structure |
+| **PostgreSQL** | A relational database (tables with rows/columns) | 23 tables store everything | Reliable, handles relational + JSON data well, free |
+
+> If a panelist asks "why PostgreSQL instead of MySQL?" — add: "PostgreSQL handles JSON columns and complex reporting cleanly, and it's what our team is consistent with. MySQL would also work; ours was a deliberate choice for reliability."
+
+---
+
 # PART 1 — ORIENTATION
 
 ## 1. The Big Picture
@@ -971,7 +1028,7 @@ Workforce MGNT/
 │   │   └── Models/                   one per table
 │   ├── routes/api.php                ★ every endpoint listed here
 │   ├── database/migrations/          table definitions
-│   ├── tests/                        automated checks (137 tests)
+│   ├── tests/                        automated checks (147 tests)
 │   └── .env                          secrets: DB credentials, GEMINI_API_KEY
 └── start.bat                         one-click launcher
 ```

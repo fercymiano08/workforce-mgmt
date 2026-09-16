@@ -1,3 +1,13 @@
+# Workforce Management Project Framework
+
+> ## 10-second summary (say this if the panel asks "what is your project?")
+> We built **AI-Enhanced Workforce Management** for **Archon Nell Inc.**: a web app with
+> **Facial Recognition clock-in**, **Shift Scheduling**, **Leave Management**, **Weekly Timesheets**,
+> **Workforce Analytics**, and an **AI Decision Support** module. Built with **React + Laravel + PostgreSQL**.
+> Users: HR Manager, Employees, and an entrance Clock-In kiosk device. Team of 5 under client **Nardz Olarte**.
+
+---
+
 Capstone Title:
 "DESIGN AND DEVELOPMENT OF AN AI-ENHANCED WORKFORCE MANAGEMENT SYSTEM FOR E-COMMERCE ENTERPRISE: SHIFT SCHEDULING, LEAVE MANAGEMENT, AND WORKFORCE ANALYTICS TO IMPROVE WORKFORCE PRODUCTIVITY"
 

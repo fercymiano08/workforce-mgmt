@@ -343,3 +343,122 @@ Use the **Strangler Fig** answer (this is a real industry pattern, not an excuse
 > "It's possible, and there's a proven way to do it - the Strangler Fig pattern: pick one module, give it its own app and its own database, then have the main system call it over HTTP, one module at a time. That's exactly our plan: finish this stage as a monolith, then migrate module by module afterward. We will only do it if traffic, teams, or independent scaling actually require it - never 'just because it's trendy.'"
 
 ---
+
+# PART 12 - What/how/why for EVERY module (the complete memory map)
+
+Use this as a rapid-fire review. One line = one idea. Cover the right column, then try to say the left column in your own words.
+
+## The universal flow (applies to EVERY module)
+
+> **What:** every module is just "show data" or "change data".
+> **How:** a page calls an API → Laravel checks who you are → controller runs a rule → database is read or written → JSON comes back → screen updates.
+> **Why:** this one pattern means security and validation are always in the same place (the backend) - never trust the buttons you see.
+
+## Module-by-module (What / How / Why)
+
+| Module | What it does | How it works | Why it matters |
+|--------|-------------|--------------|----------------|
+| **Login/Auth** | Proves who you are | Email+password checked against a bcrypt hash → issues a token | Nobody else can act as you; every action is traceable |
+| **Employees** | The company's people database | CRUD on the `employees` table; generates `EMP2026xxxx` IDs | THE central entity - every other module hangs off the employee ID |
+| **Face Registration** | Turns a face into a 128-number print | Stores `face_image` + `face_descriptor` JSON per employee | Lets the kiosk verify identity without passwords or staff |
+| **Attendance (kiosk)** | The clock-in/out terminal | Face match (< 0.6 distance) + smart pre-checks → one row in `attendance` | Accurate, tamper-resistant attendance with zero manual work |
+| **HR Attendance** | Fix/correct daily records | Approve, edit, delete rows; computed Late/Present/Absent | Keeps records honest; the audit trail source of truth |
+| **Leave** | Time-off requests | Apply (Pending) → HR Approve/Reject → deducts balance → notify | Balances stay consistent; approved leave stops "Absent" flags |
+| **Overtime** | Extra hours tracking | Same lifecycle as leave, PLUS reconciliation pushes approved OT into attendance + timesheets | Payroll numbers agree across every page |
+| **Shifts/Schedules** | Who works when | Templates + generated/edited assignments in `shift_schedules` | Drives kiosk validation, Late/Present math, coverage analysis |
+| **Timesheets** | Weekly hour summaries | Auto-generated from attendance → employee submits → HR approves → locked | Payroll-friendly, auditable, no manual summing |
+| **Dashboard** | Today's numbers at a glance | Reads cached aggregates + live counts | Manager sees the company in 5 seconds |
+| **Analytics** | Deep trend charts | `AnalyticsService` pre-computes 6 JSON sections into `analytics` table | Instant chart loads; heavy math runs once |
+| **Reports** | Printable/CSV outputs | Reads live data + formats via `reportHelpers.js` | Proof and paperwork done from one button |
+| **AI Decision Support** | AI insights + one-click actions | Reads 30 days of data → Gemini if online, else rule engine → decision queue | Flags problems HR would miss; actions reuse normal endpoints |
+| **Security Events** | Log of suspicious kiosk activity | `face_mismatch`/`pin_failed` stored Open → HR resolves/escalates | Buddy-punching is caught and reviewable |
+| **Notifications** | In-app bell messages | Backend INSERTs a row; bell polls unread count | People learn of approvals/leaves/SO immediately |
+| **Kiosk Setup** | Configures the door device | PIN hash, location, verification method stored in `settings.kiosk` | The entrance behaves exactly how HR wants |
+| **Settings/Profile** | App config + self-service edits | One settings row (JSON groups); profile edits by owner only | Flexible config; employees can't touch salary/department |
+
+---
+
+# PART 13 - Nuclear study session (do this TODAY, then teach back tonight)
+
+> Goal: finish today with the story memorized. Tomorrow is only polish + demo.
+
+| Hour | What to do | How to check yourself |
+|------|-----------|----------------------|
+| Now | Read Part 2 (roles) + Part 4 (4 flows) twice out loud | Close the file: say the 4 flows from memory |
+| +30 min | Read Part 12 module map twice | Cover the table: name What/How/Why for all 17 modules |
+| +60 min | Read Part 7 analogies + Part 11 (monolith) | Make your own analogy for: token, bcrypt, OTP, face print |
+| +90 min | Read Part 6 security + Part 9 traps | Answer all 6 trap questions WITHOUT looking |
+| +2h | Open the app, walk the 2-minute demo tour (Part 8) | Can you do it while talking? If not, redo it |
+| Tonight | Have someone quiz you with Part 12 + 13 Q&A | Any wrong answer → re-read that module + say it again |
+
+---
+
+# PART 14 - The 50-question rapid-fire quiz (answer every one)
+
+## Big picture (1-5)
+1. What is WorkForce Pro? → A web workforce management system for Archon Nell Inc.
+2. Name the 5 focus modules → Time&Attendance, Shift&Schedule, Leave, Timesheet, Analytics.
+3. Name the three "users" → HR Manager, Employee, Kiosk (device).
+4. What are the 3 tech layers? → React frontend, Laravel backend, PostgreSQL database.
+5. What was the client problem? → Paper/Excel HR work: attendance, schedules, leave, timesheets was slow and error-prone.
+
+## Architecture (6-12)
+6. How does data move? → Page → api.js → HTTP request → Laravel route → Controller → SQL → JSON → screen.
+7. Why three running programs? → Frontend (5173), backend (8000), database (5432).
+8. What is a token? → ID badge issued at login, shown on every request, destroyed at logout.
+9. What is middleware? → Bouncer that checks token + role before the controller runs.
+10. What is a migration? → Table-building recipe. What is a seeder? → Data-filling script.
+11. Monolith vs microservices? → One app+one DB now; many apps+own DBs over HTTP later (Strangler Fig).
+12. Why did we pick each tech? → React=fast UI, Laravel=secure backend, PostgreSQL=reliable relational DB, Gemini=smart insights.
+
+## Database (13-19)
+13. How many tables? → 23 (14 business + 9 Laravel plumbing).
+14. Which table is most important? → `employees` - everything links by `employee_id`.
+15. What is a primary key? → Unique row ID (e.g. `EMP20260001`).
+16. What is a foreign key? → A column pointing to another table's key (attendance.employee_id → employees.id).
+17. What is a JOIN? → Combining two tables on their key to show related data together.
+18. Why JSON columns? → Flexible config (leave_balances, kiosk, ai_resolved_insights).
+19. How many employees/attendance rows are in the demo? → 12 employees, 190 attendance rows.
+
+## Attendance rules (20-26)
+20. When is someone Late? → Clock-in more than 15 min after shift start.
+21. When is someone Present? → Clock-in within the 15-min grace.
+22. When is someone Absent? → No clock-in + no approved leave + past 60-min grace.
+23. What protects an on-leave employee from Absent? → Approved leave covering that date.
+24. What does the kiosk refuse? → No schedule, shift ended, early clock-out, already clocked in.
+25. What happens on face mismatch? → Blocked + `face_mismatch` security event + strikes → 60s lockout.
+26. How does the face match work? → 128-number descriptor compared; distance < 0.6 = match; runs in-browser (offline).
+
+## Leave & timesheet (27-33)
+27. Leave statuses? → Pending → Approved/Rejected; employee can Cancel while Pending.
+28. What happens on leave approval? → Balance deducted + notification + protects from Absent.
+29. What is reconciliation (OT)? → Approved OT hours copied into attendance + timesheet so payroll agrees.
+30. How is a timesheet born? → Auto-generated from that week's attendance rows.
+31. Who submits/approves timesheets? → Employee submits own; HR approves/rejects.
+32. Can an employee fix a missing clock-out? → No - only HR corrects records.
+33. What's a "remind me to clock out"? → A self-nudge, max 1 per person per day.
+
+## Security (34-41)
+34. How are passwords stored? → bcrypt hash (one-way scramble), never readable.
+35. Login lockout? → 5 wrong attempts → 60-second cool-down.
+36. Password policy? → 8+ chars, uppercase, lowercase, digit.
+37. OTP reset? → 6-digit code by email, 10-minute expiry, one-time use.
+38. Why can't admin self-reset? → It's the reserved owner account.
+39. Why are kiosk endpoints public but safe? → Minimal fields only (name, photo, dept, today's schedule) - never salary/email/phone/address.
+40. Where is the kiosk PIN stored? → SHA-256 hash in settings.kiosk.
+41. Frontend vs backend security? → Hiding buttons is convenience; the backend enforces real security.
+
+## AI & analytics (42-47)
+42. What does the AI read? → Last 30 days: attendance, pending leaves/OT, shift coverage, open security events.
+43. What are the two "brains"? → Google Gemini (online) or built-in PHP rule engine (offline).
+44. What 4 things does AI return? → healthScore, insights, decisionQueue, source.
+45. What actions can HR take in one click? → Approve/reject leave & OT, resolve security events.
+46. Why cached analytics? → Heavy math runs once via AnalyticsService; charts stay instant.
+47. What are the 6 analytics sections? → attendance_trend, department_productivity, leave_trend, overtime_summary, punctuality_score, payroll_discrepancy.
+
+## People & registry (48-50)
+48. Who are the demo logins? → admin@workforcepro.com/Admin@123 and employee@workforcepro.com/Employee@123.
+49. Team members? → Fercy, Asniyah, John Paul, Florita, Kyle.
+50. The client? → Archon Nell Inc., contact Nardz Olarte (QA/QC supervisor).
+
+---

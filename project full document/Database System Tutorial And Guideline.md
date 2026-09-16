@@ -264,3 +264,26 @@ Note: this restores STRUCTURE only (empty tables). Live data lives on the origin
    ```powershell
    php artisan migrate:fresh --seed
    ```
+
+---
+
+## 12. Panel Questions About The Database (with ready answers)
+
+> Memorize these in YOUR OWN words. They tie directly to the demo you'll show.
+
+| Likely question | Ready answer (plain) |
+|----------------|----------------------|
+| Why PostgreSQL and not MySQL? | Both work; PostgreSQL handles JSON columns and complex reporting cleanly, and it's genuinely free. Our team chose it for reliability. |
+| How many tables did you design? | 14 business tables + 9 Laravel framework tables = 23 total. The 9 framework ones are automatic (sessions, migrations, cache...). |
+| Which table is the most important? | `employees` — it's the center. Attendance, leaves, overtime, schedules, timesheets all point back to it by `employee_id`. |
+| How do your tables connect? | Primary keys and foreign keys. Example: `attendance.employee_id` references `employees.id`. That's also what makes our ERD look like a tree. |
+| What is a JOIN? | Combining two tables on their key, e.g. join attendance to employees so a report shows the person's name next to each clock-in. |
+| Why JSON columns? | For flexible data that doesn't deserve its own table: `employees.leave_balances`, `settings.kiosk`, `settings.ai_resolved_insights`. |
+| How is the database created? | Laravel migrations build the structure; `DatabaseSeeder` (fed by the JSON mock files) fills in the demo data. One command: `php artisan migrate:fresh --seed`. |
+| What is an index for? | A shortcut to find rows faster, e.g. `attendance(employee_id, date)` makes the kiosk's "was this person here today?" instant. |
+| Where is the password stored? | In `backend/.env` as DB settings, not in code — that file is gitignored so secrets never reach GitHub. |
+| What would happen if a table were deleted? | `php artisan migrate:fresh --seed` rebuilds every table and re-fills it. Nothing is hand-scripted against a "golden back-up" — the schema is the backup. |
+
+> Strong closing line about the DB: **"Everything hangs off `employee_id`. The 14 business tables are one connected family, which is why analytics and AI can answer questions by joining them."**
+
+---
