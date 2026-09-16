@@ -93,7 +93,7 @@ class DatabaseSeeder extends Seeder
         }
         if ($maxDay) {
             $absDays = (int) (new DateTime($maxDay))->diff(new DateTime('now'))->format('%a');
-            $this->dateShiftDays = (int) (ceil($absDays / 7) * 7);
+            $this->dateShiftDays = (int) $absDays;
         }
 
         $analytics = $this->mock('analytics');
@@ -154,27 +154,53 @@ class DatabaseSeeder extends Seeder
 
     private function seedUsers(): void
     {
-        User::query()->delete();
+        User::firstOrCreate(
+            ['email' => 'admin@workforcepro.com'],
+            [
+                'employee_id' => null,
+                'name' => 'John Delgado',
+                'password' => Hash::make('Admin@123'),
+                'role' => 'Administrator',
+                'role_label' => 'HR Manager / Admin',
+                'avatar_seed' => 'John',
+            ],
+        );
 
-        User::create([
-            'employee_id' => null,
-            'name' => 'John Delgado',
-            'email' => 'admin@workforcepro.com',
-            'password' => Hash::make('Admin@123'),
-            'role' => 'Administrator',
-            'role_label' => 'HR Manager / Admin',
-            'avatar_seed' => 'John',
-        ]);
+        User::firstOrCreate(
+            ['email' => 'employee@workforcepro.com'],
+            [
+                'employee_id' => 'EMP20260001',
+                'name' => 'Juan Dela Cruz',
+                'password' => Hash::make('Employee@123'),
+                'role' => 'Employee',
+                'role_label' => 'Employee',
+                'avatar_seed' => 'Juan',
+            ],
+        );
 
-        User::create([
-            'employee_id' => 'EMP001',
-            'name' => 'Juan Dela Cruz',
-            'email' => 'employee@workforcepro.com',
-            'password' => Hash::make('Employee@123'),
-            'role' => 'Employee',
-            'role_label' => 'Employee',
-            'avatar_seed' => 'Juan',
-        ]);
+        User::firstOrCreate(
+            ['email' => 'fercy.miano84@gmail.com'],
+            [
+                'employee_id' => 'EMP20264845',
+                'name' => 'Fercy S. Miano',
+                'password' => Hash::make('Employee@123'),
+                'role' => 'Employee',
+                'role_label' => 'Employee',
+                'avatar_seed' => 'Fercy',
+            ],
+        );
+
+        User::firstOrCreate(
+            ['email' => 'randycapalar@gmail.com'],
+            [
+                'employee_id' => 'EMP20265429',
+                'name' => 'John Paul Balderama',
+                'password' => Hash::make('Employee@123'),
+                'role' => 'Employee',
+                'role_label' => 'Employee',
+                'avatar_seed' => 'Balderama',
+            ],
+        );
     }
 
     private function seedOrgStructure(): void
@@ -309,11 +335,9 @@ class DatabaseSeeder extends Seeder
 
     private function seedEmployees(): void
     {
-        Employee::query()->delete();
-
         $data = $this->mock('employees');
         foreach ($data['employees'] ?? [] as $row) {
-            Employee::create(Employee::apiFillable($row));
+            Employee::firstOrCreate(['id' => $row['id']], Employee::apiFillable($row));
         }
     }
 
@@ -373,18 +397,28 @@ class DatabaseSeeder extends Seeder
 
     private function seedSettings(): void
     {
-        Setting::query()->delete();
-
         $data = $this->shiftedMock('settings');
         $settings = $data['settings'] ?? [];
 
-        Setting::create([
+        $fields = [
             'profile' => $settings['profile'] ?? null,
             'appearance' => $settings['appearance'] ?? null,
             'notifications' => $settings['notifications'] ?? null,
             'security' => $settings['security'] ?? null,
             'system' => $settings['system'] ?? null,
-        ]);
+        ];
+
+        if (isset($settings['company'])) {
+            $fields['company'] = $settings['company'];
+        }
+        if (isset($settings['kiosk'])) {
+            $fields['kiosk'] = $settings['kiosk'];
+        }
+        if (isset($settings['ai_resolved_insights'])) {
+            $fields['ai_resolved_insights'] = $settings['ai_resolved_insights'];
+        }
+
+        Setting::updateOrCreate(['id' => 1], $fields);
     }
 
     private function seedAnalytics(): void
