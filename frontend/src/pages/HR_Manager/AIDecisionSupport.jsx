@@ -196,7 +196,7 @@ export default function AIDecisionSupport() {
         confirmLabel: 'Open Attendance',
         confirmVariant: 'primary',
         action: 'navigate',
-        navigateTo: `/hr/attendance${qs ? '?' + qs : ''}`,
+        navigateTo: `/attendance${qs ? '?' + qs : ''}`,
       };
     }
 
@@ -212,7 +212,7 @@ export default function AIDecisionSupport() {
         confirmLabel: 'Open Overtime',
         confirmVariant: 'primary',
         action: 'navigate',
-        navigateTo: `/hr/attendance?tab=overtime${payload.employeeId ? '&employee=' + payload.employeeId : ''}`,
+        navigateTo: `/attendance?tab=overtime${payload.employeeId ? '&employee=' + payload.employeeId : ''}`,
       };
     }
 
@@ -225,7 +225,7 @@ export default function AIDecisionSupport() {
         confirmLabel: 'Open Leave',
         confirmVariant: 'primary',
         action: 'navigate',
-        navigateTo: '/hr/leave',
+        navigateTo: '/leave',
       };
     }
 
@@ -238,7 +238,7 @@ export default function AIDecisionSupport() {
         confirmLabel: 'Open Shifts',
         confirmVariant: 'primary',
         action: 'navigate',
-        navigateTo: '/hr/shifts',
+        navigateTo: '/shifts',
       };
     }
 

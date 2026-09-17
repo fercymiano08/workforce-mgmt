@@ -1,0 +1,222 @@
+{
+  "reports": [
+    {
+      "id": "RPT001",
+      "name": "Monthly Attendance Summary",
+      "type": "attendance",
+      "description": "Comprehensive monthly attendance report showing present, absent, late, and half-day records for all employees.",
+      "lastGenerated": "2026-07-20T08:00:00.000Z",
+      "generatedBy": "Camille Ramos",
+      "status": "ready"
+    },
+    {
+      "id": "RPT002",
+      "name": "Department Attendance Breakdown",
+      "type": "attendance",
+      "description": "Attendance metrics broken down by department with comparison to company average.",
+      "lastGenerated": "2026-07-19T09:30:00.000Z",
+      "generatedBy": "Camille Ramos",
+      "status": "ready"
+    },
+    {
+      "id": "RPT003",
+      "name": "Leave Utilization Report",
+      "type": "leave",
+      "description": "Tracks leave usage per employee including vacation, sick, emergency, and special leaves with balance remaining.",
+      "lastGenerated": "2026-07-22T10:00:00.000Z",
+      "generatedBy": "Patricia Garcia",
+      "status": "ready"
+    },
+    {
+      "id": "RPT004",
+      "name": "Pending Leave Requests",
+      "type": "leave",
+      "description": "List of all pending leave requests awaiting manager approval, sorted by date applied.",
+      "lastGenerated": "2026-07-25T07:30:00.000Z",
+      "generatedBy": "Camille Ramos",
+      "status": "ready"
+    },
+    {
+      "id": "RPT005",
+      "name": "Weekly Timesheet Summary",
+      "type": "timesheet",
+      "description": "Weekly summary of regular hours, overtime, and total hours logged by all active employees.",
+      "lastGenerated": "2026-07-24T18:00:00.000Z",
+      "generatedBy": "System",
+      "status": "ready"
+    },
+    {
+      "id": "RPT006",
+      "name": "Overtime Analysis Report",
+      "type": "timesheet",
+      "description": "Analysis of overtime hours by department and employee with trends over the past 6 months.",
+      "lastGenerated": "2026-07-21T09:00:00.000Z",
+      "generatedBy": "Fernando Bautista",
+      "status": "ready"
+    },
+    {
+      "id": "RPT007",
+      "name": "Shift Coverage Report",
+      "type": "shift",
+      "description": "Shows shift coverage across all departments with gaps and overstaffing indicators.",
+      "lastGenerated": "2026-07-23T08:00:00.000Z",
+      "generatedBy": "Grace Ong",
+      "status": "ready"
+    },
+    {
+      "id": "RPT008",
+      "name": "Shift Swap History",
+      "type": "shift",
+      "description": "Log of all shift swaps and schedule changes in the current month.",
+      "lastGenerated": "2026-07-20T14:00:00.000Z",
+      "generatedBy": "System",
+      "status": "ready"
+    },
+    {
+      "id": "RPT009",
+      "name": "Workforce Headcount Report",
+      "type": "workforce_analytics",
+      "description": "Current headcount by department, employment type, and status with year-over-year comparison.",
+      "lastGenerated": "2026-07-01T08:00:00.000Z",
+      "generatedBy": "Victoria Fernandez",
+      "status": "ready"
+    },
+    {
+      "id": "RPT010",
+      "name": "Employee Turnover Analysis",
+      "type": "workforce_analytics",
+      "description": "Monthly turnover rates by department with root cause analysis and retention recommendations.",
+      "lastGenerated": "2026-07-15T10:30:00.000Z",
+      "generatedBy": "Victoria Fernandez",
+      "status": "ready"
+    },
+    {
+      "id": "RPT011",
+      "name": "Absenteeism Trend Report",
+      "type": "attendance",
+      "description": "Tracks absenteeism trends over 12 months with flagged patterns and intervention suggestions.",
+      "lastGenerated": "2026-07-22T11:00:00.000Z",
+      "generatedBy": "Camille Ramos",
+      "status": "pending"
+    },
+    {
+      "id": "RPT012",
+      "name": "Payroll Discrepancy Report",
+      "type": "timesheet",
+      "description": "Identifies discrepancies between expected and actual payroll based on timesheet and attendance data.",
+      "lastGenerated": "2026-07-18T16:00:00.000Z",
+      "generatedBy": "Fernando Bautista",
+      "status": "failed"
+    }
+  ],
+  "_default": [
+    {
+      "id": "RPT001",
+      "name": "Monthly Attendance Summary",
+      "type": "attendance",
+      "description": "Comprehensive monthly attendance report showing present, absent, late, and half-day records for all employees.",
+      "lastGenerated": "2026-07-20T08:00:00.000Z",
+      "generatedBy": "Camille Ramos",
+      "status": "ready"
+    },
+    {
+      "id": "RPT002",
+      "name": "Department Attendance Breakdown",
+      "type": "attendance",
+      "description": "Attendance metrics broken down by department with comparison to company average.",
+      "lastGenerated": "2026-07-19T09:30:00.000Z",
+      "generatedBy": "Camille Ramos",
+      "status": "ready"
+    },
+    {
+      "id": "RPT003",
+      "name": "Leave Utilization Report",
+      "type": "leave",
+      "description": "Tracks leave usage per employee including vacation, sick, emergency, and special leaves with balance remaining.",
+      "lastGenerated": "2026-07-22T10:00:00.000Z",
+      "generatedBy": "Patricia Garcia",
+      "status": "ready"
+    },
+    {
+      "id": "RPT004",
+      "name": "Pending Leave Requests",
+      "type": "leave",
+      "description": "List of all pending leave requests awaiting manager approval, sorted by date applied.",
+      "lastGenerated": "2026-07-25T07:30:00.000Z",
+      "generatedBy": "Camille Ramos",
+      "status": "ready"
+    },
+    {
+      "id": "RPT005",
+      "name": "Weekly Timesheet Summary",
+      "type": "timesheet",
+      "description": "Weekly summary of regular hours, overtime, and total hours logged by all active employees.",
+      "lastGenerated": "2026-07-24T18:00:00.000Z",
+      "generatedBy": "System",
+      "status": "ready"
+    },
+    {
+      "id": "RPT006",
+      "name": "Overtime Analysis Report",
+      "type": "timesheet",
+      "description": "Analysis of overtime hours by department and employee with trends over the past 6 months.",
+      "lastGenerated": "2026-07-21T09:00:00.000Z",
+      "generatedBy": "Fernando Bautista",
+      "status": "ready"
+    },
+    {
+      "id": "RPT007",
+      "name": "Shift Coverage Report",
+      "type": "shift",
+      "description": "Shows shift coverage across all departments with gaps and overstaffing indicators.",
+      "lastGenerated": "2026-07-23T08:00:00.000Z",
+      "generatedBy": "Grace Ong",
+      "status": "ready"
+    },
+    {
+      "id": "RPT008",
+      "name": "Shift Swap History",
+      "type": "shift",
+      "description": "Log of all shift swaps and schedule changes in the current month.",
+      "lastGenerated": "2026-07-20T14:00:00.000Z",
+      "generatedBy": "System",
+      "status": "ready"
+    },
+    {
+      "id": "RPT009",
+      "name": "Workforce Headcount Report",
+      "type": "workforce_analytics",
+      "description": "Current headcount by department, employment type, and status with year-over-year comparison.",
+      "lastGenerated": "2026-07-01T08:00:00.000Z",
+      "generatedBy": "Victoria Fernandez",
+      "status": "ready"
+    },
+    {
+      "id": "RPT010",
+      "name": "Employee Turnover Analysis",
+      "type": "workforce_analytics",
+      "description": "Monthly turnover rates by department with root cause analysis and retention recommendations.",
+      "lastGenerated": "2026-07-15T10:30:00.000Z",
+      "generatedBy": "Victoria Fernandez",
+      "status": "ready"
+    },
+    {
+      "id": "RPT011",
+      "name": "Absenteeism Trend Report",
+      "type": "attendance",
+      "description": "Tracks absenteeism trends over 12 months with flagged patterns and intervention suggestions.",
+      "lastGenerated": "2026-07-22T11:00:00.000Z",
+      "generatedBy": "Camille Ramos",
+      "status": "pending"
+    },
+    {
+      "id": "RPT012",
+      "name": "Payroll Discrepancy Report",
+      "type": "timesheet",
+      "description": "Identifies discrepancies between expected and actual payroll based on timesheet and attendance data.",
+      "lastGenerated": "2026-07-18T16:00:00.000Z",
+      "generatedBy": "Fernando Bautista",
+      "status": "failed"
+    }
+  ]
+}

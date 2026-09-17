@@ -1,0 +1,386 @@
+{
+  "attendanceTrend": [
+    {
+      "month": "Aug 2025",
+      "present": 465,
+      "absent": 18,
+      "late": 22,
+      "rate": 93
+    },
+    {
+      "month": "Sep 2025",
+      "present": 470,
+      "absent": 15,
+      "late": 19,
+      "rate": 94
+    },
+    {
+      "month": "Oct 2025",
+      "present": 468,
+      "absent": 20,
+      "late": 25,
+      "rate": 92.6
+    },
+    {
+      "month": "Nov 2025",
+      "present": 472,
+      "absent": 14,
+      "late": 18,
+      "rate": 94.4
+    },
+    {
+      "month": "Dec 2025",
+      "present": 420,
+      "absent": 45,
+      "late": 12,
+      "rate": 84
+    },
+    {
+      "month": "Jan 2026",
+      "present": 460,
+      "absent": 22,
+      "late": 20,
+      "rate": 92
+    },
+    {
+      "month": "Feb 2026",
+      "present": 475,
+      "absent": 12,
+      "late": 16,
+      "rate": 95
+    },
+    {
+      "month": "Mar 2026",
+      "present": 468,
+      "absent": 18,
+      "late": 21,
+      "rate": 93.6
+    },
+    {
+      "month": "Apr 2026",
+      "present": 471,
+      "absent": 16,
+      "late": 17,
+      "rate": 94.2
+    },
+    {
+      "month": "May 2026",
+      "present": 473,
+      "absent": 14,
+      "late": 15,
+      "rate": 94.6
+    },
+    {
+      "month": "Jun 2026",
+      "present": 469,
+      "absent": 19,
+      "late": 20,
+      "rate": 93.8
+    },
+    {
+      "month": "Jul 2026",
+      "present": 458,
+      "absent": 24,
+      "late": 18,
+      "rate": 91.6
+    }
+  ],
+  "departmentProductivity": [
+    {
+      "name": "Customer Service",
+      "productivity": 92,
+      "attendance": 95.2,
+      "efficiency": 88
+    },
+    {
+      "name": "Sales & Merchandising",
+      "productivity": 86,
+      "attendance": 91.3,
+      "efficiency": 82
+    },
+    {
+      "name": "Warehousing & Logistics",
+      "productivity": 89,
+      "attendance": 93,
+      "efficiency": 86
+    },
+    {
+      "name": "IT & Systems",
+      "productivity": 91,
+      "attendance": 96.5,
+      "efficiency": 90
+    },
+    {
+      "name": "Finance & Accounting",
+      "productivity": 90,
+      "attendance": 94.8,
+      "efficiency": 89
+    },
+    {
+      "name": "Marketing",
+      "productivity": 88,
+      "attendance": 93.5,
+      "efficiency": 85
+    },
+    {
+      "name": "Human Resources",
+      "productivity": 95,
+      "attendance": 97.1,
+      "efficiency": 93
+    },
+    {
+      "name": "Operations",
+      "productivity": 89,
+      "attendance": 93,
+      "efficiency": 86
+    }
+  ],
+  "leaveTrend": [
+    {
+      "month": "Feb 2026",
+      "vacation": 5,
+      "sick": 8,
+      "emergency": 3,
+      "total": 16
+    },
+    {
+      "month": "Mar 2026",
+      "vacation": 7,
+      "sick": 6,
+      "emergency": 2,
+      "total": 15
+    },
+    {
+      "month": "Apr 2026",
+      "vacation": 9,
+      "sick": 5,
+      "emergency": 4,
+      "total": 18
+    },
+    {
+      "month": "May 2026",
+      "vacation": 12,
+      "sick": 7,
+      "emergency": 2,
+      "total": 21
+    },
+    {
+      "month": "Jun 2026",
+      "vacation": 10,
+      "sick": 9,
+      "emergency": 5,
+      "total": 24
+    },
+    {
+      "month": "Jul 2026",
+      "vacation": 14,
+      "sick": 11,
+      "emergency": 4,
+      "total": 29
+    }
+  ],
+  "overtimeSummary": [
+    {
+      "department": "Customer Service",
+      "avgOvertime": 4.2,
+      "totalOvertime": 16.8,
+      "maxOvertime": 8.5
+    },
+    {
+      "department": "Sales & Merchandising",
+      "avgOvertime": 5,
+      "totalOvertime": 15,
+      "maxOvertime": 9
+    },
+    {
+      "department": "Warehousing & Logistics",
+      "avgOvertime": 3.1,
+      "totalOvertime": 9.3,
+      "maxOvertime": 5
+    },
+    {
+      "department": "IT & Systems",
+      "avgOvertime": 6,
+      "totalOvertime": 18,
+      "maxOvertime": 10.5
+    },
+    {
+      "department": "Finance & Accounting",
+      "avgOvertime": 3.8,
+      "totalOvertime": 15.2,
+      "maxOvertime": 7
+    },
+    {
+      "department": "Marketing",
+      "avgOvertime": 2.1,
+      "totalOvertime": 6.3,
+      "maxOvertime": 4
+    },
+    {
+      "department": "Human Resources",
+      "avgOvertime": 0.5,
+      "totalOvertime": 1.5,
+      "maxOvertime": 1
+    },
+    {
+      "department": "Operations",
+      "avgOvertime": 1.5,
+      "totalOvertime": 4.5,
+      "maxOvertime": 3
+    }
+  ],
+  "payrollDiscrepancy": [
+    {
+      "employeeId": "EMP20260001",
+      "employeeName": "Juan Dela Cruz",
+      "department": "Customer Service",
+      "expectedPay": 85000,
+      "actualPay": 85950,
+      "difference": 950,
+      "status": "Overpaid",
+      "month": "Jun 2026"
+    },
+    {
+      "employeeId": "EMP20260002",
+      "employeeName": "Angela Santos",
+      "department": "Marketing",
+      "expectedPay": 72000,
+      "actualPay": 72000,
+      "difference": 0,
+      "status": "Correct",
+      "month": "Jun 2026"
+    },
+    {
+      "employeeId": "EMP20260003",
+      "employeeName": "Miguel Reyes",
+      "department": "Finance & Accounting",
+      "expectedPay": 65000,
+      "actualPay": 63750,
+      "difference": -1250,
+      "status": "Underpaid",
+      "month": "Jun 2026"
+    },
+    {
+      "employeeId": "EMP20260004",
+      "employeeName": "Patricia Garcia",
+      "department": "Human Resources",
+      "expectedPay": 58000,
+      "actualPay": 58000,
+      "difference": 0,
+      "status": "Correct",
+      "month": "Jun 2026"
+    },
+    {
+      "employeeId": "EMP20260005",
+      "employeeName": "Carlo Mendoza",
+      "department": "Sales & Merchandising",
+      "expectedPay": 50000,
+      "actualPay": 48750,
+      "difference": -1250,
+      "status": "Underpaid",
+      "month": "Jun 2026"
+    },
+    {
+      "employeeId": "EMP20260006",
+      "employeeName": "Isabelle Tan",
+      "department": "IT & Systems",
+      "expectedPay": 62000,
+      "actualPay": 62000,
+      "difference": 0,
+      "status": "Correct",
+      "month": "Jun 2026"
+    },
+    {
+      "employeeId": "EMP20260007",
+      "employeeName": "Daniel Lim",
+      "department": "Operations",
+      "expectedPay": 48000,
+      "actualPay": 44000,
+      "difference": -4000,
+      "status": "Underpaid",
+      "month": "Jun 2026"
+    },
+    {
+      "employeeId": "EMP20260008",
+      "employeeName": "Rachel Aquino",
+      "department": "IT & Systems",
+      "expectedPay": 70000,
+      "actualPay": 72100,
+      "difference": 2100,
+      "status": "Overpaid",
+      "month": "Jun 2026"
+    },
+    {
+      "employeeId": "EMP20260009",
+      "employeeName": "Jerome Villanueva",
+      "department": "Warehousing & Logistics",
+      "expectedPay": 90000,
+      "actualPay": 90000,
+      "difference": 0,
+      "status": "Correct",
+      "month": "Jun 2026"
+    },
+    {
+      "employeeId": "EMP20260010",
+      "employeeName": "Ricardo Cruz",
+      "department": "Customer Service",
+      "expectedPay": 120000,
+      "actualPay": 123500,
+      "difference": 3500,
+      "status": "Overpaid",
+      "month": "Jun 2026"
+    }
+  ],
+  "punctualityScore": [
+    {
+      "name": "Rachel Aquino",
+      "score": 98.5,
+      "department": "IT & Systems"
+    },
+    {
+      "name": "Patricia Garcia",
+      "score": 97.2,
+      "department": "Human Resources"
+    },
+    {
+      "name": "Angela Santos",
+      "score": 96.8,
+      "department": "Marketing"
+    },
+    {
+      "name": "Ricardo Cruz",
+      "score": 96.5,
+      "department": "Customer Service"
+    },
+    {
+      "name": "Jerome Villanueva",
+      "score": 95.9,
+      "department": "Warehousing & Logistics"
+    },
+    {
+      "name": "Daniel Lim",
+      "score": 95.4,
+      "department": "Operations"
+    },
+    {
+      "name": "Isabelle Tan",
+      "score": 95.1,
+      "department": "IT & Systems"
+    },
+    {
+      "name": "Miguel Reyes",
+      "score": 94.3,
+      "department": "Finance & Accounting"
+    },
+    {
+      "name": "Juan Dela Cruz",
+      "score": 93.8,
+      "department": "Customer Service"
+    },
+    {
+      "name": "Carlo Mendoza",
+      "score": 92.5,
+      "department": "Sales & Merchandising"
+    }
+  ]
+}

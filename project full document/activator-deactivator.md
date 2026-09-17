@@ -1,54 +1,81 @@
 # How To Activate and Deactivate The System
 
 > Workforce Management System — for VS Code terminal
+> Current architecture: **8 independent Laravel microservices** + **1 React frontend**.
 
 ---
 
-## Activating The System (2 Steps)
+## Activating The System (1 Step, Recommended)
 
-### Step 1 — Backend
-
-In VS Code, open the terminal (menu: **Terminal → New Terminal**).
-Paste this ENTIRE line, then press Enter:
+Open a terminal in VS Code at the project root and run:
 
 ```powershell
-cd "C:\Users\FERCY\OneDrive\Desktop\Workforce MGNT\backend"; php -d max_execution_time=0 artisan serve --port=8000
+.\start-all.ps1
 ```
 
-You should see: `Server running on [http://127.0.0.1:8000]`
+This single script:
 
-**LEAVE THIS TERMINAL OPEN.**
+1. Starts all 8 microservices, each on its own port (`core` 8000, `intelligence` 8001, `attendance` 8003, `scheduling` 8004, `timeoff` 8005, `payroll` 8006, `communications` 8007, `configuration` 8008).
+2. Starts the React frontend (`npm run dev`, Vite — usually `5173`, or `5174` if `5173` is busy).
+3. Waits a few seconds, then hits `/up` on every service and prints `UP`/`DOWN` per port so you know immediately if something didn't boot.
+4. If a port is already occupied (e.g. you never stopped a previous run), it skips that service instead of erroring — the health check at the end still tells you the true state.
 
-### Step 2 — Frontend
+Logs for each service land in `.\logs\svc-<name>.out.log` / `.err.log`, and the frontend's in `.\logs\frontend.out.log` / `.err.log` — check these first if a service shows `DOWN`.
 
-Open a SECOND terminal inside VS Code (click the **+** or the split icon at the top-right of the terminal area).
-Paste this ENTIRE line, then press Enter:
+Then open your browser to **http://localhost:5173** (or `5174`).
+
+Demo login: `admin@workforcepro.com` / `Admin@123`
+
+---
+
+## Deactivating The System (1 Step, Recommended)
 
 ```powershell
-cd "C:\Users\FERCY\OneDrive\Desktop\Workforce MGNT\frontend"; npm run dev
+.\stop-all.ps1
 ```
 
-You should see: `Local: http://localhost:5173/`
-
-**LEAVE THIS TERMINAL OPEN.**
-
-Then open your browser and go to: **http://localhost:5173**
+This finds whatever process is listening on each of the 8 service ports (and the frontend's 5173/5174) and stops it — you don't need to hunt down 9 terminal tabs by hand.
 
 ---
 
-## Deactivating The System
+## Manual Mode (If You Need One Service At A Time)
 
-Press `Ctrl + C` in each of the two terminals.
-(Or just close the two terminal tabs.)
+Useful for debugging a single service without restarting everything. Each service is a fully independent Laravel app under `backend/<name>/`:
+
+```powershell
+cd "C:\Users\FERCY\OneDrive\Desktop\Workforce MGNT\backend\core"
+php -d max_execution_time=0 artisan serve --port=8000
+```
+
+Swap `core`/`8000` for any of: `intelligence`/`8001`, `attendance`/`8003`, `scheduling`/`8004`, `timeoff`/`8005`, `payroll`/`8006`, `communications`/`8007`, `configuration`/`8008`.
+
+Frontend, same as before:
+
+```powershell
+cd "C:\Users\FERCY\OneDrive\Desktop\Workforce MGNT\frontend"
+npm run dev
+```
+
+**LEAVE EACH TERMINAL OPEN** while its process is running. To stop a manually-started one, `Ctrl + C` in its terminal (or just run `stop-all.ps1`, which stops anything on those ports regardless of how it was started).
 
 ---
 
-## Rules That Make This Work Every Time
+## Why 8 Services Instead Of 1
 
-1. Paste the WHOLE line as one piece — do not type or paste only the folder path by itself.
-2. The folder path stays inside quotes (it has a space: `Workforce MGNT`).
-3. Two terminals, one command each. Both must stay open.
-4. If you only have ONE terminal tab, click the **+** icon to make a second one for the frontend.
+Each service owns its own database and can be started, stopped, and debugged independently:
+
+| Service | Port | Owns |
+|---------|------|------|
+| `core` | 8000 | auth, employees, departments, roles — the system of record |
+| `intelligence` | 8001 | analytics + AI decision support (Gemini or rule-based) |
+| `attendance` | 8003 | daily clock records + the kiosk terminal endpoints |
+| `scheduling` | 8004 | shift templates + shift schedules |
+| `timeoff` | 8005 | leave requests + overtime requests |
+| `payroll` | 8006 | timesheets |
+| `communications` | 8007 | notifications |
+| `configuration` | 8008 | app settings + kiosk configuration |
+
+If you only start `core` and forget the rest, the login page and directory still work, but every other screen will show connection errors — that's expected: each screen now talks straight to the service that owns its data (see `System Workflow Guide.md` for the full request map).
 
 ---
 
@@ -56,12 +83,7 @@ Press `Ctrl + C` in each of the two terminals.
 
 | Symptom | Meaning |
 |---------|---------|
-| "can't be reached" in browser | Both terminals must be open and waiting |
-| "Server running on 8000" not shown | The backend did not start |
-| Red error text in a terminal | Copy it and send it to the team |
-
----
-
-## Easy Fallback (No Typing At All)
-
-Double-click the file **`start.bat`** in the `Workforce MGNT` folder — it opens both servers and the browser for you.
+| `start-all.ps1` prints `DOWN` for a port | Check `logs\svc-<name>.err.log` for that service — usually a DB connection issue or a port already used by something else |
+| "can't be reached" in the browser | The frontend isn't running, or the specific service the page needs is `DOWN` |
+| Page loads but one section errors | That section's owning service is down — see the port table above |
+| Red error text in a terminal (manual mode) | Copy it and send it to the team |

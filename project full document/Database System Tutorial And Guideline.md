@@ -1,6 +1,8 @@
 # Database System Tutorial And Guideline
 
-> Complete guide to the PostgreSQL database powering the Workforce Management System of **Archon Nell Incorporated**.
+> Complete guide to the PostgreSQL database(s) powering the Workforce Management System of **Archon Nell Incorporated**.
+>
+> If "primary key", "foreign key", or "JOIN" don't mean anything to you yet, read `00 - Start Here - Absolute Beginner Guide.md` first.
 
 ---
 
@@ -25,29 +27,42 @@
 | Property | Value |
 |----------|-------|
 | Database Engine | PostgreSQL 18 |
-| Database Name | `workforce_mgnt` |
-| Total Tables | 23 (14 business + 9 Laravel framework) |
-| Managed By | Laravel 13 migrations + pgAdmin 4 |
-| Runs On | Local machine (`127.0.0.1`) |
+| Database Names | **8 separate databases, one per microservice** (see table below) |
+| Total Tables | 23 distinct business/table designs (14 originally "business" tables + 9 Laravel framework tables), now **replicated across services as needed** — so the raw row count of `information_schema.tables` per database is higher than 14, because a service keeps read-only local copies of tables it doesn't own |
+| Managed By | 8 independent sets of Laravel 13 migrations (one per service) + pgAdmin 4 |
+| Runs On | Local machine (`127.0.0.1:5432`), one PostgreSQL server hosting all 8 databases |
 
-The database stores everything the system knows: employee records, attendance history, leave requests, shift schedules, timesheets, security events, and app configuration.
+The database (now databases, plural) store everything the system knows: employee records, attendance history, leave requests, shift schedules, timesheets, security events, and app configuration — split by domain instead of living in one place.
+
+| # | Database | Owning service | Port | Owns (real, writable tables) |
+|---|----------|-----------------|------|-------------------------------|
+| 1 | `workforce_mgnt` | `core` | 8000 | `users`, `employees`, `departments`, `roles`, `personal_access_tokens` |
+| 2 | `workforce_intel` | `intelligence` | 8001 | `analytics` |
+| 3 | `workforce_attendance` | `attendance` | 8003 | `attendance`, `security_events` |
+| 4 | `workforce_scheduling` | `scheduling` | 8004 | `shift_definitions`, `shift_schedules` |
+| 5 | `workforce_timeoff` | `timeoff` | 8005 | `leaves`, `overtime_requests` |
+| 6 | `workforce_payroll` | `payroll` | 8006 | `timesheets` |
+| 7 | `workforce_communications` | `communications` | 8007 | `notifications` |
+| 8 | `workforce_configuration` | `configuration` | 8008 | `settings` |
+
+> **Every database also contains read-only replica copies** of a few tables it needs but doesn't own — most commonly `users` and `employees` (nearly every service needs to show a name), and sometimes more depending on the service's job (e.g. `attendance`'s DB also carries a local `leaves` replica so it can tell Present vs On-Leave without calling another service on every request). Those replica tables are refreshed by `SnapshotSyncService` / `php artisan snapshot:sync` — they are NOT the source of truth, and writing to them directly would just get overwritten on the next sync.
 
 ---
 
 ## 2. Connection Details
 
-These values live in `backend/.env`:
+Each service has its own `.env` at `backend/<name>/.env`. They all share the same PostgreSQL server and credentials — only `DB_DATABASE` changes:
 
 ```env
 DB_CONNECTION=pgsql
 DB_HOST=127.0.0.1
 DB_PORT=5432
-DB_DATABASE=workforce_mgnt
+DB_DATABASE=workforce_mgnt        # ← this line differs per service, see the table in Section 1
 DB_USERNAME=postgres
 DB_PASSWORD=postgre
 ```
 
-Use these same values when connecting from pgAdmin 4 or any other client.
+To inspect a specific service's data from pgAdmin 4 or `psql`, connect to the same server (`127.0.0.1:5432`, same username/password) and pick the database name that matches the service from the table above.
 
 ---
 
@@ -55,12 +70,12 @@ Use these same values when connecting from pgAdmin 4 or any other client.
 
 | Tool | What It Does |
 |------|--------------|
-| **pgAdmin 4** | Visual browser for the database — view tables, edit data, run queries, generate ERDs |
-| **Laravel migrations** | PHP files in `backend/database/migrations/` that define table structures in code |
-| **psql** | PostgreSQL's command-line client (already installed) |
-| **pg_dump** | Command that exports the database to a `.sql` file |
+| **pgAdmin 4** | Visual browser for the database server — view tables, edit data, run queries, generate ERDs. One connection, expand any of the 8 databases under it. |
+| **Laravel migrations** | PHP files in each service's own `backend/<name>/database/migrations/` that define ITS tables in code |
+| **psql** | PostgreSQL's command-line client (already installed) — pass `-d <database_name>` to pick which of the 8 you're querying |
+| **pg_dump** | Command that exports a database to a `.sql` file — run once per database if you need to back up all 8 |
 
-**How they fit together:** Laravel migrations CREATE the tables. The app reads/writes them. pgAdmin lets humans look inside. `pg_dump` backs it all up.
+**How they fit together:** each service's own Laravel migrations CREATE that service's tables in that service's database. Each service's app reads/writes only its own database directly, plus its own replica tables via sync. pgAdmin lets humans look inside any of the 8. `pg_dump` backs each one up individually.
 
 ---
 
@@ -86,6 +101,8 @@ Some columns (like `settings.kiosk`) store flexible structured data as JSON inst
 ---
 
 ## 5. All 23 Tables Explained
+
+> The tables below are described once, logically — each still means the same thing it always did. What's different post-migration is **where the real, writable copy lives** (see the "Owning service" column and the DB table in Section 1). If a service isn't listed as the owner, any copy it has is a read-only replica.
 
 ### Core Business Tables (14) — these appear in the ERD
 
@@ -157,6 +174,8 @@ shift_definitions 1 - * shift_schedules shift_schedules.shift_id
 
 **`employees` is the central entity** — every module connects to it via `employee_id`.
 
+> **Post-migration note:** these relationships are now enforced by **application logic and snapshot sync**, not by a PostgreSQL `FOREIGN KEY` constraint — checked with `pg_constraint`, none of the 8 databases declare real FK constraints any more, even between a table and its own local replica (e.g. `workforce_attendance`'s `attendance.employee_id` isn't a hard FK to its local `employees` replica). This is deliberate: a replica table gets wiped and refilled on every sync, and a hard FK would break the moment sync order didn't match insert order. Referential integrity is now the app's job (validating IDs before writing) instead of the database's — a real trade-off of the split worth naming honestly if a panelist asks about it.
+
 ---
 
 ## 7. pgAdmin 4 Walkthrough
@@ -166,10 +185,11 @@ shift_definitions 1 - * shift_schedules shift_schedules.shift_id
 2. Open it (launches as a local web app — normal).
 3. Set a **master password** (this protects saved DB passwords — pick anything).
 
-### Connecting To The Database
+### Connecting To The Database Server
 1. Left sidebar → double-click **Servers** → **PostgreSQL 18**
 2. Enter password: `postgre`
-3. Navigate: **Databases → workforce_mgnt → Schemas → public → Tables**
+3. Expand **Databases** — you'll see all 8 (`workforce_mgnt`, `workforce_intel`, `workforce_attendance`, `workforce_scheduling`, `workforce_timeoff`, `workforce_payroll`, `workforce_communications`, `workforce_configuration`), one connection covers all of them
+4. Navigate into whichever one owns the data you want (see the table in Section 1) → **Schemas → public → Tables**
 
 ### Everyday Operations
 
@@ -235,22 +255,26 @@ You never create indexes manually here — Laravel migrations defined them. In p
 
 ## 10. Restoring The Database From Backup
 
-The file `workforce_mgnt_schema.sql` in this folder contains the full structure.
+The file `workforce_mgnt_schema.sql` in this folder contains the structure for `core`'s database only (`workforce_mgnt`) — it predates the microservices split. The fastest, most current way to (re)build ALL 8 databases from scratch is to let each service's own migrations do it — that's exactly what `start-all.ps1` assumes is already done, and what you'd run after a fresh `git clone`:
 
-### Option A — Command Line
+### Option A — Command Line (recommended: rebuilds all 8 from Laravel migrations)
+```powershell
+foreach ($svc in 'core','intelligence','attendance','scheduling','timeoff','payroll','communications','configuration') {
+  Push-Location "backend\$svc"
+  php artisan migrate:fresh --seed
+  Pop-Location
+}
+```
+This drops and rebuilds every table in every one of the 8 databases and re-seeds demo data, per service — the schema lives in code (`database/migrations/`), not in a single `.sql` file, so this is more reliable than restoring an old dump.
+
+### Option B — Restore just `core`'s legacy schema-only dump
 ```powershell
 createdb -U postgres workforce_mgnt
 psql -U postgres -d workforce_mgnt -f workforce_mgnt_schema.sql
 ```
+Useful only if you specifically need `core`'s pre-migration structure for reference — it will NOT create the other 7 databases.
 
-### Option B — pgAdmin 4
-1. Right-click **Databases → Create → Database** → name it `workforce_mgnt`
-2. Click the new database once
-3. **Tools → Query Tool**
-4. Open the .sql file (folder icon) or paste contents
-5. Press **F5**
-
-Note: this restores STRUCTURE only (empty tables). Live data lives on the original machine.
+Note: both restore STRUCTURE (Option A also reseeds demo data). Live production data, if any, lives on the original machine and isn't captured by either option.
 
 ---
 
@@ -274,16 +298,18 @@ Note: this restores STRUCTURE only (empty tables). Live data lives on the origin
 | Likely question | Ready answer (plain) |
 |----------------|----------------------|
 | Why PostgreSQL and not MySQL? | Both work; PostgreSQL handles JSON columns and complex reporting cleanly, and it's genuinely free. Our team chose it for reliability. |
-| How many tables did you design? | 14 business tables + 9 Laravel framework tables = 23 total. The 9 framework ones are automatic (sessions, migrations, cache...). |
-| Which table is the most important? | `employees` — it's the center. Attendance, leaves, overtime, schedules, timesheets all point back to it by `employee_id`. |
-| How do your tables connect? | Primary keys and foreign keys. Example: `attendance.employee_id` references `employees.id`. That's also what makes our ERD look like a tree. |
-| What is a JOIN? | Combining two tables on their key, e.g. join attendance to employees so a report shows the person's name next to each clock-in. |
+| How many tables did you design? | 14 logical business tables + 9 Laravel framework tables = 23 designs. Post-migration, those 23 are spread across **8 databases** (one per microservice), and several services keep read-only replicas of tables they don't own, so the physical table count per database varies. |
+| Why 8 databases instead of 1? | Because we migrated to microservices — each service should own its data and be deployable/testable independently. One shared database would mean one service's migration could break seven others. |
+| Which table is the most important? | `employees` — it's the center. Attendance, leaves, overtime, schedules, timesheets all point back to it by `employee_id`, whether as the owning row (in `core`) or a synced replica (everywhere else that needs it). |
+| How do your tables connect across services now? | Two ways: a **snapshot sync** job that copies read-only reference data (like `employees`) into any service's local database on a schedule, or a direct **internal API call** when a write has to happen immediately (e.g. `intelligence` approving a leave calls `timeoff` directly). There is no live cross-database JOIN — that's not physically possible once data is in separate databases. |
+| Did you lose foreign key constraints when you split the database? | Yes, and we did it deliberately — see Section 6. None of the 8 databases declare `FOREIGN KEY` constraints any more, even between a table and its own local replica, because a replica gets wiped and refilled on every sync and a hard FK would fight that. Referential integrity moved from the database layer to the application layer. |
+| What is a JOIN? | Combining two tables on their key, e.g. join attendance to employees so a report shows the person's name next to each clock-in. Still used freely *within* one service's own database — just not across two different services' databases. |
 | Why JSON columns? | For flexible data that doesn't deserve its own table: `employees.leave_balances`, `settings.kiosk`, `settings.ai_resolved_insights`. |
-| How is the database created? | Laravel migrations build the structure; `DatabaseSeeder` (fed by the JSON mock files) fills in the demo data. One command: `php artisan migrate:fresh --seed`. |
-| What is an index for? | A shortcut to find rows faster, e.g. `attendance(employee_id, date)` makes the kiosk's "was this person here today?" instant. |
-| Where is the password stored? | In `backend/.env` as DB settings, not in code — that file is gitignored so secrets never reach GitHub. |
-| What would happen if a table were deleted? | `php artisan migrate:fresh --seed` rebuilds every table and re-fills it. Nothing is hand-scripted against a "golden back-up" — the schema is the backup. |
+| How is the database created? | Each of the 8 services has its own Laravel migrations that build its own structure, and its own `DatabaseSeeder` (fed by that service's JSON mock files) that fills in demo data. Per service: `php artisan migrate:fresh --seed`, run inside `backend/<name>/`. |
+| What is an index for? | A shortcut to find rows faster, e.g. `attendance(employee_id, date)` makes the kiosk's "was this person here today?" instant — each service indexes only its own tables. |
+| Where is the password stored? | In each service's own `backend/<name>/.env` as DB settings, not in code — every `.env` is gitignored so secrets never reach GitHub. |
+| What would happen if a table were deleted? | Re-run `php artisan migrate:fresh --seed` inside that one service's folder to rebuild just that service's database and re-fill it — the other 7 services are untouched, which is itself a demo point about isolation. |
 
-> Strong closing line about the DB: **"Everything hangs off `employee_id`. The 14 business tables are one connected family, which is why analytics and AI can answer questions by joining them."**
+> Strong closing line about the DB: **"Everything still hangs off `employee_id` conceptually, but the 14 business tables now live across 8 independently-owned databases instead of one — which is exactly what the microservices requirement asked for, and it's why analytics and AI now read from a synced snapshot instead of joining live tables directly."**
 
 ---

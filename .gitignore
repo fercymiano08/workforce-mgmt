@@ -1,0 +1,11 @@
+# Runtime output from start-all.ps1 / stop-all.ps1 - not source, regenerated on every boot.
+/logs/
+*.log
+
+# OS junk
+.DS_Store
+Thumbs.db
+
+# Editor
+/.vscode/
+/.idea/

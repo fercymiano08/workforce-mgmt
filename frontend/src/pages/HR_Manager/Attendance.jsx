@@ -1,4 +1,5 @@
 import { useState, useMemo, useEffect } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import { CheckCircle, AlertTriangle, Timer, Download, Coffee, MapPin, Clock, X, Check, CheckCheck, ChevronDown, ChevronRight } from 'lucide-react';
 import Card from '../../components/ui/Card';
 import Button from '../../components/ui/Button';
@@ -23,7 +24,8 @@ const overtimeStatusVariant = { Pending: 'warning', Approved: 'success', Rejecte
 export default function Attendance() {
   const { toast } = useToast();
   const { user } = useAuth();
-  const [activeTab, setActiveTab] = useState('attendance');
+  const [searchParams] = useSearchParams();
+  const [activeTab, setActiveTab] = useState(searchParams.get('tab') === 'overtime' ? 'overtime' : 'attendance');
   const [employees, setEmployees] = useState([]);
   const [search, setSearch] = useState('');
   const [statusFilter, setStatusFilter] = useState('All');
