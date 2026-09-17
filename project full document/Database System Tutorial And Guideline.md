@@ -255,7 +255,11 @@ You never create indexes manually here — Laravel migrations defined them. In p
 
 ## 10. Restoring The Database From Backup
 
-The file `workforce_mgnt_schema.sql` in this folder contains the structure for `core`'s database only (`workforce_mgnt`) — it predates the microservices split. The fastest, most current way to (re)build ALL 8 databases from scratch is to let each service's own migrations do it — that's exactly what `start-all.ps1` assumes is already done, and what you'd run after a fresh `git clone`:
+Two schema reference files live in this folder, both regenerated directly from the live databases (not hand-written, so they're guaranteed accurate as of their date):
+- **`all_services_schema.sql`** — schema-only dump of **all 8 databases**, one clearly-labeled section per service. The full picture.
+- **`workforce_mgnt_schema.sql`** — schema-only dump of just `core`'s database (`workforce_mgnt`: `users`, `employees`, `departments`, `roles`, `personal_access_tokens`). Kept separate because `core` is the one every panelist question about "the database" usually starts from.
+
+The fastest, most current way to (re)build ALL 8 databases from scratch, though, is to let each service's own migrations do it — that's exactly what `start-all.ps1` assumes is already done, and what you'd run after a fresh `git clone`:
 
 ### Option A — Command Line (recommended: rebuilds all 8 from Laravel migrations)
 ```powershell
@@ -265,16 +269,16 @@ foreach ($svc in 'core','intelligence','attendance','scheduling','timeoff','payr
   Pop-Location
 }
 ```
-This drops and rebuilds every table in every one of the 8 databases and re-seeds demo data, per service — the schema lives in code (`database/migrations/`), not in a single `.sql` file, so this is more reliable than restoring an old dump.
+This drops and rebuilds every table in every one of the 8 databases and re-seeds demo data, per service — the schema lives in code (`database/migrations/`), not in a `.sql` file, so this is more reliable than restoring a dump and is how you'd genuinely recover from a corrupted database.
 
-### Option B — Restore just `core`'s legacy schema-only dump
+### Option B — Restore structure only, from the dump files
 ```powershell
 createdb -U postgres workforce_mgnt
 psql -U postgres -d workforce_mgnt -f workforce_mgnt_schema.sql
 ```
-Useful only if you specifically need `core`'s pre-migration structure for reference — it will NOT create the other 7 databases.
+Same pattern for any of the other 7, using the matching section of `all_services_schema.sql` instead. Useful for quickly inspecting or sharing a schema without touching a real database — it will NOT reseed demo data (use Option A for that).
 
-Note: both restore STRUCTURE (Option A also reseeds demo data). Live production data, if any, lives on the original machine and isn't captured by either option.
+Note: both restore STRUCTURE only. Live data, if any, lives on the original machine and isn't captured by either option — these are schema dumps (`--schema-only`), not full backups.
 
 ---
 

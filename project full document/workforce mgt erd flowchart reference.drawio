@@ -5,7 +5,7 @@
         <mxCell id="0" />
         <mxCell id="1" parent="0" />
 
-        <mxCell id="title" value="ARCHO NELL INCORPORATED — Workforce Management System (PostgreSQL: workforce_mgnt)" style="text;html=1;fontSize=20;fontStyle=1;align=center;verticalAlign=middle;" vertex="1" parent="1">
+        <mxCell id="title" value="ARCHO NELL INCORPORATED — Workforce Management System — LOGICAL data model (relationships shown are conceptual; as of the microservices migration these 23 tables are physically split across 8 separate PostgreSQL databases with no enforced FK constraints — see Database System Tutorial And Guideline.md)" style="text;html=1;fontSize=20;fontStyle=1;align=center;verticalAlign=middle;" vertex="1" parent="1">
           <mxGeometry x="800" y="-40" width="1300" height="40" as="geometry" />
         </mxCell>
 

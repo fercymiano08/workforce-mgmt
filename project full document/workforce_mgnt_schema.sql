@@ -1,8 +1,16 @@
+-- ============================================================
+-- Workforce Management System — CORE service database only (workforce_mgnt)
+-- Regenerated 2026-09-18 from the live server. Owns: users, employees,
+-- departments, roles, personal_access_tokens.
+-- For the other 7 microservice databases, see all_services_schema.sql
+-- (this file used to contain the old, pre-migration single-database schema).
+-- ============================================================
+
 --
 -- PostgreSQL database dump
 --
 
-\restrict xWrP8wRaNmRbPgv3PWUaE5mynQ3yAnmNSBXpRCXvcnIXnhVbDwAxjjtTfbhSuzj
+\restrict IC2J4gk6MvvyIG41GCGXsNcxas9AJOw9ja1Tbhn6RDU1E3hDiWorQpfhBnL2MAc
 
 -- Dumped from database version 18.4
 -- Dumped by pg_dump version 18.4
@@ -22,64 +30,6 @@ SET row_security = off;
 SET default_tablespace = '';
 
 SET default_table_access_method = heap;
-
---
--- Name: analytics; Type: TABLE; Schema: public; Owner: -
---
-
-CREATE TABLE public.analytics (
-    id bigint NOT NULL,
-    attendance_trend json,
-    department_productivity json,
-    leave_trend json,
-    overtime_summary json,
-    punctuality_score json,
-    payroll_discrepancy json,
-    created_at timestamp(0) without time zone,
-    updated_at timestamp(0) without time zone
-);
-
-
---
--- Name: analytics_id_seq; Type: SEQUENCE; Schema: public; Owner: -
---
-
-CREATE SEQUENCE public.analytics_id_seq
-    START WITH 1
-    INCREMENT BY 1
-    NO MINVALUE
-    NO MAXVALUE
-    CACHE 1;
-
-
---
--- Name: analytics_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: -
---
-
-ALTER SEQUENCE public.analytics_id_seq OWNED BY public.analytics.id;
-
-
---
--- Name: attendance; Type: TABLE; Schema: public; Owner: -
---
-
-CREATE TABLE public.attendance (
-    id character varying(255) NOT NULL,
-    employee_id character varying(255) NOT NULL,
-    date date NOT NULL,
-    clock_in time(0) without time zone,
-    clock_out time(0) without time zone,
-    status character varying(255) NOT NULL,
-    overtime numeric(6,2) DEFAULT '0'::numeric NOT NULL,
-    regular_hours numeric(6,2) DEFAULT '0'::numeric NOT NULL,
-    total_hours numeric(6,2) DEFAULT '0'::numeric NOT NULL,
-    break_hours numeric(6,2) DEFAULT '0'::numeric NOT NULL,
-    location character varying(255) DEFAULT 'Office'::character varying NOT NULL,
-    notes text,
-    created_at timestamp(0) without time zone,
-    updated_at timestamp(0) without time zone
-);
-
 
 --
 -- Name: cache; Type: TABLE; Schema: public; Owner: -
@@ -244,28 +194,6 @@ ALTER SEQUENCE public.jobs_id_seq OWNED BY public.jobs.id;
 
 
 --
--- Name: leaves; Type: TABLE; Schema: public; Owner: -
---
-
-CREATE TABLE public.leaves (
-    id character varying(255) NOT NULL,
-    employee_id character varying(255) NOT NULL,
-    employee_name character varying(255) NOT NULL,
-    leave_type character varying(255) NOT NULL,
-    start_date date NOT NULL,
-    end_date date NOT NULL,
-    reason text NOT NULL,
-    status character varying(255) NOT NULL,
-    applied_date date NOT NULL,
-    approved_by character varying(255),
-    comments text,
-    documents json,
-    created_at timestamp(0) without time zone,
-    updated_at timestamp(0) without time zone
-);
-
-
---
 -- Name: migrations; Type: TABLE; Schema: public; Owner: -
 --
 
@@ -294,47 +222,6 @@ CREATE SEQUENCE public.migrations_id_seq
 --
 
 ALTER SEQUENCE public.migrations_id_seq OWNED BY public.migrations.id;
-
-
---
--- Name: notifications; Type: TABLE; Schema: public; Owner: -
---
-
-CREATE TABLE public.notifications (
-    id character varying(255) NOT NULL,
-    type character varying(255) NOT NULL,
-    title character varying(255) NOT NULL,
-    message text NOT NULL,
-    "timestamp" timestamp(0) without time zone NOT NULL,
-    read boolean DEFAULT false NOT NULL,
-    employee_id character varying(255),
-    priority character varying(255) DEFAULT 'low'::character varying NOT NULL,
-    action_url character varying(255),
-    created_at timestamp(0) without time zone,
-    updated_at timestamp(0) without time zone
-);
-
-
---
--- Name: overtime_requests; Type: TABLE; Schema: public; Owner: -
---
-
-CREATE TABLE public.overtime_requests (
-    id character varying(255) NOT NULL,
-    employee_id character varying(255) NOT NULL,
-    employee_name character varying(255) NOT NULL,
-    date date NOT NULL,
-    expected_hours numeric(5,2),
-    reason text NOT NULL,
-    status character varying(255) NOT NULL,
-    requested_date date NOT NULL,
-    approved_by character varying(255),
-    comments text,
-    created_at timestamp(0) without time zone,
-    updated_at timestamp(0) without time zone,
-    approved_hours numeric(5,2),
-    approved_at timestamp(0) without time zone
-);
 
 
 --
@@ -399,24 +286,6 @@ CREATE TABLE public.roles (
 
 
 --
--- Name: security_events; Type: TABLE; Schema: public; Owner: -
---
-
-CREATE TABLE public.security_events (
-    id character varying(255) NOT NULL,
-    type character varying(255) NOT NULL,
-    message character varying(255) NOT NULL,
-    detail json,
-    employee_id character varying(255),
-    status character varying(255) DEFAULT 'Open'::character varying NOT NULL,
-    resolved_at timestamp(0) without time zone,
-    resolved_by character varying(255),
-    created_at timestamp(0) without time zone,
-    updated_at timestamp(0) without time zone
-);
-
-
---
 -- Name: sessions; Type: TABLE; Schema: public; Owner: -
 --
 
@@ -427,101 +296,6 @@ CREATE TABLE public.sessions (
     user_agent text,
     payload text NOT NULL,
     last_activity integer NOT NULL
-);
-
-
---
--- Name: settings; Type: TABLE; Schema: public; Owner: -
---
-
-CREATE TABLE public.settings (
-    id bigint NOT NULL,
-    profile json,
-    appearance json,
-    notifications json,
-    security json,
-    system json,
-    created_at timestamp(0) without time zone,
-    updated_at timestamp(0) without time zone,
-    company json,
-    kiosk json,
-    ai_resolved_insights json
-);
-
-
---
--- Name: settings_id_seq; Type: SEQUENCE; Schema: public; Owner: -
---
-
-CREATE SEQUENCE public.settings_id_seq
-    START WITH 1
-    INCREMENT BY 1
-    NO MINVALUE
-    NO MAXVALUE
-    CACHE 1;
-
-
---
--- Name: settings_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: -
---
-
-ALTER SEQUENCE public.settings_id_seq OWNED BY public.settings.id;
-
-
---
--- Name: shift_definitions; Type: TABLE; Schema: public; Owner: -
---
-
-CREATE TABLE public.shift_definitions (
-    id character varying(255) NOT NULL,
-    name character varying(255) NOT NULL,
-    start_time time(0) without time zone NOT NULL,
-    end_time time(0) without time zone NOT NULL,
-    color character varying(255),
-    created_at timestamp(0) without time zone,
-    updated_at timestamp(0) without time zone
-);
-
-
---
--- Name: shift_schedules; Type: TABLE; Schema: public; Owner: -
---
-
-CREATE TABLE public.shift_schedules (
-    id character varying(255) NOT NULL,
-    employee_id character varying(255) NOT NULL,
-    employee_name character varying(255) NOT NULL,
-    shift_id character varying(255) NOT NULL,
-    date date NOT NULL,
-    status character varying(255) NOT NULL,
-    created_at timestamp(0) without time zone,
-    updated_at timestamp(0) without time zone
-);
-
-
---
--- Name: timesheets; Type: TABLE; Schema: public; Owner: -
---
-
-CREATE TABLE public.timesheets (
-    id character varying(255) NOT NULL,
-    employee_id character varying(255) NOT NULL,
-    employee_name character varying(255) NOT NULL,
-    department character varying(255) NOT NULL,
-    date date NOT NULL,
-    week_start date NOT NULL,
-    week_end date NOT NULL,
-    regular_hours numeric(6,2) DEFAULT '0'::numeric NOT NULL,
-    overtime_hours numeric(6,2) DEFAULT '0'::numeric NOT NULL,
-    break_hours numeric(6,2) DEFAULT '0'::numeric NOT NULL,
-    total_hours numeric(6,2) DEFAULT '0'::numeric NOT NULL,
-    status character varying(255) NOT NULL,
-    submitted_date date,
-    approved_by character varying(255),
-    notes text,
-    created_at timestamp(0) without time zone,
-    updated_at timestamp(0) without time zone,
-    approved_ot_hours numeric(5,2)
 );
 
 
@@ -565,13 +339,6 @@ ALTER SEQUENCE public.users_id_seq OWNED BY public.users.id;
 
 
 --
--- Name: analytics id; Type: DEFAULT; Schema: public; Owner: -
---
-
-ALTER TABLE ONLY public.analytics ALTER COLUMN id SET DEFAULT nextval('public.analytics_id_seq'::regclass);
-
-
---
 -- Name: failed_jobs id; Type: DEFAULT; Schema: public; Owner: -
 --
 
@@ -600,33 +367,10 @@ ALTER TABLE ONLY public.personal_access_tokens ALTER COLUMN id SET DEFAULT nextv
 
 
 --
--- Name: settings id; Type: DEFAULT; Schema: public; Owner: -
---
-
-ALTER TABLE ONLY public.settings ALTER COLUMN id SET DEFAULT nextval('public.settings_id_seq'::regclass);
-
-
---
 -- Name: users id; Type: DEFAULT; Schema: public; Owner: -
 --
 
 ALTER TABLE ONLY public.users ALTER COLUMN id SET DEFAULT nextval('public.users_id_seq'::regclass);
-
-
---
--- Name: analytics analytics_pkey; Type: CONSTRAINT; Schema: public; Owner: -
---
-
-ALTER TABLE ONLY public.analytics
-    ADD CONSTRAINT analytics_pkey PRIMARY KEY (id);
-
-
---
--- Name: attendance attendance_pkey; Type: CONSTRAINT; Schema: public; Owner: -
---
-
-ALTER TABLE ONLY public.attendance
-    ADD CONSTRAINT attendance_pkey PRIMARY KEY (id);
 
 
 --
@@ -702,35 +446,11 @@ ALTER TABLE ONLY public.jobs
 
 
 --
--- Name: leaves leaves_pkey; Type: CONSTRAINT; Schema: public; Owner: -
---
-
-ALTER TABLE ONLY public.leaves
-    ADD CONSTRAINT leaves_pkey PRIMARY KEY (id);
-
-
---
 -- Name: migrations migrations_pkey; Type: CONSTRAINT; Schema: public; Owner: -
 --
 
 ALTER TABLE ONLY public.migrations
     ADD CONSTRAINT migrations_pkey PRIMARY KEY (id);
-
-
---
--- Name: notifications notifications_pkey; Type: CONSTRAINT; Schema: public; Owner: -
---
-
-ALTER TABLE ONLY public.notifications
-    ADD CONSTRAINT notifications_pkey PRIMARY KEY (id);
-
-
---
--- Name: overtime_requests overtime_requests_pkey; Type: CONSTRAINT; Schema: public; Owner: -
---
-
-ALTER TABLE ONLY public.overtime_requests
-    ADD CONSTRAINT overtime_requests_pkey PRIMARY KEY (id);
 
 
 --
@@ -766,51 +486,11 @@ ALTER TABLE ONLY public.roles
 
 
 --
--- Name: security_events security_events_pkey; Type: CONSTRAINT; Schema: public; Owner: -
---
-
-ALTER TABLE ONLY public.security_events
-    ADD CONSTRAINT security_events_pkey PRIMARY KEY (id);
-
-
---
 -- Name: sessions sessions_pkey; Type: CONSTRAINT; Schema: public; Owner: -
 --
 
 ALTER TABLE ONLY public.sessions
     ADD CONSTRAINT sessions_pkey PRIMARY KEY (id);
-
-
---
--- Name: settings settings_pkey; Type: CONSTRAINT; Schema: public; Owner: -
---
-
-ALTER TABLE ONLY public.settings
-    ADD CONSTRAINT settings_pkey PRIMARY KEY (id);
-
-
---
--- Name: shift_definitions shift_definitions_pkey; Type: CONSTRAINT; Schema: public; Owner: -
---
-
-ALTER TABLE ONLY public.shift_definitions
-    ADD CONSTRAINT shift_definitions_pkey PRIMARY KEY (id);
-
-
---
--- Name: shift_schedules shift_schedules_pkey; Type: CONSTRAINT; Schema: public; Owner: -
---
-
-ALTER TABLE ONLY public.shift_schedules
-    ADD CONSTRAINT shift_schedules_pkey PRIMARY KEY (id);
-
-
---
--- Name: timesheets timesheets_pkey; Type: CONSTRAINT; Schema: public; Owner: -
---
-
-ALTER TABLE ONLY public.timesheets
-    ADD CONSTRAINT timesheets_pkey PRIMARY KEY (id);
 
 
 --
@@ -827,20 +507,6 @@ ALTER TABLE ONLY public.users
 
 ALTER TABLE ONLY public.users
     ADD CONSTRAINT users_pkey PRIMARY KEY (id);
-
-
---
--- Name: attendance_employee_id_date_index; Type: INDEX; Schema: public; Owner: -
---
-
-CREATE INDEX attendance_employee_id_date_index ON public.attendance USING btree (employee_id, date);
-
-
---
--- Name: attendance_employee_id_index; Type: INDEX; Schema: public; Owner: -
---
-
-CREATE INDEX attendance_employee_id_index ON public.attendance USING btree (employee_id);
 
 
 --
@@ -872,27 +538,6 @@ CREATE INDEX jobs_queue_index ON public.jobs USING btree (queue);
 
 
 --
--- Name: leaves_employee_id_index; Type: INDEX; Schema: public; Owner: -
---
-
-CREATE INDEX leaves_employee_id_index ON public.leaves USING btree (employee_id);
-
-
---
--- Name: notifications_employee_id_index; Type: INDEX; Schema: public; Owner: -
---
-
-CREATE INDEX notifications_employee_id_index ON public.notifications USING btree (employee_id);
-
-
---
--- Name: overtime_requests_employee_id_index; Type: INDEX; Schema: public; Owner: -
---
-
-CREATE INDEX overtime_requests_employee_id_index ON public.overtime_requests USING btree (employee_id);
-
-
---
 -- Name: personal_access_tokens_expires_at_index; Type: INDEX; Schema: public; Owner: -
 --
 
@@ -907,13 +552,6 @@ CREATE INDEX personal_access_tokens_tokenable_type_tokenable_id_index ON public.
 
 
 --
--- Name: security_events_employee_id_index; Type: INDEX; Schema: public; Owner: -
---
-
-CREATE INDEX security_events_employee_id_index ON public.security_events USING btree (employee_id);
-
-
---
 -- Name: sessions_last_activity_index; Type: INDEX; Schema: public; Owner: -
 --
 
@@ -925,34 +563,6 @@ CREATE INDEX sessions_last_activity_index ON public.sessions USING btree (last_a
 --
 
 CREATE INDEX sessions_user_id_index ON public.sessions USING btree (user_id);
-
-
---
--- Name: shift_schedules_employee_id_date_index; Type: INDEX; Schema: public; Owner: -
---
-
-CREATE INDEX shift_schedules_employee_id_date_index ON public.shift_schedules USING btree (employee_id, date);
-
-
---
--- Name: shift_schedules_employee_id_index; Type: INDEX; Schema: public; Owner: -
---
-
-CREATE INDEX shift_schedules_employee_id_index ON public.shift_schedules USING btree (employee_id);
-
-
---
--- Name: shift_schedules_shift_id_index; Type: INDEX; Schema: public; Owner: -
---
-
-CREATE INDEX shift_schedules_shift_id_index ON public.shift_schedules USING btree (shift_id);
-
-
---
--- Name: timesheets_employee_id_index; Type: INDEX; Schema: public; Owner: -
---
-
-CREATE INDEX timesheets_employee_id_index ON public.timesheets USING btree (employee_id);
 
 
 --
@@ -974,5 +584,5 @@ ALTER TABLE ONLY public.roles
 -- PostgreSQL database dump complete
 --
 
-\unrestrict xWrP8wRaNmRbPgv3PWUaE5mynQ3yAnmNSBXpRCXvcnIXnhVbDwAxjjtTfbhSuzj
+\unrestrict IC2J4gk6MvvyIG41GCGXsNcxas9AJOw9ja1Tbhn6RDU1E3hDiWorQpfhBnL2MAc
 
