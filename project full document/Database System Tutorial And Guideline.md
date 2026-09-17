@@ -255,9 +255,7 @@ You never create indexes manually here — Laravel migrations defined them. In p
 
 ## 10. Restoring The Database From Backup
 
-Two schema reference files live in this folder, both regenerated directly from the live databases (not hand-written, so they're guaranteed accurate as of their date):
-- **`all_services_schema.sql`** — schema-only dump of **all 8 databases**, one clearly-labeled section per service. The full picture.
-- **`workforce_mgnt_schema.sql`** — schema-only dump of just `core`'s database (`workforce_mgnt`: `users`, `employees`, `departments`, `roles`, `personal_access_tokens`). Kept separate because `core` is the one every panelist question about "the database" usually starts from.
+One schema reference file lives in this folder: **`database schema microservices structure.sql`** — a schema-only dump of **all 8 databases**, regenerated directly from the live server (not hand-written, so it's guaranteed accurate as of its date), one clearly-labeled section per service (`core`, `intelligence`, `attendance`, `scheduling`, `timeoff`, `payroll`, `communications`, `configuration`). Open it and search for `-- DATABASE: workforce_mgnt` (or whichever database you want) to jump straight to that service's tables.
 
 The fastest, most current way to (re)build ALL 8 databases from scratch, though, is to let each service's own migrations do it — that's exactly what `start-all.ps1` assumes is already done, and what you'd run after a fresh `git clone`:
 
@@ -271,12 +269,13 @@ foreach ($svc in 'core','intelligence','attendance','scheduling','timeoff','payr
 ```
 This drops and rebuilds every table in every one of the 8 databases and re-seeds demo data, per service — the schema lives in code (`database/migrations/`), not in a `.sql` file, so this is more reliable than restoring a dump and is how you'd genuinely recover from a corrupted database.
 
-### Option B — Restore structure only, from the dump files
+### Option B — Restore structure only, from the reference file
+Open `database schema microservices structure.sql`, copy just the section you need (from its `-- DATABASE: <name>` header down to the next one), paste it into a new `.sql` file, then:
 ```powershell
 createdb -U postgres workforce_mgnt
-psql -U postgres -d workforce_mgnt -f workforce_mgnt_schema.sql
+psql -U postgres -d workforce_mgnt -f that_section.sql
 ```
-Same pattern for any of the other 7, using the matching section of `all_services_schema.sql` instead. Useful for quickly inspecting or sharing a schema without touching a real database — it will NOT reseed demo data (use Option A for that).
+Useful for quickly inspecting or sharing one service's schema without touching a real database — it will NOT reseed demo data (use Option A for that).
 
 Note: both restore STRUCTURE only. Live data, if any, lives on the original machine and isn't captured by either option — these are schema dumps (`--schema-only`), not full backups.
 

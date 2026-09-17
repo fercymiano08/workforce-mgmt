@@ -1,8 +1,8 @@
 -- ============================================================
 -- Workforce Management System — Full schema, ALL 8 microservice databases
 -- Regenerated 2026-09-18 directly from the live PostgreSQL server (127.0.0.1:5432)
--- One section per database. This supersedes the old single-database
--- workforce_mgnt_schema.sql, which predates the microservices migration.
+-- One section per database (core, intelligence, attendance, scheduling,
+-- timeoff, payroll, communications, configuration).
 -- ============================================================
 
 -- ============================================================
