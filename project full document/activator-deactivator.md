@@ -5,6 +5,27 @@
 
 ---
 
+## Before Anything Else: Don't Double-Click The `.ps1` Files
+
+`start-all.ps1` and `stop-all.ps1` are **scripts**, not programs you open — double-clicking them just opens the text inside in Notepad (that's Windows's default, safe behavior for script files, not a mistake on your part). You have to run them **from inside a terminal**. Two ways to get one open:
+
+**Option A — From File Explorer (no VS Code needed):**
+1. Open File Explorer, navigate into the `Workforce MGNT` folder (so you can see `start-all.ps1` in the file list).
+2. Right-click on **empty white space** inside the folder (not on any file) → click **"Open in Terminal"**.
+3. A terminal opens already pointed at the right folder. Continue to the sections below.
+
+**Option B — From VS Code:**
+1. With the project folder open in VS Code, go to the **Terminal** menu (top bar) → **New Terminal**.
+2. Continue to the sections below.
+
+**If you ever see a red error mentioning "execution policy" or "scripts is disabled on this system"** the first time you try to run one of these, paste this once and press `Y` if asked:
+```powershell
+Set-ExecutionPolicy -Scope CurrentUser -ExecutionPolicy RemoteSigned
+```
+This is a one-time fix per computer, not something you'll need to repeat.
+
+---
+
 ## Activating The System (1 Step, Recommended)
 
 Open a terminal in VS Code at the project root and run:
