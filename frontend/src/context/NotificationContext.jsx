@@ -53,9 +53,9 @@ export function NotificationProvider({ children }) {
   }, [user]);
 
   useEffect(() => {
-    // eslint-disable-next-line react-hooks/set-state-in-effect -- resets popups/seen-set immediately on logout or account switch
     seenIdsRef.current = new Set();
     initializedRef.current = false;
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- resets popups immediately on logout or account switch
     setToasts([]);
     refresh();
   }, [refresh]);

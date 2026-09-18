@@ -32,9 +32,9 @@ class PayrollClient
         if (config('svc.payroll_mode', 'remote') === 'local') {
             try {
                 if ($employeeId !== null) {
-                    TimesheetGenerationService::syncForEmployee($employeeId, date('Y-m-d'));
+                    (new TimesheetGenerationService())->syncForEmployee($employeeId, date('Y-m-d'));
                 } else {
-                    TimesheetGenerationService::regenerateAll();
+                    (new TimesheetGenerationService())->regenerateAll();
                 }
             } catch (\Throwable $e) {
                 Log::warning('Local timesheet generation failed', ['error' => $e->getMessage()]);

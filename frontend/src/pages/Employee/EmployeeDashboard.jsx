@@ -2,9 +2,9 @@ import { useMemo } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import {
   Clock, CalendarDays, CalendarCheck, Hourglass,
-  Briefcase, ChevronRight, Plus, Hand,
+  Briefcase, ChevronRight, Plus,
   Fingerprint, FileText, CalendarClock, Calendar, ArrowRight,
-  Shield, ScanFace, Building2, BadgeCheck,
+  Shield, Building2, BadgeCheck,
 } from 'lucide-react';
 import {
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend,

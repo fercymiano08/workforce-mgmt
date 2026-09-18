@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import {
   Brain, AlertTriangle, AlertCircle, Info, CheckCircle2, XCircle,
   CalendarCheck, Clock, Timer, Palmtree, CalendarDays, Users,
-  Sparkles, RefreshCw, Inbox, ShieldAlert, Lock, WifiOff, Wifi,
+  Sparkles, RefreshCw, Inbox, ShieldAlert, Lock, WifiOff,
   Zap,
 } from 'lucide-react';
 import Card from '../../components/ui/Card';
@@ -201,9 +201,6 @@ export default function AIDecisionSupport() {
     }
 
     if (action === 'navigate_overtime') {
-      const params = new URLSearchParams();
-      if (payload.employeeId) params.set('employee', payload.employeeId);
-      const qs = params.toString();
       return {
         title: label,
         body: `Open the Attendance page to review overtime?`,

@@ -1,5 +1,6 @@
 import { Link } from 'react-router-dom';
 import { Briefcase, ArrowLeft } from 'lucide-react';
+import Button from '../../components/ui/Button';
 
 // This route now simply redirects users to the updated forgot-password
 // flow, which uses a 6-digit OTP sent via email.

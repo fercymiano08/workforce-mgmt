@@ -53,7 +53,6 @@ export default function Attendance() {
   const [selectedOtIds, setSelectedOtIds] = useState(new Set());
   const [bulkLoading, setBulkLoading] = useState(false);
   const [collapsedDepts, setCollapsedDepts] = useState(new Set());
-  const OT_PAGE_SIZE = 12;
 
   useEffect(() => {
     employeeService.getAll()
@@ -82,9 +81,6 @@ export default function Attendance() {
       return matchSearch && matchStatus;
     }).sort((a, b) => b.requestedDate.localeCompare(a.requestedDate));
   }, [enrichedOvertime, overtimeSearch, overtimeStatusFilter]);
-
-  const overtimeTotalPages = Math.ceil(filteredOvertime.length / OT_PAGE_SIZE);
-  const overtimePaginated = filteredOvertime.slice((overtimePage - 1) * OT_PAGE_SIZE, overtimePage * OT_PAGE_SIZE);
 
   const openOvertime = (req) => {
     setApproveHours(req.expectedHours ? String(req.expectedHours) : '');
