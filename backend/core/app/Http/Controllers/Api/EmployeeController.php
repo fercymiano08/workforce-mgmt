@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Models\Employee;
 use App\Models\Role;
 use App\Models\User;
+use App\Services\EmployeeReplicationClient;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -67,6 +68,8 @@ class EmployeeController extends Controller
             return $employee;
         });
 
+        EmployeeReplicationClient::push($employee->id);
+
         return response()->json(['data' => $employee->toApiArray()], 201);
     }
 
@@ -90,6 +93,8 @@ class EmployeeController extends Controller
                 ]);
             }
         });
+
+        EmployeeReplicationClient::push($employee->id);
 
         return response()->json(['data' => $employee->fresh()->toApiArray()]);
     }
@@ -132,6 +137,8 @@ class EmployeeController extends Controller
             'face_descriptor' => $request->input('faceDescriptor'),
             'face_registered_at' => now(),
         ]);
+
+        EmployeeReplicationClient::push($employee->id);
 
         return response()->json(['data' => $employee->fresh()->toApiArray()]);
     }

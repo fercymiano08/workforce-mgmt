@@ -6,9 +6,11 @@ import { nowInTimezone } from '../utils/helpers';
 //
 // The source of truth is the backend `settings.kiosk` section (configuration,
 // secret PIN hash, and activity logs), so the entrance device behaves the same
-// across reloads and is not tied to browser-local storage. A small in-memory
-// cache keeps the synchronous getters fast within a session; every reload
-// re-reads from the server.
+// across reloads and is not tied to browser-local storage. A cache keeps the
+// synchronous getters fast; it is mirrored to localStorage so that a kiosk
+// restart (full browser close/reboot) boots straight into the clock-in/out
+// terminal with the previously known settings, instead of flashing the
+// "Clock-Ins Disabled" screen until the server responds.
 
 const MAX_LOGS = 200;
 
@@ -21,6 +23,8 @@ const DEFAULT_SETTINGS = {
   logs: [],
   hasPin: false,
 };
+
+const SETTINGS_KEY = 'kiosk_settings_cache';
 
 // The kiosk PIN is a one-time-per-24h security gate: once it is entered the
 // terminal stays unlocked for a full day, even if the browser tab is closed
@@ -40,10 +44,22 @@ function removeStorage(key) {
   try { window.localStorage.removeItem(key); } catch { /* ignore */ }
 }
 
-let cache = { ...DEFAULT_SETTINGS };
+function loadCachedSettings() {
+  try {
+    const raw = readStorage(SETTINGS_KEY);
+    if (raw) {
+      const parsed = JSON.parse(raw);
+      return { ...DEFAULT_SETTINGS, ...parsed, logs: parsed.logs || [] };
+    }
+  } catch { /* corrupted cache - fall through to defaults */ }
+  return { ...DEFAULT_SETTINGS };
+}
+
+let cache = loadCachedSettings();
 
 function merge(next) {
   cache = { ...cache, ...next };
+  writeStorage(SETTINGS_KEY, JSON.stringify(cache));
   return { ...cache };
 }
 

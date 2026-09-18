@@ -1,4 +1,4 @@
-import { createContext, useContext, useState, useCallback } from 'react';
+import { createContext, useContext, useState, useCallback, useMemo } from 'react';
 import http, { setToken, clearToken, getToken } from '../services/http';
 
 const STORAGE_KEY = 'workforce_auth_user';
@@ -69,19 +69,24 @@ export function AuthProvider({ children }) {
 
   const clearAuthError = useCallback(() => setAuthError(null), []);
 
+  // Without this, a brand-new object is passed to the Provider on every
+  // render of AuthProvider (from ANY state change anywhere above it in the
+  // tree, e.g. the router), which re-renders every single useAuth() consumer
+  // in the whole app even when nothing they actually use changed - a classic
+  // source of unnecessary re-renders and visible UI flicker.
+  const value = useMemo(() => ({
+    user,
+    isAuthenticated: !!user,
+    isAdmin: user?.role === 'Administrator',
+    isEmployee: user?.role === 'Employee',
+    login,
+    logout,
+    authError,
+    clearAuthError,
+  }), [user, login, logout, authError, clearAuthError]);
+
   return (
-    <AuthContext.Provider
-      value={{
-        user,
-        isAuthenticated: !!user,
-        isAdmin: user?.role === 'Administrator',
-        isEmployee: user?.role === 'Employee',
-        login,
-        logout,
-        authError,
-        clearAuthError,
-      }}
-    >
+    <AuthContext.Provider value={value}>
       {children}
     </AuthContext.Provider>
   );

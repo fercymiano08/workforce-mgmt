@@ -1,8 +1,7 @@
-<?php
+﻿<?php
 
 use App\Http\Middleware\EnsureServiceAuthenticated;
 use App\Http\Middleware\EnsureUserIsAdministrator;
-use App\Http\Middleware\SyncSnapshot;
 use Illuminate\Foundation\Application;
 use Illuminate\Foundation\Configuration\Exceptions;
 use Illuminate\Foundation\Configuration\Middleware;
@@ -21,7 +20,6 @@ return Application::configure(basePath: dirname(__DIR__))
         $middleware->alias([
             'admin' => EnsureUserIsAdministrator::class,
             'svc.auth' => EnsureServiceAuthenticated::class,
-            'sync.snapshot' => SyncSnapshot::class,
         ]);
     })
     ->withExceptions(function (Exceptions $exceptions): void {

@@ -34,6 +34,22 @@ foreach ($s in $services) {
   Write-Host "  [ok]   $($s.name) on port $($s.port)" -ForegroundColor Green
 }
 
+# Services that keep a local replica of another service's data run Laravel's
+# own scheduler in the background (`snapshot:sync` every minute - see
+# routes/console.php in each). Employees and shift schedules are additionally
+# pushed immediately on every write, so this is a safety net for everything
+# else, not the only thing keeping replicas fresh. `withoutOverlapping()` on
+# the schedule itself means running this twice is harmless.
+$schedulerServices = @('attendance', 'intelligence', 'scheduling', 'timeoff', 'payroll')
+foreach ($name in $schedulerServices) {
+  $wd = Join-Path $Root ("backend\" + $name)
+  Start-Process -FilePath 'php' -ArgumentList @('artisan', 'schedule:work') `
+    -WorkingDirectory $wd -WindowStyle Hidden `
+    -RedirectStandardOutput (Join-Path $LogDir "scheduler-$name.out.log") `
+    -RedirectStandardError  (Join-Path $LogDir "scheduler-$name.err.log")
+}
+Write-Host "  [ok]   background replica sync scheduler started for: $($schedulerServices -join ', ')" -ForegroundColor Green
+
 $frontBusy = Get-NetTCPConnection -LocalPort 5173,5174 -State Listen -ErrorAction SilentlyContinue
 if (-not $frontBusy) {
   Start-Process -FilePath 'npm.cmd' -ArgumentList @('run', 'dev') `

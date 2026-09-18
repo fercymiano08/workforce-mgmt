@@ -44,4 +44,8 @@ return [
 
     'dependencies' => json_decode((string) env('SVC_DEPENDENCIES', '[]'), true),
 
+    // Services holding a local replica of shift_schedules - pushed to
+    // immediately on create/generate/update. See ShiftReplicationClient.
+    'shift_replica_targets' => json_decode((string) env('SHIFT_REPLICA_TARGETS', '[]'), true),
+
 ];

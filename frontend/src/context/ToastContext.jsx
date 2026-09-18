@@ -60,8 +60,16 @@ export function ToastProvider({ children }) {
     [addToast]
   );
 
+  // `toasts`/`removeToast` are only ever needed by ToastContainer right
+  // below (already passed as direct props) - nothing else in the app reads
+  // them from context, only `toast`. Keeping them out of the context value
+  // means it's genuinely stable and never changes after mount, so no
+  // useToast() consumer anywhere re-renders just because a toast fired or
+  // auto-dismissed somewhere unrelated.
+  const value = useMemo(() => ({ toast }), [toast]);
+
   return (
-    <ToastContext.Provider value={{ toast, toasts, removeToast }}>
+    <ToastContext.Provider value={value}>
       {children}
       <ToastContainer toasts={toasts} removeToast={removeToast} />
     </ToastContext.Provider>

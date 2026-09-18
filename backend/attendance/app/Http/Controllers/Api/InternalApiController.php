@@ -48,6 +48,56 @@ class InternalApiController extends Controller
         return response()->json(['data' => $event->toApiArray()]);
     }
 
+    public function flagSecurityEvent(Request $request, string $id): JsonResponse
+    {
+        $this->authorizeService($request);
+
+        $event = SecurityEvent::findOrFail($id);
+        $data = $request->validate([
+            'resolvedBy' => 'nullable|string|max:100',
+        ]);
+
+        $event->status = 'Flagged';
+        $event->resolved_at = now();
+        $event->resolved_by = $data['resolvedBy'] ?? 'Workforce AI';
+        $event->save();
+
+        return response()->json(['data' => $event->toApiArray()]);
+    }
+
+    public function syncEmployee(Request $request): JsonResponse
+    {
+        $this->authorizeService($request);
+
+        $data = $request->all();
+        if (empty($data['id'])) {
+            abort(422, 'Missing employee id');
+        }
+
+        DB::table('employees')->updateOrInsert(['id' => $data['id']], $data);
+
+        return response()->json(['data' => ['synced' => true]]);
+    }
+
+    public function syncShiftSchedules(Request $request): JsonResponse
+    {
+        $this->authorizeService($request);
+
+        $rows = $request->input('rows', []);
+        if (! is_array($rows) || $rows === []) {
+            return response()->json(['data' => ['synced' => 0]]);
+        }
+
+        foreach ($rows as $row) {
+            if (empty($row['id'])) {
+                continue;
+            }
+            DB::table('shift_schedules')->updateOrInsert(['id' => $row['id']], $row);
+        }
+
+        return response()->json(['data' => ['synced' => count($rows)]]);
+    }
+
     public function resolveAllSecurityEvents(Request $request): JsonResponse
     {
         $this->authorizeService($request);

@@ -57,4 +57,4 @@ Client's Company Information:
 - Quality control, Quality assurance supervisor (Position of our client in thier workplace)
 
 PostgreSQL Password;
-postgre
+Set in each service's `backend/<service>/.env` under `DB_PASSWORD` (never commit the real password).

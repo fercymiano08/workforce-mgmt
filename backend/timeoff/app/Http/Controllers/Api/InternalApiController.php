@@ -105,6 +105,20 @@ class InternalApiController extends Controller
         return response()->json(['data' => $overtime->toApiArray()]);
     }
 
+    public function syncEmployee(Request $request): JsonResponse
+    {
+        $this->authorizeService($request);
+
+        $data = $request->all();
+        if (empty($data['id'])) {
+            abort(422, 'Missing employee id');
+        }
+
+        DB::table('employees')->updateOrInsert(['id' => $data['id']], $data);
+
+        return response()->json(['data' => ['synced' => true]]);
+    }
+
     protected function authorizeService(Request $request): void
     {
         $token = (string) $request->header('X-Service-Token', '');

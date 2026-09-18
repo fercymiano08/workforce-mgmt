@@ -1,4 +1,4 @@
-import { createContext, useContext, useEffect, useState } from 'react';
+import { createContext, useContext, useCallback, useEffect, useMemo, useState } from 'react';
 
 const ThemeContext = createContext(null);
 
@@ -61,13 +61,17 @@ export function ThemeProvider({ children }) {
     return () => mq.removeEventListener('change', handler);
   }, [theme]);
 
-  const toggleTheme = () => setTheme((prev) => (prev === 'dark' ? 'light' : 'dark'));
+  const toggleTheme = useCallback(() => setTheme((prev) => (prev === 'dark' ? 'light' : 'dark')), []);
+
+  // Memoized so every useTheme() consumer app-wide doesn't re-render on
+  // every unrelated render of whatever happens to sit above it in the tree.
+  const value = useMemo(() => ({
+    theme, setTheme, toggleTheme, isDark: theme === 'dark',
+    fontSize, setFontSize,
+  }), [theme, toggleTheme, fontSize]);
 
   return (
-    <ThemeContext.Provider value={{
-      theme, setTheme, toggleTheme, isDark: theme === 'dark',
-      fontSize, setFontSize,
-    }}>
+    <ThemeContext.Provider value={value}>
       {children}
     </ThemeContext.Provider>
   );

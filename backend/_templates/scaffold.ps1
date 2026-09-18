@@ -1,5 +1,5 @@
 # scaffold.ps1 — builds a new extracted microservice from the core service.
-# Usage:  powershell -ExecutionPolicy Bypass -File services/_templates/scaffold.ps1
+# Usage:  powershell -ExecutionPolicy Bypass -File backend/_templates/scaffold.ps1
 #   -Name configuration -Port 8008 -Db workforce_configuration `
 #   -Controllers SettingsController -Models Setting -Migrations 2026_08_11_060800_create_settings_table `
 #   -MockFiles settings -ServiceRoutes configuration -Tests SettingsTest -SnapshotGlobal $false
@@ -20,8 +20,8 @@ param(
 )
 $ErrorActionPreference = 'Stop'
 $root = Split-Path -Parent (Split-Path -Parent $PSScriptRoot)
-$backend = Join-Path (Join-Path $root 'services') 'core'
-$dest = Join-Path $root "services\$Name"
+$backend = Join-Path (Join-Path $root 'backend') 'core'
+$dest = Join-Path $root "backend\$Name"
 
 if (Test-Path $dest) { Write-Error "Destination already exists: $dest" }
 New-Item -ItemType Directory -Force -Path $dest | Out-Null
@@ -72,7 +72,7 @@ Get-ChildItem (Join-Path $dest 'tests\Unit') -Filter *.php | ForEach-Object {
   if ($_.Name -ne 'ExampleTest.php') { Remove-Item $_.FullName -Force }
 }
 # --- copy shared templates ---
-$tpl = Join-Path $root 'services\_templates'
+$tpl = Join-Path $root 'backend\_templates'
 Copy-Item (Join-Path $tpl 'EnsureServiceAuthenticated.php') (Join-Path $dest 'app\Http\Middleware\EnsureServiceAuthenticated.php')
 Copy-Item (Join-Path $tpl 'SyncSnapshot.php') (Join-Path $dest 'app\Http\Middleware\SyncSnapshot.php')
 Copy-Item (Join-Path $tpl 'SnapshotSyncService.php') (Join-Path $dest 'app\Services\SnapshotSyncService.php')

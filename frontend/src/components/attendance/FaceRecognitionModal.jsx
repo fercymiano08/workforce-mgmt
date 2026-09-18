@@ -133,25 +133,23 @@ export default function FaceRecognitionModal({ isOpen, employeeName, employeeId,
         let descriptor = null;
         try {
           await loadModels();
-          for (let attempt = 0; attempt < 3; attempt += 1) {
+          // getFaceDescriptor now never throws (it snapshots a stable frame
+          // and resolves null on failure), so 2 quick attempts are plenty.
+          for (let attempt = 0; attempt < 2; attempt += 1) {
             if (cancelled) return;
-            try {
-              descriptor = await getFaceDescriptor(videoRef.current);
-            } catch {
-              descriptor = null;
-            }
+            descriptor = await getFaceDescriptor(videoRef.current);
             if (descriptor) break;
-            await new Promise((resolve) => setTimeout(resolve, 400));
+            await new Promise((resolve) => setTimeout(resolve, 300));
           }
         } catch {
-          setVerifyError('Face recognition models could not be loaded. Refresh the page and try again.');
+          setVerifyError('Face recognition models could not be loaded. Please try again.');
           setPhase('error');
           return;
         }
         if (cancelled) return;
 
         if (!descriptor) {
-          setVerifyError('No face detected. Please center your face in the frame and try again.');
+          setVerifyError('No face detected. Make sure your face is well-lit, centered, and close enough to fill most of the camera frame, then try again.');
           setPhase('error');
           return;
         }

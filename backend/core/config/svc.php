@@ -16,4 +16,8 @@ return [
         'url' => env('AUTH_SERVICE_URL', 'http://127.0.0.1:8000'),
         'mode' => env('SVC_AUTH_MODE', 'local'),
     ],
+
+    // Services holding a local replica of employees - pushed to immediately
+    // on every create/update/face registration. See EmployeeReplicationClient.
+    'employee_replica_targets' => json_decode((string) env('EMPLOYEE_REPLICA_TARGETS', '[]'), true),
 ];

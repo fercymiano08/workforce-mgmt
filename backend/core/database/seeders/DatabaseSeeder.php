@@ -48,7 +48,7 @@ class DatabaseSeeder extends Seeder
             ['email' => 'fercy.miano84@gmail.com'],
             [
                 'employee_id' => 'EMP20264845',
-                'name' => 'Fercy S. Miano',
+                'name' => 'Fercy Miano',
                 'password' => Hash::make('Employee@123'),
                 'role' => 'Employee',
                 'role_label' => 'Employee',

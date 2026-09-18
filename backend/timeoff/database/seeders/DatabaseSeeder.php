@@ -85,6 +85,9 @@ class DatabaseSeeder extends Seeder
     private function seedOvertime(): void
     {
         OvertimeRequest::query()->delete();
+        foreach ($this->shiftedMock('overtime')['overtime'] ?? [] as $row) {
+            OvertimeRequest::create(OvertimeRequest::apiFillable($row));
+        }
     }
 
     private function seedNotifications(): void

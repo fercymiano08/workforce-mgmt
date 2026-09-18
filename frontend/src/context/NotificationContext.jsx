@@ -1,4 +1,4 @@
-import { createContext, useContext, useState, useCallback, useEffect, useRef } from 'react';
+import { createContext, useContext, useState, useCallback, useEffect, useMemo, useRef } from 'react';
 import { notificationService } from '../services/api';
 import { useAuth } from './AuthContext';
 
@@ -116,11 +116,16 @@ export function NotificationProvider({ children }) {
     }
   }, []);
 
+  // Memoized so every useNotifications() consumer app-wide (not just the
+  // bell icon) doesn't re-render on every 30-second poll unless something
+  // actually changed.
+  const value = useMemo(() => ({
+    notifications, unreadCount, toasts, dismissToast,
+    markAsRead, markAllAsRead, addNotification, deleteNotification, refresh,
+  }), [notifications, unreadCount, toasts, dismissToast, markAsRead, markAllAsRead, addNotification, deleteNotification, refresh]);
+
   return (
-    <NotificationContext.Provider value={{
-      notifications, unreadCount, toasts, dismissToast,
-      markAsRead, markAllAsRead, addNotification, deleteNotification, refresh,
-    }}>
+    <NotificationContext.Provider value={value}>
       {children}
     </NotificationContext.Provider>
   );

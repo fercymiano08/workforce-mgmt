@@ -2,7 +2,7 @@ import { useState, useMemo, useEffect } from 'react';
 import {
   CalendarDays, Plus, Clock, Edit, ArrowLeftRight, Check,
   Zap, Search, FilterX, Wand2, Trash2, AlertTriangle,
-  Sun, Sunset, Moon, ChevronLeft, ChevronRight, Users,
+  Flame, ChevronLeft, ChevronRight, Users,
 } from 'lucide-react';
 import Card, { CardTitle, CardDescription } from '../../components/ui/Card';
 import Button from '../../components/ui/Button';
@@ -15,26 +15,20 @@ import { formatDate, formatTime } from '../../utils/helpers';
 import { useToast } from '../../context/ToastContext';
 import useApiData from '../../hooks/useApiData';
 
-const shiftIcons = { SHIFT001: Sun, SHIFT002: Sunset, SHIFT003: Moon, SHIFT004: Zap };
+const shiftIcons = { SHIFT004: Zap, SHIFT005: Flame };
 const shiftIconBg = {
-  SHIFT001: 'bg-emerald-50 text-emerald-600',
-  SHIFT002: 'bg-amber-50 text-amber-600',
-  SHIFT003: 'bg-violet-50 text-violet-600',
   SHIFT004: 'bg-blue-50 text-blue-600',
+  SHIFT005: 'bg-red-50 text-red-600',
 };
 const shiftBorder = {
-  SHIFT001: 'border-l-emerald-500',
-  SHIFT002: 'border-l-amber-500',
-  SHIFT003: 'border-l-violet-500',
   SHIFT004: 'border-l-blue-500',
+  SHIFT005: 'border-l-red-500',
 };
 const shiftBlockBg = {
-  SHIFT001: 'bg-emerald-50 border-emerald-200 text-emerald-700',
-  SHIFT002: 'bg-amber-50 border-amber-200 text-amber-700',
-  SHIFT003: 'bg-violet-50 border-violet-200 text-violet-700',
   SHIFT004: 'bg-blue-50 border-blue-200 text-blue-700',
+  SHIFT005: 'bg-red-50 border-red-200 text-red-700',
 };
-const shiftBadgeVariant = { SHIFT001: 'success', SHIFT002: 'warning', SHIFT003: 'purple', SHIFT004: 'primary' };
+const shiftBadgeVariant = { SHIFT004: 'primary', SHIFT005: 'danger' };
 const statusVariant = { Scheduled: 'primary', Completed: 'success', Swapped: 'purple', Cancelled: 'danger' };
 const STATUS_OPTIONS = ['Scheduled', 'Completed', 'Swapped', 'Cancelled'];
 

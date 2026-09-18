@@ -1,6 +1,6 @@
 import { useMemo, useState } from 'react';
 import {
-  CalendarDays, CalendarClock, Sun, Sunset, Moon, Zap,
+  CalendarDays, CalendarClock, Zap, Flame,
   Clock, MapPin, Filter, CalendarOff, CalendarPlus,
 } from 'lucide-react';
 import Badge from '../../components/ui/Badge';
@@ -9,14 +9,12 @@ import useApiData from '../../hooks/useApiData';
 import { attendanceService, overtimeService, shiftService } from '../../services/api';
 import { extendTime, formatDate, formatTime } from '../../utils/helpers';
 
-const shiftIcons = { SHIFT001: Sun, SHIFT002: Sunset, SHIFT003: Moon, SHIFT004: Zap };
+const shiftIcons = { SHIFT004: Zap, SHIFT005: Flame };
 const shiftIconColors = {
-  SHIFT001: 'bg-emerald-50 text-emerald-600',
-  SHIFT002: 'bg-amber-50 text-amber-600',
-  SHIFT003: 'bg-violet-50 text-violet-600',
   SHIFT004: 'bg-blue-50 text-blue-600',
+  SHIFT005: 'bg-red-50 text-red-600',
 };
-const shiftBadgeVariant = { SHIFT001: 'success', SHIFT002: 'warning', SHIFT003: 'purple', SHIFT004: 'primary' };
+const shiftBadgeVariant = { SHIFT004: 'primary', SHIFT005: 'danger' };
 const statusBadgeVariant = {
   Upcoming: 'primary', Scheduled: 'warning', Completed: 'success',
   Swapped: 'purple', Cancelled: 'danger',

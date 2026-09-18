@@ -29,7 +29,7 @@ class AttendanceClient
 
     public static function flagSecurityEvent(string $id, ?string $resolvedBy): void
     {
-        self::postOrLocal('security-events/'.$id.'/resolve', ['resolvedBy' => $resolvedBy], function () use ($id, $resolvedBy): void {
+        self::postOrLocal('security-events/'.$id.'/flag', ['resolvedBy' => $resolvedBy], function () use ($id, $resolvedBy): void {
             $event = \App\Models\SecurityEvent::find($id);
             if ($event) {
                 $event->update([

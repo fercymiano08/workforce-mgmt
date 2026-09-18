@@ -79,7 +79,7 @@ class Employee extends Model
      */
     public function leaveBalances(): array
     {
-        $totals = $this->leave_balances ?: self::defaultLeaveBalances();
+        $totals = $this->normalizedLeaveBalancesMap();
         $used = $this->usedLeaveDays();
 
         $balances = [];
@@ -95,6 +95,36 @@ class Employee extends Model
         }
 
         return $balances;
+    }
+
+    /**
+     * Canonical {Type: total} map from the stored leave_balances column.
+     *
+     * The column normally stores the canonical map, but some environments have
+     * historically persisted the API output shape (a list of
+     * {type,total,used,remaining} objects) instead. Both shapes are accepted
+     * here so mis-shapen data can never gray out the balance cards again.
+     *
+     * @return array<string, float>
+     */
+    private function normalizedLeaveBalancesMap(): array
+    {
+        $stored = $this->leave_balances;
+
+        if (is_array($stored) && ! array_is_list($stored)) {
+            return $stored;
+        }
+
+        $map = [];
+        if (is_array($stored)) {
+            foreach ($stored as $row) {
+                if (is_array($row) && isset($row['type'])) {
+                    $map[$row['type']] = (float) ($row['total'] ?? 0);
+                }
+            }
+        }
+
+        return $map !== [] ? $map : self::defaultLeaveBalances();
     }
 
     public function toApiArray(): array

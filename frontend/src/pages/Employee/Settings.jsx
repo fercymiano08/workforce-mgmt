@@ -165,28 +165,28 @@ function MyProfileSection() {
           <Input
             label="Phone"
             icon={Smartphone}
-            value={form ? form.phone : (employee.phone || '')}
+            value={form ? form.phone : (employee?.phone || '')}
             onFocus={startEditing}
             onChange={(e) => handleChange('phone', e.target.value)}
             placeholder="+63 9XX XXX XXXX"
           />
           <Input
             label="Address"
-            value={form ? form.address : (employee.address || '')}
+            value={form ? form.address : (employee?.address || '')}
             onFocus={startEditing}
             onChange={(e) => handleChange('address', e.target.value)}
             placeholder="Street, Barangay, City"
           />
           <Input
             label="Emergency Contact Name"
-            value={form ? form.emergencyContact : (employee.emergencyContact || '')}
+            value={form ? form.emergencyContact : (employee?.emergencyContact || '')}
             onFocus={startEditing}
             onChange={(e) => handleChange('emergencyContact', e.target.value)}
             placeholder="Name of the person to contact"
           />
           <Input
             label="Emergency Contact Number"
-            value={form ? form.emergencyPhone : (employee.emergencyPhone || '')}
+            value={form ? form.emergencyPhone : (employee?.emergencyPhone || '')}
             onFocus={startEditing}
             onChange={(e) => handleChange('emergencyPhone', e.target.value)}
             placeholder="+63 9XX XXX XXXX"

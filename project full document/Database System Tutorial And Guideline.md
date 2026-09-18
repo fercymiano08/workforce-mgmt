@@ -59,7 +59,7 @@ DB_HOST=127.0.0.1
 DB_PORT=5432
 DB_DATABASE=workforce_mgnt        # ← this line differs per service, see the table in Section 1
 DB_USERNAME=postgres
-DB_PASSWORD=postgre
+DB_PASSWORD=<your-database-password>   # set in backend/<name>/.env, never committed
 ```
 
 To inspect a specific service's data from pgAdmin 4 or `psql`, connect to the same server (`127.0.0.1:5432`, same username/password) and pick the database name that matches the service from the table above.
@@ -187,7 +187,7 @@ shift_definitions 1 - * shift_schedules shift_schedules.shift_id
 
 ### Connecting To The Database Server
 1. Left sidebar → double-click **Servers** → **PostgreSQL 18**
-2. Enter password: `postgre`
+2. Enter the database password (the one set in `backend/core/.env` as `DB_PASSWORD`)
 3. Expand **Databases** — you'll see all 8 (`workforce_mgnt`, `workforce_intel`, `workforce_attendance`, `workforce_scheduling`, `workforce_timeoff`, `workforce_payroll`, `workforce_communications`, `workforce_configuration`), one connection covers all of them
 4. Navigate into whichever one owns the data you want (see the table in Section 1) → **Schemas → public → Tables**
 

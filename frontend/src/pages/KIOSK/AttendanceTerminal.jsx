@@ -376,10 +376,11 @@ export default function AttendanceTerminal() {
 
   // --- Clock in / out -----------------------------------------------------
 
-  // Runs the shift-aware pre-checks for a clock-in: no schedule today, early
-  // arrivals, and being late (past the 15-minute grace period) all produce a
-  // professional warning the employee must acknowledge before the clock-in is
-  // actually recorded. Clocking in on time records directly.
+  // Runs the shift-aware pre-checks for a clock-in: being late (past the
+  // 15-minute grace period), early arrivals, no schedule today, and a
+  // finished shift all produce a warning the employee can acknowledge and
+  // proceed past - a late clock-in must always be confirmable, never a dead
+  // end back to the start. Clocking in on time records directly.
   const evaluateClockIn = () => {
     if (!employee) return;
     const time = toTimeString(nowInTimezone(timezone));
@@ -397,33 +398,9 @@ export default function AttendanceTerminal() {
       return;
     }
 
-    if (!shiftInfo?.hasShift) {
-      setNotice({
-        tone: 'warning',
-        title: 'No Shift Scheduled Today',
-        message: `There is no shift scheduled for ${employee.firstName} ${employee.lastName} today. Clocking in without a schedule is not allowed. Please check your schedule with HR.`,
-        confirmLabel: 'Back to Home',
-        onConfirm: resetToMode,
-      });
-      setPhase('notice');
-      return;
-    }
-
-    const end = shiftInfo?.hasShift && shiftInfo.endTime ? shiftInfo.endTime : null;
-    const endMin = end ? minutesFromTime(end) : null;
-
-    if (endMin !== null && endMin > startMin && nowMin >= endMin) {
-      setNotice({
-        tone: 'warning',
-        title: 'Shift Over',
-        message: `${employee.firstName} ${employee.lastName}'s shift ended at ${formatTime(end)} today. Clocking in for a finished shift is not allowed - please contact HR.`,
-        confirmLabel: 'Back to Home',
-        onConfirm: resetToMode,
-      });
-      setPhase('notice');
-      return;
-    }
-
+    // Late is checked FIRST and always offers "Clock In Anyway" - arriving
+    // late (even unscheduled, even after the shift window) is still a valid
+    // clock-in that the employee should be able to confirm, recorded as Late.
     if (nowMin > startMin + grace) {
       const minutesLate = nowMin - startMin;
       setNotice({
@@ -448,6 +425,35 @@ export default function AttendanceTerminal() {
         confirmLabel: 'Clock In Anyway',
         cancelLabel: 'Cancel',
         onConfirm: () => { setNotice(null); recordAttendance('early'); },
+        onCancel: resetToMode,
+      });
+      setPhase('notice');
+      return;
+    }
+
+    const end = shiftInfo?.hasShift && shiftInfo.endTime ? shiftInfo.endTime : null;
+    const endMin = end ? minutesFromTime(end) : null;
+
+    if (endMin !== null && endMin > startMin && nowMin >= endMin) {
+      setNotice({
+        tone: 'warning',
+        title: 'Shift Over',
+        message: `${employee.firstName} ${employee.lastName}'s shift ended at ${formatTime(end)} today. Clocking in for a finished shift is not allowed - please contact HR.`,
+        confirmLabel: 'Back to Home',
+        onConfirm: resetToMode,
+      });
+      setPhase('notice');
+      return;
+    }
+
+    if (!shiftInfo?.hasShift) {
+      setNotice({
+        tone: 'warning',
+        title: 'No Shift Scheduled Today',
+        message: `There is no shift scheduled for ${employee.firstName} ${employee.lastName} today, so this clock-in cannot be verified against a shift. Record it anyway?`,
+        confirmLabel: 'Clock In Anyway',
+        cancelLabel: 'Cancel',
+        onConfirm: () => { setNotice(null); recordAttendance(); },
         onCancel: resetToMode,
       });
       setPhase('notice');

@@ -70,17 +70,28 @@ export default function Leave() {
   );
 
   const [leaveBalances, setLeaveBalances] = useState([]);
+  const [balancesLoading, setBalancesLoading] = useState(true);
 
   const loadBalances = useCallback(() => {
     if (!currentUser.id) {
+      setBalancesLoading(false);
       return;
     }
     leaveService.getBalances(currentUser.id)
-      .then(setLeaveBalances)
-      .catch(() => setLeaveBalances([]));
+      .then((data) => {
+        setLeaveBalances(data);
+        setBalancesLoading(false);
+      })
+      .catch(() => {
+        // Keep whatever we already had on screen instead of flashing the
+        // cards to empty on a transient failure - only a real "no data yet"
+        // case (nothing loaded before) falls through to the empty state.
+        setBalancesLoading(false);
+      });
   }, [currentUser.id]);
 
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- loadBalances synchronously resets the loading flag when there's no employee id to fetch for; the actual data fetch itself is properly async
     loadBalances();
   }, [loadBalances]);
 
@@ -239,8 +250,21 @@ export default function Leave() {
       <div>
         <h2 className="text-sm font-semibold text-gray-900 uppercase tracking-wide mb-3">Leave Balances</h2>
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
-          {leaveBalances.map((b) => {
-            const style = leaveBalanceStyle[b.type] || { text: 'text-gray-600', barBg: 'bg-gray-100', color: 'bg-gray-500' };
+          {balancesLoading && leaveBalances.length === 0 ? (
+            // Loading placeholders instead of rendering nothing - an empty
+            // grid here is what made the section look like it was
+            // disappearing and reappearing on every visit to this page.
+            Array.from({ length: 4 }).map((_, i) => (
+              <Card key={i} className="overflow-hidden">
+                <div className="skeleton w-10 h-10 rounded-xl mb-3" />
+                <div className="skeleton h-3 w-20 rounded" />
+                <div className="skeleton h-7 w-16 rounded mt-2" />
+                <div className="skeleton h-1.5 w-full rounded-full mt-3" />
+                <div className="skeleton h-3 w-24 rounded mt-1.5" />
+              </Card>
+            ))
+          ) : leaveBalances.map((b) => {
+            const style = leaveBalanceStyle[b.type] || { text: 'text-indigo-600', barBg: 'bg-indigo-100', color: 'bg-indigo-500', icon: Calendar, iconBg: 'bg-indigo-50' };
             const pct = b.total > 0 ? Math.max((b.remaining / b.total) * 100, 0) : 0;
             return (
               <Card key={b.type} className="overflow-hidden" hover>

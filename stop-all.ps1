@@ -34,5 +34,15 @@ foreach ($p in $ports) {
   Write-Host "  [ok]   $($p.name) on port $($p.port) stopped (PID $($stopped -join ', '))." -ForegroundColor Green
 }
 
+$schedulers = Get-CimInstance Win32_Process -Filter "CommandLine LIKE '%schedule:work%'" -ErrorAction SilentlyContinue
+if ($schedulers) {
+  foreach ($proc in $schedulers) {
+    Stop-Process -Id $proc.ProcessId -Force -Confirm:$false -ErrorAction SilentlyContinue
+  }
+  Write-Host "  [ok]   background replica sync scheduler stopped ($($schedulers.Count) process(es))." -ForegroundColor Green
+} else {
+  Write-Host "  [skip] background replica sync scheduler - nothing running." -ForegroundColor DarkGray
+}
+
 Write-Host ""
 Write-Host "All matched processes were signaled to stop. Re-run start-all.ps1 to bring the stack back up." -ForegroundColor Cyan

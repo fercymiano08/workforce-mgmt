@@ -30,3 +30,6 @@ Route::get('/intelligence/health', function () {
 
 // Analytics + AI (Administrator only, authenticated via the Auth service).
 require __DIR__.'/services/intelligence.php';
+
+// Machine-to-machine endpoints for peer services (SERVICE_TOKEN guarded).
+require __DIR__.'/internal.php';

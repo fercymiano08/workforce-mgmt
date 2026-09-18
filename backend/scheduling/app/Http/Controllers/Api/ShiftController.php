@@ -10,6 +10,7 @@ use App\Models\Leave;
 use App\Models\ShiftDefinition;
 use App\Models\ShiftSchedule;
 use App\Services\NotificationService;
+use App\Services\ShiftReplicationClient;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Carbon;
@@ -72,6 +73,8 @@ class ShiftController extends Controller
             '/my-schedule'
         );
 
+        ShiftReplicationClient::pushSchedules([$record->id]);
+
         return response()->json(['data' => $record->toApiArray()], 201);
     }
 
@@ -125,6 +128,7 @@ class ShiftController extends Controller
         $skippedOnLeave = 0;
         $employeesScheduled = []; // employee_id => count of new shifts
         $shortageDates = [];
+        $createdIds = [];
 
         for ($day = $start->copy(); $day->lte($end); $day->addDay()) {
             if ($skipWeekends && $day->isWeekend()) {
@@ -149,7 +153,7 @@ class ShiftController extends Controller
                     continue;
                 }
 
-                ShiftSchedule::create([
+                $newSchedule = ShiftSchedule::create([
                     'id' => $this->nextIdFor(ShiftSchedule::class, 'SCH'),
                     'employee_id' => $employee->id,
                     'employee_name' => trim($employee->first_name.' '.$employee->last_name),
@@ -157,6 +161,7 @@ class ShiftController extends Controller
                     'date' => $dateKey,
                     'status' => 'Scheduled',
                 ]);
+                $createdIds[] = $newSchedule->id;
                 $created++;
                 $employeesScheduled[$employee->id] = ($employeesScheduled[$employee->id] ?? 0) + 1;
             }
@@ -191,6 +196,8 @@ class ShiftController extends Controller
             );
         }
 
+        ShiftReplicationClient::pushSchedules($createdIds);
+
         return response()->json(['data' => [
             'created' => $created,
             'skippedExisting' => $skippedExisting,
@@ -224,6 +231,8 @@ class ShiftController extends Controller
             'low',
             '/my-schedule'
         );
+
+        ShiftReplicationClient::pushSchedules([$record->id]);
 
         return response()->json(['data' => $record->fresh()->toApiArray()]);
     }

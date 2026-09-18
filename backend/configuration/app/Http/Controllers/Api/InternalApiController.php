@@ -15,7 +15,7 @@ use Illuminate\Support\Facades\DB;
 class InternalApiController extends Controller
 {
     /** @var list<string> Tables this service owns (served to peers on request). */
-    protected array $ownedTables = [];
+    protected array $ownedTables = ['settings'];
 
     public function snapshot(Request $request): JsonResponse
     {

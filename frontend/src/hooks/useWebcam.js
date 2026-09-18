@@ -20,7 +20,11 @@ export default function useWebcam() {
 
     try {
       const stream = await navigator.mediaDevices.getUserMedia({
-        video: { width: { ideal: 1280 }, height: { ideal: 720 }, facingMode: 'user' },
+        video: {
+          facingMode: 'user',
+          width: { ideal: 640, max: 800 },
+          height: { ideal: 480, max: 600 },
+        },
         audio: false,
       });
       if (requestId !== requestIdRef.current) {
