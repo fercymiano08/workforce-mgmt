@@ -159,6 +159,20 @@ Honestly: whichever write lands last in `timeoff`'s database wins, silently. We 
 
 ## How to use this the night before
 
+---
+
+## Bonus — the newest features (finished just before the defense, be ready for these)
+
+**Q46. What does the "This Week" timesheet popup show?**
+It's a live, un-submitted view of the current work week: a KPI row (Regular, Overtime, Break, and Total hours) plus a per-day table (Date, Day, Status badge, Clock In, Clock Out, Break, Hours), with today's row highlighted and a week-total footer. It's computed on the spot from the same attendance records the weekly timesheet is generated from, so it's labeled "Auto" until the employee actually submits it.
+
+**Q47. What is "Timesheet History", and who can use it?**
+It's the list under the My Timesheet summary card — every saved week with its date range, status badge, Regular/Overtime/Total hours, and submitted date. An employee clicks any row to reopen that week's full per-day breakdown, so past weeks are never lost or hidden after submission.
+
+---
+
+## How to use this the night before
+
 1. Cover the answer column, read the question, say your answer OUT LOUD.
 2. If you freeze on a Hard/Extremely Hard one — that's fine, that's literally why this tier exists. Re-read it once, move on, come back to it tomorrow morning.
 3. Have a teammate quiz you out of order — questions land differently when you don't know which one's coming.

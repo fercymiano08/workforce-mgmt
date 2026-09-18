@@ -108,7 +108,7 @@ Browser (frontend) → sends a request to `/api/...` → the frontend's router (
 2. HR **assigns a schedule** (shift times) - or auto-generates schedules for everyone.
 3. Each day the employee **clocks in/out** (face at the kiosk).
 4. If they can't come in, they **file a leave request**; HR **approves or rejects** it, and a "leave balance" is updated.
-5. Weekly, the system builds a **timesheet** (hours worked) which the employee can submit; HR can approve.
+5. Weekly, the system builds a **timesheet** (hours worked) which the employee can submit; HR can approve. Employees can also open a live **"This Week"** timesheet and a **history** of past weeks right from the My Timesheet page.
 6. If they work extra hours, they can file an **overtime request**, which HR approves (can be done in bulk).
 
 ## Flow 4 - The "brain": Analytics + AI decision support (HR only)
@@ -131,7 +131,7 @@ Use these as quick talking points. Say each in ONE breath.
 - **Attendance** - "Who was present and when. Clock-in/out records for everyone, with alerts if something's wrong."
 - **Leave** - "Time off requests. Employees file, HR approves/rejects, and balances are updated."
 - **Overtime** - "Extra hours worked. Employees request, HR approves (even in bulk)."
-- **Timesheets** - "A weekly summary of hours. Employees submit, HR approves."
+- **Timesheets** - "A weekly summary of hours with a live 'This Week' popup and a history table. Employees submit, HR approves."
 
 **HR Manager only:**
 - **Employees / Registration** - "The company directory. HR adds, edits, and removes employees, and each one automatically gets a login account."
@@ -202,7 +202,7 @@ These are the exact things the panel may probe. Say them confidently.
 2. Open **Employees** → show the directory, note each employee has a login account.
 3. Open **Analytics** → "this summarizes everything".
 4. Open **AI Decision Support** → "the assistant flags problems in the data; HR can act in one click".
-5. Switch to **Employee** login → show "My Attendance", "My Schedule", "My Leave".
+5. Switch to **Employee** login → show "My Attendance", "My Schedule", "My Leave", and My Timesheet → click **"This Week"** to show the live popup and the history list beneath it.
 6. Optional: open the **Kiosk** screen → walk through face/PIN clock-in.
 
 **Closing line:**
@@ -340,7 +340,7 @@ Use this as a rapid-fire review. One line = one idea. Cover the right column, th
 | **Leave** | Time-off requests | Apply (Pending) → HR Approve/Reject → deducts balance → notify | Balances stay consistent; approved leave stops "Absent" flags |
 | **Overtime** | Extra hours tracking | Same lifecycle as leave, PLUS reconciliation pushes approved OT into attendance + timesheets | Payroll numbers agree across every page |
 | **Shifts/Schedules** | Who works when | Templates + generated/edited assignments in `shift_schedules` | Drives kiosk validation, Late/Present math, coverage analysis |
-| **Timesheets** | Weekly hour summaries | Auto-generated from attendance → employee submits → HR approves → locked | Payroll-friendly, auditable, no manual summing |
+| **Timesheets** | Weekly hour summaries + a live "This Week" popup + full history | Auto-generated from attendance → "This Week" opens a live per-day breakdown; employee submits → HR approves → locked | Payroll-friendly, auditable, no manual summing |
 | **Dashboard** | Today's numbers at a glance | Reads cached aggregates + live counts | Manager sees the company in 5 seconds |
 | **Analytics** | Deep trend charts | `AnalyticsService` pre-computes 6 JSON sections into `analytics` table | Instant chart loads; heavy math runs once |
 | **Reports** | Printable/CSV outputs | Reads live data + formats via `reportHelpers.js` | Proof and paperwork done from one button |
@@ -434,5 +434,7 @@ Use this as a rapid-fire review. One line = one idea. Cover the right column, th
 48. Who are the demo logins? → admin@workforcepro.com/Admin@123 and employee@workforcepro.com/Employee@123.
 49. Team members? → Fercy, Asniyah, John Paul, Florita, Kyle.
 50. The client? → Archon Nell Inc., contact Nardz Olarte (QA/QC supervisor).
+51. What does the timesheet "This Week" popup show? → A live, per-day breakdown of the current week (Date, Day, Status, Clock In, Clock Out, Break, Hours) with this week's totals — even before any timesheet is saved. It's an "Auto" record until the week is submitted.
+52. What is "Timesheet History"? → The list below the My Timesheet summary card: every saved week (range, status, Regular/Overtime/Total hours, submitted date). Clicking a row reopens that week's full popup.
 
 ---
