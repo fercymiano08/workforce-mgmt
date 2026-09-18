@@ -2,6 +2,8 @@
 
 > Workforce Management System — for VS Code terminal
 > Current architecture: **8 independent Laravel microservices** + **1 React frontend**.
+>
+> **Who this is for:** the person who has to turn the whole system on and off (before a demo, at the start of a coding day). No programming needed — it's two copy-paste commands.
 
 ---
 
@@ -38,7 +40,7 @@ This single script:
 
 1. Starts all 8 microservices, each on its own port (`core` 8000, `intelligence` 8001, `attendance` 8003, `scheduling` 8004, `timeoff` 8005, `payroll` 8006, `communications` 8007, `configuration` 8008).
 2. Starts the React frontend (`npm run dev`, Vite — usually `5173`, or `5174` if `5173` is busy).
-3. Waits a few seconds, then hits `/up` on every service and prints `UP`/`DOWN` per port so you know immediately if something didn't boot.
+3. Waits until every service is actually listening on its port, then hits `/up` on each one **with retries** (so a service that's still warming up on its first request is never reported `DOWN`), and prints `UP` / `DOWN` per port so you know immediately if something didn't boot.
 4. If a port is already occupied (e.g. you never stopped a previous run), it skips that service instead of erroring — the health check at the end still tells you the true state.
 
 Logs for each service land in `.\logs\svc-<name>.out.log` / `.err.log`, and the frontend's in `.\logs\frontend.out.log` / `.err.log` — check these first if a service shows `DOWN`.

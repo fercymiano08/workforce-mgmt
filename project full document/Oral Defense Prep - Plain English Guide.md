@@ -15,6 +15,7 @@
 - **Part 1-4** = the CORE story. Master these first. They cover ~80% of any question.
 - **Part 5-6** = one-sentence "cheat sheets" for every module and security topic.
 - **Part 7-8** = analogies + a demo-day script. Great for practicing out loud.
+- **Only have 10 minutes?** Read Part 1 (the 5 sentences) + Part 5 (module cheat sheet) — that's the whole project, compressed.
 
 ---
 

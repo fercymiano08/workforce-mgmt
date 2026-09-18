@@ -7,6 +7,11 @@
 >
 > Pair this with **Database System Tutorial And Guideline.md** (table details) and the two `.drawio` flowchart references (visual diagrams).
 
+> **TL;DR — read this file in 60 seconds:**
+> 1. **The system, in one sentence:** face-verified clock-in/out at the door → attendance records → which feed schedules, leave, overtime, weekly timesheets, analytics, and an AI assistant that helps HR run things.
+> 2. **The one rule that explains every screen:** the frontend never touches the database. It sends an API request straight to whichever of the **8 services** *owns* that data; that service checks *who you are* (via `core`), applies the rules, and reads/writes only its own database.
+> 3. **If you only read two things:** the diagram in §1 and the clock-in journey in **Module 4**. Those two explain ~80% of the whole system.
+
 ---
 
 ## How To Read This Guide
@@ -28,40 +33,11 @@ Every module section follows the same pattern:
 
 ---
 
-# PART 0 — START HERE: THE ABSOLUTE BEGINNER PRIMER
+# PART 0 — READ THIS FIRST (5 minutes)
 
-> If you have never seen code in your life, read this first. It turns the whole project into a story you can tell with your eyes closed. After this part, ANY of the other parts will make sense.
+> The absolute-beginner primer — the restaurant analogy, the 12-word glossary, and monolith-vs-microservices — already lives in **`00 - Start Here - Absolute Beginner Guide.md`**, written once, so it is **not repeated here**. If any word below is new to you, skim that file first (it takes ~15 minutes), then come back for the two tables that matter for running the system.
 
-## 0.1 Imagine the system as a restaurant
-
-| System piece | Restaurant role | Why |
-|--------------|-----------------|-----|
-| **Frontend** (React — `http://localhost:5173`) | The waiters and the menu on the table | Shows you the food, takes your order, makes it look nice. Knows NOTHING about the kitchen's storage room. |
-| **Backend** (Laravel — `http://127.0.0.1:8000`) | The kitchen + the manager | Receives the order, decides if it's allowed, does the real cooking, follows the rules. |
-| **Database** (PostgreSQL) | The storage room / filing cabinet | Holds every ingredient and every record permanently. |
-| **API** (the `/api/...` URLs) | The order ticket & the pass-through window | The only way the waiter can talk to the kitchen. |
-
-**The one sentence that explains everything:**
-> The waiter (frontend) never runs into the storage room. It writes an order ticket (API request) and hands it to the kitchen (backend); the kitchen pulls ingredients from the storage room (database), cooks, and returns the dish (JSON data) to the waiter.
-
-## 0.2 The 12 words you MUST know before tomorrow
-
-1. **Frontend** — everything you SEE (buttons, tables, charts). Built with **React + Vite + Tailwind**.
-2. **Backend** — everything you DON'T see (rules, security, math). Built with **Laravel (PHP)**.
-3. **Database** — where data is SAVED. We use **PostgreSQL**, database name `workforce_mgnt`.
-4. **API** — Application Programming Interface. A set of URLs (`/api/employees`, `/api/attendance`) that the frontend calls to get or send data.
-5. **HTTP Request** — "please give me your employees" — the frontend's message to the backend.
-6. **JSON** — the message's language. Looks like `{"name": "Fercy", "status": "Present"}`. Both sides understand it.
-7. **Token** — a digital ID badge. After login the backend gives the browser a token; the browser shows it on every request so the backend knows who's asking.
-8. **Middleware** — a bouncer. Before a request reaches the code, middleware checks "do you have a valid token? are you allowed here?"
-9. **Controller** — the chef in the kitchen. Receives the request, decides, calls the database, returns JSON.
-10. **Model** — the "shape" of a table in code (e.g., `Attendance` model = `attendance` table). Controllers use models to talk to the database without writing raw SQL everywhere.
-11. **Migration** — a recipe file that creates/edits table structures (`database/migrations/`). Run once, they build tables.
-12. **Seeder** — a script that FILLS tables with data (`database/seeders/DatabaseSeeder.php`). Our demo data came from JSON files in each service's own `database/mock/` folder (e.g. `backend/attendance/database/mock/`) — every service seeds only the tables it owns.
-
-> **Panel killer sentence:** "Migrations build the tables, seeders fill them with demo data, and every module talks to the database through its Model — that's why adding a feature is always consistent."
-
-## 0.3 What actually runs on your laptop
+## 0.1 What actually runs on your laptop
 
 **Nine programs** must be running at the same time — 8 independent Laravel services plus the frontend. One script starts them all (see **activator-deactivator.md**): `.\start-all.ps1` / `.\stop-all.ps1` at the project root.
 
@@ -82,7 +58,7 @@ You open `http://localhost:5173` in the browser. Vite's dev proxy (`frontend/vit
 
 Each service is a full, independent Laravel app living at `backend/<name>/` (e.g. `backend/attendance/`), each with its own `vendor/`, `.env`, and `artisan`.
 
-## 0.4 "What/How/Why" for the three big technologies
+## 0.2 "What/How/Why" for the three big technologies
 
 | Tech | What it is | How we use it | Why we picked it |
 |------|-----------|---------------|------------------|
@@ -438,7 +414,16 @@ Every one of these events surfaces later in the **Security Events** area of AI D
 
 ### Clock-Out Math
 
-When clocking out, the terminal/backend computes and stores on the attendance row: `regular_hours`, `overtime`, `break_hours`, `total_hours` (using the same helper the timesheet generator uses — one source of truth).
+When clocking out, the terminal computes and stores four numbers on the attendance row — **always from the actual punches, never from the schedule** (clock in 10:00 today means the 08:00–10:00 hour is simply not credited):
+
+| Stored value | What it is |
+|--------------|-----------|
+| `total_hours` | (clock-out − clock-in), minus the **1-hour unpaid lunch** — only if the worked time actually overlaps 12:00–13:00 |
+| `overtime`   | time clocked **past 17:00** (the standard day's end) |
+| `regular_hours` | total − overtime |
+| `break_hours` | the deducted lunch, in hours |
+
+The same helper the timesheet generator uses computes these — one source of truth, so attendance history and weekly timesheets always agree.
 
 ### Tech Trail
 
@@ -708,6 +693,8 @@ LOCKED
 | Submitted rows freeze for employees | Status check before allowing changes |
 | Admin can set any status | `admin` middleware group |
 | Generation never duplicates | Idempotent refresh logic |
+
+> **What a timesheet actually contains — hours, not money.** The row stores `regular_hours`, `overtime_hours` (what was *actually clocked*), `approved_ot_hours` (what was *approved via requests* — a reconciliation control, see Module 10), `break_hours`, and `total_hours`. There is **no rate, salary, or amount anywhere** — this system's job is to produce a trustworthy weekly block of *payable time*; multiplying it by a rate is the external payroll management system's step.
 
 ### Tech Trail
 

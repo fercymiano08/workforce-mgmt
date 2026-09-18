@@ -44,10 +44,9 @@ Florita Romulo
 Kyle Matthew Galande
 
 Usertypes:
--Admin (temporarily isn't the focus within our capstone itself, so this can be ignored)
--Workforce Admin
--Employees
--Entrance Clocking In Device (This isn't a regular user type; it's more of a device our employees will use to enter the workplace and clock in, potentially located within the entrance of the workplace)
+-Workforce Admin (role value `Administrator`): the single operator account that runs the whole company side
+-Employees: self-service for their own work life
+-Entrance Clocking-In (kiosk) Device: not a login — a locked-down device at the entrance employees use to clock in/out
 
 Client's Company Information:
 
@@ -56,5 +55,5 @@ Client's Company Information:
 - "NARDZ OLARTE" (Name of our Client)
 - Quality control, Quality assurance supervisor (Position of our client in thier workplace)
 
-PostgreSQL Password;
-Set in each service's `backend/<service>/.env` under `DB_PASSWORD` (never commit the real password).
+PostgreSQL Password:
+Each service reads its own database credentials from `backend/<service>/.env` under `DB_PASSWORD`. The real password is never committed to GitHub — the committed `.env.example` files carry placeholders instead.

@@ -3,6 +3,8 @@
 > Complete guide to the PostgreSQL database(s) powering the Workforce Management System of **Archon Nell Incorporated**.
 >
 > If "primary key", "foreign key", or "JOIN" don't mean anything to you yet, read `00 - Start Here - Absolute Beginner Guide.md` first.
+>
+> **Who this is for:** anyone who needs to understand the data layer or open pgAdmin. **How to skim it:** read §1 Overview → §4 concepts → §5 table names; the connection details (§2), pgAdmin walkthrough (§7), and SQL cheat sheet (§8) are for when you'll actually use the database.
 
 ---
 
