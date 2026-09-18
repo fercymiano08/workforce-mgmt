@@ -636,7 +636,7 @@ export default function AttendanceTerminal() {
     }
   }, [employee, recordedType, clockInOutcome, shiftInfo]);
 
-  // --- Disabled screen: kiosk mode has not been enabled by the HR Manager --
+  // --- Disabled screen: kiosk mode has not been enabled by the Workforce Admin --
   if (!enabled) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-[#0B1F3A] via-[#0E2747] to-[#0B1F3A] flex flex-col">

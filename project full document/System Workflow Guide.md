@@ -150,7 +150,7 @@ There are three roles. Each role logs in through the same login page but lands o
 | Logs in with | Email + password | Email + password |
 | Sees sidebar | Full management menu | Personal menu only |
 
-> Note: the system was designed with an "HR Manager" role in mind, but in the current deployment the Administrator account performs all HR duties. There is currently no separate HR Manager account.
+> Note: the system exposes exactly one operator role - the **Workforce Admin** (role value `Administrator`). All HR duties (employees, schedules, leave, overtime, payroll, kiosk, settings) are performed by that single account.
 
 ### Page Map — Every Screen In The System
 

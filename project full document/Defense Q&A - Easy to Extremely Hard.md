@@ -15,7 +15,7 @@ A web-based workforce management system — handles attendance, schedules, leave
 Frontend (React — what you see), Backend (Laravel — the brain), Database (PostgreSQL — where data is stored).
 
 **Q3. Who are the users?**
-HR Manager/Administrator (full access), Employee (self-service only), and the Kiosk (a device, not a person — no login).
+Workforce Admin/Administrator (full access), Employee (self-service only), and the Kiosk (a device, not a person — no login).
 
 **Q4. How many backend services does the system have now?**
 8: `core`, `intelligence`, `attendance`, `scheduling`, `timeoff`, `payroll`, `communications`, `configuration`.
@@ -39,7 +39,7 @@ A monolith is one app with one database doing everything; microservices are many
 Run `.\start-all.ps1` from the project root — it boots all 8 services and the frontend, and checks that each one answers on `/up`.
 
 **Q11. What's the demo login?**
-`admin@workforcepro.com` / `Admin@123` for HR Manager.
+`admin@workforcepro.com` / `Admin@123` for Workforce Admin.
 
 **Q12. How does facial recognition work, in one line?**
 A face is turned into a 128-number "descriptor." At the kiosk, a new photo's descriptor is compared to the saved one; close enough (below a distance threshold) = match.

@@ -65,7 +65,7 @@ function AppRoutes() {
 
       {/* Entrance clock-in device (KIOSK) - public, no login required */}
       <Route path="/kiosk" element={<AttendanceTerminal />} />
-      {/* HR Manager module for configuring the kiosk (protected by admin guard) */}
+      {/* Workforce Admin module for configuring the kiosk (protected by admin guard) */}
       <Route path="/kiosk-setup" element={<PrivateLayout adminOnly><KioskSetup /></PrivateLayout>} />
 
       <Route path="/" element={<PrivateLayout><HomeRoute /></PrivateLayout>} />

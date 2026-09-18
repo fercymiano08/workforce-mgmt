@@ -1,4 +1,4 @@
-export const ROLES = ['Administrator', 'HR Manager', 'Employee'];
+export const ROLES = ['Workforce Admin', 'Employee'];
 
 export const DEPARTMENTS = ['Engineering', 'Marketing', 'HR', 'Finance', 'Sales', 'Operations', 'IT', 'Legal'];
 

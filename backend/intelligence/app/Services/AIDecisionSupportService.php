@@ -275,7 +275,7 @@ Produce a decision-support briefing. Respond with ONLY a JSON object matching th
       "category": "Attendance | Punctuality | Leave | Overtime | Scheduling | Workforce | Security",
       "title": "string - short headline",
       "message": "string - 1-2 sentences citing the real numbers from the data",
-      "recommendation": "string - one concrete, actionable next step for the HR manager",
+      "recommendation": "string - one concrete, actionable next step for the Workforce Admin",
       "metric": "string | null - the key number behind this insight, e.g. '78%'"
     }
   ]
@@ -287,7 +287,7 @@ Rules:
 - If there is almost no data, say so honestly in the summary, set healthScore around 40-60, and include one info insight about sparse data. Do not fabricate recommendations.
 - If security.unresolved is non-empty, always include at least one Security insight; face mismatches are critical, failed PIN attempts are warnings.
 - healthScore meaning: 90+ healthy, 75-89 solid with minor flags, 50-74 needs attention, below 50 critical.
-- Keep every recommendation concrete and actionable by a busy HR manager.
+- Keep every recommendation concrete and actionable by a busy Workforce Admin.
 PROMPT;
     }
 

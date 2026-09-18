@@ -130,7 +130,7 @@ function MyProfileSection() {
         <CardHeader>
           <div>
             <CardTitle>Employment Information</CardTitle>
-            <CardDescription>Managed by HR - contact HR Manager to change these details</CardDescription>
+            <CardDescription>Managed by HR - contact the Workforce Admin to change these details</CardDescription>
           </div>
         </CardHeader>
 

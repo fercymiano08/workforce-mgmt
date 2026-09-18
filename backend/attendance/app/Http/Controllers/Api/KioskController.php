@@ -22,7 +22,7 @@ use Illuminate\Support\Carbon;
  * Kiosk (entrance clock-in device) configuration and activity.
  *
  * The device itself is not an authenticated user, so it talks to the read and
- * verify endpoints without a token. Only authenticated HR Managers can change
+ * verify endpoints without a token. Only authenticated Workforce Admins can change
  * the configuration or PIN.
  */
 class KioskController extends Controller

@@ -16,7 +16,7 @@ abstract class TestCase extends BaseTestCase
             'name' => 'John Delgado',
             'email' => 'admin@workforcepro.com',
             'role' => 'Administrator',
-            'role_label' => 'HR Manager / Admin',
+            'role_label' => 'Workforce Admin',
             'avatar_seed' => 'John',
         ]);
     }

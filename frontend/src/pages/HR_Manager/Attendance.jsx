@@ -46,7 +46,7 @@ export default function Attendance() {
 
   const [overtimeSearch, setOvertimeSearch] = useState('');
   const [overtimeStatusFilter, setOvertimeStatusFilter] = useState('All');
-  const [overtimePage, setOvertimePage] = useState(1);
+  const [, setOvertimePage] = useState(1);
   const [selectedOvertime, setSelectedOvertime] = useState(null);
   const [approveHours, setApproveHours] = useState('');
   const [approveComment, setApproveComment] = useState('');

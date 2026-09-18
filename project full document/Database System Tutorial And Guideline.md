@@ -110,7 +110,7 @@ Some columns (like `settings.kiosk`) store flexible structured data as JSON inst
 
 | Table | Purpose | Key Columns |
 |-------|---------|-------------|
-| `users` | Login accounts for Admin, HR Manager, AND Employees | `id`, `employee_id`, `email`, `password`, `role`, `role_label` |
+| `users` | Login accounts for the Workforce Admin and Employees | `id`, `employee_id`, `email`, `password`, `role`, `role_label` |
 | `employees` | Full employee profiles including face photo + descriptor for kiosk recognition | `id`, `first_name`, `last_name`, `department`, `position`, `face_descriptor`, `leave_balances` |
 | `departments` | Company departments | `id`, `name`, `head`, `budget`, `employee_count` |
 | `roles` | Job titles per department — powers the Position dropdown | `id`, `department_id` (FK), `name` |

@@ -15,7 +15,7 @@ import useApiData from '../../hooks/useApiData';
 
 // Two clearly separated scopes: everything under COMPANY CONFIGURATION only
 // exists once for the whole organization and is managed exclusively by the
-// HR Manager; MY ACCOUNT holds this user's own password and look-and-feel.
+// Workforce Admin; MY ACCOUNT holds this user's own password and look-and-feel.
 const NAV_GROUPS = [
   {
     label: 'Company Configuration',

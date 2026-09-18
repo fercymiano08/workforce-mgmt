@@ -22,7 +22,7 @@
 
 1. **WorkForce Pro** is a web-based **workforce management system** built for a retail/BPO company called **Archon Nell Incorporated**.
 2. It helps the company handle **attendance, schedules, leave, overtime, and timesheets** for all employees in one place.
-3. There are **three users**: the **HR Manager** (who controls everything), the **Employee** (who checks and manages their own records), and the **Kiosk** (a touchscreen device at the entrance used for clocking in and out).
+3. There are **three users**: the **Workforce Admin** (who controls everything), the **Employee** (who checks and manages their own records), and the **Kiosk** (a touchscreen device at the entrance used for clocking in and out).
 4. The system has a **frontend** (what you see in the browser) and a **backend built as 8 independent microservices**, each owning one domain (auth, attendance, scheduling, leave/overtime, payroll, notifications, settings, and analytics/AI) and its own database.
 5. It also includes **smart features**: facial-recognition attendance, automatic schedule generation, analytics dashboards, and an **AI assistant** that helps HR make decisions.
 
@@ -32,7 +32,7 @@
 
 # PART 2 - Who uses it (memorize these three)
 
-**HR Manager** *(Administrator)*
+**Workforce Admin** *(Administrator)*
 - The boss / HR personnel.
 - Can do **everything**: register employees, manage schedules, approve leave and overtime, see analytics and reports, use the AI assistant.
 - Say it as: *"The person in charge. Full access."*
@@ -85,7 +85,7 @@ Browser (frontend) → sends a request to `/api/...` → the frontend's router (
 - Wrong password → error. After **5 wrong attempts**, a **60-second cool-down** (lockout).
 - Passwords must be **8+ characters with uppercase, lowercase, and a number**.
 - Forgot password → a **6-digit code (OTP)** is emailed; valid **10 minutes**, one-time use.
-- HR Manager (admin) account **cannot** reset via forgot-password (it's the reserved owner account).
+- Workforce Admin (admin) account **cannot** reset via forgot-password (it's the reserved owner account).
 
 ## Flow 2 - Attendance with facial recognition (the kiosk)
 
@@ -133,7 +133,7 @@ Use these as quick talking points. Say each in ONE breath.
 - **Overtime** - "Extra hours worked. Employees request, HR approves (even in bulk)."
 - **Timesheets** - "A weekly summary of hours with a live 'This Week' popup and a history table. Employees submit, HR approves."
 
-**HR Manager only:**
+**Workforce Admin only:**
 - **Employees / Registration** - "The company directory. HR adds, edits, and removes employees, and each one automatically gets a login account."
 - **Face Registration** - "Turns a person's face into a 128-number face print so the kiosk can recognize them."
 - **Departments & Roles** - "The org chart - what departments exist and what job titles belong to them."
@@ -157,7 +157,7 @@ These are the exact things the panel may probe. Say them confidently.
 |-------|-------------------|
 | **Sanctum tokens** | The login "ID badge". Each badge belongs to one user and is revoked on logout. |
 | **Password hashing (bcrypt)** | Passwords are scrambled before storage, so even the database can't reveal the original. |
-| **Role-based access (RBAC)** | Employees and HR Manager see different menus. Admin-only routes are protected server-side. |
+| **Role-based access (RBAC)** | Employees and Workforce Admin see different menus. Admin-only routes are protected server-side. |
 | **OTP reset** | Forgot password sends a 6-digit code that expires in 10 minutes and works only once. |
 | **Login lockout** | 5 wrong attempts = 60-second cool-down (stops guessing/brute-force). |
 | **Password policy** | Min 8 + upper + lower + number (enforced on change, reset, and registration). |
@@ -189,16 +189,16 @@ These are the exact things the panel may probe. Say them confidently.
 # PART 8 - Demo-day script (practice out loud)
 
 **Demo accounts (they exist in your database):**
-- HR Manager: `admin@workforcepro.com` / `Admin@123`
+- Workforce Admin: `admin@workforcepro.com` / `Admin@123`
 - Employee: `employee@workforcepro.com` / `Employee@123`
 - Fercy (Employee): `fercy.miano84@gmail.com`
 - Balderama (Employee): `randycapalar@gmail.com`
 
 **30-second version (opening line):**
-"This is WorkForce Pro, a workforce management system for Archon Nell Inc. It handles HR's daily work - registering employees, attendance by facial recognition, schedules, leave, overtime, and timesheets. There are three types of users: the HR manager, employees, and the kiosk device at the entrance. The system is a React frontend talking to 8 independent Laravel microservices, each with its own PostgreSQL database."
+"This is WorkForce Pro, a workforce management system for Archon Nell Inc. It handles HR's daily work - registering employees, attendance by facial recognition, schedules, leave, overtime, and timesheets. There are three types of users: the Workforce Admin, employees, and the kiosk device at the entrance. The system is a React frontend talking to 8 independent Laravel microservices, each with its own PostgreSQL database."
 
 **2-minute tour (pick the extras that fit your demo):**
-1. Log in as **HR Manager** → show the dashboard.
+1. Log in as **Workforce Admin** → show the dashboard.
 2. Open **Employees** → show the directory, note each employee has a login account.
 3. Open **Analytics** → "this summarizes everything".
 4. Open **AI Decision Support** → "the assistant flags problems in the data; HR can act in one click".
@@ -218,8 +218,8 @@ These are the exact things the panel may probe. Say them confidently.
 
 # PART 9 - Likely trap questions + one-line answers
 
-**Q: What is the difference between an Employee and the HR Manager account?**
-A: The HR Manager has full access and management rights; an Employee only sees and manages their own records. It's enforced on the backend, not just hidden in the menu.
+**Q: What is the difference between an Employee and the Workforce Admin account?**
+A: The Workforce Admin has full access and management rights; an Employee only sees and manages their own records. It's enforced on the backend, not just hidden in the menu.
 
 **Q: How do you know a face matches?**
 A: Each face is saved as a 128-number descriptor. The kiosk compares the new capture to the stored one; a distance below 0.6 means it's the same person.
@@ -372,7 +372,7 @@ Use this as a rapid-fire review. One line = one idea. Cover the right column, th
 ## Big picture (1-5)
 1. What is WorkForce Pro? → A web workforce management system for Archon Nell Inc.
 2. Name the 5 focus modules → Time&Attendance, Shift&Schedule, Leave, Timesheet, Analytics.
-3. Name the three "users" → HR Manager, Employee, Kiosk (device).
+3. Name the three "users" → Workforce Admin, Employee, Kiosk (device).
 4. What are the 3 tech layers? → React frontend, Laravel backend, PostgreSQL database.
 5. What was the client problem? → Paper/Excel HR work: attendance, schedules, leave, timesheets was slow and error-prone.
 

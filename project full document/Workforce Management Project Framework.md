@@ -4,7 +4,7 @@
 > We built **AI-Enhanced Workforce Management** for **Archon Nell Inc.**: a web app with
 > **Facial Recognition clock-in**, **Shift Scheduling**, **Leave Management**, **Weekly Timesheets**,
 > **Workforce Analytics**, and an **AI Decision Support** module. Built with **React + Laravel + PostgreSQL**.
-> Users: HR Manager, Employees, and an entrance Clock-In kiosk device. Team of 5 under client **Nardz Olarte**.
+> Users: Workforce Admin, Employees, and an entrance Clock-In kiosk device. Team of 5 under client **Nardz Olarte**.
 
 ---
 
@@ -45,7 +45,7 @@ Kyle Matthew Galande
 
 Usertypes:
 -Admin (temporarily isn't the focus within our capstone itself, so this can be ignored)
--HR Manager
+-Workforce Admin
 -Employees
 -Entrance Clocking In Device (This isn't a regular user type; it's more of a device our employees will use to enter the workplace and clock in, potentially located within the entrance of the workplace)
 
