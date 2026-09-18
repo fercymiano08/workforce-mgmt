@@ -61,25 +61,51 @@ if (-not $frontBusy) {
   Write-Host "  [skip] frontend - port 5173/5174 is already in use." -ForegroundColor Yellow
 }
 
-Start-Sleep -Seconds 8
+# --- Wait for every service to bind its port ----------------------------
+# A freshly spawned `php artisan serve` needs a few seconds to boot before it
+# can listen (core is the heaviest app of the eight). Poll instead of a fixed
+# sleep, so we never health-check a service before its socket even exists.
+$deadline = (Get-Date).AddSeconds(60)
+$missing = @($services)
+do {
+  Start-Sleep -Seconds 2
+  $missing = @($services | Where-Object {
+    -not (Get-NetTCPConnection -LocalPort $_.port -State Listen -ErrorAction SilentlyContinue)
+  })
+} while ($missing.Count -gt 0 -and (Get-Date) -lt $deadline)
+
+Write-Host ""
+if ($missing.Count -gt 0) {
+  Write-Host "  [!] not listening within 60s: $($missing.name -join ', ')" -ForegroundColor Yellow
+} else {
+  Write-Host "  all service ports are listening." -ForegroundColor Green
+}
 
 Write-Host ""
 Write-Host "Health check (each service must answer /up):" -ForegroundColor Cyan
+# The FIRST /up call after a fresh boot performs Laravel's cold boot plus a
+# database ping - core alone can sit on that request for ~4s. On top of that,
+# `php artisan serve` is single-threaded, so it cannot accept the next
+# request while one is still running. A short timeout would fire right inside
+# that window and report a healthy service as DOWN. Use a generous timeout
+# and several spaced retries so a slow warm-up is never mistaken for a crash.
+$nameByPort = @{}
+foreach ($s in $services) { $nameByPort[$s.port] = $s.name }
 foreach ($port in 8000, 8001, 8003, 8004, 8005, 8006, 8007, 8008) {
   $ok = $false
-  # A fresh php artisan serve can take a few seconds longer than expected the
-  # first time (e.g. right after a big file move/sync) - retry a couple of
-  # times before reporting DOWN, so a slow boot isn't mistaken for a crash.
-  for ($attempt = 1; $attempt -le 3 -and -not $ok; $attempt++) {
+  for ($attempt = 1; $attempt -le 5 -and -not $ok; $attempt++) {
     try {
-      $r = Invoke-WebRequest -Uri "http://127.0.0.1:$port/up" -UseBasicParsing -TimeoutSec 4
+      $r = Invoke-WebRequest -Uri "http://127.0.0.1:$port/up" -UseBasicParsing -TimeoutSec 15
       $ok = ($r.StatusCode -eq 200)
-    } catch { }
-    if (-not $ok -and $attempt -lt 3) { Start-Sleep -Seconds 3 }
+    } catch { Start-Sleep -Milliseconds 500 }
+    if (-not $ok -and $attempt -lt 5) { Start-Sleep -Seconds 3 }
   }
   $mark = if ($ok) { 'UP' } else { 'DOWN' }
   $color = if ($ok) { 'Green' } else { 'Red' }
   Write-Host "  port $port -> $mark" -ForegroundColor $color
+  if (-not $ok) {
+    Write-Host "      (see .\logs\svc-$($nameByPort[$port]).err.log for details)" -ForegroundColor Yellow
+  }
 }
 
 Write-Host ""
