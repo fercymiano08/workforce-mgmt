@@ -15,6 +15,7 @@ import Avatar from '../../components/ui/Avatar';
 import Button from '../../components/ui/Button';
 import KpiCard from '../../components/dashboard/KpiCard';
 import ChartCard from '../../components/dashboard/ChartCard';
+import { SkeletonPage } from '../../components/ui/LoadingSkeleton';
 import useApiData from '../../hooks/useApiData';
 import { attendanceService, leaveService, shiftService, timesheetService } from '../../services/api';
 import { formatDate, formatTime } from '../../utils/helpers';
@@ -65,30 +66,33 @@ export default function EmployeeDashboard() {
   const navigate = useNavigate();
   const employeeId = user?.id || 'EMP001';
 
-  const { data: attendanceRecords } = useApiData(
+  const { data: attendanceRecords, loading: loadingAttendance } = useApiData(
     () => attendanceService.getByEmployeeId(employeeId),
     [employeeId]
   );
-  const { data: leavesRecords } = useApiData(
+  const { data: leavesRecords, loading: loadingLeaves } = useApiData(
     () => leaveService.getByEmployeeId(employeeId),
     [employeeId]
   );
-  const { data: schedules } = useApiData(
+  const { data: schedules, loading: loadingSchedules } = useApiData(
     () => shiftService.getScheduleByEmployeeId(employeeId),
     [employeeId]
   );
-  const { data: shiftDefs } = useApiData(
+  const { data: shiftDefs, loading: loadingShiftDefs } = useApiData(
     () => shiftService.getAllShifts(),
     []
   );
-  const { data: timesheetRecords } = useApiData(
+  const { data: timesheetRecords, loading: loadingTimesheets } = useApiData(
     () => timesheetService.getByEmployeeId(employeeId),
     [employeeId]
   );
-  const { data: leaveBalances } = useApiData(
+  const { data: leaveBalances, loading: loadingBalances } = useApiData(
     () => leaveService.getBalances(employeeId),
     [employeeId]
   );
+
+  const dashboardLoading =
+    loadingAttendance || loadingLeaves || loadingSchedules || loadingShiftDefs || loadingTimesheets || loadingBalances;
 
   const myAttendance = useMemo(
     () => (attendanceRecords || [])
@@ -140,6 +144,10 @@ export default function EmployeeDashboard() {
   const attendanceRate = myAttendance.length
     ? Math.round((myAttendance.filter((a) => a.status === 'Present').length / myAttendance.length) * 100)
     : 0;
+
+  if (dashboardLoading) {
+    return <SkeletonPage kpiCount={4} />;
+  }
 
   return (
     <div className="max-w-7xl mx-auto space-y-7">

@@ -14,6 +14,7 @@ import { employeeService, shiftService } from '../../services/api';
 import { formatDate, formatTime } from '../../utils/helpers';
 import { useToast } from '../../context/ToastContext';
 import useApiData from '../../hooks/useApiData';
+import { SkeletonPage } from '../../components/ui/LoadingSkeleton';
 
 const shiftIcons = { SHIFT004: Zap, SHIFT005: Flame };
 const shiftIconBg = {
@@ -53,8 +54,8 @@ const countWorkdays = (start, end, skipWeekends) => {
 export default function Shifts() {
   const [employees, setEmployees] = useState([]);
   const { toast } = useToast();
-  const { data: shiftDefs } = useApiData(() => shiftService.getAllShifts(), []);
-  const { data: shiftSchedules, refresh: refreshSchedules } = useApiData(() => shiftService.getSchedules(), []);
+  const { data: shiftDefs, loading: loadingShiftDefs } = useApiData(() => shiftService.getAllShifts(), []);
+  const { data: shiftSchedules, refresh: refreshSchedules, loading: loadingShiftSchedules } = useApiData(() => shiftService.getSchedules(), []);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingSchedule, setEditingSchedule] = useState(null);
   const [formData, setFormData] = useState({ employeeId: '', shiftId: '', date: '', notes: '' });
@@ -303,6 +304,12 @@ export default function Shifts() {
   ];
   const colorMap = { blue: 'bg-blue-50 text-blue-600', emerald: 'bg-emerald-50 text-emerald-600', amber: 'bg-amber-50 text-amber-600', purple: 'bg-purple-50 text-purple-600' };
   const barMap = { blue: 'bg-blue-500', emerald: 'bg-emerald-500', amber: 'bg-amber-500', purple: 'bg-purple-500' };
+
+  const shiftsLoading = loadingShiftDefs || loadingShiftSchedules;
+
+  if (shiftsLoading) {
+    return <SkeletonPage kpiCount={4} />;
+  }
 
   return (
     <div className="space-y-6 animate-fadeIn">

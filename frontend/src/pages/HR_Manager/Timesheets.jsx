@@ -8,11 +8,12 @@ import SearchBar from '../../components/ui/SearchBar';
 import { Select } from '../../components/ui/Input';
 import Modal from '../../components/ui/Modal';
 import { Pagination } from '../../components/ui/Table';
-import { useTimesheets, approveTimesheet, rejectTimesheet, submitTimesheet, refreshTimesheets } from '../../hooks/useTimesheets';
+import { useTimesheets, useTimesheetsLoaded, approveTimesheet, rejectTimesheet, submitTimesheet, refreshTimesheets } from '../../hooks/useTimesheets';
 import { formatDate } from '../../utils/helpers';
 import { downloadCSV } from '../../utils/export';
 import { useAuth } from '../../context/AuthContext';
 import { useToast } from '../../context/ToastContext';
+import { SkeletonPage } from '../../components/ui/LoadingSkeleton';
 
 const statusVariant = {
   Draft: 'default',
@@ -38,6 +39,7 @@ function AdminTimesheetsView() {
   const [confirmReject, setConfirmReject] = useState(false);
 
   const data = useTimesheets();
+  const timesheetsLoaded = useTimesheetsLoaded();
 
   const departments = useMemo(() => ['All', ...new Set(data.map(t => t.department))], [data]);
   const statuses = ['All', 'Draft', 'Submitted', 'Approved', 'Rejected'];
@@ -131,20 +133,24 @@ function AdminTimesheetsView() {
     amber: 'bg-amber-50 text-amber-600',
     purple: 'bg-purple-50 text-purple-600',
   };
-  const barMap = {
+const barMap = {
     blue: 'bg-blue-500',
     emerald: 'bg-emerald-500',
     amber: 'bg-amber-500',
     purple: 'bg-purple-500',
   };
 
+  if (!timesheetsLoaded) {
+    return <SkeletonPage kpiCount={4} />;
+  }
+
   return (
     <div className="space-y-6 animate-fadeIn">
-      {/* Header */}
+      {/* Staff Timesheets */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-bold text-gray-900">Timesheet Management</h1>
-          <p className="text-[14px] text-gray-500 mt-1">Track and manage employee timesheets</p>
+          <h1 className="text-2xl font-bold text-gray-900">Timesheets</h1>
+          <p className="text-[14px] text-gray-500 mt-1">Approve, reject, and track employee timesheets</p>
         </div>
         <div className="flex items-center gap-3">
           <Button variant="outline" icon={Download} size="md" onClick={handleExport}>Export</Button>
@@ -434,6 +440,7 @@ function EmployeeTimesheetsView() {
   const [isDetailOpen, setIsDetailOpen] = useState(false);
 
   const data = useTimesheets();
+  const timesheetsLoaded = useTimesheetsLoaded();
 
   const records = useMemo(
     () => data.filter((t) => t.employeeId === employeeId),
@@ -492,6 +499,10 @@ function EmployeeTimesheetsView() {
       toast.error('Error', 'Failed to submit timesheet.');
     }
   };
+
+  if (!timesheetsLoaded) {
+    return <SkeletonPage kpiCount={4} />;
+  }
 
   return (
     <div className="space-y-6 animate-fadeIn">

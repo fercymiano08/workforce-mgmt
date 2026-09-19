@@ -76,25 +76,22 @@ class DatabaseSeeder extends Seeder
 
     private function seedLeaves(): void
     {
-        Leave::query()->delete();
         foreach ($this->shiftedMock('leaves')['leaves'] ?? [] as $row) {
-            Leave::create(Leave::apiFillable($row));
+            Leave::updateOrCreate(['id' => $row['id']], Leave::apiFillable($row));
         }
     }
 
     private function seedOvertime(): void
     {
-        OvertimeRequest::query()->delete();
         foreach ($this->shiftedMock('overtime')['overtime'] ?? [] as $row) {
-            OvertimeRequest::create(OvertimeRequest::apiFillable($row));
+            OvertimeRequest::updateOrCreate(['id' => $row['id']], OvertimeRequest::apiFillable($row));
         }
     }
 
     private function seedNotifications(): void
     {
-        Notification::query()->delete();
         foreach ($this->shiftedMock('notifications')['notifications'] ?? [] as $row) {
-            Notification::create(Notification::apiFillable($row));
+            Notification::updateOrCreate(['id' => $row['id']], Notification::apiFillable($row));
         }
     }
 }

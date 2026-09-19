@@ -33,7 +33,7 @@ class DatabaseSeeder extends Seeder
             } else {
                 $data['timestamp'] = now();
             }
-            Notification::create($data);
+            Notification::updateOrCreate(['id' => $data['id']], $data);
         }
     }
 }

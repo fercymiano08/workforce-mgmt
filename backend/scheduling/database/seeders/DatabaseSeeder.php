@@ -79,31 +79,26 @@ class DatabaseSeeder extends Seeder
 
     private function seedLeaves(): void
     {
-        Leave::query()->delete();
         foreach ($this->shiftedMock('leaves')['leaves'] ?? [] as $row) {
-            Leave::create(Leave::apiFillable($row));
+            Leave::updateOrCreate(['id' => $row['id']], Leave::apiFillable($row));
         }
     }
 
     private function seedShifts(): void
     {
-        ShiftDefinition::query()->delete();
-        ShiftSchedule::query()->delete();
-
         $data = $this->shiftedMock('shifts');
         foreach ($data['shiftDefinitions'] ?? [] as $row) {
-            ShiftDefinition::create(ShiftDefinition::apiFillable($row));
+            ShiftDefinition::updateOrCreate(['id' => $row['id']], ShiftDefinition::apiFillable($row));
         }
         foreach ($data['shiftSchedules'] ?? [] as $row) {
-            ShiftSchedule::create(ShiftSchedule::apiFillable($row));
+            ShiftSchedule::updateOrCreate(['id' => $row['id']], ShiftSchedule::apiFillable($row));
         }
     }
 
     private function seedNotifications(): void
     {
-        Notification::query()->delete();
         foreach ($this->shiftedMock('notifications')['notifications'] ?? [] as $row) {
-            Notification::create(Notification::apiFillable($row));
+            Notification::updateOrCreate(['id' => $row['id']], Notification::apiFillable($row));
         }
     }
 }

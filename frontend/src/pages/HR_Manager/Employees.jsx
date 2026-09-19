@@ -15,6 +15,7 @@ import SearchBar from '../../components/ui/SearchBar';
 import Modal from '../../components/ui/Modal';
 import { Pagination } from '../../components/ui/Table';
 import EmptyState from '../../components/ui/EmptyState';
+import { SkeletonPage } from '../../components/ui/LoadingSkeleton';
 import FaceCaptureModal from '../../components/employees/FaceCaptureModal';
 import { departmentService, employeeService, roleService } from '../../services/api';
 import { formatDate } from '../../utils/helpers';
@@ -359,6 +360,10 @@ export default function Employees() {
     amber: 'bg-amber-500',
     red: 'bg-red-500',
   };
+
+  if (loading) {
+    return <SkeletonPage kpiCount={4} />;
+  }
 
   return (
     <div className="space-y-6 animate-fadeIn">

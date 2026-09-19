@@ -14,6 +14,7 @@ import Badge from '../../components/ui/Badge';
 import Button from '../../components/ui/Button';
 import KpiCard from '../../components/dashboard/KpiCard';
 import ChartCard from '../../components/dashboard/ChartCard';
+import { SkeletonPage } from '../../components/ui/LoadingSkeleton';
 import { useLanguage } from '../../context/LanguageContext';
 import { useAuth } from '../../context/AuthContext';
 import { useToast } from '../../context/ToastContext';
@@ -89,7 +90,7 @@ export default function Dashboard() {
   const { toast } = useToast();
   const { refresh: refreshNotifications } = useNotifications();
 
-  const [, setLoading] = useState(true);
+  const [loading, setLoading] = useState(true);
   const [employees, setEmployees] = useState([]);
   const [attendance, setAttendance] = useState([]);
   const [leaves, setLeaves] = useState([]);
@@ -255,6 +256,10 @@ export default function Dashboard() {
 
   const visibleLeaveRequests = pendingLeaveRequests.slice(0, 5);
   const visibleSchedule = todaySchedule.slice(0, 5);
+
+  if (loading) {
+    return <SkeletonPage kpiCount={kpiCards.length} />;
+  }
 
   return (
     <div className="max-w-7xl mx-auto space-y-7">

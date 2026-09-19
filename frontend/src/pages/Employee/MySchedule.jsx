@@ -4,6 +4,7 @@ import {
   Clock, MapPin, Filter, CalendarOff, CalendarPlus,
 } from 'lucide-react';
 import Badge from '../../components/ui/Badge';
+import { SkeletonPage } from '../../components/ui/LoadingSkeleton';
 import { useAuth } from '../../context/AuthContext';
 import useApiData from '../../hooks/useApiData';
 import { attendanceService, overtimeService, shiftService } from '../../services/api';
@@ -28,22 +29,25 @@ export default function MySchedule() {
   const employeeId = user?.id || 'EMP001';
   const [periodFilter, setPeriodFilter] = useState('This Week');
 
-  const { data: schedules } = useApiData(
+  const { data: schedules, loading: loadingSchedules } = useApiData(
     () => shiftService.getScheduleByEmployeeId(employeeId),
     [employeeId]
   );
-  const { data: definitions } = useApiData(
+  const { data: definitions, loading: loadingDefinitions } = useApiData(
     () => shiftService.getAllShifts(),
     []
   );
-  const { data: attendanceRecords } = useApiData(
+  const { data: attendanceRecords, loading: loadingAttendance } = useApiData(
     () => attendanceService.getByEmployeeId(employeeId),
     [employeeId]
   );
-  const { data: overtimeRequests } = useApiData(
+  const { data: overtimeRequests, loading: loadingOvertime } = useApiData(
     () => overtimeService.getByEmployeeId(employeeId),
     [employeeId]
   );
+
+  const scheduleLoading =
+    loadingSchedules || loadingDefinitions || loadingAttendance || loadingOvertime;
 
   const approvedOtByDate = useMemo(() => {
     const map = {};
@@ -134,6 +138,10 @@ export default function MySchedule() {
     if (referenceDate && schedule.date > referenceDate) return 'Upcoming';
     return schedule.status;
   };
+
+  if (scheduleLoading) {
+    return <SkeletonPage kpiCount={3} />;
+  }
 
   const renderShiftCard = (label, schedule, fallbackIcon, fallbackText) => {
     const def = schedule ? shiftOf(schedule.shiftId) : null;

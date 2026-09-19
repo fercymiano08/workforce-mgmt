@@ -83,47 +83,40 @@ class DatabaseSeeder extends Seeder
 
     private function seedShifts(): void
     {
-        ShiftDefinition::query()->delete();
-        ShiftSchedule::query()->delete();
-
         $data = $this->shiftedMock('shifts');
         foreach ($data['shiftDefinitions'] ?? [] as $row) {
-            ShiftDefinition::create(ShiftDefinition::apiFillable($row));
+            ShiftDefinition::updateOrCreate(['id' => $row['id']], ShiftDefinition::apiFillable($row));
         }
         foreach ($data['shiftSchedules'] ?? [] as $row) {
-            ShiftSchedule::create(ShiftSchedule::apiFillable($row));
+            ShiftSchedule::updateOrCreate(['id' => $row['id']], ShiftSchedule::apiFillable($row));
         }
     }
 
     private function seedLeaves(): void
     {
-        Leave::query()->delete();
         foreach ($this->shiftedMock('leaves')['leaves'] ?? [] as $row) {
-            Leave::create(Leave::apiFillable($row));
+            Leave::updateOrCreate(['id' => $row['id']], Leave::apiFillable($row));
         }
     }
 
     private function seedAttendance(): void
     {
-        Attendance::query()->delete();
         foreach ($this->shiftedMock('attendance')['attendance'] ?? [] as $row) {
-            Attendance::create(Attendance::apiFillable($row));
+            Attendance::updateOrCreate(['id' => $row['id']], Attendance::apiFillable($row));
         }
     }
 
     private function seedTimesheets(): void
     {
-        Timesheet::query()->delete();
         foreach ($this->shiftedMock('timesheets')['timesheets'] ?? [] as $row) {
-            Timesheet::create(Timesheet::apiFillable($row));
+            Timesheet::updateOrCreate(['id' => $row['id']], Timesheet::apiFillable($row));
         }
     }
 
     private function seedNotifications(): void
     {
-        Notification::query()->delete();
         foreach ($this->shiftedMock('notifications')['notifications'] ?? [] as $row) {
-            Notification::create(Notification::apiFillable($row));
+            Notification::updateOrCreate(['id' => $row['id']], Notification::apiFillable($row));
         }
     }
 

@@ -14,11 +14,9 @@ class DatabaseSeeder extends Seeder
 
     private function seedAnalytics(): void
     {
-        Analytics::query()->delete();
-
         $data = $this->mock('analytics');
 
-        Analytics::create([
+        Analytics::updateOrCreate(['id' => 1], [
             'attendance_trend' => $data['attendanceTrend'] ?? [],
             'department_productivity' => $data['departmentProductivity'] ?? [],
             'leave_trend' => $data['leaveTrend'] ?? [],

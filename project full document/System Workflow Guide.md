@@ -188,7 +188,7 @@ These few global rules shape every module. Keep them in mind while reading Part 
 
 ### 4.1 Timezone Rule
 
-All shift times, clock-ins, and clock-outs are **wall-clock times in Asia/Manila (UTC+8)**. The system never converts an employee's clock time to another timezone. Overnight shifts are handled so that hour math always comes out positive.
+All shift times, clock-ins, and clock-outs are **wall-clock times in Asia/Manila (UTC+8)**. The system never converts an employee's clock time to another timezone. Hour math always comes out positive.
 
 ### 4.2 Security Is Checked Twice
 
@@ -532,14 +532,12 @@ An employee with an **Approved leave** covering today is marked on-leave rather 
 
 **Files:** `HR_Manager/Shifts.jsx`, backend `ShiftController.php`
 
-### The Four Shift Templates (`shift_definitions`)
+### The Active Shift Templates (`shift_definitions`)
 
 | Code | Name | Hours |
 |------|------|-------|
-| SHIFT001 | Morning | 06:00 – 14:00 |
-| SHIFT002 | Mid | 10:00 – 18:00 |
-| SHIFT003 | Night | 14:00 – 22:00 |
 | SHIFT004 | Flexible | 08:00 – 17:00 |
+| SHIFT005 | Overtime | 17:00 – 21:00 |
 
 > SHIFT004 *is* the office "8-to-5". Templates are reference data — every employee can read them; only the admin can build assignments.
 

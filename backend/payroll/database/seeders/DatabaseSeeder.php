@@ -80,38 +80,34 @@ class DatabaseSeeder extends Seeder
 
     private function seedAttendance(): void
     {
-        Attendance::query()->delete();
         foreach ($this->shiftedMock('attendance')['attendance'] ?? [] as $row) {
-            Attendance::create(Attendance::apiFillable($row));
+            Attendance::updateOrCreate(['id' => $row['id']], Attendance::apiFillable($row));
         }
     }
 
     private function seedLeaves(): void
     {
-        Leave::query()->delete();
         foreach ($this->shiftedMock('leaves')['leaves'] ?? [] as $row) {
-            Leave::create(Leave::apiFillable($row));
+            Leave::updateOrCreate(['id' => $row['id']], Leave::apiFillable($row));
         }
     }
 
     private function seedOvertime(): void
     {
-        OvertimeRequest::query()->delete();
+        // Overtime requests are user-entered data; seeding must never delete them.
     }
 
     private function seedTimesheets(): void
     {
-        Timesheet::query()->delete();
         foreach ($this->shiftedMock('timesheets')['timesheets'] ?? [] as $row) {
-            Timesheet::create(Timesheet::apiFillable($row));
+            Timesheet::updateOrCreate(['id' => $row['id']], Timesheet::apiFillable($row));
         }
     }
 
     private function seedNotifications(): void
     {
-        Notification::query()->delete();
         foreach ($this->shiftedMock('notifications')['notifications'] ?? [] as $row) {
-            Notification::create(Notification::apiFillable($row));
+            Notification::updateOrCreate(['id' => $row['id']], Notification::apiFillable($row));
         }
     }
 }

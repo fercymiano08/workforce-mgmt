@@ -14,6 +14,7 @@ import { formatCurrency } from '../../utils/helpers';
 import { downloadCSV } from '../../utils/export';
 import useApiData from '../../hooks/useApiData';
 import { useToast } from '../../context/ToastContext';
+import { SkeletonPage } from '../../components/ui/LoadingSkeleton';
 
 const kpiColors = {
   blue: 'bg-blue-50 text-blue-600',
@@ -44,7 +45,7 @@ function ChartEmpty() {
 export default function Analytics() {
   const { toast } = useToast();
   const [range, setRange] = useState('month');
-  const { data: analyticsData } = useApiData(
+  const { data: analyticsData, loading } = useApiData(
     () => analyticsService.getAll(),
     []
   );
@@ -88,6 +89,10 @@ export default function Analytics() {
     downloadCSV('payroll-discrepancies.csv', payrollRows);
     toast.success('Export Complete', `Exported ${payrollRows.length} discrepancy records to CSV.`);
   };
+
+  if (loading) {
+    return <SkeletonPage kpiCount={4} />;
+  }
 
   return (
     <div className="space-y-6 animate-fadeIn">

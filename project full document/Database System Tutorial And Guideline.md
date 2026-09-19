@@ -137,7 +137,7 @@ Some columns (like `settings.kiosk`) store flexible structured data as JSON inst
 
 | Table | Purpose | Key Columns |
 |-------|---------|-------------|
-| `shift_definitions` | Shift templates (Morning 06:00–14:00, Flexible 08:00–17:00, etc.) | `id`, `name`, `start_time`, `end_time` |
+| `shift_definitions` | Shift templates (Flexible 08:00–17:00, Overtime 17:00–21:00) | `id`, `name`, `start_time`, `end_time` |
 | `shift_schedules` | Who works which shift on which date | `id`, `employee_id` (FK), `shift_id` (FK), `date`, `status` |
 
 #### System Support

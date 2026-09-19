@@ -16,6 +16,7 @@ import { formatDate } from '../../utils/helpers';
 import { useToast } from '../../context/ToastContext';
 import { useAuth } from '../../context/AuthContext';
 import useApiData from '../../hooks/useApiData';
+import { SkeletonPage } from '../../components/ui/LoadingSkeleton';
 
 const statusVariant = {
   Pending: 'warning',
@@ -51,7 +52,7 @@ export default function LeaveManagement() {
   const { toast } = useToast();
   const { user } = useAuth();
 
-  const { data: leaves, setData: setLeaves } = useApiData(() => leaveService.getAll(), []);
+  const { data: leaves, setData: setLeaves, loading } = useApiData(() => leaveService.getAll(), []);
 
   const [activeTab, setActiveTab] = useState('All Requests');
   const [search, setSearch] = useState('');
@@ -127,6 +128,10 @@ export default function LeaveManagement() {
     { label: 'Approved', value: summary.approved, icon: ThumbsUp, accent: 'text-emerald-600 bg-emerald-50' },
     { label: 'Rejected', value: summary.rejected, icon: ThumbsDown, accent: 'text-red-600 bg-red-50' },
   ];
+
+  if (loading) {
+    return <SkeletonPage kpiCount={4} />;
+  }
 
   return (
     <div className="space-y-6 animate-fadeIn">

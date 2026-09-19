@@ -5,6 +5,7 @@ import Button from '../../components/ui/Button';
 import Badge from '../../components/ui/Badge';
 import SearchBar from '../../components/ui/SearchBar';
 import EmptyState from '../../components/ui/EmptyState';
+import { SkeletonList } from '../../components/ui/LoadingSkeleton';
 import Input, { Select, Textarea } from '../../components/ui/Input';
 import Modal from '../../components/ui/Modal';
 import { Pagination } from '../../components/ui/Table';
@@ -64,7 +65,7 @@ export default function Leave() {
 
   // Employees may only ever see and work with their own leave requests -
   // the page lives behind an Employee-only route, so it never renders for HR.
-  const { data: leaves, setData: setLeaves } = useApiData(
+  const { data: leaves, setData: setLeaves, loading: leavesLoading } = useApiData(
     () => (currentUser.id ? leaveService.getByEmployeeId(currentUser.id) : Promise.resolve([])),
     [currentUser.id]
   );
@@ -308,7 +309,11 @@ export default function Leave() {
           </Select>
         </div>
 
-        {paginated.length === 0 ? (
+        {leavesLoading ? (
+          <Card className="p-4">
+            <SkeletonList rows={4} />
+          </Card>
+        ) : paginated.length === 0 ? (
           <Card>
             {(leaves || []).length === 0 ? (
               <EmptyState
