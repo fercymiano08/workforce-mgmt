@@ -176,6 +176,14 @@ export const kioskService = {
     return data;
   },
 
+  // Fallback for ID entry when the local directory snapshot hasn't loaded
+  // yet: resolves a single employee by full ID (or bare numeric suffix) and
+  // throws if there is no such employee.
+  async getEmployee(employeeId) {
+    const { data } = await http.get(`/kiosk/employees/${employeeId}`);
+    return data;
+  },
+
   async getAttendanceByEmployee(employeeId) {
     const { data } = await http.get(`/kiosk/attendance/${employeeId}`);
     return data;

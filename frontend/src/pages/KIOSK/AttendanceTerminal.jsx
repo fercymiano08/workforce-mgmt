@@ -30,6 +30,14 @@ const TAP_COUNT = 5;
 const FACE_MAX_STRIKES = 3;
 const FACE_COOLDOWN_MS = 60 * 1000;
 
+const EARLY_OUT_REASONS = [
+  { code: 'SICK', label: 'Feeling Unwell', detail: 'Sick or ill' },
+  { code: 'FAMILY_EMERGENCY', label: 'Family Emergency', detail: 'Urgent family matter' },
+  { code: 'PERSONAL_EMERGENCY', label: 'Personal Emergency', detail: 'Urgent personal matter' },
+  { code: 'APPROVED_LEAVE', label: 'Approved Leave', detail: 'Leave starts early' },
+  { code: 'OTHER', label: 'Other', detail: 'Explain in the note' },
+];
+
 const NOTICE_TONES = {
   danger: { icon: AlertTriangle, iconWrap: 'bg-red-50', iconColor: 'text-red-500', button: 'danger' },
   warning: { icon: AlertTriangle, iconWrap: 'bg-amber-50', iconColor: 'text-amber-500', button: 'primary' },
@@ -83,6 +91,9 @@ export default function AttendanceTerminal() {
   const [notice, setNotice] = useState(null);
   const [faceLockUntil, setFaceLockUntil] = useState(null);
   const [clockInOutcome, setClockInOutcome] = useState(null);
+  const [clockOutOutcome, setClockOutOutcome] = useState(null);
+  const [earlyOutReason, setEarlyOutReason] = useState({ reasonCode: null, reasonNote: '' });
+  const [serverCheckPending, setServerCheckPending] = useState(false);
   const faceStrikes = useRef(0);
 
   const [lockPin, setLockPin] = useState('');
@@ -142,6 +153,9 @@ export default function AttendanceTerminal() {
     setNotice(null);
     setFaceLockUntil(null);
     setClockInOutcome(null);
+    setClockOutOutcome(null);
+    setEarlyOutReason({ reasonCode: null, reasonNote: '' });
+    setServerCheckPending(false);
   };
 
   const resetToMode = () => {
@@ -216,12 +230,17 @@ export default function AttendanceTerminal() {
   }, [enabled, unlocked, lockPin]);
 
   // --- Employee ID entry: exact full-ID match only (no partial search) ----
+  // Local directory first; if it was never loaded (a one-shot fetch that can
+  // fail silently) the server-side fallbacks below keep ID entry working.
 
   const entryInfo = useMemo(() => {
     if (phase !== 'entry') return null;
     const trimmed = query.trim().toLowerCase();
     if (!trimmed) return null;
-    const matches = directory.filter((e) => String(e.id).toLowerCase().startsWith(trimmed));
+    const matches = directory.filter((e) => {
+      const id = String(e.id).toLowerCase();
+      return id.startsWith(trimmed) || (/^\d+$/.test(trimmed) && id.endsWith(trimmed));
+    });
     if (matches.length === 0) {
       return trimmed.length >= 4 ? { type: 'none' } : null;
     }
@@ -237,7 +256,54 @@ export default function AttendanceTerminal() {
     if (phase !== 'entry') return null;
     const trimmed = query.trim().toLowerCase();
     if (!trimmed) return null;
-    return directory.find((e) => String(e.id).toLowerCase() === trimmed) || null;
+    return directory.find((e) => {
+      const id = String(e.id).toLowerCase();
+      return id === trimmed || (/^\d+$/.test(trimmed) && id.endsWith(trimmed));
+    }) || null;
+  }, [query, phase, directory]);
+
+  // Self-heal: if the one-shot directory fetch failed at mount, retry it the
+  // moment an employee starts typing instead of reporting every ID as unknown.
+  useEffect(() => {
+    if (phase === 'entry' && directory.length === 0) {
+      kioskService.getEmployees()
+        .then(setDirectory)
+        .catch(() => {});
+    }
+  }, [phase, directory.length]);
+
+  // Server-side fallback: when the local directory has no match, ask the
+  // backend directly so a valid full ID (or numeric suffix) still resolves.
+  useEffect(() => {
+    const trimmed = query.trim().toLowerCase();
+    if (phase !== 'entry' || trimmed.length < 6) return;
+    const local = directory.find((e) => {
+      const id = String(e.id).toLowerCase();
+      return id === trimmed || (/^\d+$/.test(trimmed) && id.endsWith(trimmed));
+    });
+    if (local) return;
+
+    let cancelled = false;
+    const timer = setTimeout(async () => {
+      setServerCheckPending(true);
+      try {
+        const found = await kioskService.getEmployee(trimmed.toUpperCase());
+        if (!cancelled && found) {
+          setCandidate(found);
+          setPhase('confirm');
+        }
+      } catch {
+        // 404 - leave the "No employee found" message visible
+      } finally {
+        if (!cancelled) setServerCheckPending(false);
+      }
+    }, 400);
+
+    return () => {
+      cancelled = true;
+      clearTimeout(timer);
+      setServerCheckPending(false);
+    };
   }, [query, phase, directory]);
 
   if (exactMatch && !candidate) {
@@ -463,10 +529,11 @@ export default function AttendanceTerminal() {
     recordAttendance();
   };
 
-  // Runs the shift-aware pre-check for a clock-out: employees may not clock
-  // out before their shift - including any approved overtime for the day -
-  // is actually over. Early clock-outs are rejected outright; the terminal
-  // tells them their shift is still ongoing instead of recording.
+  // Runs the shift-aware pre-check for a clock-out. Leaving before the shift
+  // end is ALWAYS allowed - an employee who is sick or has an emergency must
+  // never be trapped at the terminal. Instead of rejecting the exit, the
+  // terminal opens the early clock-out reason picker so HR has the context to
+  // classify the shortfall afterwards.
   const evaluateClockOut = () => {
     if (!employee || !todayRecord) return;
 
@@ -484,17 +551,8 @@ export default function AttendanceTerminal() {
     if (endMin <= startMin) target.setDate(target.getDate() + 1);
 
     if (nowInTimezone(timezone).getTime() < target.getTime()) {
-      const pad = (n) => String(n).padStart(2, '0');
-      const endDisplay = formatTime(`${pad(Math.floor(endMin / 60) % 24)}:${pad(endMin % 60)}`);
-      const otNote = otHours > 0 ? ` (${otHours}h approved overtime)` : '';
-      setNotice({
-        tone: 'warning',
-        title: 'Shift Still Ongoing',
-        message: `${employee.firstName} ${employee.lastName}, your shift is still in progress and ends at ${endDisplay}${otNote}. Clocking out early is not allowed - please return to your post.`,
-        confirmLabel: 'Back to Home',
-        onConfirm: resetToMode,
-      });
-      setPhase('notice');
+      setEarlyOutReason({ reasonCode: null, reasonNote: '' });
+      setPhase('early-reason');
       return;
     }
 
@@ -523,15 +581,21 @@ export default function AttendanceTerminal() {
         setClockInOutcome(outcome);
       } else {
         const fields = calculateTimesheetFields(todayRecord.clockIn, time);
+        const reason = earlyOutReason.reasonCode ? {
+          reasonCode: earlyOutReason.reasonCode,
+          reasonNote: (earlyOutReason.reasonNote || '').trim() || null,
+        } : {};
         await kioskService.clockOut(todayRecord.id, {
           clockOut: time,
           regularHours: fields.regularHours,
           overtime: fields.overtimeHours,
           totalHours: fields.totalHours,
           breakHours: fields.breakHours,
+          ...reason,
         });
         setRecordedHours(fields.totalHours);
         setClockInOutcome(null);
+        setClockOutOutcome(earlyOutReason.reasonCode ? 'early' : null);
       }
 
       kioskService.log(
@@ -600,6 +664,15 @@ export default function AttendanceTerminal() {
   // arrivals carry a matching notice so HR policy is visible on the device.
   const successView = useMemo(() => {
     if (!employee || recordedType !== 'clock-in') {
+      if (clockOutOutcome === 'early') {
+        return {
+          tone: 'amber',
+          title: 'Clocked Out Early',
+          message: `Thank you, ${employee?.firstName}. Your early clock-out has been recorded.`,
+          noteTitle: 'Early Leave Recorded',
+          note: 'Your reason was attached for HR review. You can refine it anytime under My Attendance.',
+        };
+      }
       return {
         tone: 'emerald',
         title: 'Clocked Out',
@@ -634,7 +707,7 @@ export default function AttendanceTerminal() {
           note: 'You clocked in on time, within the 15-minute grace period.',
         };
     }
-  }, [employee, recordedType, clockInOutcome, shiftInfo]);
+  }, [employee, recordedType, clockInOutcome, clockOutOutcome, shiftInfo]);
 
   // --- Disabled screen: kiosk mode has not been enabled by the Workforce Admin --
   if (!enabled) {
@@ -878,9 +951,13 @@ export default function AttendanceTerminal() {
                       <p className="text-sm text-gray-500">Keep typing…</p>
                     )}
                     {entryInfo.type === 'none' && (
-                      <p className="text-sm font-medium text-red-600">
-                        No employee found with this ID. Check the spelling and try again.
-                      </p>
+                      serverCheckPending ? (
+                        <p className="text-sm font-medium text-blue-600">Checking employee records…</p>
+                      ) : (
+                        <p className="text-sm font-medium text-red-600">
+                          No employee found with this ID. Check the spelling and try again.
+                        </p>
+                      )
                     )}
                     {entryInfo.type === 'match' && (
                       <p className="text-sm font-medium text-emerald-600">Employee found — verifying…</p>
@@ -1008,6 +1085,82 @@ export default function AttendanceTerminal() {
                       {notice.cancelLabel}
                     </Button>
                   )}
+                </div>
+              </div>
+            );
+          })()}
+
+          {phase === 'early-reason' && employee && (() => {
+            const pad = (n) => String(n).padStart(2, '0');
+            const otHours = Number(shiftInfo?.approvedOvertimeHours || 0);
+            const endMin = minutesFromTime(shiftInfo?.endTime || ATTENDANCE_CONFIG.endTime) + Math.round(otHours * 60);
+            const earlyMin = Math.max(0, endMin - minutesFromTime(toTimeString(nowInTimezone(timezone))));
+            const hoursEarly = Math.floor(earlyMin / 60);
+            const minsEarly = earlyMin % 60;
+            return (
+              <div className="bg-white rounded-3xl shadow-2xl p-8 sm:p-10 w-full max-w-xl animate-fadeIn">
+                <div className="text-center">
+                  <div className="w-16 h-16 mx-auto rounded-full bg-amber-50 flex items-center justify-center">
+                    <Hand className="w-8 h-8 text-amber-500" />
+                  </div>
+                  <h2 className="text-2xl font-bold text-gray-900 mt-4">Clocking Out Early</h2>
+                  <p className="text-sm text-gray-500 mt-1.5">
+                    {employee.firstName} {employee.lastName}, your shift ends at{' '}
+                    <span className="font-semibold text-gray-900">
+                      {formatTime(`${pad((Math.floor(endMin / 60)) % 24)}:${pad(endMin % 60)}`)}
+                    </span>
+                    {otHours > 0 ? ` (${otHours}h approved overtime)` : ''}.
+                  </p>
+                  <p className="text-xs text-gray-400 mt-1">
+                    Early clock-outs are always allowed. Select the reason so HR can record it correctly.
+                  </p>
+                </div>
+
+                <div className="mt-6 grid grid-cols-2 sm:grid-cols-3 gap-3">
+                  {EARLY_OUT_REASONS.map(({ code, label, detail }) => {
+                    const selected = earlyOutReason.reasonCode === code;
+                    return (
+                      <button
+                        key={code}
+                        type="button"
+                        onClick={() => setEarlyOutReason((prev) => ({ ...prev, reasonCode: code }))}
+                        className={clsx(
+                          'rounded-2xl border-2 p-3 text-center transition-colors',
+                          selected ? 'border-amber-500 bg-amber-50' : 'border-gray-200 hover:border-amber-300'
+                        )}
+                      >
+                        <p className={clsx('text-sm font-semibold', selected ? 'text-amber-700' : 'text-gray-800')}>{label}</p>
+                        <p className="text-[11px] text-gray-400 mt-0.5">{detail}</p>
+                      </button>
+                    );
+                  })}
+                </div>
+
+                <div className="mt-5">
+                  <label className="block text-xs font-semibold uppercase tracking-wider text-gray-400">Note (optional)</label>
+                  <textarea
+                    value={earlyOutReason.reasonNote}
+                    onChange={(e) => setEarlyOutReason((prev) => ({ ...prev, reasonNote: e.target.value }))}
+                    rows={2}
+                    maxLength={1000}
+                    placeholder="Add a short note for HR (e.g. symptoms, what happened)..."
+                    className="mt-2 w-full rounded-2xl border border-gray-200 p-3 text-sm text-gray-900 outline-none focus:border-blue-400 focus:ring-2 focus:ring-blue-100 resize-none"
+                  />
+                  <p className="text-[11px] text-gray-400 mt-1.5">
+                    That leaves about {hoursEarly > 0 ? `${hoursEarly}h ` : ''}{minsEarly}m on your shift.
+                  </p>
+                </div>
+
+                <div className="mt-7 flex gap-3">
+                  <Button variant="secondary" className="flex-1 py-3" onClick={resetToMode}>Cancel</Button>
+                  <Button
+                    variant="primary"
+                    className="flex-1 py-3"
+                    disabled={!earlyOutReason.reasonCode}
+                    onClick={() => recordAttendance()}
+                  >
+                    Clock Out Early
+                  </Button>
                 </div>
               </div>
             );

@@ -82,6 +82,26 @@ export const attendanceService = {
     const { data } = await http.post('/attendance/remind-clock-out');
     return data;
   },
+  getEarlyClockOuts: async () => {
+    const { data } = await http.get('/attendance/early-outs');
+    return data;
+  },
+  getEarlyClockOutsByEmployee: async (employeeId) => {
+    const { data } = await http.get(`/attendance/early-outs/employee/${employeeId}`);
+    return data;
+  },
+  getEarlyClockOutsPending: async () => {
+    const { data } = await http.get('/attendance/early-outs/pending');
+    return data;
+  },
+  updateEarlyClockOutReason: async (id, payload) => {
+    const { data } = await http.put(`/attendance/early-outs/${id}/reason`, payload);
+    return data;
+  },
+  classifyEarlyClockOut: async (id, classification) => {
+    const { data } = await http.post(`/attendance/early-outs/${id}/classify`, { classification });
+    return data;
+  },
 };
 
 export const overtimeService = {

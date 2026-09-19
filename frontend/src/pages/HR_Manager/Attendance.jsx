@@ -1,6 +1,6 @@
 import { useState, useMemo, useEffect } from 'react';
 import { useSearchParams } from 'react-router-dom';
-import { CheckCircle, AlertTriangle, Timer, Download, Coffee, MapPin, Clock, X, Check, CheckCheck, ChevronDown, ChevronRight } from 'lucide-react';
+import { CheckCircle, AlertTriangle, Timer, Download, Coffee, MapPin, Clock, X, Check, CheckCheck, ChevronDown, ChevronRight, Hand, ClipboardCheck } from 'lucide-react';
 import Card from '../../components/ui/Card';
 import Button from '../../components/ui/Button';
 import Badge from '../../components/ui/Badge';
@@ -17,15 +17,28 @@ import { downloadCSV } from '../../utils/export';
 import useApiData from '../../hooks/useApiData';
 import { useToast } from '../../context/ToastContext';
 import { useAuth } from '../../context/AuthContext';
+import {
+  EARLY_CLOCKOUT_REASON_LABELS,
+  EARLY_CLOCKOUT_CLASSIFICATION_META,
+  EARLY_CLOCKOUT_CLASSIFICATION_OPTIONS,
+} from '../../utils/constants';
 
-const statusVariant = { Present: 'success', Late: 'warning', Absent: 'danger', 'Half Day': 'info', 'On Leave': 'default' };
+const statusVariant = { Present: 'success', Late: 'warning', Absent: 'danger', 'Half Day': 'info', 'Early Leave': 'amber', 'On Leave': 'default' };
 const overtimeStatusVariant = { Pending: 'warning', Approved: 'success', Rejected: 'danger', Cancelled: 'default' };
+
+function formatMinutesShort(minutes) {
+  const h = Math.floor((minutes || 0) / 60);
+  const m = (minutes || 0) % 60;
+  if (h > 0 && m > 0) return `${h}h ${m}m`;
+  return h > 0 ? `${h}h` : `${m}m`;
+}
 
 export default function Attendance() {
   const { toast } = useToast();
   const { user } = useAuth();
   const [searchParams] = useSearchParams();
-  const [activeTab, setActiveTab] = useState(searchParams.get('tab') === 'overtime' ? 'overtime' : 'attendance');
+  const initialTab = searchParams.get('view') === 'early' ? 'early' : searchParams.get('tab') === 'overtime' ? 'overtime' : 'attendance';
+  const [activeTab, setActiveTab] = useState(initialTab);
   const [employees, setEmployees] = useState([]);
   const [search, setSearch] = useState('');
   const [statusFilter, setStatusFilter] = useState('All');
@@ -53,6 +66,18 @@ export default function Attendance() {
   const [selectedOtIds, setSelectedOtIds] = useState(new Set());
   const [bulkLoading, setBulkLoading] = useState(false);
   const [collapsedDepts, setCollapsedDepts] = useState(new Set());
+
+  const {
+    data: earlyRecords,
+    loading: loadingEarly,
+    refresh: refreshEarly,
+  } = useApiData(() => attendanceService.getEarlyClockOuts(), []);
+
+  const [earlySearch, setEarlySearch] = useState('');
+  const [earlyFilter, setEarlyFilter] = useState('All');
+  const [selectedEarly, setSelectedEarly] = useState(null);
+  const [earlyClassify, setEarlyClassify] = useState('');
+  const [classifying, setClassifying] = useState(false);
 
   useEffect(() => {
     employeeService.getAll()
@@ -129,6 +154,50 @@ export default function Attendance() {
       next.has(dept) ? next.delete(dept) : next.add(dept);
       return next;
     });
+  };
+
+  const enrichedEarly = useMemo(() => {
+    return (earlyRecords || []).map(rec => {
+      const emp = employees.find(e => e.id === rec.employeeId);
+      return { ...rec, firstName: emp?.firstName || '', lastName: emp?.lastName || '', avatar: emp?.avatar, department: emp?.department || '' };
+    });
+  }, [earlyRecords, employees]);
+
+  const earlyStats = useMemo(() => ({
+    pending: (earlyRecords || []).filter(r => r.classification === 'PENDING_REVIEW').length,
+    excused: (earlyRecords || []).filter(r => (r.classification || '').startsWith('EXCUSED_')).length,
+    unpaid: (earlyRecords || []).filter(r => r.classification === 'UNPAID').length,
+  }), [earlyRecords]);
+
+  const filteredEarly = useMemo(() => {
+    return enrichedEarly
+      .filter(r => {
+        const name = `${r.firstName} ${r.lastName}`.toLowerCase();
+        const matchSearch = !earlySearch || name.includes(earlySearch.toLowerCase());
+        const matchFilter = earlyFilter === 'All' || r.classification === earlyFilter;
+        return matchSearch && matchFilter;
+      })
+      .sort((a, b) => `${b.date}`.localeCompare(`${a.date}`));
+  }, [enrichedEarly, earlySearch, earlyFilter]);
+
+  const openEarly = (rec) => {
+    setEarlyClassify(rec.classification === 'PENDING_REVIEW' ? '' : rec.classification);
+    setSelectedEarly(rec);
+  };
+
+  const handleEarlyClassify = async () => {
+    if (!selectedEarly || !earlyClassify) return;
+    setClassifying(true);
+    try {
+      await attendanceService.classifyEarlyClockOut(selectedEarly.id, earlyClassify);
+      await refreshEarly();
+      setSelectedEarly(null);
+      toast.success('Classification Saved', 'The early clock-out has been classified.');
+    } catch {
+      toast.error('Error', 'Failed to save the classification.');
+    } finally {
+      setClassifying(false);
+    }
   };
 
   const handleBulkDecision = async (status) => {
@@ -244,6 +313,7 @@ export default function Attendance() {
         {[
           { key: 'attendance', label: 'Attendance Records' },
           { key: 'overtime', label: 'Overtime Requests' },
+          { key: 'early', label: 'Early Clock Outs' },
         ].map(tab => (
           <button
             key={tab.key}
@@ -256,6 +326,11 @@ export default function Attendance() {
             {tab.key === 'overtime' && overtimeStats.pending > 0 && (
               <span className="ml-1.5 inline-flex items-center justify-center min-w-[18px] h-[18px] px-1 text-[10px] font-semibold rounded-full bg-amber-100 text-amber-700">
                 {overtimeStats.pending}
+              </span>
+            )}
+            {tab.key === 'early' && earlyStats.pending > 0 && (
+              <span className="ml-1.5 inline-flex items-center justify-center min-w-[18px] h-[18px] px-1 text-[10px] font-semibold rounded-full bg-amber-100 text-amber-700">
+                {earlyStats.pending}
               </span>
             )}
           </button>
@@ -309,6 +384,7 @@ export default function Attendance() {
                 <option value="Late">Late</option>
                 <option value="Absent">Absent</option>
                 <option value="Half Day">Half Day</option>
+                <option value="Early Leave">Early Leave</option>
                 <option value="On Leave">On Leave</option>
               </Select>
             </div>
@@ -380,7 +456,7 @@ export default function Attendance() {
         )}
       </Card>
       </>
-      ) : (
+      ) : activeTab === 'overtime' ? (
       <>
       {/* Overtime Stats */}
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
@@ -532,6 +608,115 @@ export default function Attendance() {
         </div>
       )}
       </>
+      ) : (
+      <>
+      {/* Early Clock Outs Stats */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+        {[
+          { label: 'Pending Review', value: earlyStats.pending, icon: Hand, color: 'amber' },
+          { label: 'Excused', value: earlyStats.excused, icon: CheckCircle, color: 'emerald' },
+          { label: 'Unpaid', value: earlyStats.unpaid, icon: AlertTriangle, color: 'red' },
+        ].map(s => {
+          const colorMap = { emerald: 'bg-emerald-50 text-emerald-600', red: 'bg-red-50 text-red-600', amber: 'bg-amber-50 text-amber-600' };
+          const barMap = { emerald: 'bg-emerald-500', red: 'bg-red-500', amber: 'bg-amber-500' };
+          return (
+            <Card key={s.label} className="overflow-hidden" hover>
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-sm text-gray-500">{s.label}</p>
+                  <p className="text-2xl font-bold text-gray-900 mt-1">{s.value}</p>
+                </div>
+                <div className={`w-12 h-12 rounded-xl flex items-center justify-center ${colorMap[s.color]}`}>
+                  <s.icon className="w-6 h-6" />
+                </div>
+              </div>
+              <div className={`h-1 rounded-full mt-4 ${barMap[s.color]}`} />
+            </Card>
+          );
+        })}
+      </div>
+
+      {/* Early Clock-Out Review Queue */}
+      <Card padding={false}>
+        <div className="p-4 border-b border-gray-100">
+          <div className="flex items-center justify-between flex-wrap gap-3">
+            <div>
+              <h3 className="font-semibold text-gray-900">Early Clock-Out Review</h3>
+              <p className="text-xs text-gray-500 mt-0.5">
+                Punches are never vetoed - the employee already left. Classify the shortfall in payroll terms here.
+              </p>
+            </div>
+            <div className="flex flex-wrap items-center gap-3">
+              <SearchBar value={earlySearch} onChange={setEarlySearch} placeholder="Search employee..." className="w-full sm:w-64" />
+              <Select value={earlyFilter} onChange={(e) => setEarlyFilter(e.target.value)} containerClass="w-full sm:w-44">
+                <option value="All">All Classifications</option>
+                <option value="PENDING_REVIEW">Pending Review</option>
+                <option value="EXCUSED_SICK">Excused (Sick)</option>
+                <option value="EXCUSED_EMERGENCY">Excused (Emergency)</option>
+                <option value="EXCUSED_EARLY_LEAVE">Excused (Early Leave)</option>
+                <option value="UNPAID">Unpaid</option>
+              </Select>
+            </div>
+          </div>
+        </div>
+
+        {loadingEarly ? (
+          <div className="p-4"><SkeletonTable rows={6} cols={6} /></div>
+        ) : filteredEarly.length === 0 ? (
+          <div className="px-4 py-12 text-center text-gray-400 text-sm">No early clock-outs to review</div>
+        ) : (
+          <div className="overflow-x-auto">
+            <table className="w-full">
+              <thead>
+                <tr className="border-b border-gray-100 bg-gray-50/30">
+                  {['Employee', 'Date', 'Clocked Out', 'Scheduled End', 'Time Lost', 'Reason', 'Classification', ''].map(h => (
+                    <th key={h} className="px-4 py-2.5 text-left text-[10px] font-semibold text-gray-400 uppercase tracking-wider">{h}</th>
+                  ))}
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-gray-50">
+                {filteredEarly.map((rec) => {
+                  const meta = EARLY_CLOCKOUT_CLASSIFICATION_META[rec.classification] || EARLY_CLOCKOUT_CLASSIFICATION_META.PENDING_REVIEW;
+                  return (
+                    <tr key={rec.id} className="hover:bg-gray-50/50 transition-colors">
+                      <td className="px-4 py-3.5">
+                        <div className="flex items-center gap-3">
+                          <Avatar firstName={rec.firstName} lastName={rec.lastName} size="sm" src={rec.avatar} />
+                          <div>
+                            <p className="font-medium text-sm text-gray-900">{rec.firstName} {rec.lastName}</p>
+                            <p className="text-xs text-gray-500">{rec.department}</p>
+                          </div>
+                        </div>
+                      </td>
+                      <td className="px-4 py-3.5 text-sm text-gray-700 whitespace-nowrap">{formatDate(rec.date)}</td>
+                      <td className="px-4 py-3.5 text-sm text-gray-700 tabular-nums">{formatTime(rec.actualClockOutTime)}</td>
+                      <td className="px-4 py-3.5 text-sm text-gray-500 tabular-nums">{formatTime(rec.scheduledEndTime)}</td>
+                      <td className="px-4 py-3.5 text-sm text-amber-600 font-medium">{formatMinutesShort(rec.minutesEarly)}</td>
+                      <td className="px-4 py-3.5 text-sm text-gray-600 max-w-[220px]">
+                        {rec.reasonCode ? (
+                          <span className="font-medium text-gray-900">{EARLY_CLOCKOUT_REASON_LABELS[rec.reasonCode] || rec.reasonCode}</span>
+                        ) : (
+                          <span className="text-gray-400 italic">No reason</span>
+                        )}
+                        {rec.reasonNote && (
+                          <p className="text-xs text-gray-400 mt-0.5 truncate" title={rec.reasonNote}>{rec.reasonNote}</p>
+                        )}
+                      </td>
+                      <td className="px-4 py-3.5"><Badge variant={meta.variant} dot size="xs">{meta.label}</Badge></td>
+                      <td className="px-4 py-3.5 text-right">
+                        <button onClick={() => openEarly(rec)} className="text-xs font-semibold text-blue-600 hover:text-blue-700 transition-colors">
+                          {rec.classification === 'PENDING_REVIEW' ? 'Classify' : 'Review'}
+                        </button>
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
+        )}
+      </Card>
+      </>
       )}
 
       <Modal isOpen={!!selectedOvertime} onClose={() => setSelectedOvertime(null)} title="Overtime Request" size="md">
@@ -644,6 +829,84 @@ export default function Attendance() {
                 </div>
               </>
             )}
+          </div>
+        )}
+      </Modal>
+
+      <Modal isOpen={!!selectedEarly} onClose={() => setSelectedEarly(null)} title="Classify Early Clock Out" size="md">
+        {selectedEarly && (
+          <div className="space-y-4">
+            <div className="flex items-center gap-3">
+              <Avatar firstName={selectedEarly.firstName} lastName={selectedEarly.lastName} size="md" src={selectedEarly.avatar} />
+              <div>
+                <p className="font-semibold text-gray-900">{selectedEarly.firstName} {selectedEarly.lastName}</p>
+                <p className="text-xs text-gray-500">{selectedEarly.department}</p>
+              </div>
+            </div>
+            <div className="grid grid-cols-2 gap-4 text-sm">
+              <div>
+                <p className="text-xs text-gray-400">Date</p>
+                <p className="font-medium text-gray-900 mt-0.5">{formatDate(selectedEarly.date)}</p>
+              </div>
+              <div>
+                <p className="text-xs text-gray-400">Time Lost</p>
+                <p className="font-medium text-amber-600 mt-0.5">{formatMinutesShort(selectedEarly.minutesEarly)}</p>
+              </div>
+              <div>
+                <p className="text-xs text-gray-400">Clocked Out At</p>
+                <p className="font-medium text-gray-900 mt-0.5 tabular-nums">{formatTime(selectedEarly.actualClockOutTime)}</p>
+              </div>
+              <div>
+                <p className="text-xs text-gray-400">Scheduled End</p>
+                <p className="font-medium text-gray-900 mt-0.5 tabular-nums">{formatTime(selectedEarly.scheduledEndTime)}</p>
+              </div>
+            </div>
+            <div className="rounded-xl border border-gray-100 bg-gray-50/60 p-4">
+              <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide">Employee Reason</p>
+              {selectedEarly.reasonCode ? (
+                <>
+                  <p className="text-sm font-medium text-gray-900 mt-1.5">
+                    {EARLY_CLOCKOUT_REASON_LABELS[selectedEarly.reasonCode] || selectedEarly.reasonCode}
+                  </p>
+                  {selectedEarly.reasonNote && (
+                    <p className="text-sm text-gray-600 mt-1">{selectedEarly.reasonNote}</p>
+                  )}
+                </>
+              ) : (
+                <p className="text-sm text-gray-500 italic mt-1.5">No reason provided yet - the employee can add one under My Attendance.</p>
+              )}
+            </div>
+            <div className="grid grid-cols-2 gap-4 text-sm">
+              <div>
+                <p className="text-xs text-gray-400">Current Status</p>
+                <Badge variant={(EARLY_CLOCKOUT_CLASSIFICATION_META[selectedEarly.classification] || EARLY_CLOCKOUT_CLASSIFICATION_META.PENDING_REVIEW).variant} dot size="xs" className="mt-1">
+                  {EARLY_CLOCKOUT_CLASSIFICATION_META[selectedEarly.classification]?.label || 'Pending Review'}
+                </Badge>
+              </div>
+              {selectedEarly.classifiedBy && (
+                <div>
+                  <p className="text-xs text-gray-400">Classified By</p>
+                  <p className="font-medium text-gray-900 mt-1">{selectedEarly.classifiedBy}</p>
+                </div>
+              )}
+            </div>
+            <Select
+              label="Classification"
+              value={earlyClassify}
+              onChange={(e) => setEarlyClassify(e.target.value)}
+            >
+              <option value="">Select a classification...</option>
+              {EARLY_CLOCKOUT_CLASSIFICATION_OPTIONS.map(({ value, label }) => (
+                <option key={value} value={value}>{label}</option>
+              ))}
+            </Select>
+            <p className="text-xs text-gray-400">
+              Classifying only adjusts the payroll consequence of the shortfall. The punch remains valid regardless.
+            </p>
+            <div className="flex justify-end gap-3 pt-4 border-t border-gray-100">
+              <Button variant="outline" onClick={() => setSelectedEarly(null)} disabled={classifying}>Cancel</Button>
+              <Button icon={ClipboardCheck} loading={classifying} disabled={!earlyClassify} onClick={handleEarlyClassify}>Save Classification</Button>
+            </div>
           </div>
         )}
       </Modal>

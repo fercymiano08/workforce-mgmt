@@ -12,6 +12,7 @@
 */
 
 use App\Http\Controllers\Api\AttendanceController;
+use App\Http\Controllers\Api\EarlyClockOutController;
 use App\Http\Controllers\Api\KioskController;
 use Illuminate\Support\Facades\Route;
 
@@ -22,12 +23,22 @@ Route::middleware('svc.auth')->group(function () {
             Route::post('/', [AttendanceController::class, 'store']);
             Route::get('/alerts/check', [AttendanceController::class, 'checkAlerts']);
             Route::get('/date/{date}', [AttendanceController::class, 'byDate']);
+            // Early clock-out review (admin): declared before /{id} so the
+            // literal segments never collide with an attendance id lookup.
+            Route::get('/early-outs', [EarlyClockOutController::class, 'index']);
+            Route::get('/early-outs/pending', [EarlyClockOutController::class, 'pending']);
+            Route::get('/early-outs/{id}', [EarlyClockOutController::class, 'show']);
+            Route::post('/early-outs/{id}/classify', [EarlyClockOutController::class, 'classify']);
             Route::get('/{id}', [AttendanceController::class, 'show']);
             Route::put('/{id}', [AttendanceController::class, 'update']);
             Route::delete('/{id}', [AttendanceController::class, 'destroy']);
         });
         // Self-or-admin: an employee may always read their own attendance history.
         Route::get('/employee/{employeeId}', [AttendanceController::class, 'byEmployee']);
+        // An employee may read their own early clock-outs and set/update the
+        // reason + proof later (the punch never waits on a reason).
+        Route::get('/early-outs/employee/{employeeId}', [EarlyClockOutController::class, 'byEmployee']);
+        Route::put('/early-outs/{id}/reason', [EarlyClockOutController::class, 'updateReason']);
         // Any authenticated employee can nudge themselves to clock out once a day.
         Route::post('/remind-clock-out', [AttendanceController::class, 'remindClockOut']);
     });
@@ -51,6 +62,7 @@ Route::prefix('kiosk')->group(function () {
     Route::post('/log', [KioskController::class, 'log']);
 
     Route::get('/employees', [KioskController::class, 'employeeDirectory']);
+    Route::get('/employees/{employeeId}', [KioskController::class, 'employeeShow']);
     Route::get('/schedule/{employeeId}', [KioskController::class, 'todaySchedule']);
     Route::get('/attendance/{employeeId}', [KioskController::class, 'attendanceByEmployee']);
     Route::post('/attendance', [KioskController::class, 'clockIn']);

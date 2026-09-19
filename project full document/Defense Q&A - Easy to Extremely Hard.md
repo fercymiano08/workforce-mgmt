@@ -169,6 +169,12 @@ It's a live, un-submitted view of the current work week: a KPI row (Regular, Ove
 **Q47. What is "Timesheet History", and who can use it?**
 It's the list under the My Timesheet summary card — every saved week with its date range, status badge, Regular/Overtime/Total hours, and submitted date. An employee clicks any row to reopen that week's full per-day breakdown, so past weeks are never lost or hidden after submission.
 
+**Q48. You used to reject early clock-outs. What changed?**
+The kiosk used to block any clock-out before the shift end ("please return to your post"). The rule now is: **no leaving without an explanation**, not **no leaving**. The terminal detects the early punch and requires a reason tap (Feeling Unwell, Family Emergency, Personal Emergency, Approved Leave, or Other). It records the punch normally, stamps the attendance row `Early Leave`, and writes an immutable `early_clock_outs` snapshot with the reason, note, and `minutes_early`. Health/emergency reasons notify all admins immediately; approved-leave/other are silent. HR later classifies each one as Excused (Sick/Emergency/Early Leave) or **Unpaid** — unpaid early minutes are deducted from pay, excused are not. The employee can still edit their reason afterwards, but the punch HR judged never changes.
+
+**Q49. Why not just let HR edit the punch instead?**
+Because punches are the audit foundation of everything downstream — hours, overtime, timesheets, payroll. Rewriting the punch to "look normal" would silently falsify attendance history. An Early Leave record preserves the true punch *and* attaches an explanation. Classification (Excused/Unpaid) is a separate, reversible judgment, so pay decisions never require touching the punch itself.
+
 ---
 
 ## How to use this the night before

@@ -400,7 +400,8 @@ Use this as a rapid-fire review. One line = one idea. Cover the right column, th
 21. When is someone Present? → Clock-in within the 15-min grace.
 22. When is someone Absent? → No clock-in + no approved leave + past 60-min grace.
 23. What protects an on-leave employee from Absent? → Approved leave covering that date.
-24. What does the kiosk refuse? → No schedule, shift ended, early clock-out, already clocked in.
+24. What does the kiosk refuse? → No schedule, shift already ended, already clocked in.
+24b. What happens on an early clock-out? → Not refused anymore — it opens a reason picker (Feeling Unwell / Family Emergency / Personal Emergency / Approved Leave / Other), records an `Early Leave` with `minutes_early`, and HR classifies it later (Excused vs Unpaid). Health/emergency reasons also notify admins.
 25. What happens on face mismatch? → Blocked + `face_mismatch` security event + strikes → 60s lockout.
 26. How does the face match work? → 128-number descriptor compared; distance < 0.6 = match; runs in-browser (offline).
 

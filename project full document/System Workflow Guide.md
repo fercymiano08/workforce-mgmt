@@ -390,7 +390,7 @@ The terminal refuses or warns in several situations — this is what makes the k
 | Shift already ended | Clock-in refused — "contact HR" |
 | More than **15 minutes late** | Warning shown: "this will be recorded as **Late**" → employee must acknowledge with "Clock In Anyway" |
 | Clocking in more than **60 minutes early** | Gentle warning ("Very Early") → acknowledge to continue |
-| **Clocking out before the shift ends** | Rejected outright — "please return to your post" (unless approved overtime extends the shift end — the terminal knows and allows it) |
+| **Clocking out before the shift ends** | Not rejected — the terminal opens the **Early Clock Out** reason picker and records an `Early Leave` (Module 4a). Approved overtime extends the shift end, so clocking out at the adjusted end is a normal clock-out, not early |
 
 ### Face Mismatch → Strikes → Lockout
 
@@ -425,10 +425,30 @@ When clocking out, the terminal computes and stores four numbers on the attendan
 
 The same helper the timesheet generator uses computes these — one source of truth, so attendance history and weekly timesheets always agree.
 
+### Module 4a — Clocking Out Early (Early Leave)
+
+Clocking out before the scheduled shift end is **allowed** — it just has to be explained. The clock-out no longer gets rejected; the terminal turns it into a reviewable record instead.
+
+| Step | Actor | What happens |
+|------|-------|--------------|
+| 1 | Terminal | Detects clock-out time < scheduled end (shift end + approved overtime) |
+| 2 | Terminal | Shows the reason picker — one tap required: **Feeling Unwell / Family Emergency / Personal Emergency / Approved Leave / Other**; a short note is optional |
+| 3 | Employee | Taps **Clock Out Early** |
+| 4 | Backend | Records the punch normally, then stores an early-out snapshot: `ECO-…` row with `reason_code`, `note`, **`minutes_early`** (absolute minutes before shift end), `reason_status` = `provided` |
+| 5 | Backend | Attendance row status → **`Early Leave`** |
+| 6 | Backend | **Notification rule:** reasons `SICK`, `FAMILY_EMERGENCY`, `PERSONAL_EMERGENCY` → all Workforce Admins get a notification immediately (health/emergency deserves a human eye). `APPROVED_LEAVE` and `OTHER` are silent — it was already arranged |
+| 7 | Database | The punch snapshot in `early_clock_outs` is immutable — like every punch, it cannot be silently edited away |
+
+Follow-up, two sides:
+
+- **Employee** — My Attendance has an **Early Clock Outs** tab: date, clocked-out time, scheduled end, time lost, reason, classification. The employee can **edit the reason/note** on their own record (`PUT /api/attendance/early-outs/{id}/reason`) even after HR has acted.
+- **HR** — the Attendance page has an **Early Clock Outs** tab with a pending-count badge. HR reviews each one and **classifies** it: `Excused (Sick)` / `Excused (Emergency)` / `Excused (Early Leave)` / `Unpaid`. **Unpaid** early minutes are deducted from pay; excused ones are not.
+
 ### Tech Trail
 
-- Endpoints: `GET /api/kiosk/employees` (directory of minimal fields), `GET /api/kiosk/schedule/{employeeId}` (today's shift), `GET /api/kiosk/attendance/{employeeId}` (today's record), `POST /api/kiosk/attendance`, `PUT /api/kiosk/attendance/{id}`, `POST /api/kiosk/log`
-- Tables: `employees` (read minimal), `shift_schedules` (read today), `attendance` (write), `security_events` (write)
+- Endpoints: `GET /api/kiosk/employees` (directory of minimal fields), `GET /api/kiosk/employees/{employeeId}` (single-employee fallback lookup, also resolves a bare numeric suffix), `GET /api/kiosk/schedule/{employeeId}` (today's shift), `GET /api/kiosk/attendance/{employeeId}` (today's record), `POST /api/kiosk/attendance`, `PUT /api/kiosk/attendance/{id}`, `POST /api/kiosk/log`
+- Early leaves: `GET /api/attendance/early-outs`, `GET /api/attendance/early-outs/employee/{employeeId}`, `GET /api/attendance/early-outs/pending`, `PUT /api/attendance/early-outs/{id}/reason`, `POST /api/attendance/early-outs/{id}/classify`
+- Tables: `employees` (read minimal), `shift_schedules` (read today), `attendance` (write), `early_clock_outs` (write), `security_events` (write)
 
 ---
 
@@ -463,9 +483,10 @@ Opens → fires several parallel GET requests (own attendance history via `/api/
 
 ### What You Can Do
 
-- See every past day: date, clock-in, clock-out, status (**Present / Late / Absent**), regular/OT/break/total hours
+- See every past day: date, clock-in, clock-out, status (**Present / Late / Absent / Early Leave**), regular/OT/break/total hours
 - Filter by period; spot patterns in your own punctuality
 - Nudge yourself: a daily self-reminder if you forgot to clock out
+- **Early Clock Outs tab:** every early-out with its date, clocked-out time, scheduled end, time lost, reason and classification — and the ability to **edit the reason/note** you gave at the kiosk (`PUT /api/attendance/early-outs/{id}/reason`)
 
 ### The "Remind Me To Clock Out" Flow
 
@@ -486,8 +507,8 @@ Creates a notification reminding the employee
 
 ### Tech Trail
 
-- Endpoints: `GET /api/attendance/employee/{employeeId}`, `POST /api/attendance/remind-clock-out`
-- Tables: `attendance` (read), `notifications` (write)
+- Endpoints: `GET /api/attendance/employee/{employeeId}`, `POST /api/attendance/remind-clock-out`, `GET /api/attendance/early-outs/employee/{employeeId}`, `PUT /api/attendance/early-outs/{id}/reason`
+- Tables: `attendance` (read), `early_clock_outs` (read/write), `notifications` (write)
 
 ---
 
@@ -506,6 +527,9 @@ Creates a notification reminding the employee
 | Correct a record | `PUT /api/attendance/{id}` | Fix times/hours; audit-friendly |
 | Remove a bad record | `DELETE /api/attendance/{id}` | |
 | Run alert checks | `GET /api/attendance/alerts/check` | Flags anomalies like missed clock-outs |
+| **Review & classify early clock-outs** | `GET /api/attendance/early-outs`, `POST /api/attendance/early-outs/{id}/classify` | One tab; pending badge shows health/emergency cases waiting |
+
+The **Early Clock Outs tab** (badge = count of `Pending Review`) lists every early-out with employee, date, time lost, the reason the employee gave at the kiosk, and current classification. HR opens one and picks `Excused (Sick)` / `Excused (Emergency)` / `Excused (Early Leave)` / `Unpaid` — unpaid early time is deducted from pay, excused is not. The employee can still edit their reason afterwards, but the punch snapshot that HR judged never changes.
 
 ### Late/Absent Logic (How Statuses Are Born)
 
@@ -882,6 +906,7 @@ Open events raise the system's concern level; resolving them restores the score.
 | Clock-out reminder requested | Employee |
 | Schedule published/changed | Affected employees (`schedule_change`) |
 | Marked Late | Employee (`attendance_late`) |
+| Clocked out early **with a health/emergency reason** | HR — all admins (`early_clockout_review`, deep-links to the Early Clock Outs tab). Approved-leave/other early-outs stay silent |
 | Security event activity | HR |
 
 ### Anatomy Of One Notification Row
@@ -976,7 +1001,8 @@ Which tables each module touches (R = read, W = write). This map is logical — 
 
 | Area | Possible values | Who can move them |
 |------|-----------------|-------------------|
-| Attendance daily status | `Present` · `Late` · `Absent` | Computed by the system (15-min grace, 60-min absent grace); admin can correct manually |
+| Attendance daily status | `Present` · `Late` · `Absent` · `Early Leave` | Computed by the system (15-min grace, 60-min absent grace); admin can correct manually |
+| Early clock-out record | Reason `provided` by employee at kiosk; classification `Pending Review` → `Excused (Sick)` / `Excused (Emergency)` / `Excused (Early Leave)` / `Unpaid` | Employee edits own reason; Admin classifies — punch snapshot is immutable |
 | Leave request | `Pending` → `Approved` / `Rejected`; employee may `Cancel` while Pending | Employee: apply/cancel own. Admin: approve/reject |
 | Overtime request | `Pending` → `Approved` / `Rejected`; `Cancel` while Pending | Same split as leave |
 | Timesheet | Generated awaiting review → `Submitted` (by employee) → `Approved` / `Rejected` (by admin) | Employee: submit own once. Admin: finalize |
