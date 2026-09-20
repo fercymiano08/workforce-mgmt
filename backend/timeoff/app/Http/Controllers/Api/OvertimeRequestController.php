@@ -67,6 +67,19 @@ class OvertimeRequestController extends Controller
             $data['approved_by'] = null;
         }
 
+        // One overtime request per person per day while an earlier one is still
+        // Pending or Approved - a second is a duplicate (typically a double click).
+        $duplicate = OvertimeRequest::where('employee_id', $data['employee_id'])
+            ->whereDate('date', $data['date'])
+            ->whereIn('status', ['Pending', 'Approved'])
+            ->first();
+        if ($duplicate) {
+            throw \Illuminate\Validation\ValidationException::withMessages([
+                'date' => ['You already have a '.$duplicate->status.' overtime request ('.$duplicate->id.') for '
+                    .\Carbon\Carbon::parse($data['date'])->format('M j, Y').'. Cancel it first if you want to change it.'],
+            ]);
+        }
+
         $record = OvertimeRequest::create([
             ...$data,
             'id' => $this->nextIdFor(OvertimeRequest::class, 'OT'),

@@ -11,7 +11,7 @@ export const FACE_VERIFICATION_STEPS = [
 
 // Steps tick fast so the scan feels instant - the real latency is the
 // server round-trip, not the on-screen animation.
-const STEP_DURATION_MS = 180;
+const STEP_DURATION_MS = 110;
 
 // Runs the verification flow against the backend. Real identity matching
 // happens server-side (POST /api/kiosk/verify-face), comparing the live

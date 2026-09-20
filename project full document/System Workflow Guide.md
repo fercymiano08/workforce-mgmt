@@ -122,9 +122,11 @@ Splitting one app into eight means every request can turn into several network c
 | **Short timeouts on non-critical calls** | Notification and audit calls: 1 s to connect, 3 s total. The early-leave policy reads the *local* settings replica first instead of calling `configuration` | A notification is never worth making someone wait at the kiosk |
 | **Mail can't hang a request** | SMTP has an 8 s timeout (`MAIL_TIMEOUT`); the AI (Gemini) call defaults to 15 s (`GEMINI_TIMEOUT`) | PHP kills any request after 30 s. A dead mail host or slow AI must fail fast, not turn into a 500 |
 | **Lists are bounded** | Notification lists return the newest 200; `GET /api/attendance` accepts optional `?from=&to=` and the HR Dashboard asks for only the last 35 days | The bell is polled every 30 s by every open tab |
+| **Duplicate requests are collapsed in the browser** | The shared HTTP client (`services/http.js`) will not send a second identical create/update/delete (same method, URL and body) while the first is still in flight — the caller just receives the first response. On top of that the shared `Button` locks itself while its action is running, and the server refuses duplicates for leave (overlapping dates), overtime (same day) and shift assignment (same day) | A slow response can never turn a double click, an Enter repeat or a spammed button into two records. Proven by an automated script (5 identical POSTs → the server receives 1) |
+| **Face scanning is warmed up and lean** | The three face-api networks are all warmed with a throw-away pass while the page/modal opens (registration and the kiosk preload the ~7 MB of models early); detection tries a 160 px input first and 320 px as the fallback (was 224/416); redundant re-detection was removed; the result flash and retry pause were shortened | The first scan used to pay a multi-second shader-compile cost and two heavier detection passes. Honest note: these are targeted fixes to the known slow spots; the actual speed still depends on the kiosk's GPU/CPU |
 | **The frontend never waits forever** | Every API call has a 45 s timeout; notification polling pauses while the browser tab is hidden and catches up when it becomes visible | A hung service now ends in an error message instead of an endless spinner |
 
-> **Why can the demo laptop still feel slower than Docker?** In "Way 1" (`start-all.ps1`) each service runs on PHP's built-in `php artisan serve`, which handles **one request at a time**, and the project may sit inside a OneDrive-synced folder (slow file reads on Windows). PHP's CLI opcache is also off by default. Docker mode uses 4 workers per service. For the smoothest demo: set `APP_DEBUG=false` and `LOG_LEVEL=warning` in each `backend/<name>/.env`, set `opcache.enable_cli=1` in `php.ini`, and keep the project outside OneDrive — or run the Docker version (see `activator-deactivator.md`).
+> **Why can the demo laptop still feel slower than Docker?** In "Way 1" (`start-all.ps1`) each service runs on PHP's built-in `php artisan serve`, which handles **one request at a time**, and the project may sit inside a OneDrive-synced folder (slow file reads on Windows). Docker mode uses 4 workers per service. For the smoothest demo: set `APP_DEBUG=false` and `LOG_LEVEL=warning` in each `backend/<name>/.env` and keep the project outside OneDrive — or run the Docker version (see `activator-deactivator.md`).
 
 ### The Golden Rule Of This Architecture
 
@@ -626,6 +628,10 @@ An employee with an **Approved leave** covering today is marked on-leave rather 
 | SHIFT005 | Overtime | 17:00 – 21:00 |
 
 > SHIFT004 *is* the office "8-to-5". Templates are reference data — every employee can read them; only the admin can build assignments.
+>
+> **The templates can never be missing.** Nothing can be scheduled without at least one template (the Assign form would have nothing to pick, and schedule generation is refused). There is no screen to create or delete templates, so a migration (`ensure_default_shift_definitions`) puts SHIFT004 and SHIFT005 in place on any database that lacks them — fresh install, Docker start, or a database whose demo seed was never run — and never touches existing rows. The Shifts page also says so plainly if the list is ever empty, instead of showing an empty dropdown.
+>
+> **One shift per person per day.** Assigning a second shift to someone who already has one that day is refused with a message naming the existing assignment; running the automated generator twice creates nothing new the second time (it reports the days as "already scheduled").
 
 ### Flow A — Building A Week (Generate Wizard)
 
@@ -683,6 +689,12 @@ Pending ────┤
 | 4 | Backend re-validates and inserts into `leaves`: `status = 'Pending'`, `applied_date = today`, `employee_name` snapshotted |
 | 5 | Notification created for HR: "new leave request" |
 | 6 | Request appears in the employee's list with a **Pending** pill |
+
+**Guardrails on applying (enforced by the server; the form mirrors them):**
+
+- **No past dates for employees.** The date pickers grey out every day before today, and the server refuses a start date before today (`422`). An Administrator may still record a past absence on someone's behalf.
+- **No duplicate / overlapping requests.** A new request whose dates overlap one that is still **Pending or Approved** is refused with a message naming the existing request. A **Cancelled** or **Rejected** request does not block a new one.
+- **No double submit.** The Submit button locks with a spinner as soon as it is clicked and stays locked until the server answers (this is built into the shared `Button` component, so **every** button whose click calls the server behaves the same). If the request fails, the form stays open with everything typed in, and the message says why.
 
 Cancel path: while still Pending, the employee can cancel it via `PATCH /api/leaves/{id}/status` with `Cancelled` — the dual-rule endpoint allows *only* that specific combination for non-admins.
 

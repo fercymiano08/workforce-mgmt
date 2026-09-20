@@ -16,8 +16,10 @@ const SCORE_THRESHOLD = 0.35;
 
 // Detection tries the small input first (fast) and only falls back to the
 // large input (slower, but finds faces that are farther/smaller in the
-// frame) when the quick pass finds nothing.
-const DETECTOR_INPUT_SIZES = [224, 416];
+// frame) when the quick pass finds nothing. A kiosk scan is a close-up face,
+// so 160 finds it on the first pass for most people; 320 covers the rest
+// (it replaces the old 224/416 pair - cheaper on both passes).
+const DETECTOR_INPUT_SIZES = [160, 320];
 
 // Downscale large uploaded photos before running detection - a 12MP phone
 // photo takes meaningfully longer to process than a 800px one, with no
@@ -94,7 +96,10 @@ export function loadModels() {
         faceapi.nets.faceLandmark68Net.loadFromUri(MODEL_URL),
         faceapi.nets.faceRecognitionNet.loadFromUri(MODEL_URL),
       ]);
-      await warmUpDetector();
+      await warmUpNetworks();
+      // The fallback (larger) detector size compiles its own shaders too; do that in
+      // the background so it never delays the first scan.
+      warmUpDetector(DETECTOR_INPUT_SIZES[1]);
     })().catch((error) => {
       // A rejected promise would otherwise be cached forever - a one-off
       // download hiccup would then brick every scan until a full reload.
@@ -107,20 +112,51 @@ export function loadModels() {
   return modelsPromise;
 }
 
-// The first inference on the WebGL backend compiles its shaders, which costs
-// well over a second. Doing one throw-away detection on a blank frame while the
-// modal is still opening moves that cost out of the user's real scan.
-async function warmUpDetector() {
+// The first inference of each network on the WebGL backend compiles its shaders,
+// which costs well over a second per network. Doing one throw-away pass through
+// ALL THREE networks on blank frames while the modal is still opening moves that
+// cost out of the user's real scan (previously only the detector was warmed, so
+// the landmark and recognition networks still paid it during the first scan).
+function blankCanvas(size) {
+  const canvas = document.createElement('canvas');
+  canvas.width = size;
+  canvas.height = size;
+  return canvas;
+}
+
+async function warmUpDetector(inputSize) {
   try {
-    const blank = document.createElement('canvas');
-    blank.width = DETECTOR_INPUT_SIZES[0];
-    blank.height = DETECTOR_INPUT_SIZES[0];
-    await faceapi.detectSingleFace(blank, detectorOptions(DETECTOR_INPUT_SIZES[0]));
+    await faceapi.detectSingleFace(blankCanvas(inputSize), detectorOptions(inputSize));
   } catch {
     // Warm-up is best effort only.
   }
 }
 
+async function warmUpNetworks() {
+  await warmUpDetector(DETECTOR_INPUT_SIZES[0]);
+  try {
+    await faceapi.nets.faceLandmark68Net.detectLandmarks(blankCanvas(112));
+  } catch {
+    // best effort
+  }
+  try {
+    await faceapi.nets.faceRecognitionNet.computeFaceDescriptor(blankCanvas(150));
+  } catch {
+    // best effort
+  }
+}
+
+// Call from a page that will soon need face scanning (registration, the kiosk)
+// so the ~7 MB of model files and the shader warm-up happen while the user is
+// still filling in the form, not after they press the scan button.
+export function preloadFaceModels() {
+  const start = () => loadModels().catch(() => {});
+  if (typeof window !== 'undefined' && typeof window.requestIdleCallback === 'function') {
+    window.requestIdleCallback(start, { timeout: 2500 });
+  } else {
+    setTimeout(start, 800);
+  }
+}
 // Lets the browser paint (e.g. the scan animation) before a long synchronous
 // detection pass starts blocking the main thread.
 const nextPaint = () => new Promise((resolve) => requestAnimationFrame(() => setTimeout(resolve, 0)));
@@ -262,4 +298,4 @@ export function loadImageFileToCanvas(file) {
   });
 }
 
-export const faceMatchService = { loadModels, getFaceDescriptor, loadImageFileToCanvas };
+export const faceMatchService = { loadModels, preloadFaceModels, getFaceDescriptor, loadImageFileToCanvas };

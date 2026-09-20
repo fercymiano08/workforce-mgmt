@@ -35,6 +35,33 @@ const http = axios.create({
   timeout: 45000,
 });
 
+// System-wide duplicate guard (the backstop behind the shared <Button> lock).
+// While an identical create/update/delete request (same method, URL and body) is
+// still in flight, a second copy is NOT sent - the caller simply receives the
+// first request's response. So a double click, an Enter-key repeat or a slow
+// server can never create two records, whichever screen or control triggered it.
+// Reads (GET) are never touched; requests carrying an abort signal or a non-JSON
+// body (file uploads) are left alone.
+const baseAdapter = axios.getAdapter(axios.defaults.adapter);
+const inFlightWrites = new Map();
+
+http.defaults.adapter = (config) => {
+  const method = String(config.method || 'get').toLowerCase();
+  // No body (e.g. DELETE) is fine; a body that is not a JSON string (FormData / file) is skipped.
+  const hasOpaqueBody = config.data != null && typeof config.data !== 'string';
+  if (method === 'get' || method === 'head' || config.signal || hasOpaqueBody) {
+    return baseAdapter(config);
+  }
+
+  const key = `${method} ${config.baseURL || ''}${config.url} ${config.data ?? ''}`;
+  const pending = inFlightWrites.get(key);
+  if (pending) return pending;
+
+  const request = baseAdapter(config).finally(() => inFlightWrites.delete(key));
+  inFlightWrites.set(key, request);
+  return request;
+};
+
 const readKioskToken = () => {
   try {
     const raw = window.localStorage.getItem(KIOSK_TOKEN_KEY);

@@ -30,9 +30,9 @@ const leaveTypeVariant = {
   Sick: 'danger',
   Emergency: 'warning',
   Special: 'purple',
-  Bereavement: 'default',
-  Unpaid: 'default',
-  'Half Day': 'default',
+  Bereavement: 'indigo',
+  Unpaid: 'teal',
+  'Half Day': 'info',
 };
 
 const allTabs = ['All Requests', 'Pending Approvals'];

@@ -152,7 +152,16 @@ export default function Shifts() {
   const hasActiveFilters = Boolean(searchQuery || departmentFilter || dateFilter || statusFilter);
   const clearFilters = () => { setSearchQuery(''); setDepartmentFilter(''); setDateFilter(''); setStatusFilter(''); };
 
+  // Assigning or generating needs at least one shift template. If none exist say so,
+  // instead of opening a form whose Shift dropdown is silently empty.
+  const noShiftTemplates = () => {
+    if (loadingShiftDefs || (shiftDefs && shiftDefs.length > 0)) return false;
+    toast.error('No shift templates found', 'There are no shift definitions (such as the Flexible Shift) to assign. Reload the page; if this persists, ask the developer to run the scheduling migrations.');
+    return true;
+  };
+
   const openAdd = () => {
+    if (noShiftTemplates()) return;
     setEditingSchedule(null);
     setFormData({ employeeId: '', shiftId: standardShift?.id || '', date: '', notes: '' });
     setFormErrors({});
@@ -204,11 +213,19 @@ export default function Shifts() {
         await refreshSchedules();
         toast.success('Shift Assigned', `${employeeName} was scheduled for ${formData.date}.`);
       }
-    } catch { toast.error('Error', 'Failed to save schedule.'); }
+    } catch (err) {
+      // Keep the form open (nothing typed is lost) and show the server's reason,
+      // e.g. "already has a shift on that day".
+      const data = err?.response?.data;
+      const firstFieldError = data?.errors ? Object.values(data.errors).flat()[0] : null;
+      toast.error('Could not save schedule', firstFieldError || data?.message || 'The server did not respond. Please try again.');
+      return;
+    }
     setIsModalOpen(false);
   };
 
   const openGenerate = () => {
+    if (noShiftTemplates()) return;
     setGenerateSearch('');
     setGenerateForm({ startDate: '', endDate: '', shiftId: standardShift?.id || '', skipWeekends: true, scope: 'all', scopeDepartment: '', employeeIds: [] });
     setGenerateErrors({});
@@ -292,7 +309,11 @@ export default function Shifts() {
       if (summary.skippedOnLeave) parts.push(`${summary.skippedOnLeave} skipped for approved leave`);
       if (summary.shortageDates?.length) parts.push(`${summary.shortageDates.length} day(s) flagged for staffing shortage`);
       toast.success('Schedule Generated', parts.join(' · '));
-    } catch { toast.error('Error', 'Failed to generate schedule.'); }
+    } catch (err) {
+      const data = err?.response?.data;
+      const firstFieldError = data?.errors ? Object.values(data.errors).flat()[0] : null;
+      toast.error('Could not generate schedule', firstFieldError || data?.message || 'The server did not respond. Please try again.');
+    }
     finally { setGenerating(false); }
   };
 

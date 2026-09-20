@@ -1,3 +1,4 @@
+import { useEffect, useRef, useState } from 'react';
 import clsx from 'clsx';
 import { Loader2 } from 'lucide-react';
 
@@ -21,6 +22,10 @@ const sizes = {
   xl: 'px-6 py-3.5 text-base rounded-xl gap-2.5',
 };
 
+// Double-click guard for the whole app: when a button's onClick is async (returns a
+// promise - i.e. it talks to the server), the button locks and shows a spinner
+// until that promise settles. Extra clicks in the meantime are ignored, so a slow
+// response can never turn into duplicate submissions.
 export default function Button({
   variant = 'primary',
   size = 'md',
@@ -29,8 +34,36 @@ export default function Button({
   disabled,
   className,
   icon: Icon,
+  onClick,
   ...props
 }) {
+  const [pending, setPending] = useState(false);
+  const inFlight = useRef(false); // set synchronously, so even two clicks in the same frame are caught
+  const mounted = useRef(true);
+
+  useEffect(() => {
+    mounted.current = true;
+    return () => { mounted.current = false; };
+  }, []);
+
+  const handleClick = onClick
+    ? (event) => {
+        if (inFlight.current) return;
+        const result = onClick(event);
+        if (result && typeof result.then === 'function') {
+          inFlight.current = true;
+          setPending(true);
+          const release = () => {
+            inFlight.current = false;
+            if (mounted.current) setPending(false);
+          };
+          result.then(release, release);
+        }
+      }
+    : undefined;
+
+  const busy = loading || pending;
+
   return (
     <button
       className={clsx(
@@ -39,10 +72,12 @@ export default function Button({
         sizes[size],
         className
       )}
-      disabled={disabled || loading}
+      disabled={disabled || busy}
+      aria-busy={busy || undefined}
+      onClick={handleClick}
       {...props}
     >
-      {loading ? (
+      {busy ? (
         <Loader2 className="w-4 h-4 animate-spin" />
       ) : Icon ? (
         <Icon className="w-4 h-4" />

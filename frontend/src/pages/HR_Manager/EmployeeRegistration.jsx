@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
+import { preloadFaceModels } from '../../services/faceMatchService';
 import { useNavigate } from 'react-router-dom';
 import { UserPlus, ArrowLeft, ScanFace, CheckCircle2, RefreshCw, Camera, Eye, EyeOff, User, Phone, Briefcase, KeyRound } from 'lucide-react';
 import Card from '../../components/ui/Card';
@@ -92,6 +93,10 @@ export default function EmployeeRegistration() {
   const [formData, setFormData] = useState(createEmptyForm());
   const [formErrors, setFormErrors] = useState({});
   const [submitting, setSubmitting] = useState(false);
+
+  // Registration ends with a face scan: fetch the face models and warm them up
+  // while the admin is still filling in the form, so the scan itself is fast.
+  useEffect(() => { preloadFaceModels(); }, []);
   const [isFaceModalOpen, setIsFaceModalOpen] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);

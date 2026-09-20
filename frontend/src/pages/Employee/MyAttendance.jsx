@@ -385,13 +385,15 @@ export default function MyAttendance() {
                     </td>
                     <td className="px-6 py-3.5 text-right">
                       {req.status === 'Pending' && (
-                        <button
+                        <Button
+                          variant="ghost"
+                          size="xs"
+                          icon={XCircle}
+                          className="text-red-500 hover:text-red-600 hover:bg-red-50"
                           onClick={() => handleCancelOvertime(req)}
-                          className="inline-flex items-center gap-1 text-xs font-medium text-red-500 hover:text-red-600 transition-colors"
                         >
-                          <XCircle className="w-3.5 h-3.5" />
                           Cancel
-                        </button>
+                        </Button>
                       )}
                     </td>
                   </tr>

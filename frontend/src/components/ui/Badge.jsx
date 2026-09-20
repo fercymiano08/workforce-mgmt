@@ -9,6 +9,9 @@ const variants = {
   info: 'bg-sky-50 text-sky-700',
   purple: 'bg-purple-50 text-purple-700',
   pink: 'bg-pink-50 text-pink-700',
+  indigo: 'bg-indigo-50 text-indigo-700',
+  teal: 'bg-teal-50 text-teal-700',
+  amber: 'bg-amber-50 text-amber-700',
 };
 
 const dotVariants = {
@@ -20,6 +23,9 @@ const dotVariants = {
   info: 'bg-sky-500',
   purple: 'bg-purple-500',
   pink: 'bg-pink-500',
+  indigo: 'bg-indigo-500',
+  teal: 'bg-teal-500',
+  amber: 'bg-amber-500',
 };
 
 export default function Badge({ children, variant = 'default', dot = false, className, size = 'sm' }) {

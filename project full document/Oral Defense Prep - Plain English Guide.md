@@ -298,7 +298,7 @@ A: In 8 separate PostgreSQL databases, one per microservice — `core` holds use
 The "scariest" architecture question. Your answer is strong and true, and it has a before/after:
 **this system started as one Laravel monolith. We migrated it to 8 independent microservices using the Strangler Fig pattern — pulling one domain out at a time, verifying it with tests, then moving to the next. That migration is now COMPLETE: all 8 domains (auth/identity, analytics+AI, attendance, scheduling, time-off, payroll, communications, configuration) run as separate Laravel apps, each on its own port, each with its own PostgreSQL database, each independently testable and independently startable.**
 
-> This matches the requirement from the higher department: microservices format. We didn't rewrite the system from scratch — we proved the domain boundaries first inside the monolith (each module already owned its own tables and routes), then physically lifted each one out into its own app + database, one at a time, the safest possible order. Every extraction was verified by that service's own automated test suite before moving to the next. All 178 tests across the 8 services are green.
+> This matches the requirement from the higher department: microservices format. We didn't rewrite the system from scratch — we proved the domain boundaries first inside the monolith (each module already owned its own tables and routes), then physically lifted each one out into its own app + database, one at a time, the safest possible order. Every extraction was verified by that service's own automated test suite before moving to the next. All 196 tests across the 8 services are green.
 
 ## What our system looks like TODAY (Strangler Fig, complete)
 
@@ -332,7 +332,7 @@ The "scariest" architecture question. Your answer is strong and true, and it has
 ```
 
 **The one-line truth (memorize this):**
-> "We migrated this system from a single Laravel monolith to 8 independent microservices using the Strangler Fig pattern — one domain extracted and verified at a time. That migration is complete: every domain (identity, analytics/AI, attendance, scheduling, time-off, payroll, communications, configuration) is now its own Laravel app, its own port, its own database, with 178 automated tests passing across all 8, and the frontend's proxy config is the only thing that routes requests to the right one."
+> "We migrated this system from a single Laravel monolith to 8 independent microservices using the Strangler Fig pattern — one domain extracted and verified at a time. That migration is complete: every domain (identity, analytics/AI, attendance, scheduling, time-off, payroll, communications, configuration) is now its own Laravel app, its own port, its own database, with 196 automated tests passing across all 8, and the frontend's proxy config is the only thing that routes requests to the right one."
 
 ## Why we did it in this order (your honest engineering answer)
 

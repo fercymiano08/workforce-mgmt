@@ -53,10 +53,22 @@ class ShiftController extends Controller
         $data = ShiftSchedule::apiFillable($request->validate([
             'employeeId' => 'required|string|max:20',
             'employeeName' => 'required|string|max:150',
-            'shiftId' => 'required|string|max:20',
+            'shiftId' => 'required|string|max:20|exists:shift_definitions,id',
             'date' => 'required|date',
             'status' => 'required|string|max:50',
         ]));
+
+        // One shift per employee per day. A second assignment for the same day is
+        // a duplicate (typically a double click) - refuse it and say where it is.
+        $existing = ShiftSchedule::where('employee_id', $data['employee_id'])
+            ->whereDate('date', $data['date'])
+            ->first();
+        if ($existing) {
+            throw \Illuminate\Validation\ValidationException::withMessages([
+                'date' => [$data['employee_name'].' already has a shift ('.$existing->id.') on '
+                    .\Carbon\Carbon::parse($data['date'])->format('M j, Y').'. Edit or delete it instead of adding another.'],
+            ]);
+        }
 
         $record = ShiftSchedule::create([
             ...$data,

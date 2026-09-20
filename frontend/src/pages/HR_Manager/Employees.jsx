@@ -1,4 +1,5 @@
 import { useState, useMemo, useEffect, useCallback, useRef } from 'react';
+import { preloadFaceModels } from '../../services/faceMatchService';
 import { useNavigate } from 'react-router-dom';
 import {
   Grid3X3, List, Mail, Phone, MapPin, User,
@@ -141,6 +142,9 @@ export default function Employees() {
       setLoading(false);
     }
   }, [toast]);
+
+  // Editing an employee can re-register their face: get the models ready early.
+  useEffect(() => { preloadFaceModels(); }, []);
 
   useEffect(() => {
     let active = true;

@@ -140,7 +140,7 @@ export default function FaceRecognitionModal({ isOpen, employeeName, employeeId,
             if (cancelled) return;
             descriptor = await getFaceDescriptor(videoRef.current);
             if (descriptor) break;
-            await new Promise((resolve) => setTimeout(resolve, 300));
+            await new Promise((resolve) => setTimeout(resolve, 120));
           }
         } catch {
           setVerifyError('Face recognition models could not be loaded. Please try again.');
@@ -182,7 +182,7 @@ export default function FaceRecognitionModal({ isOpen, employeeName, employeeId,
         // Just a brief confirmation flash - every extra 100ms slows the line.
         completeTimer = setTimeout(() => {
           if (!cancelled) onCompleteRef.current(verification.data);
-        }, 350);
+        }, 220);
       } catch {
         if (cancelled) return;
         setVerifyError('Face verification failed. Please try again.');

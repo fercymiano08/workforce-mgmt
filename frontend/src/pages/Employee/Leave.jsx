@@ -10,6 +10,7 @@ import Input, { Select, Textarea } from '../../components/ui/Input';
 import Modal from '../../components/ui/Modal';
 import { Pagination } from '../../components/ui/Table';
 import { leaveService } from '../../services/api';
+import { toDateKey } from '../../services/attendanceService';
 import { formatDate } from '../../utils/helpers';
 import { useToast } from '../../context/ToastContext';
 import { useAuth } from '../../context/AuthContext';
@@ -27,9 +28,9 @@ const leaveTypeVariant = {
   Sick: 'danger',
   Emergency: 'warning',
   Special: 'purple',
-  Bereavement: 'default',
-  Unpaid: 'default',
-  'Half Day': 'default',
+  Bereavement: 'indigo',
+  Unpaid: 'teal',
+  'Half Day': 'info',
 };
 
 const leaveBalanceStyle = {
@@ -37,8 +38,8 @@ const leaveBalanceStyle = {
   Sick: { text: 'text-red-600', barBg: 'bg-red-100', color: 'bg-red-500', icon: Heart, iconBg: 'bg-red-50' },
   Emergency: { text: 'text-amber-600', barBg: 'bg-amber-100', color: 'bg-amber-500', icon: AlertTriangle, iconBg: 'bg-amber-50' },
   Special: { text: 'text-purple-600', barBg: 'bg-purple-100', color: 'bg-purple-500', icon: Star, iconBg: 'bg-purple-50' },
-  Bereavement: { text: 'text-gray-600', barBg: 'bg-gray-100', color: 'bg-gray-500', icon: Flower2, iconBg: 'bg-gray-50' },
-  Unpaid: { text: 'text-slate-600', barBg: 'bg-slate-100', color: 'bg-slate-500', icon: Wallet, iconBg: 'bg-slate-50' },
+  Bereavement: { text: 'text-indigo-600', barBg: 'bg-indigo-100', color: 'bg-indigo-500', icon: Flower2, iconBg: 'bg-indigo-50' },
+  Unpaid: { text: 'text-teal-600', barBg: 'bg-teal-100', color: 'bg-teal-500', icon: Wallet, iconBg: 'bg-teal-50' },
 };
 
 const leaveTypes = ['Vacation', 'Sick', 'Emergency', 'Special', 'Bereavement', 'Unpaid'];
@@ -52,6 +53,10 @@ const countDays = (start, end) => {
 };
 
 const ROWS_PER_PAGE = 6;
+
+// Today as YYYY-MM-DD in the browser's local time. Leave can start today at the
+// earliest - a leave request for a day that has already begun is meaningless.
+const todayKey = () => toDateKey(new Date());
 
 export default function Leave() {
   const { toast } = useToast();
@@ -173,6 +178,7 @@ export default function Leave() {
   const validateApply = () => {
     const errs = {};
     if (!applyForm.startDate) errs.startDate = 'Start date is required';
+    else if (applyForm.startDate < todayKey()) errs.startDate = 'Leave cannot start in the past. Choose today or a later date.';
     if (!applyForm.endDate) errs.endDate = 'End date is required';
     if (applyForm.startDate && applyForm.endDate && applyForm.startDate > applyForm.endDate) {
       errs.endDate = 'End date must be after start date';
@@ -182,6 +188,8 @@ export default function Leave() {
     return Object.keys(errs).length === 0;
   };
 
+  // Async on purpose: the shared Button locks itself (spinner) until this promise
+  // settles, so a slow server can't turn extra clicks into duplicate requests.
   const handleApplyLeave = async () => {
     if (!validateApply()) return;
     try {
@@ -199,8 +207,13 @@ export default function Leave() {
       });
       setLeaves((prev) => [created, ...prev]);
       toast.success('Leave Applied', 'Your leave request has been submitted for approval.');
-    } catch {
-      toast.error('Error', 'Failed to submit leave request.');
+    } catch (error) {
+      // Keep the form open with everything typed in, and say WHY it failed
+      // (e.g. an overlapping request) instead of a generic error.
+      const data = error?.response?.data;
+      const firstFieldError = data?.errors ? Object.values(data.errors).flat()[0] : null;
+      toast.error('Could not submit leave', firstFieldError || data?.message || 'The server did not respond. Please try again.');
+      return;
     }
     setApplyForm({ leaveType: 'Vacation', startDate: '', endDate: '', reason: '', proofFile: null });
     setApplyErrors({});
@@ -517,6 +530,7 @@ export default function Leave() {
               type="date"
               required
               value={applyForm.startDate}
+              min={todayKey()}
               onChange={(e) => {
                 const startDate = e.target.value;
                 setApplyForm((f) => ({
@@ -534,7 +548,7 @@ export default function Leave() {
               type="date"
               required
               value={applyForm.endDate}
-              min={applyForm.startDate || undefined}
+              min={applyForm.startDate || todayKey()}
               disabled={!applyForm.startDate}
               onChange={(e) => setApplyForm((f) => ({ ...f, endDate: e.target.value }))}
               error={applyErrors.endDate}

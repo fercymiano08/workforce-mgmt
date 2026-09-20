@@ -11,6 +11,7 @@ use App\Services\AuditClient;
 use App\Services\NotificationService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Carbon;
 use Illuminate\Validation\ValidationException;
 
 class LeaveController extends Controller
@@ -95,6 +96,36 @@ class LeaveController extends Controller
         if ($request->user()?->role !== 'Administrator') {
             $data['status'] = 'Pending';
             $data['approved_by'] = null;
+
+            // Employees cannot file leave for days that have already begun. (An
+            // Administrator may still record a past absence on someone's behalf.)
+            $today = Carbon::now('Asia/Manila')->toDateString();
+            if (Carbon::parse($data['start_date'])->toDateString() < $today) {
+                throw ValidationException::withMessages([
+                    'startDate' => ['Leave cannot start in the past. Choose today or a later date.'],
+                ]);
+            }
+        }
+
+        if (Carbon::parse($data['end_date'])->lt(Carbon::parse($data['start_date']))) {
+            throw ValidationException::withMessages([
+                'endDate' => ['The end date cannot be before the start date.'],
+            ]);
+        }
+
+        // A second request for days that are already covered by a Pending or
+        // Approved one is a duplicate (typically a double click). Refuse it.
+        $overlap = Leave::where('employee_id', $data['employee_id'])
+            ->whereIn('status', ['Pending', 'Approved'])
+            ->whereDate('start_date', '<=', $data['end_date'])
+            ->whereDate('end_date', '>=', $data['start_date'])
+            ->first();
+        if ($overlap) {
+            throw ValidationException::withMessages([
+                'startDate' => ['You already have a '.$overlap->status.' '.$overlap->leave_type.' leave request ('.$overlap->id.') from '
+                    .$overlap->start_date->format('M j').' to '.$overlap->end_date->format('M j, Y')
+                    .' that overlaps these dates. Cancel it first if you want to change it.'],
+            ]);
         }
 
         $this->assertSufficientBalance(
