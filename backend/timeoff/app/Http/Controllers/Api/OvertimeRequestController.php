@@ -60,6 +60,13 @@ class OvertimeRequestController extends Controller
 
         $this->assertSelfOrAdmin($request, $data['employee_id']);
 
+        // An employee's request always starts Pending and unapproved, whatever the
+        // request body says. Only an Administrator may create one already decided.
+        if ($request->user()?->role !== 'Administrator') {
+            $data['status'] = 'Pending';
+            $data['approved_by'] = null;
+        }
+
         $record = OvertimeRequest::create([
             ...$data,
             'id' => $this->nextIdFor(OvertimeRequest::class, 'OT'),

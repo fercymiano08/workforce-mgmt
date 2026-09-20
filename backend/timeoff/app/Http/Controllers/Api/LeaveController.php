@@ -90,6 +90,13 @@ class LeaveController extends Controller
 
         $this->assertSelfOrAdmin($request, $data['employee_id']);
 
+        // An employee's request always starts Pending and unapproved, whatever the
+        // request body says. Only an Administrator may create one already decided.
+        if ($request->user()?->role !== 'Administrator') {
+            $data['status'] = 'Pending';
+            $data['approved_by'] = null;
+        }
+
         $this->assertSufficientBalance(
             $data['employee_id'],
             $data['leave_type'],

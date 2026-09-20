@@ -54,6 +54,51 @@ class TimeoffApiTest extends TestCase
             ->assertJsonStructure(['data' => ['id']]);
     }
 
+    public function test_employee_cannot_self_approve_leave_at_creation(): void
+    {
+        $employee = $this->otpEmployeeUser();
+
+        $this->actingAs($employee)
+            ->postJson('/api/leaves', [
+                'employeeId' => 'EMP-OTP',
+                'employeeName' => 'Juan Dela Cruz',
+                'leaveType' => 'Vacation',
+                'startDate' => '2030-03-10',
+                'endDate' => '2030-03-11',
+                'reason' => 'Try to self-approve',
+                'status' => 'Approved',
+                'approvedBy' => 'John Delgado',
+                'appliedDate' => '2030-03-01',
+            ])
+            ->assertCreated();
+
+        $leave = Leave::where('reason', 'Try to self-approve')->firstOrFail();
+        $this->assertSame('Pending', $leave->status);
+        $this->assertNull($leave->approved_by);
+    }
+
+    public function test_employee_cannot_self_approve_overtime_at_creation(): void
+    {
+        $employee = $this->otpEmployeeUser();
+
+        $this->actingAs($employee)
+            ->postJson('/api/overtime', [
+                'employeeId' => 'EMP-OTP',
+                'employeeName' => 'Juan Dela Cruz',
+                'date' => '2030-03-15',
+                'expectedHours' => 3,
+                'reason' => 'Try to self-approve OT',
+                'status' => 'Approved',
+                'approvedBy' => 'John Delgado',
+                'requestedDate' => '2030-03-01',
+            ])
+            ->assertCreated();
+
+        $ot = OvertimeRequest::where('reason', 'Try to self-approve OT')->firstOrFail();
+        $this->assertSame('Pending', $ot->status);
+        $this->assertNull($ot->approved_by);
+    }
+
     public function test_admin_can_approve_leave_and_overtime(): void
     {
         $admin = $this->adminUser();
