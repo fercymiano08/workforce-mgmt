@@ -1,6 +1,7 @@
 <?php
 
 use App\Http\Middleware\EnsureServiceAuthenticated;
+use App\Http\Middleware\EnsureKioskDevice;
 use App\Http\Middleware\EnsureUserIsAdministrator;
 use Illuminate\Foundation\Application;
 use Illuminate\Foundation\Configuration\Exceptions;
@@ -19,6 +20,7 @@ return Application::configure(basePath: dirname(__DIR__))
         $middleware->redirectGuestsTo(fn (Request $request) => response()->json(['message' => 'Unauthenticated.'], 401));
         $middleware->alias([
             'admin' => EnsureUserIsAdministrator::class,
+            'kiosk.device' => EnsureKioskDevice::class,
             'svc.auth' => EnsureServiceAuthenticated::class,
         ]);
     })

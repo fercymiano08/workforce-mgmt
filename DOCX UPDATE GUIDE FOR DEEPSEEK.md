@@ -183,8 +183,12 @@ straight to the owning service via its development proxy:
   analytics, reports, AI Decision Support, audit logs, settings, kiosk setup.
 - **Employee:** own dashboard, attendance history, schedule, leave requests, overtime requests, timesheets,
   pay statement, profile, early clock-out reasons, notifications.
-- **Entrance Clocking In Device:** public kiosk endpoints that return only minimal fields (name, photo,
-  department, today's schedule) — never salary, email, phone or address. Exiting kiosk mode requires the admin PIN.
+- **Entrance Clocking In Device:** not a user account. It is unlocked with the kiosk PIN, after which the server issues a
+  signed, expiring **device token** (valid 24 h, void as soon as the PIN changes) that every clock-in, directory, face-check
+  and log call must present (`X-Kiosk-Token`). Only the kiosk status and the PIN check are open, and the PIN check is
+  rate-limited (10/min). The endpoints return only minimal fields (name, photo, department, today's schedule) — never salary,
+  email, phone or address. Failed PIN attempts are recorded as security events by the server. Clock-ins are refused while
+  an administrator has the kiosk switched off. Exiting kiosk mode requires the admin PIN. **Not** implemented: face liveness.
 - Access control is enforced **on the server** (role middleware + owner checks); hiding a menu item is not the security.
 
 ### 4.6 Modules — exact behavior
@@ -308,7 +312,7 @@ straight to the owning service via its development proxy:
 | Audit trail for key record changes (see K) | A separate cloud / CI security pipeline (Docker containerization is real but is not a security control) |
 
 ### 4.9 Testing and tooling — reality
-- **123 automated PHPUnit tests** across the 8 services (core 66, intelligence 17, attendance 12, timeoff 6, scheduling 5, payroll 5, communications 5, configuration 7), all offline (in-memory SQLite), all passing at last run.
+- **167 automated PHPUnit tests** across the 8 services (core 66, intelligence 19, attendance 29, timeoff 14, payroll 11, communications 10, scheduling 9, configuration 9), all offline (in-memory SQLite), all passing at last run.
 - Frontend: ESLint + production build check. Backend: Laravel logs.
 - **Not present in the repository:** GitHub Actions workflows (no CI/CD), PHP_CodeSniffer, Postman collection.  
   **UPDATE — Docker now exists** (Dockerfiles + `docker-compose.yml`, on branch `docker`, see `DOCKER GUIDE FOR DEEPSEEK.md`). Docker is real; CI/CD is still not.
@@ -393,7 +397,7 @@ straight to the owning service via its development proxy:
 | Figure 3.6 | Redraw — spec in Part 7. Caption: "Figure 3.6: Microservices System Architecture". |
 | 3.3.1 DevOps Toolchain | **DECISION NEEDED (Part 9-A)** — items 3 (GitHub Actions) and part of 1 (GitHub Projects/Issues, labels, milestones) and 2 (feature branches) are unverified. Provide Version A/B. Item 4 (Postman): unverified. Item 5 (Monitoring: Laravel logging) is true; also mention the health-check endpoint `/up` and startup health check. |
 | 3.3.2 CI/CD Pipeline + Fig 3.7/3.8 | **DECISION NEEDED (Part 9-A).** Version A: retitle "3.3.2 Recommended CI/CD Pipeline (Future Deployment)" and change all verbs to conditional/future; Version B: delete. The two figures 3.7 and 3.8 are duplicates with the same caption "Simplified CI/CD Pipeline" — keep only one either way. |
-| 3.3.3 Testing Strategy | Keep four levels, but: *Unit/Feature testing* — say PHPUnit feature and unit tests run **per service** (8 suites, 123 tests) and are executed locally by developers (remove "automated through GitHub Actions on every pull request" unless the human confirms CI exists). *API testing* — Postman: **DECISION NEEDED**; alternative true wording: endpoints are exercised through PHPUnit HTTP tests and manual requests. Manual and UAT paragraphs: keep (strategy only). Add: cross-service flows verified manually; automated cross-service tests are future work. |
+| 3.3.3 Testing Strategy | Keep four levels, but: *Unit/Feature testing* — say PHPUnit feature and unit tests run **per service** (8 suites, 167 tests) and are executed locally by developers (remove "automated through GitHub Actions on every pull request" unless the human confirms CI exists). *API testing* — Postman: **DECISION NEEDED**; alternative true wording: endpoints are exercised through PHPUnit HTTP tests and manual requests. Manual and UAT paragraphs: keep (strategy only). Add: cross-service flows verified manually; automated cross-service tests are future work. |
 | 3.4 Innovation Framework | Keep the five phases. Stage 2 "employee self-service schedule change requests" → remove. Stage 3 "Schedule management features based on industry best practices" keep. |
 | 3.4.1 Realized Innovations | Rewrite items 1–4 with Text T-12 and add items 5–7 (overtime reconciliation, early clock-out workflow, replicated microservice data design). Remove "eliminates buddy punching" absolutes. |
 
@@ -406,7 +410,7 @@ straight to the owning service via its development proxy:
 | A.5 Network Configuration | Local: ports 8000–8008, 5173, 5432; internal calls over HTTP on localhost with shared secret. |
 | A.6 Deployment and Infrastructure | Reality: **Docker Compose on a single machine** (15 containers; use `DOCKER GUIDE FOR DEEPSEEK.md` Parts 3, 7, 10.4) OR the plain local method `start-all.ps1`; cloud hosting/domain/HTTPS = future work. |
 | A.7 Security Measures + Figure A.7.1 | Rewrite text using Part 4.8 table (left column only) and Text T-13; redraw the figure without "API Gateway (SSL, CORS, Rate Limiting)" and without "Encrypted Biometrics"; fix the `&amp;` rendering bug in the current figure. |
-| A.8 Testing | Keep the layered strategy, but state actual counts (123 PHPUnit tests, 8 suites). |
+| A.8 Testing | Keep the layered strategy, but state actual counts (167 PHPUnit tests, 8 suites). |
 | A.9, A.10, A.14 | Empty headings — A.10 APIs and Integration Points: write a table of API prefixes → service (Part 4.2) and the internal endpoints concept. A.14 DevOps/CI/CD: follow the Part 9-A decision. A.9 Monitoring: `/up` health endpoints, Laravel logs. |
 | A.11 User Documentation | Keep; add that the project folder contains a beginner guide, workflow guide, defense Q&A, database tutorial and startup guide. |
 | A.12 Known Issues | **Replace** the listed "known issues" (low-light, slow report generation, session timeouts, duplicate entries…) with the *verified* limitations in Part 4.11, plus the true operational ones: no liveness detection; first face-model load is slower; services must be started together. |
@@ -587,7 +591,7 @@ For each sentence a panelist could test, the system can demonstrate it:
 | Analytics / reports / CSV / print | Analytics and Reports pages |
 | Audit trail | Workforce Admin → Audit Logs (after editing an employee) |
 | Roles: Workforce Admin, Employee, kiosk | Login as each |
-| 123 automated tests | `php artisan test` in each `backend/<service>` folder |
+| 167 automated tests | `php artisan test` in each `backend/<service>` folder |
 | Documented limitations | Part 4.11 |
 
 ---

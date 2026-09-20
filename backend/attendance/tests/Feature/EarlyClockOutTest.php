@@ -15,6 +15,14 @@ class EarlyClockOutTest extends TestCase
 {
     use RefreshDatabase;
 
+    protected function setUp(): void
+    {
+        parent::setUp();
+
+        // Every kiosk call below comes from a device that has passed the kiosk PIN.
+        $this->withHeaders($this->kioskDeviceHeaders());
+    }
+
     private function employee(string $id = 'EMP20260001'): Employee
     {
         return Employee::create([

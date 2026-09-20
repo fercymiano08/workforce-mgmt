@@ -36,6 +36,7 @@ class AttendanceApiTest extends TestCase
         ]);
 
         $today = now()->toDateString();
+        $this->withHeaders($this->kioskDeviceHeaders());
 
         $this->postJson('/api/kiosk/attendance', [
             'employeeId' => $employee->id,
@@ -67,6 +68,8 @@ class AttendanceApiTest extends TestCase
             'clockIn' => '08:00:00',
             'status' => 'On Time',
         ];
+
+        $this->withHeaders($this->kioskDeviceHeaders());
 
         $this->postJson('/api/kiosk/attendance', $payload)->assertCreated();
         $this->postJson('/api/kiosk/attendance', $payload)->assertStatus(409);

@@ -55,9 +55,17 @@ Route::middleware('svc.auth')->group(function () {
 // authenticated user, so these are intentionally public. Each endpoint here
 // returns only the minimal fields a public, unauthenticated terminal needs -
 // never full employee records (salary, email, phone, address, etc.).
+//
+// Only config (is the kiosk on? is a PIN set?) and verify-pin are open. verify-pin
+// is rate-limited and returns a signed device token; everything else - the
+// employee directory, face check, logging, clock-in/out - needs that token
+// (X-Kiosk-Token), so the endpoints cannot be driven by a bare HTTP client.
 Route::prefix('kiosk')->group(function () {
     Route::get('/config', [KioskController::class, 'config']);
-    Route::post('/verify-pin', [KioskController::class, 'verifyPin']);
+    Route::post('/verify-pin', [KioskController::class, 'verifyPin'])->middleware('throttle:10,1');
+});
+
+Route::prefix('kiosk')->middleware('kiosk.device')->group(function () {
     Route::post('/verify-face', [KioskController::class, 'verifyFace']);
     Route::post('/log', [KioskController::class, 'log']);
 

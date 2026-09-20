@@ -210,7 +210,7 @@ Suggested wording: *"Containerizing the system acted as an integration test: it 
 
 All run on the team laptop against the Docker stack:
 
-- **123 automated PHPUnit tests pass** (core 66, intelligence 17, attendance 12, scheduling 5, timeoff 6, payroll 5, communications 5, configuration 7).
+- **167 automated PHPUnit tests pass** (core 66, intelligence 19, attendance 29, timeoff 14, payroll 11, communications 10, scheduling 9, configuration 9). This includes role-boundary tests in 7 services (an Employee is refused on every administrator route and on every other employee's data; anonymous requests get 401) and tests for the kiosk device token.
 - **18 of 18 administrator API endpoints** returned valid JSON through the nginx frontend container (employees, departments, roles, shifts, attendance, early-outs, leaves, overtime, timesheets, notifications, settings, analytics, AI insights, audit log, kiosk configuration).
 - **Role-based access:** an Employee token received HTTP **403** on admin routes (`/employees`, `/audit`, analytics, AI insights, shift schedules) and HTTP **200** on their own routes.
 - **Cross-service flow:** creating an employee in `core` replicated it to the other **5** services; an Employee filing a leave in `timeoff` produced a **"Leave Approved" notification in `communications`** after admin approval, plus audit events (`leave.created`, `leave.status_changed`) recorded in `core`'s audit trail.
@@ -237,7 +237,7 @@ Not tested (do not claim): live camera face registration and kiosk clock-in *ins
 | **3.2.1 "Why Microservices?"** | Keep the DOC GUIDE replacement. Add a short paragraph: Docker gives each service an isolated, reproducible runtime (Part 2). |
 | **Figure 3.6 (architecture)** | Redraw per DOC GUIDE (no API gateway, no single database). Optionally add a second figure "Deployment view (Docker Compose)" from Part 3.4. |
 | **3.3 (build/CI/CD text, Figures 3.7 / 3.8)** | **Docker part becomes true; CI/CD part stays false.** Rewrite as: *builds are done with `docker compose build`; there is no automated CI/CD pipeline; automated testing is PHPUnit run locally.* Relabel or remove the pipeline figures. |
-| **3.3.3 Testing** | Add Part 8 results (123 PHPUnit tests, 18/18 endpoint checks, role checks, cold start). |
+| **3.3.3 Testing** | Add Part 8 results (167 PHPUnit tests, 18/18 endpoint checks, role checks, cold start). |
 | **A.6 Deployment and Infrastructure** | Replace "local start-up via start-all.ps1; cloud/container = future work" with: **Docker Compose deployment on a single machine (Part 3)**, plus the honest limitations (Part 7). Cloud/domain/HTTPS = future work. |
 | **A.7 Security** | Add: secrets in a git-ignored environment file, not in images; containers isolated on a private network; only the listed ports published. Do **not** claim TLS. |
 | **A.13 Repository** | Add the Docker files list (Part 3.1). State `docker compose up -d --build` as the run command. |
@@ -257,7 +257,7 @@ Also apply: **HR Manager → Workforce Admin** everywhere (DOC GUIDE).
 > Docker Engine and Docker Compose were used to containerize the system so that the PHP runtime, database and web server versions are identical across the team's machines. This reproducibility removed the "works on my machine" problem during development and demonstration.
 
 **10.3 — Build and deployment text replacing the CI/CD claims (3.3)**
-> The system is built and started with Docker Compose (`docker compose up -d --build`). Automated verification is performed with PHPUnit test suites in each microservice (123 tests in total). The project does not currently use a continuous integration or continuous deployment pipeline; introducing one is listed as future work.
+> The system is built and started with Docker Compose (`docker compose up -d --build`). Automated verification is performed with PHPUnit test suites in each microservice (167 tests in total). The project does not currently use a continuous integration or continuous deployment pipeline; introducing one is listed as future work.
 
 **10.4 — Deployment appendix intro (A.6)**
 > The system runs on a single machine using Docker Compose: one PostgreSQL container, eight microservice containers, five scheduler containers and one frontend container (nginx). Data is stored in a persistent Docker volume, and configuration secrets are supplied through an environment file that is excluded from version control. This deployment is intended for development and demonstration; public hosting would additionally require a domain name, HTTPS, a production web server and automated backups.

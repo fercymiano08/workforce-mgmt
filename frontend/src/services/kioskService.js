@@ -1,4 +1,4 @@
-import http from './http';
+import http, { KIOSK_TOKEN_KEY } from './http';
 import { toDateKey } from './attendanceService';
 import { nowInTimezone } from '../utils/helpers';
 
@@ -26,11 +26,10 @@ const DEFAULT_SETTINGS = {
 
 const SETTINGS_KEY = 'kiosk_settings_cache';
 
-// The kiosk PIN is a one-time-per-24h security gate: once it is entered the
-// terminal stays unlocked for a full day, even if the browser tab is closed
-// and reopened (localStorage survives tab shutdown on the same device).
-const UNLOCK_KEY = 'kiosk_unlock_until';
-const UNLOCK_DURATION_MS = 24 * 60 * 60 * 1000;
+// The kiosk PIN is a one-time-per-24h security gate. Entering it makes the server issue a
+// signed device token (valid 24h, void as soon as the PIN changes), which is stored in
+// localStorage so the terminal stays unlocked across a tab close or reboot. The server -
+// not this browser flag - enforces it: every clock-in call needs that token.
 
 function readStorage(key) {
   try { return window.localStorage.getItem(key); } catch { return null; }
@@ -99,27 +98,40 @@ export const kioskService = {
   },
 
   isUnlocked() {
-    const until = Number(readStorage(UNLOCK_KEY) || 0);
-    return until > Date.now();
+    try {
+      const { token, expiresAt } = JSON.parse(readStorage(KIOSK_TOKEN_KEY) || '{}');
+      return Boolean(token) && Number(expiresAt) * 1000 > Date.now();
+    } catch {
+      return false;
+    }
   },
 
-  markUnlocked() {
-    writeStorage(UNLOCK_KEY, String(Date.now() + UNLOCK_DURATION_MS));
+  storeDeviceToken(token, expiresAt) {
+    if (token && expiresAt) {
+      writeStorage(KIOSK_TOKEN_KEY, JSON.stringify({ token, expiresAt }));
+    }
   },
 
   clearUnlocked() {
-    removeStorage(UNLOCK_KEY);
+    removeStorage(KIOSK_TOKEN_KEY);
   },
 
+  // Called by an Administrator while enabling the kiosk; the server returns a device
+  // token so this very device is unlocked straight away.
   async setPin(pin) {
-    await http.post('/kiosk/pin', { pin });
+    const response = await http.post('/kiosk/pin', { pin });
+    this.storeDeviceToken(response.token, response.expiresAt);
     return this.load();
   },
 
   async verifyPin(pin) {
     try {
       const response = await http.post('/kiosk/verify-pin', { pin });
-      return response.ok === true;
+      if (response.ok === true) {
+        this.storeDeviceToken(response.token, response.expiresAt);
+        return true;
+      }
+      return false;
     } catch {
       return false;
     }
@@ -131,7 +143,6 @@ export const kioskService = {
       active: true,
       enabledAt: new Date().toISOString(),
     });
-    this.markUnlocked();
     await this.log('mode', `Kiosk mode enabled on "${next.deviceName || 'this device'}"`, {
       detail: `Location: ${next.location}`,
     });

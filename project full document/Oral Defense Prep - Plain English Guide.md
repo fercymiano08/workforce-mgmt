@@ -164,7 +164,7 @@ These are the exact things the panel may probe. Say them confidently.
 | **Password policy** | Min 8 + upper + lower + number (enforced on change, reset, and registration). |
 | **Throttling** | Forgot-password and reset endpoints are throttled (limited requests per minute). |
 | **Kiosk PIN** | A PIN is stored only as a SHA-256 hash (a one-way code), never in plain text. |
-| **Public kiosk endpoints** | The device needs no login, but it can ONLY see minimal info (never salary, email, phone, address). |
+| **Kiosk device token** | The device has no login, but entering the kiosk PIN gives it a signed 24-hour token; without the token the kiosk endpoints answer 401. Even with it, it only sees minimal info (never salary, email, phone, address). |
 
 **One killer closing line:**
 > "Security is enforced on the **backend**, not the frontend - the frontend only *shows* what the backend allows. So even if someone edits the browser, they can't access anything they're not authorized to."
@@ -421,7 +421,7 @@ Use this as a rapid-fire review. One line = one idea. Cover the right column, th
 36. Password policy? → 8+ chars, uppercase, lowercase, digit.
 37. OTP reset? → 6-digit code by email, 10-minute expiry, one-time use.
 38. Why can't admin self-reset? → It's the reserved owner account.
-39. Why are kiosk endpoints public but safe? → Minimal fields only (name, photo, dept, today's schedule) - never salary/email/phone/address.
+39. How is the kiosk secured if it has no login? → PIN unlock gives the device a signed, expiring token that every clock-in call must send; the PIN check is rate-limited; the token dies when the PIN changes; and the endpoints return minimal fields only (name, photo, dept, today's schedule) - never salary/email/phone/address.
 40. Where is the kiosk PIN stored? → SHA-256 hash in settings.kiosk.
 41. Frontend vs backend security? → Hiding buttons is convenience; the backend enforces real security.
 

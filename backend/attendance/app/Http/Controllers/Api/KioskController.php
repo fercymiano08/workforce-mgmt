@@ -17,6 +17,7 @@ use App\Services\NotificationService;
 use App\Services\PayrollClient;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use App\Services\KioskDeviceToken;
 use Illuminate\Support\Carbon;
 
 /**
@@ -55,9 +56,24 @@ class KioskController extends Controller
 
         $kiosk = $this->kiosk();
         $hash = hash('sha256', 'wfp-kiosk:'.$request->input('pin'));
+        $ok = ! empty($kiosk['pinHash']) && hash_equals($kiosk['pinHash'], $hash);
+
+        if (! $ok) {
+            // Logged here, not by the terminal: a locked device has no token yet,
+            // and this way the record cannot be forged or skipped by a client.
+            if (! empty($kiosk['pinHash'])) {
+                $this->appendLog('security', 'Failed attempt to unlock the kiosk (incorrect PIN)');
+            }
+
+            return response()->json(['ok' => false]);
+        }
+
+        $device = KioskDeviceToken::issue();
 
         return response()->json([
-            'ok' => ! empty($kiosk['pinHash']) && hash_equals($kiosk['pinHash'], $hash),
+            'ok' => true,
+            'token' => $device['token'],
+            'expiresAt' => $device['expiresAt'],
         ]);
     }
 
@@ -70,12 +86,25 @@ class KioskController extends Controller
             'employeeId' => 'nullable|string|max:20',
         ]);
 
+        $entry = $this->appendLog(
+            $request->input('type'),
+            $request->input('message'),
+            $request->input('detail'),
+            $request->input('employeeId'),
+        );
+
+        return response()->json(['data' => $entry], 201);
+    }
+
+    /** Adds an entry to the kiosk activity log (and a security event when it is one). */
+    private function appendLog(string $type, string $message, ?string $detail = null, ?string $employeeId = null): array
+    {
         $entry = [
             'id' => 'KLOG-'.strtoupper(substr(uniqid('', true), 0, 13)),
-            'type' => $request->input('type'),
-            'message' => $request->input('message'),
-            'detail' => $request->input('detail'),
-            'employeeId' => $request->input('employeeId'),
+            'type' => $type,
+            'message' => $message,
+            'detail' => $detail,
+            'employeeId' => $employeeId,
             'at' => now()->toISOString(),
         ];
 
@@ -84,11 +113,11 @@ class KioskController extends Controller
         $kiosk['logs'] = array_slice([$entry, ...($kiosk['logs'] ?? [])], 0, self::MAX_LOGS);
         ConfigurationClient::updateKiosk($kiosk);
 
-        if ($entry['type'] === 'security') {
-            $this->recordSecurityEvent($entry['message'], $entry['employeeId']);
+        if ($type === 'security') {
+            $this->recordSecurityEvent($message, $employeeId);
         }
 
-        return response()->json(['data' => $entry], 201);
+        return $entry;
     }
 
     /**
@@ -218,7 +247,15 @@ class KioskController extends Controller
         $kiosk['pinHash'] = hash('sha256', 'wfp-kiosk:'.$request->input('pin'));
         ConfigurationClient::updateKiosk($kiosk);
 
-        return response()->json(['success' => true]);
+        // The Administrator setting the PIN is standing at the device being enabled,
+        // so it is issued a token straight away (any older token is now void).
+        $device = KioskDeviceToken::issue();
+
+        return response()->json([
+            'success' => true,
+            'token' => $device['token'] ?? null,
+            'expiresAt' => $device['expiresAt'] ?? null,
+        ]);
     }
 
     public function reset(): JsonResponse
@@ -362,6 +399,10 @@ class KioskController extends Controller
 
     public function clockIn(Request $request): JsonResponse
     {
+        if ($inactive = $this->inactiveResponse()) {
+            return $inactive;
+        }
+
         $data = Attendance::apiFillable($request->validate([
             'employeeId' => 'required|string|max:20|exists:employees,id',
             'date' => 'required|date',
@@ -410,6 +451,10 @@ class KioskController extends Controller
 
     public function clockOut(Request $request, string $id): JsonResponse
     {
+        if ($inactive = $this->inactiveResponse()) {
+            return $inactive;
+        }
+
         $record = Attendance::find($id);
         if (! $record) {
             return response()->json(['message' => 'Attendance record not found'], 404);
@@ -584,6 +629,19 @@ class KioskController extends Controller
      * config value, then the app default. Shift times and "now" comparisons
      * for the device all use this.
      */
+    /** Clock-ins only work while an Administrator has the kiosk switched on. */
+    private function inactiveResponse(): ?JsonResponse
+    {
+        if ($this->kiosk()['active']) {
+            return null;
+        }
+
+        return response()->json([
+            'message' => 'Clock-ins are currently disabled on this kiosk.',
+            'code' => 'kiosk_inactive',
+        ], 423);
+    }
+
     private function kioskTimezone(): string
     {
         $kiosk = $this->kiosk();

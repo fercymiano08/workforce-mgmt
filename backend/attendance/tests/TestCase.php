@@ -4,7 +4,9 @@ namespace Tests;
 
 use App\Models\Department;
 use App\Models\Role;
+use App\Models\Setting;
 use App\Models\User;
+use App\Services\KioskDeviceToken;
 use Illuminate\Foundation\Testing\TestCase as BaseTestCase;
 
 abstract class TestCase extends BaseTestCase
@@ -31,6 +33,25 @@ abstract class TestCase extends BaseTestCase
             'role_label' => 'Employee',
             'avatar_seed' => 'Juan',
         ]);
+    }
+
+    /**
+     * Sets a kiosk PIN (1234) and returns the headers of a device that has unlocked
+     * with it. Pass $active = false for a kiosk that an admin has switched off.
+     *
+     * @return array{'X-Kiosk-Token': string}
+     */
+    protected function kioskDeviceHeaders(bool $active = true): array
+    {
+        $setting = Setting::firstOrNew(['id' => 1]);
+        $setting->kiosk = array_merge($setting->kiosk ?? [], [
+            'pinHash' => hash('sha256', 'wfp-kiosk:1234'),
+            'active' => $active,
+            'enabledAt' => now()->toISOString(),
+        ]);
+        $setting->save();
+
+        return ['X-Kiosk-Token' => KioskDeviceToken::issue()['token']];
     }
 
     protected function seedOrgStructure(): void

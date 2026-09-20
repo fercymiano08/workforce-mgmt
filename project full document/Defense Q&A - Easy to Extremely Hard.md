@@ -15,7 +15,7 @@ A web-based workforce management system — handles attendance, schedules, leave
 Frontend (React — what you see), Backend (Laravel — the brain), Database (PostgreSQL — where data is stored).
 
 **Q3. Who are the users?**
-Workforce Admin/Administrator (full access), Employee (self-service only), and the Kiosk (a device, not a person — no login).
+Workforce Admin/Administrator (full access), Employee (self-service only), and the Kiosk (a device, not a person — no login; it is unlocked with the kiosk PIN and then holds a signed, expiring device token).
 
 **Q4. How many backend services does the system have now?**
 8: `core`, `intelligence`, `attendance`, `scheduling`, `timeoff`, `payroll`, `communications`, `configuration`.
@@ -188,7 +188,16 @@ No. It routes by URL prefix (a reverse proxy, the same table as the Vite dev pro
 Secrets are in a git-ignored `.env` file, supplied to the containers as environment variables — not baked into images and not in the repository (only `.env.docker.example` is tracked). Data lives in a Docker volume, so `docker compose down` keeps it and `docker compose down -v` erases it.
 
 **Q54. Did putting it in Docker find any problems?**
-Yes, which is a good sign the test was worth doing: a missing import that would have crashed the Audit Logs page, invisible BOM characters in 7 services' bootstrap files, read-only cache folders copied from Windows, and a PostgreSQL start-up timing issue. All were fixed and re-tested (123 PHPUnit tests pass; a from-scratch `down -v` + `up -d` produces a working system in about 80 seconds).
+Yes, which is a good sign the test was worth doing: a missing import that would have crashed the Audit Logs page, invisible BOM characters in 7 services' bootstrap files, read-only cache folders copied from Windows, and a PostgreSQL start-up timing issue. All were fixed and re-tested (167 PHPUnit tests pass; a from-scratch `down -v` + `up -d` produces a working system in about 80 seconds).
+
+**Q55. How do you make sure an Employee can never do what a Workforce Admin can — and the reverse?**
+On the **server**, not just in the menus. Every administrator route is behind the `admin` middleware, so an Employee token gets **403** (verified live against the running system for AI Decision Support, employees, audit logs, analytics, shift schedules and settings changes). Routes both roles can reach check ownership: an Employee can only read or file things under their own employee ID (`assertSelfOrAdmin`), and can only withdraw their own *pending* leave/overtime or submit their own *draft* timesheet. On the frontend, every admin page is wrapped admin-only and every "My …" page employee-only, but that is convenience — a role-boundary test in each service proves the server side (167 tests in total).
+
+**Q56. Can an Employee approve their own leave by editing the request?**
+Not any more, and we can say exactly why. While auditing role boundaries we found that the *create* endpoints saved whatever `status` the request contained, so a hand-made request with `status: "Approved"` would have been accepted. We wrote a failing test first, then fixed it: for an Employee the server now always saves **Pending** with no approver, and only an Administrator can decide it. This is a good example of testing finding a real defect.
+
+**Q57. The kiosk has no login. Couldn't someone clock in a colleague with a script?**
+Not without unlocking the device. Entering the kiosk PIN makes the server issue a signed token (valid 24 hours, voided the moment the PIN is changed) and every clock-in, directory, face-check and log call must send it; the PIN check itself is rate-limited to 10 attempts a minute, and failed attempts are recorded as security events by the server. Honest limits: someone who knows the PIN, or who is standing at the unlocked kiosk, can still use it, and the kiosk supports an employee-ID fallback; there is no face liveness check, and it is a local-network device, not internet-grade hardening.
 
 ---
 

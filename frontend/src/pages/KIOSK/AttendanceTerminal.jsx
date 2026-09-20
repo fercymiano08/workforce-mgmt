@@ -12,6 +12,7 @@ import Avatar from '../../components/ui/Avatar';
 import FaceRecognitionModal from '../../components/attendance/FaceRecognitionModal';
 import KioskPinModal from '../../components/kiosk/KioskPinModal';
 import { kioskService } from '../../services/kioskService';
+import { KIOSK_LOCKED_EVENT } from '../../services/http';
 import { loadModels } from '../../services/faceMatchService';
 import { useToast } from '../../context/ToastContext';
 import { formatDate, formatTime, nowInTimezone } from '../../utils/helpers';
@@ -110,6 +111,14 @@ export default function AttendanceTerminal() {
   const searchRef = useRef(null);
   const taps = useRef([]);
 
+  // The server says this device is no longer unlocked (24h expired, or the PIN was changed):
+  // fall back to the PIN screen instead of showing errors on every clock-in.
+  useEffect(() => {
+    const relock = () => setUnlocked(false);
+    window.addEventListener(KIOSK_LOCKED_EVENT, relock);
+    return () => window.removeEventListener(KIOSK_LOCKED_EVENT, relock);
+  }, []);
+
   useEffect(() => {
     const clock = setInterval(() => {
       setNow(new Date());
@@ -120,9 +129,13 @@ export default function AttendanceTerminal() {
       setUnlocked(kioskService.isUnlocked());
       if (next.active) {
         loadModels().catch(() => {});
-        kioskService.getEmployees()
-          .then(setDirectory)
-          .catch(() => {});
+        // The employee directory needs the device token, so only ask for it once unlocked
+        // (handleLockSubmit fetches it right after a successful PIN).
+        if (kioskService.isUnlocked()) {
+          kioskService.getEmployees()
+            .then(setDirectory)
+            .catch(() => {});
+        }
       }
     });
     return () => {
@@ -190,13 +203,14 @@ export default function AttendanceTerminal() {
     const ok = await kioskService.verifyPin(pin);
     if (ok) {
       kioskService.log('security', 'Kiosk terminal unlocked with access PIN');
-      kioskService.markUnlocked();
       setLockPin('');
       setLockSubmitting(false);
       setUnlocked(true);
       setPhase('mode');
+      // The directory needs the device token, so it can only be fetched once unlocked.
+      kioskService.getEmployees().then(setDirectory).catch(() => {});
     } else {
-      kioskService.log('security', 'Failed attempt to unlock the kiosk (incorrect PIN)');
+      // (The server records the failed attempt itself - a locked device has no token to log with.)
       setLockError('Incorrect PIN. Please try again.');
       setLockPin('');
       setLockSubmitting(false);
@@ -643,13 +657,11 @@ export default function AttendanceTerminal() {
     const ok = await kioskService.verifyPin(pin);
     if (ok) {
       kioskService.log('security', 'Kiosk unlocked by Administrator');
-      kioskService.markUnlocked();
       setUnlockSubmitting(false);
       setShowUnlock(false);
       toast.success('Unlocked', 'Returning to the Kiosk Management Dashboard.');
       navigate('/kiosk-setup');
     } else {
-      kioskService.log('security', 'Failed attempt to unlock the kiosk (incorrect PIN)');
       setUnlockError('Incorrect PIN. Please try again.');
       setUnlockSubmitting(false);
     }
