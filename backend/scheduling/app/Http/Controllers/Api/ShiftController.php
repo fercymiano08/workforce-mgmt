@@ -70,10 +70,16 @@ class ShiftController extends Controller
             ]);
         }
 
-        $record = ShiftSchedule::create([
-            ...$data,
-            'id' => $this->nextIdFor(ShiftSchedule::class, 'SCH'),
-        ]);
+        try {
+            $record = ShiftSchedule::create([
+                ...$data,
+                'id' => $this->nextIdFor(ShiftSchedule::class, 'SCH'),
+            ]);
+        } catch (\Illuminate\Database\UniqueConstraintViolationException) {
+            throw \Illuminate\Validation\ValidationException::withMessages([
+                'date' => [$data['employee_name'].' already has a shift on '.\Carbon\Carbon::parse($data['date'])->format('M j, Y').'. Edit or delete it instead of adding another.'],
+            ]);
+        }
 
         $definition = ShiftDefinition::find($record->shift_id);
         NotificationService::notifyEmployee(
@@ -165,14 +171,20 @@ class ShiftController extends Controller
                     continue;
                 }
 
-                $newSchedule = ShiftSchedule::create([
-                    'id' => $this->nextIdFor(ShiftSchedule::class, 'SCH'),
-                    'employee_id' => $employee->id,
-                    'employee_name' => trim($employee->first_name.' '.$employee->last_name),
-                    'shift_id' => $data['shiftId'],
-                    'date' => $dateKey,
-                    'status' => 'Scheduled',
-                ]);
+                try {
+                    $newSchedule = ShiftSchedule::create([
+                        'id' => $this->nextIdFor(ShiftSchedule::class, 'SCH'),
+                        'employee_id' => $employee->id,
+                        'employee_name' => trim($employee->first_name.' '.$employee->last_name),
+                        'shift_id' => $data['shiftId'],
+                        'date' => $dateKey,
+                        'status' => 'Scheduled',
+                    ]);
+                } catch (\Illuminate\Database\UniqueConstraintViolationException) {
+                    // Someone else scheduled this person for this day a moment ago.
+                    $skippedExisting++;
+                    continue;
+                }
                 $createdIds[] = $newSchedule->id;
                 $created++;
                 $employeesScheduled[$employee->id] = ($employeesScheduled[$employee->id] ?? 0) + 1;

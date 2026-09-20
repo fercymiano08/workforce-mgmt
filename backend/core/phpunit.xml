@@ -33,5 +33,7 @@
         <env name="TELESCOPE_ENABLED" value="false"/>
         <env name="NIGHTWATCH_ENABLED" value="false"/>
         <env name="GEMINI_API_KEY" value=""/>
+        <!-- Tests must NEVER reach the real running services (they would write test data into them). -->
+        <env name="EMPLOYEE_REPLICA_TARGETS" value="[]"/>
     </php>
 </phpunit>

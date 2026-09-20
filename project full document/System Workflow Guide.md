@@ -121,6 +121,10 @@ Splitting one app into eight means every request can turn into several network c
 | **Notification batches are bounded** | The attendance alert scan looks up "already flagged today" with **one** query, and sends new alerts as one concurrent batch capped at **15 per scan**; the rest follow on the next scan (the "already flagged" check prevents duplicates) | Before, each absent employee cost an unindexed query plus a blocking HTTP call — a busy morning could exceed PHP's 30 s request limit |
 | **Short timeouts on non-critical calls** | Notification and audit calls: 1 s to connect, 3 s total. The early-leave policy reads the *local* settings replica first instead of calling `configuration` | A notification is never worth making someone wait at the kiosk |
 | **Mail can't hang a request** | SMTP has an 8 s timeout (`MAIL_TIMEOUT`); the AI (Gemini) call defaults to 15 s (`GEMINI_TIMEOUT`) | PHP kills any request after 30 s. A dead mail host or slow AI must fail fast, not turn into a 500 |
+| **The database enforces one-per-day** | A unique index on ttendance (employee_id, date) and shift_schedules (employee_id, date) means two simultaneous requests can never create a duplicate, even under Docker's multiple workers (an application check alone can be beaten by a race). The app turns the database's refusal into a friendly message | The admin's manual *Add attendance* had no duplicate check at all before this |
+| **Working-day logic uses Manila time** | Services run in UTC, but shifts and attendance are Manila wall-clock. The no-show alert scan now uses the company's clock (LocalTime), so a missing 8 AM person is flagged at 9 AM, not ~5 PM | Comparing a Manila shift start with a UTC 
+ow() made the alert fire 8 hours late |
+| **Tests never touch the live system** | The test suites force every replica-push address to empty and every cross-service client into local mode (with guard tests) | Running the tests used to push test employees/schedules into the running services |
 | **Lists are bounded** | Notification lists return the newest 200; `GET /api/attendance` accepts optional `?from=&to=` and the HR Dashboard asks for only the last 35 days | The bell is polled every 30 s by every open tab |
 | **Duplicate requests are collapsed in the browser** | The shared HTTP client (`services/http.js`) will not send a second identical create/update/delete (same method, URL and body) while the first is still in flight — the caller just receives the first response. On top of that the shared `Button` locks itself while its action is running, and the server refuses duplicates for leave (overlapping dates), overtime (same day) and shift assignment (same day) | A slow response can never turn a double click, an Enter repeat or a spammed button into two records. Proven by an automated script (5 identical POSTs → the server receives 1) |
 | **Face scanning is warmed up and lean** | The three face-api networks are all warmed with a throw-away pass while the page/modal opens (registration and the kiosk preload the ~7 MB of models early); detection tries a 160 px input first and 320 px as the fallback (was 224/416); redundant re-detection was removed; the result flash and retry pause were shortened | The first scan used to pay a multi-second shader-compile cost and two heavier detection passes. Honest note: these are targeted fixes to the known slow spots; the actual speed still depends on the kiosk's GPU/CPU |
@@ -464,6 +468,8 @@ The terminal has one popup component with four tones. Use this table to explain 
 | Red | Attendance Not Recorded | A real network/server failure — nothing was saved | Try Again / Cancel |
 | Amber (warning) | You Are Late | More than 15 min after shift start | Clock In Anyway / Cancel |
 | Amber | Schedule Unavailable | The schedule could not be loaded | Back to Home |
+| Amber | Overtime Not Approved | Clocking **out** more than 15 min past the (approved) shift end with no approved overtime covering it — the extra time is recorded but **not paid** | Clock Out / Go Back |
+| Red/Amber banner | Early-out allowance | On the early clock-out reason screen: "1 of 2 used", or "this one will be recorded as UNEXCUSED" once used up; extra line for *Feeling Unwell* (certificate within 48 h) | — |
 | Blue (info) | Clocking In Early / Very Early | Before the shift start | Clock In Anyway / Cancel |
 | Screens | Already Clocked In Today · No Clock-In Found | Duplicate / missing punch | Suggests the right action |
 | Screen | Terminal locked (60 s countdown) | 3 face-mismatch strikes | — |
@@ -491,23 +497,37 @@ Clocking out before the scheduled shift end is **allowed** — it just has to be
 | Step | Actor | What happens |
 |------|-------|--------------|
 | 1 | Terminal | Detects clock-out time < scheduled end (shift end + approved overtime) |
-| 2 | Terminal | Shows the reason picker — one tap required: **Feeling Unwell / Family Emergency / Personal Emergency / Approved Leave / Other**; a short note is optional |
+| 2 | Terminal | Shows how many free early clock-outs the person has already used (e.g. "1 of 2 in the last 30 days"; red "this one will be UNEXCUSED" once they are used up), then the reason picker — one tap required: **Feeling Unwell / Family Emergency / Personal Emergency / Other**; a short note is optional. Choosing *Feeling Unwell* adds: "needs a medical certificate within 48 hours" |
 | 3 | Employee | Taps **Clock Out Early** |
-| 4 | Backend | Records the punch normally, then stores an early-out snapshot: `ECO-…` row with `reason_code`, `note`, **`minutes_early`** (absolute minutes before shift end), `reason_status` = `provided` |
+| 4 | Backend | Records the punch normally, then stores an early-out snapshot: `ECO-…` row with `reason_code`, `note`, **`minutes_early`** (absolute minutes before shift end) |
 | 5 | Backend | Attendance row status → **`Early Leave`** |
-| 6 | Backend | **Notification rule:** reasons `SICK`, `FAMILY_EMERGENCY`, `PERSONAL_EMERGENCY` → all Workforce Admins get a notification immediately (health/emergency deserves a human eye). `APPROVED_LEAVE` and `OTHER` are silent — it was already arranged |
+| 6 | Backend | **Verifies what it can** (`EarlyLeaveEnforcer`, see below) — the punch itself is never refused |
 | 7 | Database | The punch snapshot in `early_clock_outs` is immutable — like every punch, it cannot be silently edited away |
 
-Follow-up, two sides:
+#### Why the reason alone is not trusted
 
-- **Employee** — My Attendance has an **Early Clock Outs** tab: date, clocked-out time, scheduled end, time lost, reason, classification. The employee can **edit the reason/note** on their own record (`PUT /api/attendance/early-outs/{id}/reason`) even after HR has acted.
-- **HR** — the Attendance page has an **Early Clock Outs** tab with a pending-count badge. HR reviews each one and **classifies** it: `Excused (Sick)` / `Excused (Emergency)` / `Excused (Early Leave)` / `Unpaid`. **Unpaid** early minutes are deducted from pay; excused ones are not.
+A kiosk cannot tell whether "I'm sick" is true — and every employee sees the same steps. So the reason is treated as a **claim**, and the system makes false claims costly and visible:
+
+| Control | What it does |
+|---------|--------------|
+| **Free allowance** | Each employee gets **2 free early clock-outs per rolling 30 days** (both editable in Settings). The **3rd is marked UNEXCUSED (Unpaid) automatically, at the punch** — no waiting for HR. Only *earlier* early-outs count against you, so "2 free" means two |
+| **Proof for SICK** | A *Feeling Unwell* claim becomes `CERTIFICATE_REQUIRED` with a deadline of **48 hours** (Settings → *Certificate Deadline*). The employee uploads a photo/PDF in My Attendance → Early Clock Outs. If the deadline passes with nothing attached, an hourly job (`early-outs:expire-certificates`) marks it **unexcused automatically** and tells both sides. HR **cannot** excuse a sick early-out without a certificate on file, unless they use *Override* (audited) |
+| **Alert on every early clock-out** | All Workforce Admins are notified for **every** early clock-out — including *Other* — with the running count ("early clock-out #2 in 30 days, within the free allowance of 2"). High priority once the allowance is exceeded, so a person can follow up the same day |
+| **Copycat detection** | If **3 employees** leave early on the same day citing the same reason, the admins get a "Possible Early-Leave Pattern" alert |
+| **Only verifiable reasons** | *Approved Leave* is no longer offered (a day with approved leave has no clock-in at all, so it can never be true at the kiosk); the server also refuses it |
+
+**Follow-up, two sides:**
+
+- **Employee** — My Attendance has an **Early Clock Outs** tab: date, clocked-out time, scheduled end, time lost, reason, classification, and proof status (*Certificate required — due …*). The employee can edit the reason/note and **attach a medical certificate** (`PUT /api/attendance/early-outs/{id}/reason`).
+- **HR** — the Attendance page has an **Early Clock Outs** tab with a pending-count badge. HR reviews each one (with the certificate download link) and **classifies** it: `Excused (Sick)` / `Excused (Emergency)` / `Excused (Early Leave)` / `Unpaid`.
+
+> **Honest note on pay:** payroll pays the hours actually clocked, so the missing hours after an early leave are not paid either way. The classification is the attendance/discipline record (and, for *Excused (Sick)*, it drafts a Sick-leave request); it does not currently add or remove pay by itself.
 
 ### Tech Trail
 
 - Endpoints: `GET /api/kiosk/employees` (directory of minimal fields), `GET /api/kiosk/employees/{employeeId}` (single-employee fallback lookup, also resolves a bare numeric suffix), `GET /api/kiosk/schedule/{employeeId}` (today's shift), `GET /api/kiosk/attendance/{employeeId}` (today's record), `POST /api/kiosk/attendance`, `PUT /api/kiosk/attendance/{id}`, `POST /api/kiosk/log`
 - Early leaves: `GET /api/attendance/early-outs`, `GET /api/attendance/early-outs/employee/{employeeId}`, `GET /api/attendance/early-outs/pending`, `PUT /api/attendance/early-outs/{id}/reason`, `POST /api/attendance/early-outs/{id}/classify`
-- Server answers to remember: `422 {reason: 'no_shift'}`, `422 {reason: 'shift_over'}`, `422 {reason: 'on_approved_leave'}`, `422 {reason: 'reason_required'}`, `409` duplicate clock-in, `423` kiosk switched off, `401 kiosk_locked` missing/expired device token. The terminal shows the server's message for any of these.
+- Server answers to remember: `422 {reason: 'no_shift'}`, `422 {reason: 'shift_over'}`, `422 {reason: 'on_approved_leave'}`, `422 {reason: 'reason_required'}`, `422 {reason: 'reason_not_verifiable'}` (Approved Leave as a reason), `422 {reason: 'proof_required'}` (HR excusing a sick claim with no certificate), `409` duplicate clock-in, `423` kiosk switched off, `401 kiosk_locked` missing/expired device token. The terminal shows the server's message for any of these.
 - Tables: `employees` (read minimal), `shift_schedules` (read today), `attendance` (write), `early_clock_outs` (write), `security_events` (write)
 - Automated tests: `KioskGuardrailTest` (no shift, 9:30 pm with no shift, cancelled schedule, shift over, approved-overtime window, 08:15:00 = Present vs 08:15:01 = Late, server clock wins, reason required, clock-out at end needs none, face-mismatch alert), `EarlyClockOutTest`, `KioskDeviceTokenTest`
 
@@ -624,12 +644,13 @@ An employee with an **Approved leave** covering today is marked on-leave rather 
 
 | Code | Name | Hours |
 |------|------|-------|
-| SHIFT004 | Flexible | 08:00 – 17:00 |
-| SHIFT005 | Overtime | 17:00 – 21:00 |
+| SHIFT004 | Flexible Shift | 08:00 – 17:00 |
 
-> SHIFT004 *is* the office "8-to-5". Templates are reference data — every employee can read them; only the admin can build assignments.
+> **There is exactly ONE shift: the 8-to-5 Flexible Shift** (this is how the client's company actually works). Templates are reference data — every employee can read them; only the admin can build assignments.
 >
-> **The templates can never be missing.** Nothing can be scheduled without at least one template (the Assign form would have nothing to pick, and schedule generation is refused). There is no screen to create or delete templates, so a migration (`ensure_default_shift_definitions`) puts SHIFT004 and SHIFT005 in place on any database that lacks them — fresh install, Docker start, or a database whose demo seed was never run — and never touches existing rows. The Shifts page also says so plainly if the list is ever empty, instead of showing an empty dropdown.
+> **Overtime is not a shift.** There is deliberately no "Overtime Shift" (5–9 PM) template — nobody can be *scheduled* for overtime. Overtime only happens when an employee's day is **extended**: an approved overtime request moves that day's effective end from 5:00 PM to 5:00 PM + the approved hours (Module 10). A migration removes the old Overtime template from any database that still has it.
+>
+> **The template can never be missing.** Nothing can be scheduled without it (the Assign form would have nothing to pick, and schedule generation is refused). There is no screen to create or delete templates, so a migration (`ensure_default_shift_definitions`) puts SHIFT004 in place on any database that lacks it — fresh install, Docker start, or a database whose demo seed was never run — and never touches existing rows. The Shifts page also says so plainly if the list is ever empty, instead of showing an empty dropdown.
 >
 > **One shift per person per day.** Assigning a second shift to someone who already has one that day is refused with a message naming the existing assignment; running the automated generator twice creates nothing new the second time (it reports the days as "already scheduled").
 
@@ -736,6 +757,26 @@ Cancel path: while still Pending, the employee can cancel it via `PATCH /api/lea
 | 6 | Employee may **cancel** their own request while Pending (same dual-rule pattern as leave) |
 
 Why reconciliation matters: without it, approved OT would live only in a request row and payroll numbers would disagree across pages. Reconciliation keeps `attendance.overtime`, `timesheets.approved_ot_hours`, and the request row telling the same story.
+
+### How Overtime Is Actually Paid (Approved AND Worked)
+
+Overtime is any time worked past the shift end (5:00 PM), but it is **paid only when it was approved — and only for the time actually worked**. Per day:
+
+```
+paid overtime  =  the SMALLER of  (overtime really worked that day)  and  (overtime approved for that day)
+```
+
+| Situation | Worked past 5 PM | Approved | Paid OT |
+|-----------|------------------|----------|---------|
+| Stayed late **without** asking | 2 h | 0 | **0 h** — recorded, flagged "Unauthorized Overtime", not paid |
+| Approved for 2 h, used all of it | 2 h | 2 h | 2 h |
+| Approved for 2 h, left on time | 0 h | 2 h | **0 h** (an unused approval is not paid) |
+| Approved for 2 h, stayed 3 h | 3 h | 2 h | **2 h** (capped at the approval) |
+| Approved for 2 h, stayed 1 h | 1 h | 2 h | 1 h |
+
+- Each weekly timesheet keeps three numbers: `overtime_hours` (worked), `approved_ot_hours` (approved) and **`paid_ot_hours`** (payable — what payroll uses, at 1.25× the hourly rate). The HR Timesheets screen shows "**Xh not paid**" beside unapproved time, and the employee's timesheet shows "Xh paid · Yh not approved".
+- **The kiosk warns the employee at clock-out**: if they clock out more than 15 minutes after the (approved) end with no approval covering it, an amber **"Overtime Not Approved"** popup says the extra time will be recorded but **not paid** unless HR approves it. The punch is still accepted — nobody is trapped at the door.
+- **Approval can come after the fact.** An employee who worked late without asking can file a request for **any day in the past 7 days** (older dates go through HR, who can record any date). HR then decides; if approved, the timesheet is recalculated and the time becomes payable.
 
 ### Tech Trail
 
@@ -986,7 +1027,10 @@ Open events raise the system's concern level; resolving them restores the score.
 | Clock-out reminder requested | Employee |
 | Schedule published/changed | Affected employees (`schedule_change`) |
 | Clocked in Late at the kiosk | HR — all admins (`attendance_late`) |
-| Clocked out early **with a health/emergency reason** | HR — all admins (`early_clock_out`, deep-links to the Early Clock Outs tab). Approved-leave/other early-outs stay silent |
+| **Every** early clock-out | HR — all admins (`early_clock_out`, deep-links to the Early Clock Outs tab), with the running count; high priority once the free allowance is exceeded |
+| Early clock-outs past the free allowance / sick certificate overdue | Employee **and** HR (`early_leave_auto_unpaid`) |
+| A SICK early clock-out needs proof | Employee (`early_leave_certificate_required`, with the deadline); HR when the proof is uploaded (`early_leave_proof_submitted`) |
+| 3 employees leave early the same day with the same reason | HR (`early_clock_out_pattern`, high priority) |
 | **Face mismatch at the kiosk** (someone clocking in as another person) | HR — all admins, **high priority** (`security_face_mismatch`, deep-links to AI Decision Support) |
 | No-show / un-closed clock-in / unauthorized overtime / staffing shortage (dashboard alert scan) | HR — all admins (`attendance_absent`, `attendance_incomplete`, `attendance_unauthorized_ot`, `staff_shortage`) |
 
@@ -1107,6 +1151,11 @@ Which tables each module touches (R = read, W = write). This map is logical — 
 | 0.6 | Face-match distance threshold (below = same person) |
 | 15 s | How long a service reuses `core`'s "who is this token?" answer |
 | 15 alerts | Most no-show/overtime alerts one dashboard scan sends |
+| 2 per 30 days | Free early clock-outs per rolling window — the 3rd is unexcused automatically (editable in Settings) |
+| 48 hours | Deadline to upload a medical certificate for a SICK early clock-out (editable in Settings) |
+| 3 employees | Same reason, same day = "possible early-leave pattern" alert |
+| 7 days | How far back an employee can file an overtime request for a day already worked |
+| 1.25× | Overtime pay premium, applied only to *paid* overtime (approved AND worked) |
 | 200 | Newest notifications returned per list |
 | 35 days | Attendance window the HR Dashboard requests |
 | 1 s / 3 s | Connect / total timeout for notification and audit calls |

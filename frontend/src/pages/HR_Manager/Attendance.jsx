@@ -20,6 +20,7 @@ import { useAuth } from '../../context/AuthContext';
 import {
   EARLY_CLOCKOUT_REASON_LABELS,
   EARLY_CLOCKOUT_CLASSIFICATION_META,
+  EARLY_CLOCKOUT_REASON_STATUS_META,
   EARLY_CLOCKOUT_CLASSIFICATION_OPTIONS,
 } from '../../utils/constants';
 
@@ -217,8 +218,9 @@ export default function Attendance() {
       await refreshEarly();
       setSelectedEarly(null);
       toast.success('Classification Saved', 'The early clock-out has been classified.');
-    } catch {
-      toast.error('Error', 'Failed to save the classification.');
+    } catch (err) {
+      // e.g. "No medical certificate is attached..." - say why, not just "failed".
+      toast.error('Could not save', err?.response?.data?.message || 'Failed to save the classification.');
     } finally {
       setClassifying(false);
     }
@@ -726,6 +728,13 @@ export default function Attendance() {
                         {rec.reasonNote && (
                           <p className="text-xs text-gray-400 mt-0.5 truncate" title={rec.reasonNote}>{rec.reasonNote}</p>
                         )}
+                        {EARLY_CLOCKOUT_REASON_STATUS_META[rec.reasonStatus] && (
+                          <div className="mt-1">
+                            <Badge variant={EARLY_CLOCKOUT_REASON_STATUS_META[rec.reasonStatus].variant} size="xs">
+                              {EARLY_CLOCKOUT_REASON_STATUS_META[rec.reasonStatus].label}
+                            </Badge>
+                          </div>
+                        )}
                       </td>
                       <td className="px-4 py-3.5"><Badge variant={meta.variant} dot size="xs">{meta.label}</Badge></td>
                       <td className="px-4 py-3.5 text-right">
@@ -901,6 +910,31 @@ export default function Attendance() {
                 <p className="text-sm text-gray-500 italic mt-1.5">No reason provided yet - the employee can add one under My Attendance.</p>
               )}
             </div>
+            {selectedEarly.reasonCode === 'SICK' && (
+              <div className={`rounded-xl border p-4 ${selectedEarly.proof?.length ? 'border-emerald-100 bg-emerald-50/60' : 'border-amber-100 bg-amber-50/60'}`}>
+                <p className="text-xs font-semibold uppercase tracking-wide text-gray-600">Medical Certificate</p>
+                {selectedEarly.proof?.length ? (
+                  <ul className="mt-1.5 space-y-1">
+                    {selectedEarly.proof.map((p, i) => (
+                      <li key={i} className="text-sm">
+                        <a href={p.dataUrl} download={p.name || `certificate-${i + 1}`} className="font-medium text-blue-600 hover:underline">
+                          {p.name || `Certificate ${i + 1}`}
+                        </a>
+                        <span className="text-xs text-gray-400"> - download to review</span>
+                      </li>
+                    ))}
+                  </ul>
+                ) : (
+                  <p className="text-sm text-amber-800 mt-1.5">
+                    No certificate attached yet.
+                    {selectedEarly.proofDueAt
+                      ? ` Due ${new Date(selectedEarly.proofDueAt).toLocaleString('en-US', { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' })}; after that it becomes unexcused automatically.`
+                      : ''}
+                    {' '}Excusing it as Sick needs a certificate, or the Override option below.
+                  </p>
+                )}
+              </div>
+            )}
             <div className="grid grid-cols-2 gap-4 text-sm">
               <div>
                 <p className="text-xs text-gray-400">Current Status</p>

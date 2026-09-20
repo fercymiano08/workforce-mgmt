@@ -65,6 +65,15 @@ class OvertimeRequestController extends Controller
         if ($request->user()?->role !== 'Administrator') {
             $data['status'] = 'Pending';
             $data['approved_by'] = null;
+
+            // Retroactive requests are allowed for the past week (someone worked late
+            // without asking first and HR may still approve it) - not further back.
+            $earliest = \Carbon\Carbon::now('Asia/Manila')->subDays(7)->toDateString();
+            if (\Carbon\Carbon::parse($data['date'])->toDateString() < $earliest) {
+                throw \Illuminate\Validation\ValidationException::withMessages([
+                    'date' => ['Overtime can only be requested for today, the future, or the past 7 days. Please contact HR for older dates.'],
+                ]);
+            }
         }
 
         // One overtime request per person per day while an earlier one is still

@@ -6,13 +6,6 @@
       "startTime": "08:00",
       "endTime": "17:00",
       "color": "#3B82F6"
-    },
-    {
-      "id": "SHIFT005",
-      "name": "Overtime Shift",
-      "startTime": "17:00",
-      "endTime": "21:00",
-      "color": "#EF4444"
     }
   ],
   "shiftSchedules": [

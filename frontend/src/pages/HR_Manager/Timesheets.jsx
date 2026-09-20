@@ -280,6 +280,9 @@ const barMap = {
                           {ts.approvedOtHours > 0 && ts.overtimeHours > ts.approvedOtHours && (
                             <AlertTriangle className="w-3.5 h-3.5 text-amber-500" title={`Overtime overrun - ${ts.approvedOtHours}h approved, ${ts.overtimeHours}h clocked this week`} />
                           )}
+                          {ts.overtimeHours > (ts.paidOtHours ?? 0) && (
+                            <span className="text-xs font-medium text-red-500" title="Overtime that was not approved for that day is recorded but not paid">· {(ts.overtimeHours - (ts.paidOtHours ?? 0)).toFixed(1)}h not paid</span>
+                          )}
                         </div>
                       ) : (
                         <span className="text-gray-400">-</span>
@@ -371,6 +374,7 @@ const barMap = {
                         <AlertTriangle className="w-3 h-3" /> Overrun by {(selectedTimesheet.overtimeHours - selectedTimesheet.approvedOtHours).toFixed(1)}h
                       </p>
                     )}
+                    <p className="text-[11px] mt-0.5 font-medium text-purple-700">{Number(selectedTimesheet.paidOtHours ?? 0).toFixed(1)}h paid{selectedTimesheet.overtimeHours > (selectedTimesheet.paidOtHours ?? 0) ? <span className="text-red-500"> · {(selectedTimesheet.overtimeHours - (selectedTimesheet.paidOtHours ?? 0)).toFixed(1)}h not paid</span> : null}</p>
                   </>
                 )}
               </div>
@@ -594,6 +598,9 @@ function EmployeeTimesheetsView() {
                           {ts.approvedOtHours > 0 && ts.overtimeHours > ts.approvedOtHours && (
                             <AlertTriangle className="w-3.5 h-3.5 text-amber-500" title={`Overtime overrun - ${ts.approvedOtHours}h approved, ${ts.overtimeHours}h clocked this week`} />
                           )}
+                          {ts.overtimeHours > (ts.paidOtHours ?? 0) && (
+                            <span className="text-xs font-medium text-red-500" title="Overtime that was not approved for that day is recorded but not paid">· {(ts.overtimeHours - (ts.paidOtHours ?? 0)).toFixed(1)}h not paid</span>
+                          )}
                         </div>
                       ) : (
                         <span className="text-gray-400">-</span>
@@ -686,6 +693,7 @@ function EmployeeTimesheetsView() {
                         <AlertTriangle className="w-3 h-3" /> Overrun by {(selectedTimesheet.overtimeHours - selectedTimesheet.approvedOtHours).toFixed(1)}h
                       </p>
                     )}
+                    <p className="text-[11px] mt-0.5 font-medium text-purple-700">{Number(selectedTimesheet.paidOtHours ?? 0).toFixed(1)}h paid{selectedTimesheet.overtimeHours > (selectedTimesheet.paidOtHours ?? 0) ? <span className="text-red-500"> · {(selectedTimesheet.overtimeHours - (selectedTimesheet.paidOtHours ?? 0)).toFixed(1)}h not paid</span> : null}</p>
                   </>
                 )}
               </div>

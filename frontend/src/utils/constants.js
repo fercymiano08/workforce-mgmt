@@ -27,9 +27,17 @@ export const EARLY_CLOCKOUT_REASON_OPTIONS = [
   { value: 'SICK', label: 'Feeling Unwell' },
   { value: 'FAMILY_EMERGENCY', label: 'Family Emergency' },
   { value: 'PERSONAL_EMERGENCY', label: 'Personal Emergency' },
-  { value: 'APPROVED_LEAVE', label: 'Approved Leave' },
+  // 'Approved Leave' is no longer offered: it cannot be verified at the kiosk, so it
+  // would only be a free excuse (old records that used it still display below).
   { value: 'OTHER', label: 'Other' },
 ];
+
+// Where a claim stands on PROOF (a SICK claim needs a medical certificate in time).
+export const EARLY_CLOCKOUT_REASON_STATUS_META = {
+  CERTIFICATE_REQUIRED: { label: 'Certificate required', variant: 'warning' },
+  PROOF_SUBMITTED: { label: 'Proof submitted', variant: 'info' },
+  CERTIFICATE_OVERDUE: { label: 'Certificate overdue', variant: 'danger' },
+};
 
 export const EARLY_CLOCKOUT_REASON_LABELS = {
   SICK: 'Feeling Unwell',

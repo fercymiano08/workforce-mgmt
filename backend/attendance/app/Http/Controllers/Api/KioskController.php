@@ -13,6 +13,7 @@ use App\Models\SecurityEvent;
 use App\Models\Setting;
 use App\Models\ShiftSchedule;
 use App\Services\ConfigurationClient;
+use App\Services\EarlyLeaveEnforcer;
 use App\Services\NotificationService;
 use App\Services\PayrollClient;
 use Illuminate\Http\JsonResponse;
@@ -412,6 +413,8 @@ class KioskController extends Controller
                 'startTime' => $shift->start_time,
                 'endTime' => $shift->end_time,
                 'approvedOvertimeHours' => $approvedOtHours,
+                // Shown before the employee picks a reason for leaving early.
+                'earlyLeave' => app(EarlyLeaveEnforcer::class)->allowanceFor($employeeId, $dateKey),
             ],
         ]);
     }
@@ -488,10 +491,15 @@ class KioskController extends Controller
         $shiftStart = Carbon::parse($data['date'].' '.$shift->start_time, $timezone);
         $data['status'] = $now->gt($shiftStart->copy()->addMinutes(self::LATE_GRACE_MINUTES)) ? 'Late' : 'Present';
 
-        $record = Attendance::create([
-            ...$data,
-            'id' => $this->nextIdFor(Attendance::class, 'ATT'),
-        ]);
+        try {
+            $record = Attendance::create([
+                ...$data,
+                'id' => $this->nextIdFor(Attendance::class, 'ATT'),
+            ]);
+        } catch (\Illuminate\Database\UniqueConstraintViolationException) {
+            // Two clock-ins raced each other; the database let only one through.
+            return response()->json(['message' => 'This employee already has an attendance record for today.'], 409);
+        }
 
         PayrollClient::syncForEmployee($record->employee_id);
 
@@ -566,6 +574,16 @@ class KioskController extends Controller
             'proof' => 'nullable|array',
         ]);
 
+        // 'Approved Leave' cannot be verified at the kiosk (a day with approved leave has
+        // no clock-in at all), so it is not accepted as a reason - it would just be a
+        // free excuse. The real reasons are health, family or personal emergency, or Other.
+        if (($validated['reasonCode'] ?? null) === 'APPROVED_LEAVE') {
+            return response()->json([
+                'message' => 'Approved Leave cannot be chosen here. Please pick the actual reason for leaving early.',
+                'data' => ['reason' => 'reason_not_verifiable'],
+            ], 422);
+        }
+
         $clockOut = Carbon::parse($dateKey.' '.$validated['clockOut'], $timezone);
         $isEarly = $effectiveEnd && $clockOut->lt($effectiveEnd);
 
@@ -588,16 +606,20 @@ class KioskController extends Controller
 
         $record->update($data);
 
+        $earlyLeave = null;
         if ($isEarly) {
             $early = $this->recordEarlyClockOut($record, $effectiveEnd, $clockOut, $validated);
-            if ($early && in_array($early->reason_code, ['SICK', 'FAMILY_EMERGENCY', 'PERSONAL_EMERGENCY'], true)) {
-                $this->notifyEarlyClockOut($record, $early);
-            }
+            // Verified, not just recorded: free allowance, proof for SICK, alerts to every
+            // admin, copycat detection. The punch stays accepted either way.
+            $earlyLeave = $early ? app(EarlyLeaveEnforcer::class)->applyAtPunch($early) : null;
         }
 
         PayrollClient::syncForEmployee($record->employee_id);
 
-        return response()->json(['data' => $record->fresh()->toApiArray()]);
+        return response()->json([
+            'data' => $record->fresh()->toApiArray(),
+            'earlyLeave' => $earlyLeave,
+        ]);
     }
 
     /**
@@ -630,24 +652,6 @@ class KioskController extends Controller
         ]);
     }
 
-    /**
-     * Awareness-only alert to all Workforce Admins when someone leaves early
-     * for a health/emergency reason. This is NOT an approval workflow - the
-     * employee has already left. Admin simply becomes aware so HR can follow
-     * up with context later.
-     */
-    private function notifyEarlyClockOut(Attendance $record, EarlyClockOut $early): void
-    {
-        $reason = str_replace('_', ' ', (string) $early->reason_code);
-
-        NotificationService::notifyAdmins(
-            'early_clock_out',
-            'Early Clock Out',
-            ($early->employee_name ?? 'An employee').' clocked out early at '.$early->actual_clock_out_time.' ('.$reason.').',
-            'medium',
-            '/attendance?view=early'
-        );
-    }
 
     /**
      * The real point in time a shift ends: the scheduled end, extended by the

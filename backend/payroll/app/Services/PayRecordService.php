@@ -13,7 +13,7 @@ use App\Models\Timesheet;
  * without touching the Attendance or Core databases:
  *
  *   hourly_rate = (monthly salary raised to a year) / (52 weeks * 40 hours)
- *   pay for the week = regular_hours * rate + approved_ot_hours * rate * 1.25
+ *   pay for the week = regular_hours * rate + paid_ot_hours * rate * 1.25
  *
  * Statutory deductions are simplified, fixed amounts + a withholding share -
  * a placeholder policy an organization would replace with its real SSS /
@@ -42,7 +42,7 @@ class PayRecordService
 
         foreach ($timesheets as $timesheet) {
             $regularHours = (float) $timesheet->regular_hours;
-            $otHours = (float) $timesheet->approved_ot_hours;
+            $otHours = (float) $timesheet->paid_ot_hours; // approved AND actually worked
 
             $regularPay = round($regularHours * $rate, 2);
             $otPay = round($otHours * $rate * (float) config('pay.ot_premium', 1.25), 2);

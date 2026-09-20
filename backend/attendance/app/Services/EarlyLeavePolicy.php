@@ -19,6 +19,8 @@ class EarlyLeavePolicy
     public const DEFAULT_WINDOW_DAYS = 30;
     public const DEFAULT_ALLOWED_COUNT = 2;
     public const DEFAULT_SICK_CERT_THRESHOLD = 2;
+    // A SICK claim cannot be checked at the kiosk, so proof is due within this many hours.
+    public const DEFAULT_CERTIFICATE_HOURS = 48;
 
     private static array $cached = [];
 
@@ -30,6 +32,11 @@ class EarlyLeavePolicy
     public function allowedCount(): int
     {
         return (int) $this->value('early_leave_allowed_count', self::DEFAULT_ALLOWED_COUNT);
+    }
+
+    public function certificateHours(): int
+    {
+        return max(1, (int) $this->value('early_leave_certificate_hours', self::DEFAULT_CERTIFICATE_HOURS));
     }
 
     public function sickCertThreshold(): int

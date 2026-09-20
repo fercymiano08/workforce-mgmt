@@ -81,6 +81,36 @@ class OvertimeReconciliationService
     }
 
     /**
+     * Overtime that is actually PAYABLE for a set of attendance rows: for each
+     * day, the smaller of the overtime really worked and the overtime approved
+     * for that day. So working past 5 PM with no approval earns nothing extra,
+     * and an approval that was not used (left on time) is not paid either.
+     *
+     * @param  \Illuminate\Support\Collection<int, Attendance>  $attendance
+     */
+    public function payableHoursForAttendance(string $employeeId, $attendance): float
+    {
+        $total = 0.0;
+
+        foreach ($attendance->groupBy(fn (Attendance $a) => $a->date->toDateString()) as $date => $rows) {
+            $worked = (float) $rows->sum('overtime');
+            if ($worked <= 0) {
+                continue;
+            }
+
+            $approved = (float) OvertimeRequest::where('employee_id', $employeeId)
+                ->whereDate('date', $date)
+                ->where('status', 'Approved')
+                ->get()
+                ->sum(fn (OvertimeRequest $r) => (float) ($r->approved_hours ?? $r->expected_hours ?? 0));
+
+            $total += min($worked, $approved);
+        }
+
+        return round($total, 2);
+    }
+
+    /**
      * Sum of authorized (approved) OT hours falling inside a week, used when
      * regenerating a weekly timesheet so it can show approved vs actual OT.
      */

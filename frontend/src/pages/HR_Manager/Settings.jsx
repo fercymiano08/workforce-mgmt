@@ -133,6 +133,7 @@ function EarlyLeaveSection({ settingsData, onSaved }) {
     early_leave_window_days: system.early_leave_window_days ?? 30,
     early_leave_allowed_count: system.early_leave_allowed_count ?? 2,
     early_leave_sick_cert_threshold: system.early_leave_sick_cert_threshold ?? 2,
+    early_leave_certificate_hours: system.early_leave_certificate_hours ?? 48,
   });
 
   const handleChange = (field, value) => {
@@ -162,7 +163,7 @@ function EarlyLeaveSection({ settingsData, onSaved }) {
           </div>
         </CardHeader>
 
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-5">
           <Input
             label="Rolling Window (days)"
             type="number"
@@ -172,7 +173,7 @@ function EarlyLeaveSection({ settingsData, onSaved }) {
             icon={TimerOff}
           />
           <Input
-            label="Max Early Outs in Window"
+            label="Free Early Outs in Window"
             type="number"
             min={1}
             value={form.early_leave_allowed_count}
@@ -185,13 +186,21 @@ function EarlyLeaveSection({ settingsData, onSaved }) {
             value={form.early_leave_sick_cert_threshold}
             onChange={(e) => handleChange('early_leave_sick_cert_threshold', Number(e.target.value))}
           />
+          <Input
+            label="Certificate Deadline (hours)"
+            type="number"
+            min={1}
+            value={form.early_leave_certificate_hours}
+            onChange={(e) => handleChange('early_leave_certificate_hours', Number(e.target.value))}
+          />
         </div>
 
         <InfoNote>
-          Once an employee reaches the max early outs within the rolling window, their next early clock-out is
-          auto-classified as Unpaid and HR gets an alert (admins can still override per record). Recurring SICK
-          early outs past the certificate threshold flag the record as certificate-required and generate a
-          pending Sick leave draft for approval.
+          Each employee gets the free early outs above within the rolling window; the NEXT one is unexcused (Unpaid)
+          automatically at the kiosk, with no need to wait for HR (admins can still override per record). Every early
+          clock-out alerts the admins. A SICK claim can't be verified at the kiosk, so it needs a medical certificate
+          within the deadline above - otherwise it becomes unexcused automatically. Excusing a sick early out
+          generates a pending Sick leave draft for approval.
         </InfoNote>
 
         <div className="flex justify-end mt-6">

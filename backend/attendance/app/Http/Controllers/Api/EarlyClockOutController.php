@@ -92,11 +92,12 @@ class EarlyClockOutController extends Controller
         $override = (bool) $request->boolean('override');
         $policy = app(EarlyLeavePolicy::class);
 
-        $windowStart = now()->subDays(max($policy->windowDays(), 1) - 1)->startOfDay()->toDateString();
+        $enforcer = app(\App\Services\EarlyLeaveEnforcer::class);
+        $windowStart = $enforcer->windowStart($record->date->toDateString());
 
-        $withinWindow = EarlyClockOut::where('employee_id', $record->employee_id)
-            ->where('date', '>=', $windowStart)
-            ->count();
+        // Earlier early clock-outs only - the record being judged is not counted against itself,
+        // so 'free allowance 2' really means two free ones and the THIRD is unexcused.
+        $withinWindow = $enforcer->priorCount($record->employee_id, $record->date->toDateString(), $record->id);
 
         $chosen = $validated['classification'];
         $note = null;
@@ -104,7 +105,7 @@ class EarlyClockOutController extends Controller
         $limitHit = $withinWindow >= $policy->allowedCount();
         if (! $override && ! in_array($chosen, ['UNPAID', 'PENDING_REVIEW'], true) && $limitHit) {
             $chosen = 'UNPAID';
-            $note = "Auto-classified UNPAID: {$withinWindow} early clock-outs within the last {$policy->windowDays()} days meet the configured limit of {$policy->allowedCount()}.";
+            $note = "Auto-classified UNPAID: {$withinWindow} earlier early clock-outs within {$policy->windowDays()} days already use the free allowance of {$policy->allowedCount()}.";
             NotificationService::notifyAdmins(
                 'early_leave_auto_unpaid',
                 'Early Clock-Out Auto-Classified Unpaid',
@@ -120,6 +121,14 @@ class EarlyClockOutController extends Controller
                 'high',
                 '/my-attendance'
             );
+        }
+
+        // A SICK claim can't be verified at the kiosk: it is only excused with proof on file.
+        if ($chosen === 'EXCUSED_SICK' && ! $override && empty($record->proof)) {
+            return response()->json([
+                'message' => 'No medical certificate is attached to this record. Ask the employee to upload one, or use Override if you have verified it another way.',
+                'data' => ['reason' => 'proof_required'],
+            ], 422);
         }
 
         $reasonStatus = $record->reason_status;
@@ -212,12 +221,33 @@ class EarlyClockOutController extends Controller
             'proof' => 'nullable|array',
         ]);
 
+        $newProof = $validated['proof'] ?? $record->proof;
+        $hadProof = ! empty($record->proof);
+        $reasonCode = $validated['reasonCode'] ?? $record->reason_code;
+
+        // A reason that cannot be verified at the kiosk (SICK) stays 'certificate required'
+        // until proof is attached; once it is, HR is told to review it.
+        $status = $reasonCode ? 'PROVIDED' : 'PENDING';
+        if ($reasonCode === 'SICK') {
+            $status = ! empty($newProof) ? 'PROOF_SUBMITTED' : ($record->reason_status === 'CERTIFICATE_OVERDUE' ? 'CERTIFICATE_OVERDUE' : 'CERTIFICATE_REQUIRED');
+        }
+
         $record->update([
-            'reason_code' => $validated['reasonCode'] ?? $record->reason_code,
+            'reason_code' => $reasonCode,
             'reason_note' => $validated['reasonNote'] ?? $record->reason_note,
-            'proof' => $validated['proof'] ?? $record->proof,
-            'reason_status' => ($validated['reasonCode'] ?? $record->reason_code) ? 'PROVIDED' : 'PENDING',
+            'proof' => $newProof,
+            'reason_status' => $status,
         ]);
+
+        if (! $hadProof && ! empty($newProof)) {
+            NotificationService::notifyAdmins(
+                'early_leave_proof_submitted',
+                'Early Clock-Out Proof Submitted',
+                ($record->employee_name ?? $record->employee_id).' uploaded proof for the early clock-out on '.$record->date->format('M d, Y').'. Review and excuse it if it checks out.',
+                'medium',
+                '/attendance?view=early'
+            );
+        }
 
         $user = $request->user();
         AuditClient::record(

@@ -22,6 +22,7 @@ import {
   EARLY_CLOCKOUT_REASON_OPTIONS,
   EARLY_CLOCKOUT_REASON_LABELS,
   EARLY_CLOCKOUT_CLASSIFICATION_META,
+  EARLY_CLOCKOUT_REASON_STATUS_META,
 } from '../../utils/constants';
 
 const statusVariant = {
@@ -33,7 +34,11 @@ const overtimeStatusVariant = {
   Pending: 'warning', Approved: 'success', Rejected: 'danger', Cancelled: 'default',
 };
 
-const TODAY = new Date().toISOString().split('T')[0];
+// Local (browser) calendar dates - toISOString() is UTC and gives the wrong day in the early morning.
+const localDateKey = (d) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+const TODAY = localDateKey(new Date());
+// Overtime can be requested for a day already worked (up to a week back) - HR can approve it afterwards.
+const OT_EARLIEST = localDateKey(new Date(Date.now() - 7 * 86400000));
 
 function toDateKey(date) {
   const y = date.getFullYear();
@@ -82,6 +87,8 @@ export default function MyAttendance() {
 
   const [editingEarly, setEditingEarly] = useState(null);
   const [earlyReasonForm, setEarlyReasonForm] = useState({ reasonCode: '', reasonNote: '' });
+  const [earlyProof, setEarlyProof] = useState(null); // { name, dataUrl } chosen in the modal
+  const [earlyProofError, setEarlyProofError] = useState('');
   const [savingEarly, setSavingEarly] = useState(false);
 
   const myOvertimeRequests = useMemo(
@@ -179,7 +186,25 @@ export default function MyAttendance() {
       reasonCode: record.reasonCode || '',
       reasonNote: record.reasonNote || '',
     });
+    setEarlyProof(null);
+    setEarlyProofError('');
     setEditingEarly(record);
+  };
+
+  const MAX_EARLY_PROOF_SIZE = 5 * 1024 * 1024; // 5MB
+  const handleEarlyProofSelect = (e) => {
+    const file = e.target.files?.[0];
+    e.target.value = '';
+    if (!file) return;
+    setEarlyProofError('');
+    if (file.size > MAX_EARLY_PROOF_SIZE) {
+      setEarlyProofError('File is too large. Maximum size is 5MB.');
+      return;
+    }
+    const reader = new FileReader();
+    reader.onload = () => setEarlyProof({ name: file.name, dataUrl: reader.result });
+    reader.onerror = () => setEarlyProofError('Could not read that file. Please try again.');
+    reader.readAsDataURL(file);
   };
 
   const handleSaveEarlyReason = async () => {
@@ -189,10 +214,14 @@ export default function MyAttendance() {
       await attendanceService.updateEarlyClockOutReason(editingEarly.id, {
         reasonCode: earlyReasonForm.reasonCode || undefined,
         reasonNote: earlyReasonForm.reasonNote.trim() || undefined,
+        ...(earlyProof ? { proof: [earlyProof] } : {}),
       });
       await refreshEarlyOuts();
       setEditingEarly(null);
-      toast.success('Reason Updated', 'Your early clock-out reason has been saved for HR review.');
+      toast.success(
+        earlyProof ? 'Proof Submitted' : 'Reason Updated',
+        earlyProof ? 'Your certificate was sent to HR for review.' : 'Your early clock-out reason has been saved for HR review.'
+      );
     } catch {
       toast.error('Error', 'Failed to update the reason. Please try again.');
     } finally {
@@ -450,14 +479,28 @@ export default function MyAttendance() {
                               <p className="text-xs text-gray-400 mt-0.5 max-w-[220px] truncate" title={rec.reasonNote}>{rec.reasonNote}</p>
                             )}
                           </td>
-                          <td className="px-6 py-3.5"><Badge variant={classificationMeta.variant} dot size="xs">{classificationMeta.label}</Badge></td>
+                          <td className="px-6 py-3.5">
+                            <Badge variant={classificationMeta.variant} dot size="xs">{classificationMeta.label}</Badge>
+                            {EARLY_CLOCKOUT_REASON_STATUS_META[rec.reasonStatus] && (
+                              <div className="mt-1">
+                                <Badge variant={EARLY_CLOCKOUT_REASON_STATUS_META[rec.reasonStatus].variant} size="xs">
+                                  {EARLY_CLOCKOUT_REASON_STATUS_META[rec.reasonStatus].label}
+                                </Badge>
+                                {rec.reasonStatus === 'CERTIFICATE_REQUIRED' && rec.proofDueAt && (
+                                  <p className="text-[11px] text-amber-600 mt-0.5">
+                                    due {new Date(rec.proofDueAt).toLocaleString('en-US', { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' })}
+                                  </p>
+                                )}
+                              </div>
+                            )}
+                          </td>
                           <td className="px-6 py-3.5 text-right">
                             <button
                               onClick={() => openEarlyReasonModal(rec)}
                               className="inline-flex items-center gap-1 text-xs font-semibold text-blue-600 hover:text-blue-700 transition-colors"
                             >
                               <Pencil className="w-3.5 h-3.5" />
-                              Edit Reason
+                              {['CERTIFICATE_REQUIRED', 'CERTIFICATE_OVERDUE'].includes(rec.reasonStatus) ? 'Upload Certificate' : 'Edit Reason'}
                             </button>
                           </td>
                         </tr>
@@ -590,11 +633,14 @@ export default function MyAttendance() {
           <Input
             label="Date"
             type="date"
-            min={TODAY}
+            min={OT_EARLIEST}
             value={requestForm.date}
             onChange={e => setRequestForm({ ...requestForm, date: e.target.value })}
             error={requestErrors.date}
           />
+          <p className="-mt-2 text-[11px] text-gray-400">
+            Worked late without asking first? You can request a day from the past week; HR decides whether to approve it.
+          </p>
           <Input
             label="Expected Hours (optional)"
             type="number"
@@ -654,8 +700,35 @@ export default function MyAttendance() {
             value={earlyReasonForm.reasonNote}
             onChange={(e) => setEarlyReasonForm({ ...earlyReasonForm, reasonNote: e.target.value })}
           />
+          <div>
+            <label className="text-[13px] font-medium text-gray-700">
+              Proof / Medical Certificate{' '}
+              <span className="text-gray-400 font-normal">{earlyReasonForm.reasonCode === 'SICK' ? '(required to be excused)' : '(optional)'}</span>
+            </label>
+            {editingEarly?.proofDueAt && earlyReasonForm.reasonCode === 'SICK' && (
+              <p className="text-[11px] text-amber-600 mt-1">
+                Upload by {new Date(editingEarly.proofDueAt).toLocaleString('en-US', { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' })} or this early clock-out will not be excused.
+              </p>
+            )}
+            {earlyProof ? (
+              <div className="mt-1.5 flex items-center justify-between gap-2 px-3.5 py-2.5 rounded-xl border border-gray-200 bg-gray-50">
+                <span className="text-sm text-gray-700 truncate">{earlyProof.name}</span>
+                <button type="button" onClick={() => setEarlyProof(null)} className="text-xs font-medium text-gray-400 hover:text-red-600 shrink-0">Remove</button>
+              </div>
+            ) : (
+              <label className="mt-1.5 flex items-center justify-center gap-2 px-3.5 py-2.5 rounded-xl border border-dashed border-gray-300 bg-white text-sm text-gray-500 hover:border-blue-400 hover:text-blue-600 cursor-pointer transition-colors">
+                <Plus className="w-4 h-4" />
+                {editingEarly?.proof?.length ? 'Replace the attached file' : 'Attach a file (photo or PDF)'}
+                <input type="file" accept="image/*,.pdf" className="hidden" onChange={handleEarlyProofSelect} />
+              </label>
+            )}
+            {editingEarly?.proof?.length > 0 && !earlyProof && (
+              <p className="text-[11px] text-emerald-600 mt-1">A file is already attached: {editingEarly.proof[0]?.name || 'certificate'}</p>
+            )}
+            {earlyProofError && <p className="text-xs text-red-500 font-medium mt-1.5">{earlyProofError}</p>}
+          </div>
           <p className="text-xs text-gray-400">
-            Your reason never blocks the punch - it only helps HR classify the shortfall in payroll terms.
+            Your reason never blocks the punch, but HR checks every one - a sick claim is only excused with a medical certificate.
           </p>
         </div>
         <div className="flex justify-end gap-3 mt-6 pt-4 border-t border-gray-100">

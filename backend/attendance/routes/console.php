@@ -15,3 +15,6 @@ Artisan::command('inspire', function () {
 // a 1-minute worst case instead of "only when someone remembers to run
 // snapshot:sync by hand". Started by start-all.ps1 via `schedule:work`.
 Schedule::command('snapshot:sync')->everyMinute()->withoutOverlapping();
+
+// A SICK early clock-out without a medical certificate by its deadline becomes unexcused.
+Schedule::command('early-outs:expire-certificates')->hourly()->withoutOverlapping();

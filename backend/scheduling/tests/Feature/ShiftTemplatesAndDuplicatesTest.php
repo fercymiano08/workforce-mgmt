@@ -46,7 +46,7 @@ class ShiftTemplatesAndDuplicatesTest extends TestCase
         ]);
     }
 
-    public function test_the_flexible_shift_exists_on_a_fresh_database(): void
+    public function test_flexible_is_the_only_shift_template_on_a_fresh_database(): void
     {
         $flexible = ShiftDefinition::find('SHIFT004');
 
@@ -54,7 +54,9 @@ class ShiftTemplatesAndDuplicatesTest extends TestCase
         $this->assertSame('Flexible Shift', $flexible->name);
         $this->assertSame('08:00', substr((string) $flexible->start_time, 0, 5));
         $this->assertSame('17:00', substr((string) $flexible->end_time, 0, 5));
-        $this->assertNotNull(ShiftDefinition::find('SHIFT005'));
+        // Flexible is the ONLY template: overtime is an extension of it, not a shift.
+        $this->assertSame(1, ShiftDefinition::count());
+        $this->assertNull(ShiftDefinition::find('SHIFT005'));
     }
 
     public function test_the_admin_can_list_the_default_templates(): void
@@ -79,7 +81,7 @@ class ShiftTemplatesAndDuplicatesTest extends TestCase
         $this->employee();
 
         $this->assign()->assertCreated();
-        $this->assign('SHIFT005')->assertStatus(422)->assertJsonValidationErrors('date');
+        $this->assign('SHIFT004')->assertStatus(422)->assertJsonValidationErrors('date');
 
         $this->assertSame(1, ShiftSchedule::count());
     }
@@ -126,5 +128,14 @@ class ShiftTemplatesAndDuplicatesTest extends TestCase
             ->assertJsonPath('data.skippedExisting', 5);
 
         $this->assertSame(5, ShiftSchedule::count());
+    }
+
+    public function test_the_database_itself_refuses_two_shifts_on_one_day(): void
+    {
+        $this->employee();
+        \App\Models\ShiftSchedule::create(['id' => 'SCH001', 'employee_id' => 'EMP20260001', 'employee_name' => 'Juan', 'shift_id' => 'SHIFT004', 'date' => '2030-01-15', 'status' => 'Scheduled']);
+
+        $this->expectException(\Illuminate\Database\UniqueConstraintViolationException::class);
+        \App\Models\ShiftSchedule::create(['id' => 'SCH002', 'employee_id' => 'EMP20260001', 'employee_name' => 'Juan', 'shift_id' => 'SHIFT004', 'date' => '2030-01-15', 'status' => 'Scheduled']);
     }
 }

@@ -69,7 +69,9 @@ class EarlyClockOutTest extends TestCase
         $early = EarlyClockOut::where('attendance_id', $record->id)->first();
         $this->assertNotNull($early);
         $this->assertSame('SICK', $early->reason_code);
-        $this->assertSame('PROVIDED', $early->reason_status);
+        // SICK cannot be verified at the kiosk: it is 'certificate required' with a deadline.
+        $this->assertSame('CERTIFICATE_REQUIRED', $early->reason_status);
+        $this->assertNotNull($early->proof_due_at);
         $this->assertSame('PENDING_REVIEW', $early->classification);
         $this->assertGreaterThan(0, $early->minutes_early);
         $this->assertSame('17:00', (string) $early->scheduled_end_time);
@@ -142,13 +144,13 @@ class EarlyClockOutTest extends TestCase
 
         $this->actingAs($this->adminUser())
             ->postJson('/api/attendance/early-outs/'.$early->id.'/classify', [
-                'classification' => 'EXCUSED_SICK',
+                'classification' => 'EXCUSED_EMERGENCY',
             ])->assertOk()
-            ->assertJsonPath('data.classification', 'EXCUSED_SICK');
+            ->assertJsonPath('data.classification', 'EXCUSED_EMERGENCY');
 
         $this->assertDatabaseHas('early_clock_outs', [
             'id' => $early->id,
-            'classification' => 'EXCUSED_SICK',
+            'classification' => 'EXCUSED_EMERGENCY',
         ]);
     }
 

@@ -15,7 +15,7 @@ class Timesheet extends Model
 
     protected $fillable = [
         'id', 'employee_id', 'employee_name', 'department', 'date', 'week_start',
-        'week_end', 'regular_hours', 'overtime_hours', 'approved_ot_hours',
+        'week_end', 'regular_hours', 'overtime_hours', 'approved_ot_hours', 'paid_ot_hours',
         'break_hours', 'total_hours', 'status', 'submitted_date', 'approved_by', 'notes',
     ];
 
@@ -28,6 +28,7 @@ class Timesheet extends Model
             'regular_hours' => 'float',
             'overtime_hours' => 'float',
             'approved_ot_hours' => 'float',
+            'paid_ot_hours' => 'float',
             'break_hours' => 'float',
             'total_hours' => 'float',
             'submitted_date' => 'date:Y-m-d',

@@ -31,11 +31,12 @@ const TAP_COUNT = 5;
 const FACE_MAX_STRIKES = 3;
 const FACE_COOLDOWN_MS = 60 * 1000;
 
+const pad = (n) => String(n).padStart(2, '0');
+
 const EARLY_OUT_REASONS = [
   { code: 'SICK', label: 'Feeling Unwell', detail: 'Sick or ill' },
   { code: 'FAMILY_EMERGENCY', label: 'Family Emergency', detail: 'Urgent family matter' },
   { code: 'PERSONAL_EMERGENCY', label: 'Personal Emergency', detail: 'Urgent personal matter' },
-  { code: 'APPROVED_LEAVE', label: 'Approved Leave', detail: 'Leave starts early' },
   { code: 'OTHER', label: 'Other', detail: 'Explain in the note' },
 ];
 
@@ -93,6 +94,7 @@ export default function AttendanceTerminal() {
   const [faceLockUntil, setFaceLockUntil] = useState(null);
   const [clockInOutcome, setClockInOutcome] = useState(null);
   const [clockOutOutcome, setClockOutOutcome] = useState(null);
+  const [earlyLeaveInfo, setEarlyLeaveInfo] = useState(null);
   const [earlyOutReason, setEarlyOutReason] = useState({ reasonCode: null, reasonNote: '' });
   const [serverCheckPending, setServerCheckPending] = useState(false);
   const faceStrikes = useRef(0);
@@ -167,6 +169,7 @@ export default function AttendanceTerminal() {
     setFaceLockUntil(null);
     setClockInOutcome(null);
     setClockOutOutcome(null);
+    setEarlyLeaveInfo(null);
     setEarlyOutReason({ reasonCode: null, reasonNote: '' });
     setServerCheckPending(false);
   };
@@ -575,6 +578,31 @@ export default function AttendanceTerminal() {
       return;
     }
 
+    // Past the (approved) end of the shift by more than the grace period: the extra
+    // time is recorded honestly but only PAID if overtime was approved. Tell the
+    // employee now, so nobody stays on believing the extra hours count. The punch
+    // itself is never refused - people are never trapped at the door.
+    const nowMin = minutesFromTime(toTimeString(nowInTimezone(timezone)));
+    const extraMin = nowMin - endMin;
+    if (endMin > startMin && extraMin > ATTENDANCE_CONFIG.gracePeriodMinutes) {
+      const h = Math.floor(extraMin / 60);
+      const m = extraMin % 60;
+      const amount = `${h > 0 ? `${h}h ` : ''}${m}m`;
+      setNotice({
+        tone: 'warning',
+        title: 'Overtime Not Approved',
+        message: otHours > 0
+          ? `You are clocking out ${amount} after your approved overtime ended (${formatTime(`${pad(Math.floor(endMin / 60) % 24)}:${pad(endMin % 60)}`)}). That extra time will be recorded but will NOT be paid unless HR approves it. You can send an overtime request from My Attendance.`
+          : `Your shift ended at ${formatTime(shiftInfo.endTime)} and you have no approved overtime. You are clocking out ${amount} later. That extra time will be recorded but will NOT be paid unless HR approves an overtime request for today. You can send one from My Attendance.`,
+        confirmLabel: 'Clock Out',
+        cancelLabel: 'Go Back',
+        onConfirm: () => { setNotice(null); recordAttendance(); },
+        onCancel: resetToMode,
+      });
+      setPhase('notice');
+      return;
+    }
+
     recordAttendance();
   };
 
@@ -604,7 +632,7 @@ export default function AttendanceTerminal() {
           reasonCode: earlyOutReason.reasonCode,
           reasonNote: (earlyOutReason.reasonNote || '').trim() || null,
         } : {};
-        await kioskService.clockOut(todayRecord.id, {
+        const punched = await kioskService.clockOut(todayRecord.id, {
           clockOut: time,
           regularHours: fields.regularHours,
           overtime: fields.overtimeHours,
@@ -615,6 +643,7 @@ export default function AttendanceTerminal() {
         setRecordedHours(fields.totalHours);
         setClockInOutcome(null);
         setClockOutOutcome(earlyOutReason.reasonCode ? 'early' : null);
+        setEarlyLeaveInfo(punched?.earlyLeave || null);
       }
 
       kioskService.log(
@@ -698,12 +727,23 @@ export default function AttendanceTerminal() {
   const successView = useMemo(() => {
     if (!employee || recordedType !== 'clock-in') {
       if (clockOutOutcome === 'early') {
+        // Say what this early clock-out COSTS, so the reason is never a free pass.
+        const info = earlyLeaveInfo;
+        const lines = ['Your reason was attached and HR has been notified.'];
+        if (info?.autoUnpaid) {
+          lines.push(`This was early clock-out #${info.position} within ${info.windowDays} days (free allowance: ${info.allowed}), so it is recorded as UNEXCUSED.`);
+        } else if (info) {
+          lines.push(`Early clock-out #${info.position} in the last ${info.windowDays} days (${info.allowed} are free).`);
+        }
+        if (info?.proofRequired) {
+          lines.push(`A medical certificate is required within ${info.certificateHours} hours - upload it in My Attendance, or this will not be excused.`);
+        }
         return {
           tone: 'amber',
           title: 'Clocked Out Early',
           message: `Thank you, ${employee?.firstName}. Your early clock-out has been recorded.`,
-          noteTitle: 'Early Leave Recorded',
-          note: 'Your reason was attached for HR review. You can refine it anytime under My Attendance.',
+          noteTitle: info?.autoUnpaid ? 'Recorded As Unexcused' : 'Early Leave Recorded',
+          note: lines.join(' '),
         };
       }
       return {
@@ -740,7 +780,7 @@ export default function AttendanceTerminal() {
           note: 'You clocked in on time, within the 15-minute grace period.',
         };
     }
-  }, [employee, recordedType, clockInOutcome, clockOutOutcome, shiftInfo]);
+  }, [employee, recordedType, clockInOutcome, clockOutOutcome, earlyLeaveInfo, shiftInfo]);
 
   // --- Disabled screen: kiosk mode has not been enabled by the Workforce Admin --
   if (!enabled) {
@@ -1145,8 +1185,27 @@ export default function AttendanceTerminal() {
                     {otHours > 0 ? ` (${otHours}h approved overtime)` : ''}.
                   </p>
                   <p className="text-xs text-gray-400 mt-1">
-                    Early clock-outs are always allowed. Select the reason so HR can record it correctly.
+                    Early clock-outs are always allowed. Select the real reason - HR reviews every one.
                   </p>
+                  {shiftInfo?.earlyLeave && (() => {
+                    const el = shiftInfo.earlyLeave;
+                    const over = el.used >= el.allowed;
+                    return (
+                      <div className={clsx(
+                        'mt-4 rounded-2xl border p-3 text-left text-xs leading-relaxed',
+                        over ? 'border-red-200 bg-red-50 text-red-700' : 'border-amber-200 bg-amber-50 text-amber-800'
+                      )}>
+                        {over
+                          ? `You have already used ${el.used} of ${el.allowed} early clock-outs in the last ${el.windowDays} days. This one will be recorded as UNEXCUSED.`
+                          : `Early clock-outs used in the last ${el.windowDays} days: ${el.used} of ${el.allowed}. After that, each one is recorded as unexcused.`}
+                        {earlyOutReason.reasonCode === 'SICK' && (
+                          <span className="block mt-1 font-semibold">
+                            Feeling unwell needs a medical certificate within {el.certificateHours} hours, or it will not be excused.
+                          </span>
+                        )}
+                      </div>
+                    );
+                  })()}
                 </div>
 
                 <div className="mt-6 grid grid-cols-2 sm:grid-cols-3 gap-3">

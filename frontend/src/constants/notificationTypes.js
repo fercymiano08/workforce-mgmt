@@ -1,7 +1,7 @@
 import {
   Bell, CheckCircle, XCircle, Calendar, Clock,
   Megaphone, AlertCircle, Settings, FileText, UserPlus,
-  AlarmClockOff, UserX, Users, ShieldAlert,
+  AlarmClockOff, UserX, Users, ShieldAlert, LogOut,
 } from 'lucide-react';
 
 // Single source of truth for how each notification type renders (icon +
@@ -25,6 +25,11 @@ export const notificationTypeConfig = {
   attendance_late: { icon: AlarmClockOff, color: 'text-amber-500', bg: 'bg-amber-50' },
   attendance_absent: { icon: UserX, color: 'text-red-500', bg: 'bg-red-50' },
   security_face_mismatch: { icon: ShieldAlert, color: 'text-red-500', bg: 'bg-red-50' },
+  early_clock_out: { icon: LogOut, color: 'text-amber-500', bg: 'bg-amber-50' },
+  early_clock_out_pattern: { icon: ShieldAlert, color: 'text-red-500', bg: 'bg-red-50' },
+  early_leave_auto_unpaid: { icon: AlertCircle, color: 'text-red-500', bg: 'bg-red-50' },
+  early_leave_certificate_required: { icon: FileText, color: 'text-orange-500', bg: 'bg-orange-50' },
+  early_leave_proof_submitted: { icon: FileText, color: 'text-blue-500', bg: 'bg-blue-50' },
   attendance_incomplete: { icon: AlertCircle, color: 'text-orange-500', bg: 'bg-orange-50' },
   staff_shortage: { icon: Users, color: 'text-red-500', bg: 'bg-red-50' },
   overtime_requested: { icon: Clock, color: 'text-blue-500', bg: 'bg-blue-50' },

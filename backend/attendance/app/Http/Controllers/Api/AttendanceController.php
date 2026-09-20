@@ -14,6 +14,7 @@ use App\Services\AuditClient;
 use App\Services\NotificationService;
 use App\Services\OvertimeReconciliationService;
 use App\Services\PayrollClient;
+use App\Support\LocalTime;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Carbon;
@@ -44,7 +45,9 @@ class AttendanceController extends Controller
      */
     public function checkAlerts(): JsonResponse
     {
-        $today = Carbon::today();
+        // The company's wall clock (Manila), not the server's UTC: shift starts are Manila times.
+        $now = LocalTime::now();
+        $today = LocalTime::today();
         $todayKey = $today->toDateString();
 
         $absentFlagged = 0;
@@ -54,7 +57,8 @@ class AttendanceController extends Controller
         // Everything already flagged today, loaded with ONE query instead of an
         // unindexed LIKE query per employee. notifyAdmins() leaves employee_id
         // null, so dedup matches on the marker embedded in each message.
-        $notified = Notification::whereDate('timestamp', $today)
+        // Notification timestamps are stored in UTC, so the local day starts at this UTC instant.
+        $notified = Notification::where('timestamp', '>=', $today->copy()->utc())
             ->whereIn('type', ['attendance_absent', 'attendance_incomplete', 'attendance_unauthorized_ot', 'staff_shortage'])
             ->get(['type', 'message'])
             ->groupBy('type')
@@ -107,8 +111,8 @@ class AttendanceController extends Controller
                 continue;
             }
 
-            $shiftStart = Carbon::parse($todayKey.' '.$startTime);
-            if (now()->lt($shiftStart->addMinutes(self::ABSENT_GRACE_MINUTES))) {
+            $shiftStart = Carbon::parse($todayKey.' '.$startTime, $now->getTimezone());
+            if ($now->lt($shiftStart->addMinutes(self::ABSENT_GRACE_MINUTES))) {
                 continue;
             }
 
@@ -271,7 +275,7 @@ class AttendanceController extends Controller
             return response()->json(['message' => 'You are not authorized to access this resource.'], 403);
         }
 
-        $today = now()->toDateString();
+        $today = LocalTime::today()->toDateString();
 
         $active = Attendance::where('employee_id', $employeeId)
             ->where('date', $today)
@@ -285,7 +289,7 @@ class AttendanceController extends Controller
 
         $alreadySent = Notification::where('type', 'clock_out_reminder')
             ->where('employee_id', $employeeId)
-            ->whereDate('timestamp', now())
+            ->where('timestamp', '>=', LocalTime::today()->utc())
             ->exists();
 
         if ($alreadySent) {
@@ -327,10 +331,20 @@ class AttendanceController extends Controller
             'notes' => 'nullable|string',
         ]));
 
-        $record = Attendance::create([
-            ...$data,
-            'id' => $this->nextIdFor(Attendance::class, 'ATT'),
-        ]);
+        $duplicateMessage = ['date' => ['This employee already has an attendance record for that date. Edit the existing one instead of adding another.']];
+        if (Attendance::where('employee_id', $data['employee_id'])->whereDate('date', $data['date'])->exists()) {
+            throw \Illuminate\Validation\ValidationException::withMessages($duplicateMessage);
+        }
+
+        try {
+            $record = Attendance::create([
+                ...$data,
+                'id' => $this->nextIdFor(Attendance::class, 'ATT'),
+            ]);
+        } catch (\Illuminate\Database\UniqueConstraintViolationException) {
+            // Lost a race with a simultaneous request - the database refused the duplicate.
+            throw \Illuminate\Validation\ValidationException::withMessages($duplicateMessage);
+        }
 
         $this->syncTimesheets($record->employee_id, $record->date);
         $this->notifyIfLate($record);

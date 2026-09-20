@@ -1613,6 +1613,7 @@ CREATE TABLE public.early_clock_outs (
     reason_note text,
     proof json,
     reason_status character varying(255) DEFAULT 'PENDING'::character varying NOT NULL,
+    proof_due_at timestamp(0) without time zone,
     classification character varying(255) DEFAULT 'PENDING_REVIEW'::character varying NOT NULL,
     classified_by character varying(255),
     classified_at timestamp(0) without time zone,
@@ -3875,6 +3876,7 @@ CREATE TABLE public.timesheets (
     created_at timestamp(0) without time zone,
     updated_at timestamp(0) without time zone,
     approved_ot_hours numeric(5,2)
+    paid_ot_hours numeric(5,2) DEFAULT '0'::numeric NOT NULL,
 );
 
 

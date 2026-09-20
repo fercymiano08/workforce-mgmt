@@ -54,4 +54,32 @@ class OvertimeDuplicateTest extends TestCase
 
         $this->actingAs($employee)->postJson('/api/overtime', $this->payload('2030-02-15'))->assertCreated();
     }
+
+    public function test_an_employee_can_request_overtime_for_a_day_already_worked_this_week(): void
+    {
+        $yesterday = \Illuminate\Support\Carbon::now('Asia/Manila')->subDay()->toDateString();
+
+        $this->actingAs($this->otpEmployeeUser())
+            ->postJson('/api/overtime', $this->payload($yesterday))
+            ->assertCreated();
+    }
+
+    public function test_a_request_older_than_a_week_is_refused_for_employees(): void
+    {
+        $old = \Illuminate\Support\Carbon::now('Asia/Manila')->subDays(10)->toDateString();
+
+        $this->actingAs($this->otpEmployeeUser())
+            ->postJson('/api/overtime', $this->payload($old))
+            ->assertStatus(422)
+            ->assertJsonValidationErrors('date');
+    }
+
+    public function test_an_administrator_can_record_older_overtime(): void
+    {
+        $old = \Illuminate\Support\Carbon::now('Asia/Manila')->subDays(10)->toDateString();
+
+        $this->actingAs($this->adminUser())
+            ->postJson('/api/overtime', $this->payload($old))
+            ->assertCreated();
+    }
 }

@@ -215,9 +215,11 @@ export const kioskService = {
     return data;
   },
 
+  // Returns the attendance record plus `earlyLeave` (present only for an early
+  // clock-out): whether it counted against the free allowance and what proof is due.
   async clockOut(id, payload) {
-    const { data } = await http.put(`/kiosk/attendance/${id}`, payload);
-    return data;
+    const { data, earlyLeave } = await http.put(`/kiosk/attendance/${id}`, payload);
+    return { ...data, earlyLeave: earlyLeave || null };
   },
 };
 

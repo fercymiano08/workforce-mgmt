@@ -41,8 +41,10 @@ class TimesheetGenerationService
         $overtime = round((float) $attendance->sum('overtime'), 2);
         $break = round((float) $attendance->sum('break_hours'), 2);
         $total = round((float) $attendance->sum('total_hours'), 2);
-        $approvedOt = app(OvertimeReconciliationService::class)
-            ->approvedHoursInWeek($employeeId, $weekStart->toDateString(), $weekEnd->toDateString());
+        $reconciliation = app(OvertimeReconciliationService::class);
+        $approvedOt = $reconciliation->approvedHoursInWeek($employeeId, $weekStart->toDateString(), $weekEnd->toDateString());
+        // What payroll actually pays: per day, the smaller of worked and approved.
+        $paidOt = $reconciliation->payableHoursForAttendance($employeeId, $attendance);
         $employeeName = trim($employee->first_name.' '.$employee->last_name);
 
         $existing = Timesheet::where('employee_id', $employeeId)
@@ -58,6 +60,7 @@ class TimesheetGenerationService
                 'regular_hours' => $regular,
                 'overtime_hours' => $overtime,
                 'approved_ot_hours' => $approvedOt,
+                'paid_ot_hours' => $paidOt,
                 'break_hours' => $break,
                 'total_hours' => $total,
             ]);
@@ -79,6 +82,7 @@ class TimesheetGenerationService
             'regular_hours' => $regular,
             'overtime_hours' => $overtime,
             'approved_ot_hours' => $approvedOt,
+            'paid_ot_hours' => $paidOt,
             'break_hours' => $break,
             'total_hours' => $total,
             'status' => 'Pending',

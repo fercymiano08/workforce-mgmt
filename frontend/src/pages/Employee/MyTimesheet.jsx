@@ -376,6 +376,14 @@ export default function MyTimesheet() {
               <div className="bg-purple-50 rounded-xl p-3 text-center">
                 <p className="text-[11px] text-purple-600 font-medium uppercase">Overtime</p>
                 <p className="text-lg font-bold text-purple-700 mt-0.5">{Number(selectedWeek.overtimeHours || 0).toFixed(1)}h</p>
+                {selectedWeek.paidOtHours != null && Number(selectedWeek.overtimeHours || 0) > 0 && (
+                  <p className="text-[10px] mt-0.5 text-purple-600">
+                    {Number(selectedWeek.paidOtHours).toFixed(1)}h paid
+                    {Number(selectedWeek.overtimeHours) > Number(selectedWeek.paidOtHours)
+                      ? <span className="text-red-500"> · {(Number(selectedWeek.overtimeHours) - Number(selectedWeek.paidOtHours)).toFixed(1)}h not approved</span>
+                      : null}
+                  </p>
+                )}
               </div>
               <div className="bg-amber-50 rounded-xl p-3 text-center">
                 <p className="text-[11px] text-amber-600 font-medium uppercase">Break</p>

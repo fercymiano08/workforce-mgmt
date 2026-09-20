@@ -36,6 +36,9 @@
         <env name="SVC_AUTH_MODE" value="local"/>
         <env name="SVC_NOTIFICATIONS_MODE" value="local"/>
         <env name="SERVICE_TOKEN" value="wfp-intel-2026-secret-9f3a7c1e"/>
+        <!-- Tests must NEVER reach the real running services (they would write test data into them). -->
+        <env name="SVC_PAYROLL_MODE" value="local"/>
+        <env name="SVC_CONFIGURATION_MODE" value="local"/>
     </php>
 </phpunit>
 

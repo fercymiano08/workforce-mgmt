@@ -108,7 +108,7 @@ Browser (frontend) → sends a request to `/api/...` → the frontend's router (
 | Clock in later than that | Popup **"You Are Late"** → can still "Clock In Anyway" → recorded **Late**, admins notified |
 | Clock in before the shift starts | Popup "Clocking In Early" → can continue |
 | Clock out before the shift end | Must **state a reason first** (reason picker) → recorded "Early Leave" |
-| Clock out at/after the shift end | "Clocked Out" - success |
+| Clock out at/after the shift end | "Clocked Out" - success. If it is more than 15 min past the end with no approved overtime: amber **"Overtime Not Approved"** warning - the extra time is recorded but not paid |
 | Someone else's face | Red **"Identity Verification Failed"** warning, security event logged, **Workforce Admins alerted**, 3 strikes = 60 s lockout |
 
 > **Key defense point:** these rules are enforced by the **server**, not just the screen. The server uses its own clock and looks up the shift itself, so a wrong tablet clock or a hand-made request can't fake an on-time punch. The popups just explain the rule to the employee first.
@@ -298,7 +298,7 @@ A: In 8 separate PostgreSQL databases, one per microservice — `core` holds use
 The "scariest" architecture question. Your answer is strong and true, and it has a before/after:
 **this system started as one Laravel monolith. We migrated it to 8 independent microservices using the Strangler Fig pattern — pulling one domain out at a time, verifying it with tests, then moving to the next. That migration is now COMPLETE: all 8 domains (auth/identity, analytics+AI, attendance, scheduling, time-off, payroll, communications, configuration) run as separate Laravel apps, each on its own port, each with its own PostgreSQL database, each independently testable and independently startable.**
 
-> This matches the requirement from the higher department: microservices format. We didn't rewrite the system from scratch — we proved the domain boundaries first inside the monolith (each module already owned its own tables and routes), then physically lifted each one out into its own app + database, one at a time, the safest possible order. Every extraction was verified by that service's own automated test suite before moving to the next. All 196 tests across the 8 services are green.
+> This matches the requirement from the higher department: microservices format. We didn't rewrite the system from scratch — we proved the domain boundaries first inside the monolith (each module already owned its own tables and routes), then physically lifted each one out into its own app + database, one at a time, the safest possible order. Every extraction was verified by that service's own automated test suite before moving to the next. All 229 tests across the 8 services are green.
 
 ## What our system looks like TODAY (Strangler Fig, complete)
 
@@ -332,7 +332,7 @@ The "scariest" architecture question. Your answer is strong and true, and it has
 ```
 
 **The one-line truth (memorize this):**
-> "We migrated this system from a single Laravel monolith to 8 independent microservices using the Strangler Fig pattern — one domain extracted and verified at a time. That migration is complete: every domain (identity, analytics/AI, attendance, scheduling, time-off, payroll, communications, configuration) is now its own Laravel app, its own port, its own database, with 196 automated tests passing across all 8, and the frontend's proxy config is the only thing that routes requests to the right one."
+> "We migrated this system from a single Laravel monolith to 8 independent microservices using the Strangler Fig pattern — one domain extracted and verified at a time. That migration is complete: every domain (identity, analytics/AI, attendance, scheduling, time-off, payroll, communications, configuration) is now its own Laravel app, its own port, its own database, with 229 automated tests passing across all 8, and the frontend's proxy config is the only thing that routes requests to the right one."
 
 ## Why we did it in this order (your honest engineering answer)
 
@@ -442,9 +442,10 @@ Use this as a rapid-fire review. One line = one idea. Cover the right column, th
 21. When is someone Present? → Clock-in within the 15-min grace (08:15:00 is still on time).
 22. When is someone Absent? → No clock-in + no approved leave + past 60-min grace.
 23. What protects an on-leave employee from Absent? → Approved leave covering that date.
+24a2. What happens if I work past 5 PM without an approved overtime request? → It is recorded but NOT paid; the kiosk warns you at clock-out. Overtime is paid only for time that was approved AND worked (the smaller of the two, per day). You can file a request for a day in the past week and HR can still approve it.
 24. What does the kiosk refuse? → No schedule today, shift already ended, already clocked in, approved leave. All enforced on the server.
 24a. What does the kiosk do when someone is late? → Warns ("You Are Late") but lets them "Clock In Anyway"; recorded Late; admins notified.
-24b. What happens on an early clock-out? → Never refused for a real reason, but a reason must be picked first (Feeling Unwell / Family Emergency / Personal Emergency / Approved Leave / Other). Records an `Early Leave` with `minutes_early`, and HR classifies it later (Excused vs Unpaid). Health/emergency reasons also notify admins.
+24b. What happens on an early clock-out? → Never refused for a real reason, but a reason must be picked first (Feeling Unwell / Family Emergency / Personal Emergency / Other). It is treated as a CLAIM, not a fact: 2 free early clock-outs per 30 days, the 3rd is unexcused automatically; a sick claim needs a medical certificate within 48 hours or it becomes unexcused; the admins are alerted about EVERY early clock-out; 3 people using the same excuse the same day is flagged.
 25. What happens on face mismatch? → Red warning + `face_mismatch` security event + a high-priority notification to every admin + 3 strikes → 60s lockout.
 26. How does the face match work? → 128-number descriptor compared; distance < 0.6 = match; runs in-browser (offline).
 

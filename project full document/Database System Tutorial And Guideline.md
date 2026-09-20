@@ -125,8 +125,8 @@ Some columns (like `settings.kiosk`) store flexible structured data as JSON inst
 | Table | Purpose | Key Columns |
 |-------|---------|-------------|
 | `attendance` | One row per employee per day: clock in/out, hours, status. The kiosk writes `date`, `clock_in` and the Present/Late `status` from the **server's** clock and the employee's scheduled shift | `id`, `employee_id` (FK), `date`, `clock_in`, `clock_out`, `total_hours`, `status` |
-| `early_clock_outs` | One row per early clock-out: the reason the employee gave at the kiosk, minutes lost, and HR's Excused/Unpaid classification (immutable punch snapshot) | `id`, `attendance_id`, `employee_id`, `reason_code`, `minutes_early`, `classification` |
-| `timesheets` | Weekly hour summaries submitted for approval | `id`, `employee_id` (FK), `week_start`, `week_end`, `regular_hours`, `status` |
+| `early_clock_outs` | One row per early clock-out: the reason the employee gave at the kiosk, minutes lost, proof (medical certificate) and its deadline `proof_due_at`, and the Excused/Unpaid classification - set automatically at the punch when the free allowance is used up or a sick certificate is overdue, otherwise by HR (immutable punch snapshot) | `id`, `attendance_id`, `employee_id`, `reason_code`, `minutes_early`, `proof_due_at`, `classification` |
+| `timesheets` | Weekly hour summaries submitted for approval. `overtime_hours` = worked, `approved_ot_hours` = approved, `paid_ot_hours` = payable (per day the smaller of the two) | `id`, `employee_id` (FK), `week_start`, `week_end`, `regular_hours`, `overtime_hours`, `paid_ot_hours`, `status` |
 | `overtime_requests` | OT applications: expected vs approved hours | `id`, `employee_id` (FK), `expected_hours`, `approved_hours`, `status` |
 
 #### Leave
@@ -141,7 +141,7 @@ Some columns (like `settings.kiosk`) store flexible structured data as JSON inst
 
 | Table | Purpose | Key Columns |
 |-------|---------|-------------|
-| `shift_definitions` | Shift templates (Flexible 08:00–17:00, Overtime 17:00–21:00) | `id`, `name`, `start_time`, `end_time` |
+| `shift_definitions` | The single shift template (Flexible Shift 08:00–17:00). Overtime is not a shift - it extends this one when an overtime request is approved | `id`, `name`, `start_time`, `end_time` |
 | `shift_schedules` | Who works which shift on which date | `id`, `employee_id` (FK), `shift_id` (FK), `date`, `status` |
 
 #### System Support
