@@ -1,8 +1,9 @@
 -- ============================================================
 -- Workforce Management System — Full schema, ALL 8 microservice databases
--- Regenerated 2026-09-18 directly from the live PostgreSQL server (127.0.0.1:5432)
+-- Regenerated 2026-09-20 directly from the live PostgreSQL server (127.0.0.1:5432)
 -- One section per database (core, intelligence, attendance, scheduling,
 -- timeoff, payroll, communications, configuration).
+-- Schema only (no data). Includes audit_events (core) and early_clock_outs (attendance).
 -- ============================================================
 
 -- ============================================================
@@ -12,7 +13,7 @@
 -- PostgreSQL database dump
 --
 
-\restrict GdDx4tIPLTSClW4fnCQbQNNLkt4J00r161aSazDDKXTwTbrrVArLNihmMbsqJaH
+\restrict KN3ZLHq13EXOhFQvzDAXPc6NwivCQs6Ph3VB6rWeOyR1AwroxNDsCenJ97acHcE
 
 -- Dumped from database version 18.4
 -- Dumped by pg_dump version 18.4
@@ -32,6 +33,44 @@ SET row_security = off;
 SET default_tablespace = '';
 
 SET default_table_access_method = heap;
+
+--
+-- Name: audit_events; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.audit_events (
+    id bigint NOT NULL,
+    service character varying(40) NOT NULL,
+    event character varying(120) NOT NULL,
+    entity_type character varying(40) NOT NULL,
+    entity_id character varying(40),
+    actor character varying(150),
+    actor_id character varying(40),
+    before json,
+    after json,
+    meta json,
+    created_at timestamp(0) without time zone DEFAULT CURRENT_TIMESTAMP NOT NULL
+);
+
+
+--
+-- Name: audit_events_id_seq; Type: SEQUENCE; Schema: public; Owner: -
+--
+
+CREATE SEQUENCE public.audit_events_id_seq
+    START WITH 1
+    INCREMENT BY 1
+    NO MINVALUE
+    NO MAXVALUE
+    CACHE 1;
+
+
+--
+-- Name: audit_events_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: -
+--
+
+ALTER SEQUENCE public.audit_events_id_seq OWNED BY public.audit_events.id;
+
 
 --
 -- Name: cache; Type: TABLE; Schema: public; Owner: -
@@ -341,6 +380,13 @@ ALTER SEQUENCE public.users_id_seq OWNED BY public.users.id;
 
 
 --
+-- Name: audit_events id; Type: DEFAULT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.audit_events ALTER COLUMN id SET DEFAULT nextval('public.audit_events_id_seq'::regclass);
+
+
+--
 -- Name: failed_jobs id; Type: DEFAULT; Schema: public; Owner: -
 --
 
@@ -373,6 +419,14 @@ ALTER TABLE ONLY public.personal_access_tokens ALTER COLUMN id SET DEFAULT nextv
 --
 
 ALTER TABLE ONLY public.users ALTER COLUMN id SET DEFAULT nextval('public.users_id_seq'::regclass);
+
+
+--
+-- Name: audit_events audit_events_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.audit_events
+    ADD CONSTRAINT audit_events_pkey PRIMARY KEY (id);
 
 
 --
@@ -512,6 +566,34 @@ ALTER TABLE ONLY public.users
 
 
 --
+-- Name: audit_events_entity_id_index; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX audit_events_entity_id_index ON public.audit_events USING btree (entity_id);
+
+
+--
+-- Name: audit_events_entity_type_index; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX audit_events_entity_type_index ON public.audit_events USING btree (entity_type);
+
+
+--
+-- Name: audit_events_event_index; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX audit_events_event_index ON public.audit_events USING btree (event);
+
+
+--
+-- Name: audit_events_service_index; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX audit_events_service_index ON public.audit_events USING btree (service);
+
+
+--
 -- Name: cache_expiration_index; Type: INDEX; Schema: public; Owner: -
 --
 
@@ -586,7 +668,7 @@ ALTER TABLE ONLY public.roles
 -- PostgreSQL database dump complete
 --
 
-\unrestrict GdDx4tIPLTSClW4fnCQbQNNLkt4J00r161aSazDDKXTwTbrrVArLNihmMbsqJaH
+\unrestrict KN3ZLHq13EXOhFQvzDAXPc6NwivCQs6Ph3VB6rWeOyR1AwroxNDsCenJ97acHcE
 
 
 -- ============================================================
@@ -596,7 +678,7 @@ ALTER TABLE ONLY public.roles
 -- PostgreSQL database dump
 --
 
-\restrict MkcjcYX9RWcnRRzXK1pnW7C2MTYE3UE0n6asUQFsH6yaQDMI93n9Fc85wwBb4AM
+\restrict 9YTtTNghaqkyLytF0oy1TfcQ2LH1kqTI9ywMH8tbo83TcbH6pqDEXMn1k57nFOk
 
 -- Dumped from database version 18.4
 -- Dumped by pg_dump version 18.4
@@ -1439,7 +1521,7 @@ CREATE INDEX users_employee_id_index ON public.users USING btree (employee_id);
 -- PostgreSQL database dump complete
 --
 
-\unrestrict MkcjcYX9RWcnRRzXK1pnW7C2MTYE3UE0n6asUQFsH6yaQDMI93n9Fc85wwBb4AM
+\unrestrict 9YTtTNghaqkyLytF0oy1TfcQ2LH1kqTI9ywMH8tbo83TcbH6pqDEXMn1k57nFOk
 
 
 -- ============================================================
@@ -1449,7 +1531,7 @@ CREATE INDEX users_employee_id_index ON public.users USING btree (employee_id);
 -- PostgreSQL database dump
 --
 
-\restrict SXMWI8QXFCmb07rsl6RGeswbJhkFJMvncEp6KOmVoTbLh1swBcfRgqXfac2bbe9
+\restrict WVAnLBilHeI45kch5veOK69VPdiZPV7PlMnFMm80oyT3sUCrvBhyuwf4SavuwBc
 
 -- Dumped from database version 18.4
 -- Dumped by pg_dump version 18.4
@@ -1511,6 +1593,33 @@ CREATE TABLE public.cache_locks (
     key character varying(255) NOT NULL,
     owner character varying(255) NOT NULL,
     expiration bigint NOT NULL
+);
+
+
+--
+-- Name: early_clock_outs; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.early_clock_outs (
+    id character varying(255) NOT NULL,
+    attendance_id character varying(255) NOT NULL,
+    employee_id character varying(255) NOT NULL,
+    employee_name character varying(255),
+    date date NOT NULL,
+    scheduled_end_time time(0) without time zone,
+    actual_clock_out_time time(0) without time zone NOT NULL,
+    minutes_early integer DEFAULT 0 NOT NULL,
+    reason_code character varying(255),
+    reason_note text,
+    proof json,
+    reason_status character varying(255) DEFAULT 'PENDING'::character varying NOT NULL,
+    classification character varying(255) DEFAULT 'PENDING_REVIEW'::character varying NOT NULL,
+    classified_by character varying(255),
+    classified_at timestamp(0) without time zone,
+    notification_sent boolean DEFAULT false NOT NULL,
+    created_at timestamp(0) without time zone,
+    updated_at timestamp(0) without time zone,
+    classification_note text
 );
 
 
@@ -1967,6 +2076,14 @@ ALTER TABLE ONLY public.cache
 
 
 --
+-- Name: early_clock_outs early_clock_outs_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.early_clock_outs
+    ADD CONSTRAINT early_clock_outs_pkey PRIMARY KEY (id);
+
+
+--
 -- Name: employees employees_email_unique; Type: CONSTRAINT; Schema: public; Owner: -
 --
 
@@ -2147,6 +2264,27 @@ CREATE INDEX cache_locks_expiration_index ON public.cache_locks USING btree (exp
 
 
 --
+-- Name: early_clock_outs_attendance_id_index; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX early_clock_outs_attendance_id_index ON public.early_clock_outs USING btree (attendance_id);
+
+
+--
+-- Name: early_clock_outs_employee_id_date_index; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX early_clock_outs_employee_id_date_index ON public.early_clock_outs USING btree (employee_id, date);
+
+
+--
+-- Name: early_clock_outs_employee_id_index; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX early_clock_outs_employee_id_index ON public.early_clock_outs USING btree (employee_id);
+
+
+--
 -- Name: failed_jobs_connection_queue_failed_at_index; Type: INDEX; Schema: public; Owner: -
 --
 
@@ -2241,7 +2379,7 @@ CREATE INDEX users_employee_id_index ON public.users USING btree (employee_id);
 -- PostgreSQL database dump complete
 --
 
-\unrestrict SXMWI8QXFCmb07rsl6RGeswbJhkFJMvncEp6KOmVoTbLh1swBcfRgqXfac2bbe9
+\unrestrict WVAnLBilHeI45kch5veOK69VPdiZPV7PlMnFMm80oyT3sUCrvBhyuwf4SavuwBc
 
 
 -- ============================================================
@@ -2251,7 +2389,7 @@ CREATE INDEX users_employee_id_index ON public.users USING btree (employee_id);
 -- PostgreSQL database dump
 --
 
-\restrict FvH68CX9prvkAf6ud8hXm8euLsz6OrUVhtEMi21nqdeA7mufeb66u9LxQa6JSs2
+\restrict FV17yLi2GuvERFo9TMHwEN6A58QHGqBfZR3hlKtaMIfVjEYGgSCCBwju6bHhrPA
 
 -- Dumped from database version 18.4
 -- Dumped by pg_dump version 18.4
@@ -2835,7 +2973,7 @@ CREATE INDEX users_employee_id_index ON public.users USING btree (employee_id);
 -- PostgreSQL database dump complete
 --
 
-\unrestrict FvH68CX9prvkAf6ud8hXm8euLsz6OrUVhtEMi21nqdeA7mufeb66u9LxQa6JSs2
+\unrestrict FV17yLi2GuvERFo9TMHwEN6A58QHGqBfZR3hlKtaMIfVjEYGgSCCBwju6bHhrPA
 
 
 -- ============================================================
@@ -2845,7 +2983,7 @@ CREATE INDEX users_employee_id_index ON public.users USING btree (employee_id);
 -- PostgreSQL database dump
 --
 
-\restrict B0zU59kJKqL0rVdA2kmM4i9nEDMZbI7xCbdVtTr2PSsAfAjl2yxYISq5gkGDUOC
+\restrict FGAMs8eyKXvtGbiO2BuMaOewnoaNlCdRkP7jknosf2W323uxhfDbIgbgi3nBSZW
 
 -- Dumped from database version 18.4
 -- Dumped by pg_dump version 18.4
@@ -3398,7 +3536,7 @@ CREATE INDEX users_employee_id_index ON public.users USING btree (employee_id);
 -- PostgreSQL database dump complete
 --
 
-\unrestrict B0zU59kJKqL0rVdA2kmM4i9nEDMZbI7xCbdVtTr2PSsAfAjl2yxYISq5gkGDUOC
+\unrestrict FGAMs8eyKXvtGbiO2BuMaOewnoaNlCdRkP7jknosf2W323uxhfDbIgbgi3nBSZW
 
 
 -- ============================================================
@@ -3408,7 +3546,7 @@ CREATE INDEX users_employee_id_index ON public.users USING btree (employee_id);
 -- PostgreSQL database dump
 --
 
-\restrict DbGNeEAChyIoThRo8cTk3dwpLySSN1RbzevIq4k3RKnw4GEuLKSeqFbthbjfDx5
+\restrict b2eLi4aogSt6Vn1nxby41O3dJOC1gdw8Ohk0XeBEQpWh1FDHsPqCYDZlwyRyuxZ
 
 -- Dumped from database version 18.4
 -- Dumped by pg_dump version 18.4
@@ -4046,7 +4184,7 @@ CREATE INDEX users_employee_id_index ON public.users USING btree (employee_id);
 -- PostgreSQL database dump complete
 --
 
-\unrestrict DbGNeEAChyIoThRo8cTk3dwpLySSN1RbzevIq4k3RKnw4GEuLKSeqFbthbjfDx5
+\unrestrict b2eLi4aogSt6Vn1nxby41O3dJOC1gdw8Ohk0XeBEQpWh1FDHsPqCYDZlwyRyuxZ
 
 
 -- ============================================================
@@ -4056,7 +4194,7 @@ CREATE INDEX users_employee_id_index ON public.users USING btree (employee_id);
 -- PostgreSQL database dump
 --
 
-\restrict 6Il5cGDO0uZ2ZuXIdfYrdYPWJhDMaT66TBKmSKHYdm0nP1EaJX2O69m8AZnixIX
+\restrict 1kVmxoapS3TjT3cdD5NdQJlAjtF11JUjlRhtiaOu5OZm3DyV0ivy3ANIRaxb7HC
 
 -- Dumped from database version 18.4
 -- Dumped by pg_dump version 18.4
@@ -4483,7 +4621,7 @@ CREATE INDEX users_employee_id_index ON public.users USING btree (employee_id);
 -- PostgreSQL database dump complete
 --
 
-\unrestrict 6Il5cGDO0uZ2ZuXIdfYrdYPWJhDMaT66TBKmSKHYdm0nP1EaJX2O69m8AZnixIX
+\unrestrict 1kVmxoapS3TjT3cdD5NdQJlAjtF11JUjlRhtiaOu5OZm3DyV0ivy3ANIRaxb7HC
 
 
 -- ============================================================
@@ -4493,7 +4631,7 @@ CREATE INDEX users_employee_id_index ON public.users USING btree (employee_id);
 -- PostgreSQL database dump
 --
 
-\restrict Adx3LigZEGt9Rzwjp7mfwR5jRsDSHlRo9SzUMmRC6epmG0oCHfCCa8hlkfG3jpU
+\restrict 7m7sYkfHTEMRngErJpaH6wgKgw3TeyiBN9QUihTIXaEcNPF2C431fentURFJtlZ
 
 -- Dumped from database version 18.4
 -- Dumped by pg_dump version 18.4
@@ -4939,6 +5077,5 @@ CREATE INDEX users_employee_id_index ON public.users USING btree (employee_id);
 -- PostgreSQL database dump complete
 --
 
-\unrestrict Adx3LigZEGt9Rzwjp7mfwR5jRsDSHlRo9SzUMmRC6epmG0oCHfCCa8hlkfG3jpU
-
+\unrestrict 7m7sYkfHTEMRngErJpaH6wgKgw3TeyiBN9QUihTIXaEcNPF2C431fentURFJtlZ
 
