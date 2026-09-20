@@ -379,6 +379,7 @@ Use this as a rapid-fire review. One line = one idea. Cover the right column, th
 
 ## Architecture (6-12)
 6. How does data move? → Page → api.js → Vite proxy routes by URL prefix → the owning microservice's Laravel route → Controller → its own SQL database → JSON → screen.
+7a. Is Docker used? → Yes, as an alternative way to run the whole system. Docker Compose starts 15 containers: PostgreSQL, the 8 Laravel services, 5 small scheduler containers and an nginx frontend. No features changed (only a few small bug fixes found while testing); Docker only changes how it is built and started. It targets development/demonstration on one machine — no cloud, no HTTPS, no CI/CD yet.
 7. Why nine running programs? → Frontend (5173) + 8 microservices, each on its own port: core (8000), intelligence (8001), attendance (8003), scheduling (8004), timeoff (8005), payroll (8006), communications (8007), configuration (8008) — all against PostgreSQL (5432), one database per service. `start-all.ps1` boots all 9 and health-checks them.
 8. What is a token? → ID badge issued at login by `core`, shown on every request, validated by whichever service receives it by asking `core` over HTTP, destroyed at logout.
 9. What is middleware? → Bouncer that checks token + role before the controller runs, in every service.

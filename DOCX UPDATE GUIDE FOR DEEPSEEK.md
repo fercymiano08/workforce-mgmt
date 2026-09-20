@@ -7,6 +7,9 @@
 > (Fercy Miano, team leader) will paste this guide and the document text to you.
 > **Why it matters:** the capstone panel will read the document and then watch
 > the system run. Any sentence that the system cannot back up is a defense risk.
+>
+> **Companion file:** `DOCKER GUIDE FOR DEEPSEEK.md` describes the Docker setup that was added after
+> this guide was written. **Read both. Where they disagree about Docker, the Docker guide wins.**
 
 ---
 
@@ -72,7 +75,7 @@
    means the system's admin user type (see Part 3).
 3. **Claims about features that do not exist:** employee shift-swap /
    schedule-change requests; AI-generated or skills/availability-based schedules;
-   an "AI forecasting service"; encrypted biometrics at rest; Docker, GitHub
+   an "AI forecasting service"; encrypted biometrics at rest; GitHub
    Actions CI/CD, PHP_CodeSniffer, Postman; Observer pattern; offline clock-in that
    syncs later; "fraud-proof" attendance (there is **no liveness detection**).
    Remove or reword per Part 5.
@@ -113,7 +116,7 @@ Everything below was verified against the source code and the live databases.
 - Client/context: Archo Nell Incorporated (contact: Mr. Nardz Olarte, QC/QA Supervisor).
 - Repository: public GitHub `fercymiano08/workforce-mgmt`, branch `main`.
 - Three user types: **Workforce Admin** (HR-level administrator), **Employee**, **Entrance Clocking In Device** (kiosk — a device, not an account).
-- The system runs locally (development environment). There is **no cloud deployment**.
+- The system runs locally (development environment), either with the plain local scripts or **containerized with Docker Compose** (added later — see the companion file `DOCKER GUIDE FOR DEEPSEEK.md`, which overrides this guide wherever Docker is mentioned). There is **no cloud deployment**.
 
 ### 4.2 Architecture — 8 microservices + 1 frontend
 Each service is a separate Laravel application with its **own** PostgreSQL database.
@@ -302,18 +305,19 @@ straight to the owning service via its development proxy:
 | Kiosk PIN (salted SHA-256), 3-strike face lockout, security events | Rate limiting on every endpoint (only auth-reset endpoints are throttled + login lockout) |
 | Server-side input validation on every write | Encryption in transit on the local dev setup (HTTPS is a deployment concern) |
 | Shared-secret protection of internal service endpoints | Audit of *every* user action |
-| Audit trail for key record changes (see K) | A separate Docker / cloud / CI security pipeline |
+| Audit trail for key record changes (see K) | A separate cloud / CI security pipeline (Docker containerization is real but is not a security control) |
 
 ### 4.9 Testing and tooling — reality
 - **123 automated PHPUnit tests** across the 8 services (core 66, intelligence 17, attendance 12, timeoff 6, scheduling 5, payroll 5, communications 5, configuration 7), all offline (in-memory SQLite), all passing at last run.
 - Frontend: ESLint + production build check. Backend: Laravel logs.
-- **Not present in the repository:** Dockerfile / docker-compose, GitHub Actions workflows, PHP_CodeSniffer, Postman collection.
+- **Not present in the repository:** GitHub Actions workflows (no CI/CD), PHP_CodeSniffer, Postman collection.  
+  **UPDATE — Docker now exists** (Dockerfiles + `docker-compose.yml`, on branch `docker`, see `DOCKER GUIDE FOR DEEPSEEK.md`). Docker is real; CI/CD is still not.
   (Deployment files were deliberately removed earlier; deployment is planned for after completion.)
 - Feature branches / pull requests: **not verifiable** — ask the human before keeping that claim (Part 9).
 
 ### 4.10 Deployment — reality
 - Local development/demo environment: PostgreSQL server + 8 `php artisan serve` processes + Vite dev server, started by `start-all.ps1`.
-- Cloud, containers, load balancing, message queues, monitoring dashboards: **future work**.
+- Cloud hosting, load balancing, message queues, monitoring dashboards, CI/CD: **future work**. (Docker containerization is **implemented** — see `DOCKER GUIDE FOR DEEPSEEK.md`.)
 
 ### 4.11 Known limitations (be honest — they make the document credible)
 1. No liveness detection (a printed photo could in principle fool identity matching).
@@ -400,7 +404,7 @@ straight to the owning service via its development proxy:
 | A.2 Information Systems Integration | Write from Part 4.3 (auth via core, internal endpoints, replicas, push, scheduler). |
 | A.4 Database Schema | Write from Part 4.7 (8 databases and their tables). Mention the project file "database schema microservices structure.sql" as the schema reference. |
 | A.5 Network Configuration | Local: ports 8000–8008, 5173, 5432; internal calls over HTTP on localhost with shared secret. |
-| A.6 Deployment and Infrastructure | Reality: local start-up via `start-all.ps1`; cloud/container deployment = future work. |
+| A.6 Deployment and Infrastructure | Reality: **Docker Compose on a single machine** (15 containers; use `DOCKER GUIDE FOR DEEPSEEK.md` Parts 3, 7, 10.4) OR the plain local method `start-all.ps1`; cloud hosting/domain/HTTPS = future work. |
 | A.7 Security Measures + Figure A.7.1 | Rewrite text using Part 4.8 table (left column only) and Text T-13; redraw the figure without "API Gateway (SSL, CORS, Rate Limiting)" and without "Encrypted Biometrics"; fix the `&amp;` rendering bug in the current figure. |
 | A.8 Testing | Keep the layered strategy, but state actual counts (123 PHPUnit tests, 8 suites). |
 | A.9, A.10, A.14 | Empty headings — A.10 APIs and Integration Points: write a table of API prefixes → service (Part 4.2) and the internal endpoints concept. A.14 DevOps/CI/CD: follow the Part 9-A decision. A.9 Monitoring: `/up` health endpoints, Laravel logs. |
@@ -557,7 +561,7 @@ Legend to add: solid = user request; dashed = service-to-service (token check, r
 
 | ID | Question | Recommended default |
 |---|---|---|
-| **9-A** | The document describes Docker, GitHub Actions CI/CD, PHP_CodeSniffer, Postman and preview URLs. None exist in the repository. Keep as *recommended future pipeline* (Version A) or delete (Version B)? Does the team have any of these outside the repo (e.g., a private Postman collection)? | Version A, only for CI/CD/Docker; delete PHP_CodeSniffer and preview URLs; keep Postman only if the team truly used it. |
+| **9-A** | **UPDATED:** Docker is now implemented (see `DOCKER GUIDE FOR DEEPSEEK.md`) — keep Docker as a real, honestly-scoped tool. The remaining question is only about GitHub Actions CI/CD, PHP_CodeSniffer, Postman and preview URLs. None exist in the repository. Keep as *recommended future pipeline* (Version A) or delete (Version B)? Does the team have any of these outside the repo (e.g., a private Postman collection)? | Version A, only for CI/CD/Docker; delete PHP_CodeSniffer and preview URLs; keep Postman only if the team truly used it. |
 | **9-B** | Did the team really use feature branches and pull-request reviews? (`git` history appears to be on `main`.) | If not confirmed, reword to "Git and GitHub were used for version control and collaboration." |
 | **9-C** | RESOLVED: Audit trail and My Pay Record are now committed and pushed. | Describe them as implemented. |
 | **9-D** | Which dates are correct: final-defense date, title-page month, completion date? | Human decides. |

@@ -141,7 +141,7 @@ Correct catch — right now, checking "who is this token?" costs a real network 
 Honest answers that show maturity: (1) design the internal API contracts and replica strategy BEFORE splitting, rather than discovering what each service needs mid-migration; (2) add lightweight caching for the cross-service auth check from day one; (3) use per-service tokens instead of one shared `SERVICE_TOKEN`; (4) add automated tests that specifically check cross-service flows (e.g. "does an approved leave in `timeoff` correctly show as not-absent in `attendance`"), not just each service's own isolated tests.
 
 **Q41. What's missing for this to run safely in production with real users, not a demo?**
-Good checklist to have ready: containerization (Docker) so each service deploys identically everywhere instead of relying on a developer's PHP install; each service running multiple instances behind a load balancer (especially `core`, per Q28); centralized logging/monitoring across all 8 services instead of 8 separate log files; a real secrets manager instead of `.env` files; HTTPS everywhere; rate limiting on the internal APIs, not just the public login endpoints; and probably a message queue (like RabbitMQ or Redis queues) for things like notifications instead of a synchronous HTTP call, so a slow `communications` service can't slow down the service that's trying to notify someone.
+Good checklist to have ready: **containerization is now partly done** — the whole system runs under Docker Compose (one container per service), but only as a single-machine development/demo setup, so the remaining gap is production-grade hosting (PHP-FPM + nginx, images in a registry, a CI/CD pipeline); each service running multiple instances behind a load balancer (especially `core`, per Q28); centralized logging/monitoring across all 8 services instead of 8 separate log files; a real secrets manager instead of `.env` files; HTTPS everywhere; rate limiting on the internal APIs, not just the public login endpoints; and probably a message queue (like RabbitMQ or Redis queues) for things like notifications instead of a synchronous HTTP call, so a slow `communications` service can't slow down the service that's trying to notify someone.
 
 **Q42. What testing strategy do you have — do you test that the services work TOGETHER, or only individually?**
 Each of the 8 services has its own offline automated test suite (118 tests total, all passing) that verifies that service in isolation. What we do NOT have is automated "contract" or integration tests that boot multiple real services together and verify a full cross-service flow end-to-end automatically — right now that's verified manually (which we did before this defense). That's a fair gap to admit if asked directly: "our unit/feature test coverage per service is solid; true end-to-end integration testing across services is currently manual."
@@ -174,6 +174,21 @@ The kiosk used to block any clock-out before the shift end ("please return to yo
 
 **Q49. Why not just let HR edit the punch instead?**
 Because punches are the audit foundation of everything downstream — hours, overtime, timesheets, payroll. Rewriting the punch to "look normal" would silently falsify attendance history. An Early Leave record preserves the true punch *and* attaches an explanation. Classification (Excused/Unpaid) is a separate, reversible judgment, so pay decisions never require touching the punch itself.
+
+**Q50. Is Docker part of your system? What exactly did it change?**
+Yes — as an alternative way to run it. `docker compose up -d` starts 15 containers: one PostgreSQL server (8 databases), the 8 Laravel services, 5 scheduler containers (they run `snapshot:sync` every minute) and an nginx container that serves the built React app and routes `/api/*` to the right service. **No features or business rules changed** (only a few small bug fixes found along the way, see Q54) — Docker only changes how the system is built, started and isolated, so it now starts with one command and behaves the same on any machine.
+
+**Q51. Is that "production deployment"? Do you have CI/CD, a domain or HTTPS?**
+No, and we say so honestly. It is a development/demonstration setup on one machine. The API containers use PHP's built-in server (4 workers), there is no HTTPS or domain, no image registry and no CI/CD pipeline. For public hosting we would add a domain + HTTPS, PHP-FPM behind nginx, managed secrets, automated backups and a pipeline (the team is considering a VPS-based host such as Hostinger).
+
+**Q52. Is the nginx container your API gateway?**
+No. It routes by URL prefix (a reverse proxy, the same table as the Vite dev proxy) but does no authentication, rate limiting or request filtering. Every service still validates the token itself by asking `core`.
+
+**Q53. Where are the passwords and secrets in the Docker setup? What happens to the data when you stop it?**
+Secrets are in a git-ignored `.env` file, supplied to the containers as environment variables — not baked into images and not in the repository (only `.env.docker.example` is tracked). Data lives in a Docker volume, so `docker compose down` keeps it and `docker compose down -v` erases it.
+
+**Q54. Did putting it in Docker find any problems?**
+Yes, which is a good sign the test was worth doing: a missing import that would have crashed the Audit Logs page, invisible BOM characters in 7 services' bootstrap files, read-only cache folders copied from Windows, and a PostgreSQL start-up timing issue. All were fixed and re-tested (123 PHPUnit tests pass; a from-scratch `down -v` + `up -d` produces a working system in about 80 seconds).
 
 ---
 

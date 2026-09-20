@@ -164,6 +164,7 @@ Good question to be ready for — say this honestly, it's actually a strength if
 This will make or break your confidence more than any Q&A. Memorize this section.
 
 1. **Don't panic-narrate.** Say: *"Let me check the service logs"* — that's a completely normal, professional thing to say. It shows you know how to debug, not that you're lost.
+2a. **Running with Docker instead?** Use `docker compose ps` (which container is not healthy?) and `docker compose logs core` (replace `core` with the service name). Then `docker compose up -d` again. See `activator-deactivator.md` → *Way 2*.
 2. Run `.\start-all.ps1` again — it tells you exactly which of the 8 services is `UP` or `DOWN`. If one is `DOWN`, that's your answer.
 3. Check the log file for that specific service: `logs\svc-<name>.err.log` (e.g. `logs\svc-attendance.err.log`). The error is usually one readable sentence near the bottom.
 4. If a whole PAGE won't load: it's almost always because ONE of the 8 services isn't running. Re-run `start-all.ps1` and wait for its health check to show all 8 as `UP`.

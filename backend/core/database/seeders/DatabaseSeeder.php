@@ -13,12 +13,19 @@ class DatabaseSeeder extends Seeder
 {
     public function run(): void
     {
-        $this->seedUsers();
+        // SEED_DEMO_DATA=false seeds only the fixed admin account plus the
+        // department/role structure (used by the Docker bootstrap). Default is
+        // unchanged: everything, including the demo users and employees.
+        $demo = filter_var(env('SEED_DEMO_DATA', true), FILTER_VALIDATE_BOOLEAN);
+
+        $this->seedUsers($demo);
         $this->seedOrgStructure();
-        $this->seedEmployees();
+        if ($demo) {
+            $this->seedEmployees();
+        }
     }
 
-    private function seedUsers(): void
+    private function seedUsers(bool $demo = true): void
     {
         User::firstOrCreate(
             ['email' => 'admin@workforcepro.com'],
@@ -31,6 +38,10 @@ class DatabaseSeeder extends Seeder
                 'avatar_seed' => 'John',
             ],
         );
+
+        if (! $demo) {
+            return;
+        }
 
         User::firstOrCreate(
             ['email' => 'employee@workforcepro.com'],

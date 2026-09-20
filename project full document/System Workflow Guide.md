@@ -171,6 +171,8 @@ What happens, in order, whenever any page loads data. Example: the Employee Dash
 | 6 | PostgreSQL — `workforce_attendance` | Runs roughly: `SELECT * FROM attendance WHERE employee_id = 'EMP20260001' ORDER BY date DESC` |
 | 7 | Back up the chain | Rows become JSON → travel back → `api.js` receives them → React state updates → the UI renders |
 
+> **Docker mode:** when the system runs with `docker compose`, the same routing is done by **nginx inside the `frontend` container** (`docker/nginx.conf`, identical prefix table, container names such as `http://core:8000` instead of `127.0.0.1`). It is a reverse proxy only — no authentication, rate limiting or filtering — so it is still **not** an API gateway.
+
 Every API call is routed straight to its owning service by the **Vite dev proxy** (not a backend gateway — there is no gateway anymore):
 `/api/auth*`, `/api/employees*`, `/api/departments*`, `/api/roles*`, `/api/profile*` → **`core`** (:8000) · `/api/attendance*` + `/api/kiosk*` → **`attendance`** (:8003) · `/api/shifts*` → **`scheduling`** (:8004) · `/api/leaves*` + `/api/overtime*` → **`timeoff`** (:8005) · `/api/timesheets*` → **`payroll`** (:8006) · `/api/analytics*` (including `/ai/insights` and `/ai/actions`) → **`intelligence`** (:8001) · `/api/notifications*` → **`communications`** (:8007) · `/api/settings*` → **`configuration`** (:8008). Anything unmatched falls back to `core`.
 

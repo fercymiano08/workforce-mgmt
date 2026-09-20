@@ -33,6 +33,7 @@
 | Total Tables | 23 distinct business/table designs (14 originally "business" tables + 9 Laravel framework tables), now **replicated across services as needed** — so the raw row count of `information_schema.tables` per database is higher than 14, because a service keeps read-only local copies of tables it doesn't own |
 | Managed By | 8 independent sets of Laravel 13 migrations (one per service) + pgAdmin 4 |
 | Runs On | Local machine (`127.0.0.1:5432`), one PostgreSQL server hosting all 8 databases |
+| Runs On (Docker) | The `postgres` container, published on the host at **`127.0.0.1:5433`**, hosting the same 8 databases (created by `docker/postgres-init/01-create-databases.sh`, data in the `pgdata` Docker volume). It is a **separate** server from the local one on 5432; the password is in the git-ignored `.env` |
 
 The database (now databases, plural) store everything the system knows: employee records, attendance history, leave requests, shift schedules, timesheets, security events, and app configuration — split by domain instead of living in one place.
 

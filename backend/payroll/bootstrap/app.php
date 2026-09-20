@@ -1,4 +1,4 @@
-﻿<?php
+<?php
 
 use App\Http\Middleware\EnsureServiceAuthenticated;
 use App\Http\Middleware\EnsureUserIsAdministrator;

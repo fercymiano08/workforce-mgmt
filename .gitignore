@@ -12,3 +12,6 @@ Thumbs.db
 
 # Capstone document contains teammates personal CV data - never commit
 /*.docx
+
+# Docker Compose secrets (copy .env.docker.example to .env)
+/.env

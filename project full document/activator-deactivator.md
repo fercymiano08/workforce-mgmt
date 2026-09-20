@@ -7,6 +7,45 @@
 
 ---
 
+## Two Ways To Run The System (pick ONE — never both at once)
+
+| | **Way 1: PowerShell scripts** (`start-all.ps1`) | **Way 2: Docker** (`docker compose`) |
+|---|---|---|
+| What it does | Starts PHP + the Vite dev server directly on your laptop | Starts every part inside its own container |
+| Needs | PHP, Composer, Node, local PostgreSQL | **Docker Desktop open** (whale icon in the tray) |
+| Database it uses | Your local PostgreSQL (port 5432) | A separate PostgreSQL **inside Docker** (host port 5433) |
+| Start / stop | `.\start-all.ps1` / `.\stop-all.ps1` | `docker compose up -d` / `docker compose down` |
+| Address | http://localhost:5173 | http://localhost:5173 (same) |
+
+**The two ways use the same ports (8000–8008 and 5173), so run only ONE at a time.** If one is running, stop it first
+(`.\stop-all.ps1` for Way 1, `docker compose down` for Way 2). Their databases are **separate**: an employee added in one
+will not appear in the other.
+
+### Way 2 in detail — Docker
+
+Run these from the `Workforce MGNT` folder in the VS Code terminal (Docker Desktop must be running):
+
+```
+docker compose up -d --build    # FIRST time only: builds everything (more than 10 minutes on this laptop)
+docker compose up -d            # every other time: starts in 1–2 minutes
+docker compose ps               # every line should say "healthy" or "Up"
+docker compose down             # stop everything (your database data is KEPT)
+docker compose down -v          # stop AND ERASE the Docker database (fresh empty system)
+```
+
+- Open **http://localhost:5173** and log in as the Workforce Admin (John Delgado). A brand-new Docker database contains
+  **only** the admin, the 8 departments and the 33 job positions; add employees yourself.
+- Secrets live in a file called `.env` in the project folder (git-ignored). If it is missing, copy `.env.docker.example`
+  to `.env` and fill it in.
+- **Something wrong?** `docker compose ps` shows which container is not healthy; `docker compose logs -f core`
+  (replace `core` with the service name) shows its live log. In Docker Desktop: **Containers → workforce → click a container → Logs**.
+- Docker uses about **500 MB** of memory in total once running.
+- Full technical description of the Docker setup: `DOCKER GUIDE FOR DEEPSEEK.md` (project root).
+
+---
+
+## Way 1 — The PowerShell Scripts
+
 ## Before Anything Else: Don't Double-Click The `.ps1` Files
 
 `start-all.ps1` and `stop-all.ps1` are **scripts**, not programs you open — double-clicking them just opens the text inside in Notepad (that's Windows's default, safe behavior for script files, not a mistake on your part). You have to run them **from inside a terminal**. Two ways to get one open:

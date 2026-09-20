@@ -1,0 +1,17 @@
+# Keep images small and keep secrets out of them. Build context = project root.
+.git
+.env
+**/.env
+**/vendor
+**/node_modules
+**/storage/logs/*
+**/storage/framework/cache/data/*
+**/storage/framework/sessions/*
+**/storage/framework/views/*
+frontend/dist
+logs
+project full document
+*.docx
+*.md
+*.ps1
+.vscode
