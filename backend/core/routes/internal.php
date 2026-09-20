@@ -14,4 +14,5 @@ use Illuminate\Support\Facades\Route;
 
 Route::prefix('internal')->group(function () {
     Route::get('/snapshot', [InternalApiController::class, 'snapshot']);
+    Route::post('/audit', [InternalApiController::class, 'recordAudit']);
 });

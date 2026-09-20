@@ -6,6 +6,7 @@ use App\Http\Controllers\Api\Concerns\AuthorizesEmployeeScope;
 use App\Http\Controllers\Api\Concerns\GeneratesSequentialIds;
 use App\Http\Controllers\Controller;
 use App\Models\Timesheet;
+use App\Services\AuditClient;
 use App\Services\NotificationService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -68,6 +69,16 @@ class TimesheetController extends Controller
             'id' => $this->nextIdFor(Timesheet::class, 'TS'),
         ]);
 
+        AuditClient::record(
+            'timesheet.created',
+            'Timesheet',
+            $record->id,
+            actor: $request->user()?->name,
+            actorId: $request->user()?->employee_id,
+            after: $record->toApiArray(),
+            meta: ['employeeId' => $record->employee_id],
+        );
+
         if ($record->status === 'Submitted') {
             NotificationService::notifyAdmins(
                 'timesheet_submitted',
@@ -105,7 +116,18 @@ class TimesheetController extends Controller
             'notes' => 'nullable|string',
         ]));
 
+        $before = $record->toApiArray();
         $record->update($data);
+
+        AuditClient::record(
+            'timesheet.updated',
+            'Timesheet',
+            $record->id,
+            actor: $request->user()?->name,
+            actorId: $request->user()?->employee_id,
+            before: $before,
+            after: $record->fresh()->toApiArray(),
+        );
 
         return response()->json(['data' => $record->fresh()->toApiArray()]);
     }
@@ -140,6 +162,16 @@ class TimesheetController extends Controller
             'approved_by' => $request->input('approvedBy'),
         ]);
 
+        AuditClient::record(
+            'timesheet.status_changed',
+            'Timesheet',
+            $record->id,
+            actor: $request->user()?->name,
+            actorId: $request->user()?->employee_id,
+            after: $record->fresh()->toApiArray(),
+            meta: ['status' => $status, 'employeeId' => $record->employee_id],
+        );
+
         if (in_array($status, ['Approved', 'Rejected'], true)) {
             NotificationService::notifyEmployee(
                 $record->employee_id,
@@ -160,6 +192,14 @@ class TimesheetController extends Controller
         if (! $record) {
             return response()->json(['message' => 'Timesheet not found'], 404);
         }
+
+        AuditClient::record(
+            'timesheet.deleted',
+            'Timesheet',
+            $record->id,
+            before: $record->toApiArray(),
+            meta: ['employeeId' => $record->employee_id],
+        );
 
         $record->delete();
 

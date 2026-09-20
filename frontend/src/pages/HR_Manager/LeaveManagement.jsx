@@ -30,8 +30,6 @@ const leaveTypeVariant = {
   Sick: 'danger',
   Emergency: 'warning',
   Special: 'purple',
-  Maternity: 'pink',
-  Paternity: 'info',
   Bereavement: 'default',
   Unpaid: 'default',
   'Half Day': 'default',
@@ -39,7 +37,7 @@ const leaveTypeVariant = {
 
 const allTabs = ['All Requests', 'Pending Approvals'];
 const statuses = ['All', 'Pending', 'Approved', 'Rejected', 'Cancelled'];
-const leaveTypes = ['All', 'Vacation', 'Sick', 'Emergency', 'Special', 'Maternity', 'Paternity', 'Bereavement', 'Unpaid', 'Half Day'];
+const leaveTypes = ['All', 'Vacation', 'Sick', 'Emergency', 'Special', 'Bereavement', 'Unpaid', 'Half Day'];
 
 const ROWS_PER_PAGE = 8;
 

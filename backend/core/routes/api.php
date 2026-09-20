@@ -16,6 +16,7 @@
 
 require __DIR__.'/services/auth.php';
 require __DIR__.'/services/identity.php';
+require __DIR__.'/services/audit.php';
 
 // Machine-to-machine endpoints for peer services (SERVICE_TOKEN guarded).
 require __DIR__.'/internal.php';

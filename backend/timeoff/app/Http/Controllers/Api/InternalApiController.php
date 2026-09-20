@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers\Api;
 
+use App\Http\Controllers\Api\Concerns\GeneratesSequentialIds;
 use App\Http\Controllers\Controller;
 use App\Models\Leave;
 use App\Models\OvertimeRequest;
@@ -18,6 +19,8 @@ use Illuminate\Support\Facades\DB;
  */
 class InternalApiController extends Controller
 {
+    use GeneratesSequentialIds;
+
     /** @var list<string> Tables this service owns (served to peers on request). */
     protected array $ownedTables = ['leaves', 'overtime_requests'];
 
@@ -117,6 +120,57 @@ class InternalApiController extends Controller
         DB::table('employees')->updateOrInsert(['id' => $data['id']], $data);
 
         return response()->json(['data' => ['synced' => true]]);
+    }
+
+    /**
+     * Create a Pending Sick leave auto-generated from an early clock-out with
+     * a SICK reason. Idempotent: re-posting the same day returns the existing
+     * draft instead of stacking duplicates. HR completes the medical-certificate
+     * flow and approves it from the normal leave queue (one click).
+     */
+    public function autoDraftSickLeave(Request $request): JsonResponse
+    {
+        $this->authorizeService($request);
+
+        $data = $request->validate([
+            'employeeId' => 'required|string|max:20',
+            'employeeName' => 'required|string|max:150',
+            'date' => 'required|date',
+            'minutesEarly' => 'nullable|integer|min:0',
+            'earlyOutId' => 'nullable|string|max:40',
+        ]);
+
+        $existing = Leave::where('employee_id', $data['employeeId'])
+            ->where('leave_type', 'Sick')
+            ->where('start_date', $data['date'])
+            ->where('status', 'Pending')
+            ->where('reason', 'like', '[Auto-generated from early clock-out]%')
+            ->first();
+
+        if ($existing) {
+            return response()->json(['data' => $existing->toApiArray()]);
+        }
+
+        $note = $earlyOutId ?? '';
+        $minutes = (int) ($data['minutesEarly'] ?? 0);
+
+        $leave = Leave::create([
+            'id' => $this->nextIdFor(Leave::class, 'LVE'),
+            'employee_id' => $data['employeeId'],
+            'employee_name' => $data['employeeName'],
+            'leave_type' => 'Sick',
+            'start_date' => $data['date'],
+            'end_date' => $data['date'],
+            'status' => 'Pending',
+            'applied_date' => now()->toDateString(),
+            'approved_by' => null,
+            'comments' => null,
+            'documents' => [],
+            'reason' => '[Auto-generated from early clock-out] '.($minutes > 0 ? "Clock-out {$minutes} min early on {$data['date']}." : "Early clock-out on {$data['date']}.")
+                .($note !== '' ? " Early clock-out record: {$note}." : ''),
+        ]);
+
+        return response()->json(['data' => $leave->toApiArray()], 201);
     }
 
     protected function authorizeService(Request $request): void

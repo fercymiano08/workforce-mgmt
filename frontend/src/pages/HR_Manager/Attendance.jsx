@@ -77,6 +77,7 @@ export default function Attendance() {
   const [earlyFilter, setEarlyFilter] = useState('All');
   const [selectedEarly, setSelectedEarly] = useState(null);
   const [earlyClassify, setEarlyClassify] = useState('');
+  const [earlyOverride, setEarlyOverride] = useState(false);
   const [classifying, setClassifying] = useState(false);
 
   useEffect(() => {
@@ -182,14 +183,37 @@ export default function Attendance() {
 
   const openEarly = (rec) => {
     setEarlyClassify(rec.classification === 'PENDING_REVIEW' ? '' : rec.classification);
+    setEarlyOverride(false);
     setSelectedEarly(rec);
+  };
+
+  const handleEarlyExport = () => {
+    if (!filteredEarly.length) {
+      toast.error('Nothing to export', 'No early clock-outs match the current filters.');
+      return;
+    }
+    const rows = filteredEarly.map((rec) => ({
+      'Employee ID': rec.employeeId,
+      Employee: `${rec.firstName} ${rec.lastName}`.trim(),
+      Date: rec.date,
+      'Clocked Out': formatTime(rec.actualClockOutTime),
+      'Scheduled End': formatTime(rec.scheduledEndTime),
+      'Time Lost': formatMinutesShort(rec.minutesEarly),
+      Reason: EARLY_CLOCKOUT_REASON_LABELS[rec.reasonCode] || rec.reasonCode || '',
+      Note: rec.reasonNote || '',
+      'Reason Status': rec.reasonStatus || '',
+      Classification: rec.classification || 'PENDING_REVIEW',
+      'Classified By': rec.classifiedBy || '',
+    }));
+    downloadCSV(`early-clockouts-${new Date().toISOString().slice(0, 10)}.csv`, rows);
+    toast.success('Export ready', `Exported ${rows.length} early clock-out records as CSV.`);
   };
 
   const handleEarlyClassify = async () => {
     if (!selectedEarly || !earlyClassify) return;
     setClassifying(true);
     try {
-      await attendanceService.classifyEarlyClockOut(selectedEarly.id, earlyClassify);
+      await attendanceService.classifyEarlyClockOut(selectedEarly.id, earlyClassify, earlyOverride);
       await refreshEarly();
       setSelectedEarly(null);
       toast.success('Classification Saved', 'The early clock-out has been classified.');
@@ -656,6 +680,7 @@ export default function Attendance() {
                 <option value="EXCUSED_EARLY_LEAVE">Excused (Early Leave)</option>
                 <option value="UNPAID">Unpaid</option>
               </Select>
+              <Button variant="outline" size="sm" icon={Download} onClick={handleEarlyExport}>Export CSV</Button>
             </div>
           </div>
         </div>
@@ -890,6 +915,12 @@ export default function Attendance() {
                 </div>
               )}
             </div>
+            {selectedEarly.classificationNote && (
+              <div className="rounded-xl border border-amber-100 bg-amber-50/60 p-3">
+                <p className="text-xs font-semibold text-amber-700 uppercase tracking-wide">System Note</p>
+                <p className="text-sm text-amber-800 mt-1">{selectedEarly.classificationNote}</p>
+              </div>
+            )}
             <Select
               label="Classification"
               value={earlyClassify}
@@ -903,6 +934,20 @@ export default function Attendance() {
             <p className="text-xs text-gray-400">
               Classifying only adjusts the payroll consequence of the shortfall. The punch remains valid regardless.
             </p>
+            <label className="flex items-start gap-3 rounded-xl border border-gray-200 bg-gray-50 p-3 cursor-pointer">
+              <input
+                type="checkbox"
+                checked={earlyOverride}
+                onChange={(e) => setEarlyOverride(e.target.checked)}
+                className="mt-0.5 w-4 h-4 accent-blue-600"
+              />
+              <span>
+                <span className="block text-sm font-medium text-gray-800">Override automatic policy</span>
+                <span className="block text-xs text-gray-500 mt-0.5">
+                  When selected, the rolling early-out limit and medical-certificate rules are bypassed for this record.
+                </span>
+              </span>
+            </label>
             <div className="flex justify-end gap-3 pt-4 border-t border-gray-100">
               <Button variant="outline" onClick={() => setSelectedEarly(null)} disabled={classifying}>Cancel</Button>
               <Button icon={ClipboardCheck} loading={classifying} disabled={!earlyClassify} onClick={handleEarlyClassify}>Save Classification</Button>

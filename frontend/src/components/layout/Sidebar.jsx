@@ -4,7 +4,7 @@ import {
   LayoutDashboard, Users, Clock, Calendar, FileText,
   CalendarDays, BarChart3, FileBarChart, Settings,
   LogOut, AlertTriangle, Fingerprint, CalendarClock, FileClock,
-  Brain, SlidersHorizontal
+  Brain, SlidersHorizontal, Wallet, ScrollText
 } from 'lucide-react';
 import clsx from 'clsx';
 import Avatar from '../ui/Avatar';
@@ -14,6 +14,7 @@ import Button from '../ui/Button';
 import { useRole } from '../../context/RoleContext';
 import { useAuth } from '../../context/AuthContext';
 import { useLanguage } from '../../context/LanguageContext';
+import { useInsights } from '../../context/InsightsContext';
 
 const adminMenuGroups = [
   {
@@ -41,13 +42,14 @@ const adminMenuGroups = [
     label: 'nav.group.analytics',
     items: [
       { path: '/analytics', key: 'nav.analytics', icon: BarChart3 },
-      { path: '/ai-decision-support', key: 'nav.aiDecisionSupport', icon: Brain },
+      { path: '/ai-decision-support', key: 'nav.aiDecisionSupport', icon: Brain, badgeName: 'ai' },
       { path: '/reports', key: 'nav.reports', icon: FileBarChart },
     ],
   },
   {
     label: 'nav.group.system',
     items: [
+      { path: '/audit-logs', key: 'nav.auditLogs', icon: ScrollText },
       { path: '/kiosk-setup', key: 'nav.kioskSetup', icon: SlidersHorizontal },
       { path: '/settings', key: 'nav.settings', icon: Settings },
     ],
@@ -60,6 +62,7 @@ const employeeMenuItems = [
   { path: '/my-schedule', key: 'nav.mySchedule', icon: CalendarClock },
   { path: '/leave', key: 'nav.leave', icon: Calendar },
   { path: '/my-timesheet', key: 'nav.timesheets', icon: FileClock },
+  { path: '/my-pay', key: 'nav.myPay', icon: Wallet },
   { path: '/settings', key: 'nav.settings', icon: Settings },
 ];
 
@@ -69,6 +72,7 @@ export default function Sidebar({ isOpen, onClose }) {
   const { currentRole } = useRole();
   const { user, logout } = useAuth();
   const { t } = useLanguage();
+  const { unresolvedCount } = useInsights();
 
   const [showLogoutModal, setShowLogoutModal] = useState(false);
 
@@ -92,6 +96,11 @@ export default function Sidebar({ isOpen, onClose }) {
           isActive ? 'text-white' : 'text-slate-500 group-hover:text-slate-300'
         )} />
         <span className="truncate">{t(item.key)}</span>
+        {item.badgeName && unresolvedCount > 0 && (
+          <span className="ml-auto min-w-[20px] h-[20px] px-1.5 inline-flex items-center justify-center rounded-full bg-red-500 text-white text-[10px] font-bold">
+            {unresolvedCount > 99 ? '99+' : unresolvedCount}
+          </span>
+        )}
       </NavLink>
     );
   };

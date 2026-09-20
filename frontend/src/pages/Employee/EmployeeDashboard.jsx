@@ -4,7 +4,7 @@ import {
   Clock, CalendarDays, CalendarCheck, Hourglass,
   Briefcase, ChevronRight, Plus,
   Fingerprint, FileText, CalendarClock, Calendar, ArrowRight,
-  Shield, Building2, BadgeCheck,
+  Shield, Building2, BadgeCheck, DoorOpen,
 } from 'lucide-react';
 import {
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend,
@@ -23,7 +23,7 @@ import { formatDate, formatTime } from '../../utils/helpers';
 const COLORS = { emerald: '#10B981', amber: '#F59E0B', red: '#EF4444', blue: '#3B82F6' };
 
 const leaveTypeBadge = (type) => {
-  const map = { Vacation: 'primary', Sick: 'success', Emergency: 'warning', Special: 'purple', Maternity: 'pink', Paternity: 'info' };
+  const map = { Vacation: 'primary', Sick: 'success', Emergency: 'warning', Special: 'purple' };
   return map[type] || 'default';
 };
 
@@ -90,9 +90,13 @@ export default function EmployeeDashboard() {
     () => leaveService.getBalances(employeeId),
     [employeeId]
   );
+  const { data: earlyOuts, loading: loadingEarlyOuts } = useApiData(
+    () => attendanceService.getEarlyClockOutsByEmployee(employeeId),
+    [employeeId]
+  );
 
   const dashboardLoading =
-    loadingAttendance || loadingLeaves || loadingSchedules || loadingShiftDefs || loadingTimesheets || loadingBalances;
+    loadingAttendance || loadingLeaves || loadingSchedules || loadingShiftDefs || loadingTimesheets || loadingBalances || loadingEarlyOuts;
 
   const myAttendance = useMemo(
     () => (attendanceRecords || [])
@@ -144,6 +148,51 @@ export default function EmployeeDashboard() {
   const attendanceRate = myAttendance.length
     ? Math.round((myAttendance.filter((a) => a.status === 'Present').length / myAttendance.length) * 100)
     : 0;
+
+  const todayKey = new Date().toISOString().slice(0, 10);
+  const todayEarly = useMemo(
+    () => (earlyOuts || []).find((e) => e.date === todayKey),
+    [earlyOuts, todayKey]
+  );
+
+  const earlyInfo = todayEarly ? (
+    <div className="flex items-center gap-5 p-5 rounded-2xl border border-amber-100 bg-amber-50/70">
+      <div className="w-11 h-11 rounded-xl bg-amber-400/20 flex items-center justify-center shrink-0">
+        <DoorOpen className="w-5 h-5 text-amber-600" />
+      </div>
+      <div className="flex-1 min-w-0">
+        <p className="text-sm font-semibold text-amber-800">Early leave today</p>
+        <p className="text-xs text-amber-700 mt-0.5">
+          You clocked out {todayEarly.minutesEarly ? `${todayEarly.minutesEarly} min early` : 'early'} today
+          {todayEarly.classification === 'UNPAID'
+            ? ' · classified as Unpaid'
+            : todayEarly.classification === 'PENDING_REVIEW'
+              ? ' · pending HR review'
+              : todayEarly.classification
+                ? ' · excused'
+                : ''}.
+        </p>
+      </div>
+      <Badge
+        variant={
+          todayEarly.classification === 'UNPAID'
+            ? 'danger'
+            : todayEarly.classification === 'PENDING_REVIEW' || !todayEarly.classification
+              ? 'warning'
+              : 'success'}
+        size="sm"
+      >
+        {todayEarly.classification === 'UNPAID'
+          ? 'Unpaid'
+          : todayEarly.classification === 'PENDING_REVIEW' || !todayEarly.classification
+            ? 'Pending Review'
+            : 'Excused'}
+      </Badge>
+      <Link to="/my-attendance" className="inline-flex items-center gap-1 text-xs font-semibold text-amber-700 hover:text-amber-900 transition-colors shrink-0">
+        Review <ArrowRight className="w-3.5 h-3.5" />
+      </Link>
+    </div>
+  ) : null;
 
   if (dashboardLoading) {
     return <SkeletonPage kpiCount={4} />;
@@ -199,6 +248,9 @@ export default function EmployeeDashboard() {
         <KpiCard label="Attendance Rate" value={`${attendanceRate}%`} icon={CalendarDays} accent="purple" />
         <KpiCard label="Pending Requests" value={pendingCount} icon={Clock} accent="amber" />
       </div>
+
+      {/* Early Leave Today */}
+      {earlyInfo}
 
       {/* Attendance chart + My Schedule */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">

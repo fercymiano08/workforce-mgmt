@@ -7,6 +7,7 @@ use App\Http\Controllers\Api\Concerns\GeneratesSequentialIds;
 use App\Http\Controllers\Controller;
 use App\Models\Employee;
 use App\Models\Leave;
+use App\Services\AuditClient;
 use App\Services\NotificationService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -101,6 +102,16 @@ class LeaveController extends Controller
             'id' => $this->nextIdFor(Leave::class, 'LVE'),
         ]);
 
+        AuditClient::record(
+            'leave.created',
+            'Leave',
+            $record->id,
+            actor: $request->user()?->name,
+            actorId: $request->user()?->employee_id,
+            after: $record->toApiArray(),
+            meta: ['employeeId' => $record->employee_id, 'leaveType' => $record->leave_type],
+        );
+
         NotificationService::notifyAdmins(
             'leave_request',
             'New Leave Request',
@@ -155,7 +166,18 @@ class LeaveController extends Controller
             'documents' => 'nullable|array',
         ]));
 
+        $before = $record->toApiArray();
         $record->update($data);
+
+        AuditClient::record(
+            'leave.updated',
+            'Leave',
+            $record->id,
+            actor: $request->user()?->name,
+            actorId: $request->user()?->employee_id,
+            before: $before,
+            after: $record->fresh()->toApiArray(),
+        );
 
         return response()->json(['data' => $record->fresh()->toApiArray()]);
     }
@@ -190,6 +212,16 @@ class LeaveController extends Controller
             'status' => $status,
             'approved_by' => $request->input('approvedBy', $record->approved_by),
         ]);
+
+        AuditClient::record(
+            'leave.status_changed',
+            'Leave',
+            $record->id,
+            actor: $request->user()?->name,
+            actorId: $request->user()?->employee_id,
+            after: $record->fresh()->toApiArray(),
+            meta: ['status' => $status, 'employeeId' => $record->employee_id],
+        );
 
         if ($status === 'Approved') {
             NotificationService::notifyEmployee(
@@ -228,6 +260,13 @@ class LeaveController extends Controller
         if (! $record) {
             return response()->json(['message' => 'Leave request not found'], 404);
         }
+
+        AuditClient::record(
+            'leave.deleted',
+            'Leave',
+            $record->id,
+            before: $record->toApiArray(),
+        );
 
         $record->delete();
 

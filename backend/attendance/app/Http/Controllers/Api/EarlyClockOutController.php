@@ -5,6 +5,11 @@ namespace App\Http\Controllers\Api;
 use App\Http\Controllers\Api\Concerns\AuthorizesEmployeeScope;
 use App\Http\Controllers\Controller;
 use App\Models\EarlyClockOut;
+use App\Models\Employee;
+use App\Services\AuditClient;
+use App\Services\EarlyLeavePolicy;
+use App\Services\NotificationService;
+use App\Services\TimeoffClient;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 
@@ -54,6 +59,19 @@ class EarlyClockOutController extends Controller
      * HR classifies an early clock-out after the fact. Allowed because a
      * reason can only adjust the payroll consequence - it never invalidates
      * the punch or retroactively rejects the employee's right to leave.
+     *
+     * Abuse controls are enforced here, not on the kiosk (the punch is always
+     * accepted):
+     *  - Rolling threshold: once an employee has reached the configured number
+     *    of early outs within the window (default 2 in 30 days), the record is
+     *    auto-classified UNPAID and both HR and the employee are told. HR can
+     *    explicitly override with the `override` flag when the situation
+     *    genuinely warrants mercy.
+     *  - Medical-certificate rule: recurring SICK early outs (default 2)
+     *    within the window flag the record as CERTIFICATE_REQUIRED so HR can
+     *    collect proof. SICK classifications also auto-generate a pending Sick
+     *    leave draft that HR approves in one click (consuming the Sick balance
+     *    via the normal leave workflow).
      */
     public function classify(Request $request, string $id): JsonResponse
     {
@@ -67,15 +85,108 @@ class EarlyClockOutController extends Controller
 
         $validated = $request->validate([
             'classification' => 'required|string|in:PENDING_REVIEW,EXCUSED_SICK,EXCUSED_EMERGENCY,EXCUSED_EARLY_LEAVE,UNPAID',
+            'override' => 'nullable|boolean',
         ]);
 
         $admin = $request->user();
+        $override = (bool) $request->boolean('override');
+        $policy = app(EarlyLeavePolicy::class);
+
+        $windowStart = now()->subDays(max($policy->windowDays(), 1) - 1)->startOfDay()->toDateString();
+
+        $withinWindow = EarlyClockOut::where('employee_id', $record->employee_id)
+            ->where('date', '>=', $windowStart)
+            ->count();
+
+        $chosen = $validated['classification'];
+        $note = null;
+
+        $limitHit = $withinWindow >= $policy->allowedCount();
+        if (! $override && ! in_array($chosen, ['UNPAID', 'PENDING_REVIEW'], true) && $limitHit) {
+            $chosen = 'UNPAID';
+            $note = "Auto-classified UNPAID: {$withinWindow} early clock-outs within the last {$policy->windowDays()} days meet the configured limit of {$policy->allowedCount()}.";
+            NotificationService::notifyAdmins(
+                'early_leave_auto_unpaid',
+                'Early Clock-Out Auto-Classified Unpaid',
+                "{$record->employee_name} ({$record->employee_id}) had an early clock-out on ".$record->date->format('M d, Y').' auto-classified as UNPAID - '.$withinWindow.' early outs within '.$policy->windowDays().' days.',
+                'high',
+                '/attendance'
+            );
+            NotificationService::notifyEmployee(
+                $record->employee_id,
+                'early_leave_auto_unpaid',
+                'Early Clock-Out Classified as Unpaid',
+                'Your early clock-out on '.$record->date->format('M d, Y').' was classified as unpaid because the team has a policy limit of '.$policy->allowedCount().' early clock-outs within '.$policy->windowDays().' days.',
+                'high',
+                '/my-attendance'
+            );
+        }
+
+        $reasonStatus = $record->reason_status;
+        if (in_array($chosen, ['EXCUSED_SICK'], true)) {
+            $sickCount = EarlyClockOut::where('employee_id', $record->employee_id)
+                ->where('date', '>=', $windowStart)
+                ->where(function ($q): void {
+                    $q->where('reason_code', 'SICK')->orWhere('classification', 'EXCUSED_SICK');
+                })
+                ->count();
+
+            if (! $override && $sickCount >= $policy->sickCertThreshold()) {
+                $reasonStatus = 'CERTIFICATE_REQUIRED';
+                $note = trim(($note ? $note.' ' : '')."Medical certificate required: {$sickCount} SICK early clock-outs within the last {$policy->windowDays()} days exceeds the limit of {$policy->sickCertThreshold()}.");
+                NotificationService::notifyEmployee(
+                    $record->employee_id,
+                    'early_leave_certificate_required',
+                    'Medical Certificate Required',
+                    'Please submit a medical certificate for your SICK early clock-out on '.$record->date->format('M d, Y').' so HR can excuse it.',
+                    'medium',
+                    '/my-attendance'
+                );
+                NotificationService::notifyAdmins(
+                    'early_leave_certificate_required',
+                    'Early Clock-Out Needs Medical Certificate',
+                    "{$record->employee_name} ({$record->employee_id}) needs a medical certificate for the SICK early clock-out on ".$record->date->format('M d, Y').'.',
+                    'medium',
+                    '/attendance'
+                );
+            }
+        }
 
         $record->update([
-            'classification' => $validated['classification'],
+            'classification' => $chosen,
+            'classification_note' => $note,
+            'reason_status' => $reasonStatus,
             'classified_by' => $admin->name ?? $admin->email ?? null,
             'classified_at' => now(),
         ]);
+
+        if ($chosen === 'EXCUSED_SICK') {
+            $employee = Employee::find($record->employee_id);
+            TimeoffClient::autoDraftSickLeave(
+                $record->employee_id,
+                $employee ? trim($employee->first_name.' '.$employee->last_name) : $record->employee_name,
+                $record->date->toDateString(),
+                $record->minutes_early,
+                $record->id,
+            );
+        }
+
+        AuditClient::record(
+            'early_clockout.classified',
+            'EarlyClockOut',
+            $record->id,
+            actor: $admin->name ?? $admin->email,
+            actorId: $admin->employee_id,
+            before: $record->getOriginal(),
+            after: $record->fresh()->toApiArray(),
+            meta: [
+                'employeeId' => $record->employee_id,
+                'date' => $record->date->toDateString(),
+                'applied' => $chosen,
+                'requested' => $validated['classification'],
+                'override' => $override,
+            ],
+        );
 
         return response()->json(['data' => $record->fresh()->toApiArray()]);
     }
@@ -107,6 +218,17 @@ class EarlyClockOutController extends Controller
             'proof' => $validated['proof'] ?? $record->proof,
             'reason_status' => ($validated['reasonCode'] ?? $record->reason_code) ? 'PROVIDED' : 'PENDING',
         ]);
+
+        $user = $request->user();
+        AuditClient::record(
+            'early_clockout.reason_updated',
+            'EarlyClockOut',
+            $record->id,
+            actor: $user?->name,
+            actorId: $user?->employee_id,
+            after: $record->fresh()->toApiArray(),
+            meta: ['employeeId' => $record->employee_id, 'date' => $record->date->toDateString()],
+        );
 
         return response()->json(['data' => $record->fresh()->toApiArray()]);
     }

@@ -98,9 +98,16 @@ export const attendanceService = {
     const { data } = await http.put(`/attendance/early-outs/${id}/reason`, payload);
     return data;
   },
-  classifyEarlyClockOut: async (id, classification) => {
-    const { data } = await http.post(`/attendance/early-outs/${id}/classify`, { classification });
+  classifyEarlyClockOut: async (id, classification, override = false) => {
+    const { data } = await http.post(`/attendance/early-outs/${id}/classify`, { classification, override });
     return data;
+  },
+};
+
+export const auditService = {
+  getLogs: async (params = {}) => {
+    const response = await http.get('/audit', { params });
+    return { data: response.data, meta: response.meta };
   },
 };
 
@@ -233,6 +240,13 @@ export const timesheetService = {
   },
   delete: async (id) => {
     const { data } = await http.delete(`/timesheets/${id}`);
+    return data;
+  },
+};
+
+export const payRecordService = {
+  getByEmployeeId: async (employeeId) => {
+    const { data } = await http.get(`/timesheets/pay/employee/${employeeId}`);
     return data;
   },
 };

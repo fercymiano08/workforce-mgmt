@@ -49,8 +49,6 @@ class Employee extends Model
             'Sick' => 10,
             'Emergency' => 5,
             'Special' => 5,
-            'Maternity' => 105, // RA 11210, 105-Day Expanded Maternity Leave Law
-            'Paternity' => 7,   // RA 8187, Paternity Leave Act
             'Bereavement' => 5,
             'Unpaid' => 30,
         ];

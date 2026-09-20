@@ -15,6 +15,7 @@ import useApiData from '../../hooks/useApiData';
 import useNetworkStatus from '../../hooks/useNetworkStatus';
 import { useLanguage } from '../../context/LanguageContext';
 import { useToast } from '../../context/ToastContext';
+import { useInsights } from '../../context/InsightsContext';
 
 const RADIUS = 54;
 const CIRCUMFERENCE = 2 * Math.PI * RADIUS;
@@ -71,6 +72,7 @@ export default function AIDecisionSupport() {
   const { toast } = useToast();
   const navigate = useNavigate();
   const isOnline = useNetworkStatus();
+  const insightsCtx = useInsights();
   const [filter, setFilter] = useState('all');
   const [pending, setPending] = useState(null);
   const [running, setRunning] = useState(false);
@@ -169,6 +171,7 @@ export default function AIDecisionSupport() {
       }
       toast.success(successTitle, successMessage);
       setPending(null);
+      insightsCtx?.refresh();
     } catch (err) {
       toast.error('Action Failed', err?.response?.data?.message || 'The request could not be completed.');
       setPending(null);
@@ -302,6 +305,7 @@ export default function AIDecisionSupport() {
       }
       toast.success(successTitle, successMessage);
       setApplyPending(null);
+      insightsCtx?.refresh();
     } catch (err) {
       toast.error('Action Failed', err?.response?.data?.message || 'The request could not be completed.');
       setApplyPending(null);
@@ -459,7 +463,7 @@ export default function AIDecisionSupport() {
         </div>
         <Button
           variant="outline"
-          onClick={refresh}
+          onClick={() => { refresh(); insightsCtx?.refresh(); }}
           disabled={loading}
           className="sm:self-start"
         >

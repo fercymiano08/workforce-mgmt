@@ -14,6 +14,7 @@ use Illuminate\Support\Facades\Route;
 
 Route::prefix('internal')->group(function () {
     Route::get('/snapshot', [InternalApiController::class, 'snapshot']);
+    Route::get('/settings', [InternalApiController::class, 'getSettings']);
     Route::post('/settings/kiosk', [InternalApiController::class, 'storeKiosk']);
     Route::post('/settings/ai-insights', [InternalApiController::class, 'updateAiInsights']);
 });

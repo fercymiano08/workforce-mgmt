@@ -10,6 +10,7 @@ use App\Models\Employee;
 use App\Models\Leave;
 use App\Models\Notification;
 use App\Models\ShiftSchedule;
+use App\Services\AuditClient;
 use App\Services\NotificationService;
 use App\Services\OvertimeReconciliationService;
 use App\Services\PayrollClient;
@@ -319,6 +320,8 @@ class AttendanceController extends Controller
             return response()->json(['message' => 'Attendance record not found'], 404);
         }
 
+        $before = $record->toApiArray();
+
         $data = Attendance::apiFillable($request->validate([
             'employeeId' => 'sometimes|string|max:20',
             'date' => 'sometimes|date',
@@ -335,6 +338,18 @@ class AttendanceController extends Controller
 
         $record->update($data);
 
+        $user = $request->user();
+        AuditClient::record(
+            'attendance.punch_corrected',
+            'Attendance',
+            $record->id,
+            actor: $user?->name,
+            actorId: $user?->employee_id,
+            before: $before,
+            after: $record->fresh()->toApiArray(),
+            meta: ['id' => $record->id, 'date' => $record->date->toDateString()],
+        );
+
         $this->syncTimesheets($record->employee_id, $record->date);
 
         return response()->json(['data' => $record->fresh()->toApiArray()]);
@@ -346,6 +361,14 @@ class AttendanceController extends Controller
         if (! $record) {
             return response()->json(['message' => 'Attendance record not found'], 404);
         }
+
+        AuditClient::record(
+            'attendance.deleted',
+            'Attendance',
+            $record->id,
+            before: $record->toApiArray(),
+            meta: ['date' => $record->date->toDateString()],
+        );
 
         $record->delete();
 

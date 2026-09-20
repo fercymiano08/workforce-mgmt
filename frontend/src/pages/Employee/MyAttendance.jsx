@@ -1,7 +1,7 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import {
   CheckCircle, AlertTriangle, TrendingUp,
-  CalendarDays, MapPin, Filter, Clock, Plus, XCircle, Pencil, LogOut,
+  CalendarDays, MapPin, Filter, Clock, Plus, XCircle, Pencil, LogOut, Download, Printer,
 } from 'lucide-react';
 import Badge from '../../components/ui/Badge';
 import Button from '../../components/ui/Button';
@@ -17,6 +17,7 @@ import useApiData from '../../hooks/useApiData';
 import { attendanceService, overtimeService, shiftService } from '../../services/api';
 import { formatDate, formatTime, approvedOvertimeHours, extendTime } from '../../utils/helpers';
 import { formatHours } from '../../services/attendanceService';
+import { downloadCsv, printElementAsPdf } from '../../utils/export';
 import {
   EARLY_CLOCKOUT_REASON_OPTIONS,
   EARLY_CLOCKOUT_REASON_LABELS,
@@ -52,6 +53,7 @@ export default function MyAttendance() {
   const { user } = useAuth();
   const { toast } = useToast();
   const employeeId = user?.id || 'EMP001';
+  const printRef = useRef(null);
 
   const { data: records } = useApiData(
     () => attendanceService.getByEmployeeId(employeeId),
@@ -231,6 +233,32 @@ export default function MyAttendance() {
     return filtered.reduce((sum, a) => sum + (a.totalHours || 0), 0);
   }, [filtered]);
 
+  const handleExport = () => {
+    if (!filtered.length) {
+      toast.error('Nothing to export', 'No attendance records match the current period filter.');
+      return;
+    }
+    const rows = filtered.map((a) => ({
+      Date: a.date,
+      Status: a.status || '',
+      'Clock In': a.clockIn ? formatTime(a.clockIn) : '',
+      'Clock Out': a.clockOut ? formatTime(a.clockOut) : '',
+      'Break (h)': a.breakHours || 0,
+      'Overtime (h)': a.overtime || 0,
+      'Total (h)': a.totalHours || 0,
+    }));
+    downloadCsv(`my-attendance-${employeeId}.csv`, rows);
+    toast.success('Export ready', `Exported ${rows.length} attendance records as CSV.`);
+  };
+
+  const handlePrint = () => {
+    if (!filtered.length || !printRef.current) {
+      toast.error('Nothing to print', 'No attendance records match the current period filter.');
+      return;
+    }
+    printElementAsPdf(printRef.current, `Attendance - ${employeeId}`);
+  };
+
   return (
     <div className="max-w-7xl mx-auto space-y-6">
       {/* Header */}
@@ -245,6 +273,8 @@ export default function MyAttendance() {
             <span className="font-medium">{formatDate(new Date().toISOString())}</span>
           </div>
           <LiveClock />
+          <Button variant="outline" size="md" icon={Download} onClick={handleExport}>Export CSV</Button>
+          <Button variant="outline" size="md" icon={Printer} onClick={handlePrint}>Print / PDF</Button>
         </div>
       </div>
 
@@ -631,6 +661,35 @@ export default function MyAttendance() {
           <Button onClick={handleSaveEarlyReason} loading={savingEarly} icon={CheckCircle}>Save Reason</Button>
         </div>
       </Modal>
+
+      {/* Print/PDF snapshot - hidden on screen, rendered into a print window */}
+      <div className="hidden">
+        <div ref={printRef}>
+          <h1>My Attendance</h1>
+          <p className="print-sub">Employee {employeeId} · Generated {new Date().toLocaleString()}</p>
+          <table>
+            <thead>
+              <tr>
+                <th>Date</th><th>Status</th><th>Clock In</th><th>Clock Out</th>
+                <th>Break (h)</th><th>Overtime (h)</th><th>Total (h)</th>
+              </tr>
+            </thead>
+            <tbody>
+              {filtered.map((a) => (
+                <tr key={a.id}>
+                  <td>{a.date}</td>
+                  <td>{a.status || ''}</td>
+                  <td>{a.clockIn ? formatTime(a.clockIn) : ''}</td>
+                  <td>{a.clockOut ? formatTime(a.clockOut) : ''}</td>
+                  <td>{a.breakHours || 0}</td>
+                  <td>{a.overtime || 0}</td>
+                  <td>{a.totalHours || 0}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      </div>
     </div>
   );
 }

@@ -21,7 +21,7 @@ class EarlyClockOut extends Model
         'id', 'attendance_id', 'employee_id', 'employee_name', 'date',
         'scheduled_end_time', 'actual_clock_out_time', 'minutes_early',
         'reason_code', 'reason_note', 'proof', 'reason_status',
-        'classification', 'classified_by', 'classified_at', 'notification_sent',
+        'classification', 'classification_note', 'classified_by', 'classified_at', 'notification_sent',
     ];
 
     protected function casts(): array

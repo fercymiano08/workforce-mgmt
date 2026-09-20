@@ -15,7 +15,7 @@ export const EMPLOYMENT_TYPES = ['Full-time', 'Part-time', 'Contract'];
 
 export const EMPLOYMENT_STATUSES = ['Active', 'Inactive', 'On Leave'];
 
-export const LEAVE_TYPES = ['Vacation', 'Sick', 'Emergency', 'Maternity', 'Paternity', 'Special'];
+export const LEAVE_TYPES = ['Vacation', 'Sick', 'Emergency', 'Special'];
 
 export const LEAVE_STATUSES = ['Pending', 'Approved', 'Rejected'];
 

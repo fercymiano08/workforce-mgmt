@@ -29,6 +29,20 @@ class InternalApiController extends Controller
         return response()->json(['data' => $snapshot]);
     }
 
+    /**
+     * Current settings row for peer services (read path). Services read their
+     * policy thresholds (e.g. early-leave window) from here instead of keeping
+     * a second source of truth.
+     */
+    public function getSettings(Request $request): JsonResponse
+    {
+        $this->authorizeService($request);
+
+        $setting = Setting::query()->firstOrCreate([]);
+
+        return response()->json(['data' => $setting->toApiArray()]);
+    }
+
     public function storeKiosk(Request $request): JsonResponse
     {
         $this->authorizeService($request);

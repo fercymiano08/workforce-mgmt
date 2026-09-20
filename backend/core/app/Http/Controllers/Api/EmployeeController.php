@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Models\Employee;
 use App\Models\Role;
 use App\Models\User;
+use App\Services\AuditLogger;
 use App\Services\EmployeeReplicationClient;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -70,6 +71,16 @@ class EmployeeController extends Controller
 
         EmployeeReplicationClient::push($employee->id);
 
+        AuditLogger::record(
+            'core',
+            'employee.created',
+            'Employee',
+            $employee->id,
+            actor: $request->user()?->name,
+            actorId: $request->user()?->email ?: null,
+            after: $employee->fresh()->toApiArray(),
+        );
+
         return response()->json(['data' => $employee->toApiArray()], 201);
     }
 
@@ -81,6 +92,8 @@ class EmployeeController extends Controller
         }
 
         $validated = $this->validateData($request, $id);
+
+        $before = $employee->toApiArray();
 
         DB::transaction(function () use ($employee, $validated, $request): void {
             $employee->update($validated);
@@ -96,15 +109,38 @@ class EmployeeController extends Controller
 
         EmployeeReplicationClient::push($employee->id);
 
+        $user = $request->user();
+        AuditLogger::record(
+            'core',
+            'employee.updated',
+            'Employee',
+            $employee->id,
+            actor: $user?->name,
+            actorId: $user?->email ?: null,
+            before: $before,
+            after: $employee->fresh()->toApiArray(),
+            meta: ['id' => $employee->id],
+        );
+
         return response()->json(['data' => $employee->fresh()->toApiArray()]);
     }
 
-    public function destroy(string $id): JsonResponse
+    public function destroy(Request $request, string $id): JsonResponse
     {
         $employee = Employee::find($id);
         if (! $employee) {
             return response()->json(['message' => 'Employee not found'], 404);
         }
+
+        AuditLogger::record(
+            'core',
+            'employee.deleted',
+            'Employee',
+            $employee->id,
+            actor: $request->user()?->name,
+            actorId: $request->user()?->email ?: null,
+            before: $employee->toApiArray(),
+        );
 
         DB::transaction(function () use ($employee): void {
             User::where('employee_id', $employee->id)->delete();
@@ -139,6 +175,17 @@ class EmployeeController extends Controller
         ]);
 
         EmployeeReplicationClient::push($employee->id);
+
+        $user = $request->user();
+        AuditLogger::record(
+            'core',
+            'employee.face_registered',
+            'Employee',
+            $employee->id,
+            actor: $user?->name,
+            actorId: $user?->email ?: null,
+            after: $employee->fresh()->toApiArray(),
+        );
 
         return response()->json(['data' => $employee->fresh()->toApiArray()]);
     }

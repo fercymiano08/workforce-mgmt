@@ -1,5 +1,5 @@
 import { useState, useMemo, useEffect, useCallback } from 'react';
-import { Calendar, CheckCircle, Clock, FileText, Plus, XCircle, Palmtree, Heart, AlertTriangle, Star, Baby, Users, Flower2, Wallet, Hourglass, ThumbsUp, ThumbsDown, ChevronRight } from 'lucide-react';
+import { Calendar, CheckCircle, Clock, FileText, Plus, XCircle, Palmtree, Heart, AlertTriangle, Star, Flower2, Wallet, Hourglass, ThumbsUp, ThumbsDown, ChevronRight } from 'lucide-react';
 import Card from '../../components/ui/Card';
 import Button from '../../components/ui/Button';
 import Badge from '../../components/ui/Badge';
@@ -27,8 +27,6 @@ const leaveTypeVariant = {
   Sick: 'danger',
   Emergency: 'warning',
   Special: 'purple',
-  Maternity: 'pink',
-  Paternity: 'info',
   Bereavement: 'default',
   Unpaid: 'default',
   'Half Day': 'default',
@@ -39,13 +37,11 @@ const leaveBalanceStyle = {
   Sick: { text: 'text-red-600', barBg: 'bg-red-100', color: 'bg-red-500', icon: Heart, iconBg: 'bg-red-50' },
   Emergency: { text: 'text-amber-600', barBg: 'bg-amber-100', color: 'bg-amber-500', icon: AlertTriangle, iconBg: 'bg-amber-50' },
   Special: { text: 'text-purple-600', barBg: 'bg-purple-100', color: 'bg-purple-500', icon: Star, iconBg: 'bg-purple-50' },
-  Maternity: { text: 'text-pink-600', barBg: 'bg-pink-100', color: 'bg-pink-500', icon: Baby, iconBg: 'bg-pink-50' },
-  Paternity: { text: 'text-sky-600', barBg: 'bg-sky-100', color: 'bg-sky-500', icon: Users, iconBg: 'bg-sky-50' },
   Bereavement: { text: 'text-gray-600', barBg: 'bg-gray-100', color: 'bg-gray-500', icon: Flower2, iconBg: 'bg-gray-50' },
   Unpaid: { text: 'text-slate-600', barBg: 'bg-slate-100', color: 'bg-slate-500', icon: Wallet, iconBg: 'bg-slate-50' },
 };
 
-const leaveTypes = ['Vacation', 'Sick', 'Emergency', 'Special', 'Maternity', 'Paternity', 'Bereavement', 'Unpaid'];
+const leaveTypes = ['Vacation', 'Sick', 'Emergency', 'Special', 'Bereavement', 'Unpaid'];
 
 // Inclusive calendar-day count of a leave range, e.g. Jan 01 - Jan 03 = 3 days.
 const countDays = (start, end) => {

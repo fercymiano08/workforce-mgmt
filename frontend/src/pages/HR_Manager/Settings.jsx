@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import {
   Settings as SettingsIcon, Building, Palette, Shield,
-  Save, Globe, Mail, Smartphone,
+  Save, Globe, Mail, Smartphone, TimerOff,
 } from 'lucide-react';
 import Card, { CardHeader, CardTitle, CardDescription } from '../../components/ui/Card';
 import Button from '../../components/ui/Button';
@@ -21,6 +21,7 @@ const NAV_GROUPS = [
     label: 'Company Configuration',
     items: [
       { id: 'company', key: 'settings.company', icon: Building },
+      { id: 'earlyLeave', key: 'settings.earlyLeave', icon: TimerOff },
       { id: 'regional', key: 'settings.regional', icon: Globe },
     ],
   },
@@ -125,6 +126,82 @@ function CompanySection({ settingsData, onSaved }) {
   );
 }
 
+function EarlyLeaveSection({ settingsData, onSaved }) {
+  const { toast } = useToast();
+  const system = settingsData.system || {};
+  const [form, setForm] = useState({
+    early_leave_window_days: system.early_leave_window_days ?? 30,
+    early_leave_allowed_count: system.early_leave_allowed_count ?? 2,
+    early_leave_sick_cert_threshold: system.early_leave_sick_cert_threshold ?? 2,
+  });
+
+  const handleChange = (field, value) => {
+    setForm((prev) => ({ ...prev, [field]: value }));
+  };
+
+  const handleSave = async () => {
+    try {
+      // 'system' is replaced wholesale by the API, so merge the new threshold
+      // keys into the values that already exist on the row (date/time formats).
+      await settingsService.update({ system: { ...system, ...form } });
+      applySystemSettings({ dateFormat: system.dateFormat, timeFormat: system.timeFormat });
+      toast.success('Early leave policy updated', 'New thresholds apply to all future classifications.');
+      onSaved?.();
+    } catch {
+      toast.error('Error', 'Failed to save early leave policy.');
+    }
+  };
+
+  return (
+    <div className="space-y-6">
+      <Card>
+        <CardHeader>
+          <div>
+            <CardTitle>Early Clock-Out Policy</CardTitle>
+            <CardDescription>Rules that auto-classify early clock-outs for the whole workforce</CardDescription>
+          </div>
+        </CardHeader>
+
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
+          <Input
+            label="Rolling Window (days)"
+            type="number"
+            min={1}
+            value={form.early_leave_window_days}
+            onChange={(e) => handleChange('early_leave_window_days', Number(e.target.value))}
+            icon={TimerOff}
+          />
+          <Input
+            label="Max Early Outs in Window"
+            type="number"
+            min={1}
+            value={form.early_leave_allowed_count}
+            onChange={(e) => handleChange('early_leave_allowed_count', Number(e.target.value))}
+          />
+          <Input
+            label="Sick Outs Before Certificate"
+            type="number"
+            min={1}
+            value={form.early_leave_sick_cert_threshold}
+            onChange={(e) => handleChange('early_leave_sick_cert_threshold', Number(e.target.value))}
+          />
+        </div>
+
+        <InfoNote>
+          Once an employee reaches the max early outs within the rolling window, their next early clock-out is
+          auto-classified as Unpaid and HR gets an alert (admins can still override per record). Recurring SICK
+          early outs past the certificate threshold flag the record as certificate-required and generate a
+          pending Sick leave draft for approval.
+        </InfoNote>
+
+        <div className="flex justify-end mt-6">
+          <Button icon={Save} onClick={handleSave}>Save Changes</Button>
+        </div>
+      </Card>
+    </div>
+  );
+}
+
 function RegionalSection({ settingsData, onSaved }) {
   const { toast } = useToast();
   const { language, setLanguage } = useLanguage();
@@ -209,6 +286,8 @@ export default function Settings() {
     switch (activeTab) {
       case 'regional':
         return <RegionalSection {...props} />;
+      case 'earlyLeave':
+        return <EarlyLeaveSection {...props} />;
       case 'account':
         return <AccountSection />;
       case 'appearance':

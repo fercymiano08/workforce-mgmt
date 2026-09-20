@@ -1,6 +1,6 @@
-import { useMemo, useState } from 'react';
+import { useMemo, useRef, useState } from 'react';
 import {
-  CalendarDays, Clock3, Timer, Coffee, Send, BarChart3, ChevronRight,
+  CalendarDays, Clock3, Timer, Coffee, Send, BarChart3, ChevronRight, Download, Printer,
 } from 'lucide-react';
 import { useTimesheets, useTimesheetsLoaded, submitTimesheet, refreshTimesheets } from '../../hooks/useTimesheets';
 import { useAuth } from '../../context/AuthContext';
@@ -15,6 +15,7 @@ import useApiData from '../../hooks/useApiData';
 import { attendanceService } from '../../services/api';
 import { toDateKey } from '../../services/attendanceService';
 import { formatDate, formatTime } from '../../utils/helpers';
+import { downloadCsv, printElementAsPdf } from '../../utils/export';
 
 const hours = (value) => `${Number(value || 0).toFixed(1)}h`;
 
@@ -44,6 +45,7 @@ export default function MyTimesheet() {
   const { user } = useAuth();
   const { toast } = useToast();
   const employeeId = user?.id || 'EMP001';
+  const printRef = useRef(null);
   const [selectedWeek, setSelectedWeek] = useState(null);
   const data = useTimesheets();
   const loaded = useTimesheetsLoaded();
@@ -152,6 +154,34 @@ export default function MyTimesheet() {
     }
   };
 
+  const handleExport = () => {
+    if (!records.length) {
+      toast.error('Nothing to export', 'You have no saved timesheets yet.');
+      return;
+    }
+    const rows = records.map((t) => ({
+      'Week Start': t.weekStart,
+      'Week End': t.weekEnd,
+      'Regular Hours': t.regularHours || 0,
+      'Overtime Hours': t.overtimeHours || 0,
+      'Break Hours': t.breakHours || 0,
+      'Total Hours': t.totalHours || 0,
+      Status: t.status,
+      'Submitted': t.submittedDate || '',
+      'Approved By': t.approvedBy || '',
+    }));
+    downloadCsv(`my-timesheets-${employeeId}.csv`, rows);
+    toast.success('Export ready', `Exported ${rows.length} timesheets as CSV.`);
+  };
+
+  const handlePrint = () => {
+    if (!printRef.current) {
+      toast.error('Nothing to print', 'No saved timesheets to print.');
+      return;
+    }
+    printElementAsPdf(printRef.current, `Timesheets - ${employeeId}`);
+  };
+
   // The seven day rows of whichever week the modal is showing. Each row maps
   // back to that date's attendance record, so even a saved weekly timesheet
   // shows the actual per-day clock-in/out detail behind its totals.
@@ -201,6 +231,8 @@ export default function MyTimesheet() {
             <CalendarDays className="w-4 h-4 text-gray-400" />
             <span className="font-medium">{formatDate(new Date().toISOString())}</span>
           </div>
+          <Button variant="outline" size="md" icon={Download} onClick={handleExport}>Export CSV</Button>
+          <Button variant="outline" size="md" icon={Printer} onClick={handlePrint}>Print / PDF</Button>
           <Button variant="outline" size="md" icon={CalendarDays} onClick={() => setSelectedWeek(liveWeekRecord)}>
             This Week
           </Button>
@@ -459,6 +491,36 @@ export default function MyTimesheet() {
           </div>
         )}
       </Modal>
+
+      {/* Print/PDF snapshot - hidden on screen, rendered into a print window */}
+      <div className="hidden">
+        <div ref={printRef}>
+          <h1>My Timesheets</h1>
+          <p className="print-sub">Employee {employeeId} · Generated {new Date().toLocaleString()}</p>
+          <table>
+            <thead>
+              <tr>
+                <th>Week Start</th><th>Week End</th><th>Regular (h)</th><th>Overtime (h)</th>
+                <th>Break (h)</th><th>Total (h)</th><th>Status</th><th>Submitted</th>
+              </tr>
+            </thead>
+            <tbody>
+              {records.map((t) => (
+                <tr key={t.id}>
+                  <td>{t.weekStart}</td>
+                  <td>{t.weekEnd}</td>
+                  <td>{Number(t.regularHours || 0).toFixed(1)}</td>
+                  <td>{Number(t.overtimeHours || 0).toFixed(1)}</td>
+                  <td>{Number(t.breakHours || 0).toFixed(1)}</td>
+                  <td>{Number(t.totalHours || 0).toFixed(1)}</td>
+                  <td>{t.status}</td>
+                  <td>{t.submittedDate || ''}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      </div>
     </div>
   );
 }
