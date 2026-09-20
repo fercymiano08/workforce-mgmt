@@ -34,31 +34,14 @@ class EarlyClockOutTest extends TestCase
         ]);
     }
 
-    private function scheduleToday(string $employeeId): void
-    {
-        ShiftDefinition::create([
-            'id' => 'SHIFT004',
-            'name' => 'Flexible Shift',
-            'start_time' => '08:00:00',
-            'end_time' => '17:00:00',
-            'color' => '#3B82F6',
-        ]);
-
-        ShiftSchedule::create([
-            'id' => 'SCH001',
-            'employee_id' => $employeeId,
-            'employee_name' => 'Juan Dela Cruz',
-            'shift_id' => 'SHIFT004',
-            'date' => now()->toDateString(),
-            'status' => 'Scheduled',
-        ]);
-    }
-
     private function clockIn(string $employeeId): Attendance
     {
+        $date = $this->freezeKioskClock('08:00:00');
+        $this->scheduleShift($employeeId);
+
         $this->postJson('/api/kiosk/attendance', [
             'employeeId' => $employeeId,
-            'date' => now()->toDateString(),
+            'date' => $date,
             'clockIn' => '08:00:00',
             'status' => 'Present',
             'location' => 'Main Entrance',
@@ -71,7 +54,6 @@ class EarlyClockOutTest extends TestCase
     {
         $this->employee();
         $record = $this->clockIn('EMP20260001');
-        $this->scheduleToday('EMP20260001');
 
         $this->putJson('/api/kiosk/attendance/'.$record->id, [
             'clockOut' => '12:00:00',
@@ -93,11 +75,10 @@ class EarlyClockOutTest extends TestCase
         $this->assertSame('17:00', (string) $early->scheduled_end_time);
     }
 
-    public function test_early_clock_out_without_reason_stays_pending(): void
+    public function test_early_clock_out_without_a_reason_is_refused(): void
     {
         $this->employee();
         $record = $this->clockIn('EMP20260001');
-        $this->scheduleToday('EMP20260001');
 
         $this->putJson('/api/kiosk/attendance/'.$record->id, [
             'clockOut' => '12:00:00',
@@ -105,19 +86,18 @@ class EarlyClockOutTest extends TestCase
             'overtime' => 0,
             'totalHours' => 4,
             'breakHours' => 0,
-        ])->assertOk();
+        ])->assertStatus(422)
+            ->assertJsonPath('data.reason', 'reason_required');
 
-        $early = EarlyClockOut::where('attendance_id', $record->id)->first();
-        $this->assertNotNull($early);
-        $this->assertSame('PENDING', $early->reason_status);
-        $this->assertNull($early->reason_code);
+        // Nothing was punched out and no early-leave record was created.
+        $this->assertNull($record->fresh()->clock_out);
+        $this->assertSame(0, EarlyClockOut::count());
     }
 
-    public function test_reason_can_be_added_after_the_punch(): void
+    public function test_reason_can_be_refined_after_the_punch(): void
     {
         $this->employee();
         $record = $this->clockIn('EMP20260001');
-        $this->scheduleToday('EMP20260001');
 
         $this->putJson('/api/kiosk/attendance/'.$record->id, [
             'clockOut' => '12:00:00',
@@ -125,6 +105,7 @@ class EarlyClockOutTest extends TestCase
             'overtime' => 0,
             'totalHours' => 4,
             'breakHours' => 0,
+            'reasonCode' => 'OTHER',
         ])->assertOk();
 
         $early = EarlyClockOut::where('attendance_id', $record->id)->first();
@@ -151,7 +132,6 @@ class EarlyClockOutTest extends TestCase
     {
         $this->employee();
         $record = $this->clockIn('EMP20260001');
-        $this->scheduleToday('EMP20260001');
 
         $this->putJson('/api/kiosk/attendance/'.$record->id, [
             'clockOut' => '12:00:00',
@@ -176,7 +156,6 @@ class EarlyClockOutTest extends TestCase
     {
         $this->employee();
         $record = $this->clockIn('EMP20260001');
-        $this->scheduleToday('EMP20260001');
 
         $this->putJson('/api/kiosk/attendance/'.$record->id, [
             'clockOut' => '12:00:00',

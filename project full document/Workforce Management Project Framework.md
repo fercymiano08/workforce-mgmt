@@ -19,7 +19,7 @@ Timesheet Management
 Workforce Analytics
 
 Features:
--Employee ID + Facial Recognition-Based Clock In
+-Employee ID + Facial Recognition-Based Clock In (shift-aware: Present within 15 min of the shift start, Late warning afterwards, reason required for early clock-out, admin alert on a face mismatch — all enforced by the server)
 -AI Decision Support (AI API Supported)
 -Automated Logic/Rule-Based Shift Scheduling
 -Timesheet Generation (Weekly)

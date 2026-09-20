@@ -26,6 +26,17 @@ class InternalApiController extends Controller
             $snapshot[$table] = DB::table($table)->orderBy('id')->get();
         }
 
+        // The registered face photo (~40 KB each) is only ever displayed by core;
+        // other services match on face_descriptor. Replicating it would multiply
+        // the payload of every minute-by-minute sync by the headcount.
+        if (isset($snapshot['employees'])) {
+            $snapshot['employees'] = $snapshot['employees']->map(function ($row) {
+                $row->face_image = null;
+
+                return $row;
+            })->values();
+        }
+
         return response()->json(['data' => $snapshot]);
     }
 

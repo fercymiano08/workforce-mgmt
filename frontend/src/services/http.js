@@ -25,9 +25,14 @@ const remove = (key) => {
   try { store()?.removeItem(key); } catch { /* ignore */ }
 };
 
+// Without a timeout a hung service leaves the page spinning until the browser
+// gives up (minutes). The servers cut a request off at ~30s, so 45s only
+// triggers when a service is truly unresponsive - callers then get an
+// ECONNABORTED error to show instead of an endless spinner.
 const http = axios.create({
   baseURL: '/api',
   headers: { 'Content-Type': 'application/json' },
+  timeout: 45000,
 });
 
 const readKioskToken = () => {

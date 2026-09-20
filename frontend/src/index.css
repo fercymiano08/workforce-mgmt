@@ -140,6 +140,34 @@
   50% { top: 86%; }
 }
 
+/* Face scan overlay (FaceScanOverlay.jsx) - transform/opacity only, so it stays
+   smooth on the compositor thread while face detection blocks the main thread. */
+@keyframes face-sweep {
+  0%   { transform: translateY(-100%); }
+  100% { transform: translateY(357%); }
+}
+
+@keyframes face-dot {
+  0%, 100% { opacity: 0.15; transform: scale(0.6); }
+  50%      { opacity: 1;    transform: scale(1.4); }
+}
+
+.face-oval {
+  border-radius: 50% 50% 48% 48% / 42% 42% 58% 58%;
+  box-shadow: 0 0 0 999px rgba(11, 31, 58, 0.45);
+}
+
+.face-sweep {
+  background: linear-gradient(to bottom, transparent, rgba(96, 165, 250, 0.55), transparent);
+  border-bottom: 2px solid rgba(147, 197, 253, 0.9);
+  will-change: transform;
+  animation: face-sweep 1.6s ease-in-out infinite;
+}
+
+.face-dot {
+  animation: face-dot 1.2s ease-in-out infinite;
+}
+
 /* Utility layer: custom utility classes participate in Tailwind's cascade */
 @layer utilities {
   .animate-fadeIn {

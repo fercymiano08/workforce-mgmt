@@ -138,10 +138,12 @@ Let's trace what happens when an employee clocks in at the kiosk. Read this like
 2. The kiosk's camera takes a photo, and — inside the browser itself, no internet needed — compares it to the employee's saved face data. This face-matching step happens on the DEVICE, not on a server.
 3. If it matches, the frontend sends a request: `POST /api/kiosk/attendance` — basically saying "clock this person in now."
 4. That request has the URL prefix `/api/kiosk/...`, so the frontend's traffic-router (a setting called the Vite proxy) sends it straight to the **`attendance` service** (port 8003) — not to any of the other 7.
-5. Inside the `attendance` service: a bouncer (middleware) checks a few rules — is there a shift scheduled today? Are they already clocked in? Is this suspiciously early or late?
-6. If everything's fine, the `attendance` service writes one new row into ITS OWN database (`workforce_attendance`) — the actual attendance record.
+5. Inside the `attendance` service: the service checks the rules itself — is there a shift scheduled today? Is the shift already over? Are they already clocked in? The kiosk screen also shows friendly warning popups first (for example "You Are Late"), but the **service is the one that really enforces the rules** — so nobody can cheat by editing the screen.
+6. The service uses **its own clock** to decide the time and whether the person is **Present** (up to 15 minutes after the shift starts) or **Late** (after that). If they're late, it still lets them clock in, but the admins get a notification. If there's no shift today, it says no. Then it writes one new row into ITS OWN database (`workforce_attendance`) — the actual attendance record.
 7. It sends back a JSON answer: "success, clocked in at 8:03 AM."
-8. The kiosk screen shows a green success message.
+8. The kiosk screen shows a green success message (or an amber one if the person was late).
+
+> **If someone tries to clock in as another person:** their face won't match, the kiosk shows a red warning, and the system sends an alert to the Workforce Admin.
 
 Notice: only ONE of the 8 services was involved in the core action (`attendance`). The other 7 didn't need to do anything. That's the whole point of splitting them up.
 

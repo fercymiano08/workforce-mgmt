@@ -5,6 +5,7 @@ import {
 import clsx from 'clsx';
 import Modal from '../ui/Modal';
 import Button from '../ui/Button';
+import FaceScanOverlay from '../attendance/FaceScanOverlay';
 import useWebcam from '../../hooks/useWebcam';
 import { getFaceDescriptor, loadImageFileToCanvas, loadModels } from '../../services/faceMatchService';
 
@@ -216,10 +217,10 @@ export default function FaceCaptureModal({ isOpen, employeeId, employeeName, onC
           <div className="relative rounded-2xl overflow-hidden bg-gray-900 aspect-square">
             <img src={capturedImage} alt="Captured face preview" className="w-full h-full object-cover" />
             {detecting && (
-              <div className="absolute inset-0 flex flex-col items-center justify-center gap-2 bg-black/40 text-white/90">
-                <Loader2 className="w-6 h-6 animate-spin" />
-                <p className="text-xs font-medium">Analyzing face...</p>
-              </div>
+              <>
+                <FaceScanOverlay state="scanning" />
+                <p className="absolute inset-x-0 bottom-3 text-center text-xs font-medium text-white/90">Analyzing face...</p>
+              </>
             )}
           </div>
           {noFaceDetected ? (
@@ -281,7 +282,7 @@ export default function FaceCaptureModal({ isOpen, employeeId, employeeName, onC
             )}
             {isActive && (
               <div className="absolute inset-0 pointer-events-none flex items-center justify-center">
-                <div className="w-[62%] aspect-square rounded-full border-2 border-dashed border-blue-400/80" />
+                <FaceScanOverlay state="idle" />
                 <div className="absolute left-4 top-4 w-8 h-8 border-l-2 border-t-2 border-blue-400 rounded-tl-lg" />
                 <div className="absolute right-4 top-4 w-8 h-8 border-r-2 border-t-2 border-blue-400 rounded-tr-lg" />
                 <div className="absolute left-4 bottom-4 w-8 h-8 border-l-2 border-b-2 border-blue-400 rounded-bl-lg" />

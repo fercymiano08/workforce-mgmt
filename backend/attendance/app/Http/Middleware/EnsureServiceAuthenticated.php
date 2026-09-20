@@ -6,6 +6,7 @@ use App\Models\User;
 use Closure;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Http;
 use Symfony\Component\HttpFoundation\Response;
 
@@ -47,17 +48,44 @@ class EnsureServiceAuthenticated
         return $next($request);
     }
 
+    /**
+     * How long a successful /api/auth/me answer is reused. Every request to
+     * every service otherwise blocks on a round-trip to the (single-threaded)
+     * Auth service, which is the biggest multiplier on page load time. The
+     * trade-off: a revoked token or changed role is honoured by the other
+     * services up to this many seconds late.
+     */
+    private const IDENTITY_CACHE_SECONDS = 15;
+
     private function remoteUser(string $token): ?User
     {
+        $cacheKey = 'svc-identity:'.hash('sha256', $token);
+
         try {
-            $response = Http::timeout(10)
-                ->withToken($token)
-                ->get(rtrim(config('svc.auth.url'), '/').'/api/auth/me');
+            $data = Cache::get($cacheKey);
         } catch (\Throwable) {
-            return null;
+            $data = null;
         }
 
-        $data = $response->ok() ? $response->json('user') : null;
+        if (! is_array($data)) {
+            try {
+                $response = Http::timeout(10)
+                    ->withToken($token)
+                    ->get(rtrim(config('svc.auth.url'), '/').'/api/auth/me');
+            } catch (\Throwable) {
+                return null;
+            }
+
+            $data = $response->ok() ? $response->json('user') : null;
+
+            if (is_array($data) && isset($data['role'], $data['email'])) {
+                try {
+                    Cache::put($cacheKey, $data, self::IDENTITY_CACHE_SECONDS);
+                } catch (\Throwable) {
+                    // Caching is an optimisation only.
+                }
+            }
+        }
 
         if (! is_array($data) || ! isset($data['role'], $data['email'])) {
             return null;

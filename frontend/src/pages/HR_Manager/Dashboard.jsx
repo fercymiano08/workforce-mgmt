@@ -102,7 +102,8 @@ export default function Dashboard() {
     let active = true;
     Promise.all([
       employeeService.getAll(),
-      attendanceService.getAll(),
+      // The dashboard only shows today and the last 7 days.
+      attendanceService.getAll({ from: toDateKey(new Date(Date.now() - 35 * 86400000)) }),
       leaveService.getAll(),
       shiftService.getSchedules(),
       shiftService.getAllShifts(),

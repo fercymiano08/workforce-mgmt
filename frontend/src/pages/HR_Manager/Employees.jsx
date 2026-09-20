@@ -215,6 +215,14 @@ export default function Employees() {
     setFormData({ ...emp });
     setFormErrors({});
     setIsFormOpen(true);
+    // The list omits the (large) face photo; fetch it for this one employee.
+    if (emp.faceRegistered && !emp.faceImage) {
+      employeeService.getById(emp.id).then((full) => {
+        setFormData((prev) => (prev.id === emp.id
+          ? { ...prev, faceImage: full.faceImage, faceDescriptor: full.faceDescriptor }
+          : prev));
+      }).catch(() => {});
+    }
   };
 
   const openDelete = (emp) => setDeleteTarget(emp);

@@ -94,6 +94,7 @@ export function loadModels() {
         faceapi.nets.faceLandmark68Net.loadFromUri(MODEL_URL),
         faceapi.nets.faceRecognitionNet.loadFromUri(MODEL_URL),
       ]);
+      await warmUpDetector();
     })().catch((error) => {
       // A rejected promise would otherwise be cached forever - a one-off
       // download hiccup would then brick every scan until a full reload.
@@ -105,6 +106,24 @@ export function loadModels() {
   }
   return modelsPromise;
 }
+
+// The first inference on the WebGL backend compiles its shaders, which costs
+// well over a second. Doing one throw-away detection on a blank frame while the
+// modal is still opening moves that cost out of the user's real scan.
+async function warmUpDetector() {
+  try {
+    const blank = document.createElement('canvas');
+    blank.width = DETECTOR_INPUT_SIZES[0];
+    blank.height = DETECTOR_INPUT_SIZES[0];
+    await faceapi.detectSingleFace(blank, detectorOptions(DETECTOR_INPUT_SIZES[0]));
+  } catch {
+    // Warm-up is best effort only.
+  }
+}
+
+// Lets the browser paint (e.g. the scan animation) before a long synchronous
+// detection pass starts blocking the main thread.
+const nextPaint = () => new Promise((resolve) => requestAnimationFrame(() => setTimeout(resolve, 0)));
 
 function detectorOptions(inputSize) {
   return new faceapi.TinyFaceDetectorOptions({
@@ -138,8 +157,9 @@ function frameMeanLuminance(canvas) {
     const thumb = document.createElement('canvas');
     thumb.width = 8;
     thumb.height = 8;
-    thumb.getContext('2d').drawImage(canvas, 0, 0, 8, 8);
-    const { data } = thumb.getContext('2d').getImageData(0, 0, 8, 8);
+    const thumbCtx = thumb.getContext('2d', { willReadFrequently: true });
+    thumbCtx.drawImage(canvas, 0, 0, 8, 8);
+    const { data } = thumbCtx.getImageData(0, 0, 8, 8);
     let sum = 0;
     for (let i = 0; i < data.length; i += 4) {
       sum += (data[i] + data[i + 1] + data[i + 2]) / 3;
@@ -180,7 +200,6 @@ async function detectOnce(source, inputSize) {
  * Detection is deliberately multi-pass for reliability:
  *   1. a stable low-res snapshot of the live frame, fast detector input 224
  *   2. the same snapshot, large detector input 416 (finds smaller faces)
- *   3. the raw live video element at 224 then 416, as a last resort
  * The moment any pass returns a valid descriptor, that is the result, so a
  * clear centered face is still found on the first (fast) pass.
  */
@@ -190,10 +209,13 @@ export async function getFaceDescriptor(mediaElement) {
   if (!mediaElement) return null;
 
   const isVideo = mediaElement?.tagName === 'VIDEO';
-  const sources = isVideo
-    ? [snapshotToCanvas(mediaElement), mediaElement]
-    : [mediaElement];
-  const snapshot = isVideo ? sources[0] : null;
+  // The snapshot holds the same pixels as the live video, so re-running
+  // detection on the raw element only doubled the worst-case time. It is kept
+  // solely as a fallback for when a snapshot could not be drawn.
+  const snapshot = isVideo ? snapshotToCanvas(mediaElement) : null;
+  const sources = isVideo ? [snapshot || mediaElement] : [mediaElement];
+
+  await nextPaint();
 
   for (const source of sources) {
     if (!source) continue;

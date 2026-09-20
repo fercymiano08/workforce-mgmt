@@ -56,8 +56,16 @@ class EarlyLeavePolicy
             return self::$cached = self::readLocalReplica();
         }
 
+        // Read the local settings replica (refreshed every minute) first and only
+        // go over HTTP when it has nothing yet - the early-leave endpoints
+        // shouldn't wait on a remote call for a setting that rarely changes.
+        $local = $this->readLocalReplica();
+        if ($local !== []) {
+            return self::$cached = $local;
+        }
+
         try {
-            $response = Http::timeout(4)
+            $response = Http::connectTimeout(1)->timeout(3)
                 ->withHeader('X-Service-Token', (string) config('svc.token'))
                 ->get(rtrim(config('svc.configuration.url'), '/').'/api/internal/settings');
 

@@ -48,7 +48,7 @@
 - Used to clock in/out by **face or PIN**.
 - Say it as: *"The door terminal. It's a device, not an account."*
 
-**Key point to remember:** The kiosk does NOT log in with a username and password. It talks to the backend with its own special (public) endpoints. That's why it's called a "device", not a role.
+**Key point to remember:** The kiosk does NOT log in with a username and password. It talks to the backend through its own special kiosk endpoints, unlocked by the kiosk PIN, which gives the device a signed, expiring token. That's why it's called a "device", not a role.
 
 ---
 
@@ -98,9 +98,27 @@ Browser (frontend) → sends a request to `/api/...` → the frontend's router (
    - Score above 0.6 → **not a match** → a **security event** is logged for HR to review.
 4. Wrong faces / failed PINs get recorded as **security events**, which the HR can see (and the AI assistant can flag).
 
+**The attendance rules the kiosk enforces (memorize this table):**
+
+| Situation | What the kiosk does |
+|-----------|--------------------|
+| No shift scheduled today | **Blocked** - "No Shift Scheduled Today" |
+| Shift already over | **Blocked** - "Shift Over" |
+| Clock in within 15 min of the shift start (up to and including 15:00) | **Present**, no popup |
+| Clock in later than that | Popup **"You Are Late"** → can still "Clock In Anyway" → recorded **Late**, admins notified |
+| Clock in before the shift starts | Popup "Clocking In Early" → can continue |
+| Clock out before the shift end | Must **state a reason first** (reason picker) → recorded "Early Leave" |
+| Clock out at/after the shift end | "Clocked Out" - success |
+| Someone else's face | Red **"Identity Verification Failed"** warning, security event logged, **Workforce Admins alerted**, 3 strikes = 60 s lockout |
+
+> **Key defense point:** these rules are enforced by the **server**, not just the screen. The server uses its own clock and looks up the shift itself, so a wrong tablet clock or a hand-made request can't fake an on-time punch. The popups just explain the rule to the employee first.
+
+**While scanning**, the camera shows a **face-shaped oval** with a sweeping scan band and dots that pulse over the face, and the oval turns green when identity is confirmed.
+
 **Extra defense points:**
 - The face-api models run **locally in the browser** (folder `public/models/`) → works **offline**.
 - The whole task works even without internet - that matters for a demo.
+- Face scanning is made faster by warming up the model while the modal opens (so the first real scan isn't slow) and by scanning one stable snapshot of the camera frame instead of repeating the same detection on the raw video.
 
 ## Flow 3 - An employee's everyday: schedule → clock in → leave → timesheet
 
@@ -165,6 +183,9 @@ These are the exact things the panel may probe. Say them confidently.
 | **Throttling** | Forgot-password and reset endpoints are throttled (limited requests per minute). |
 | **Kiosk PIN** | A PIN is stored only as a SHA-256 hash (a one-way code), never in plain text. |
 | **Kiosk device token** | The device has no login, but entering the kiosk PIN gives it a signed 24-hour token; without the token the kiosk endpoints answer 401. Even with it, it only sees minimal info (never salary, email, phone, address). |
+| **Server-enforced attendance rules** | No shift / finished shift = refused, Present vs Late is computed from the *server's* clock, and an early clock-out must carry a reason - all checked on the backend, so the kiosk screen can't be bypassed. |
+| **Face-mismatch alert** | A face that doesn't match the ID entered is logged as a security event AND every Workforce Admin gets a high-priority notification right away. |
+| **Short-lived identity cache** | Services reuse `core`'s "who is this token?" answer for 15 seconds so pages load fast. Trade-off: a revoked token can work up to 15 s longer in the other services. |
 
 **One killer closing line:**
 > "Security is enforced on the **backend**, not the frontend - the frontend only *shows* what the backend allows. So even if someone edits the browser, they can't access anything they're not authorized to."
@@ -206,6 +227,14 @@ These are the exact things the panel may probe. Say them confidently.
 5. Switch to **Employee** login → show "My Attendance", "My Schedule", "My Leave", and My Timesheet → click **"This Week"** to show the live popup and the history list beneath it.
 6. Optional: open the **Kiosk** screen → walk through face/PIN clock-in.
 
+**Kiosk demo checklist (each line is a different popup - pick 2-3):**
+- An employee with **no shift today** tries to clock in → red **"No Shift Scheduled Today"**. *(Prepare: leave one employee unscheduled for today.)*
+- An employee whose shift started **more than 15 minutes ago** → amber **"You Are Late"** → **Clock In Anyway** → green-amber "Clocked In (Late)"; the Admin's bell shows the late alert.
+- An employee **within 15 minutes** of the start → straight to **"Clocked In Successfully"** (Present).
+- **Clock out early** → the reason picker won't continue until a reason is chosen → "Clocked Out Early".
+- Type someone else's ID and show your own face → red **"Identity Verification Failed"** → switch to the Admin account and show the **Face Mismatch** notification + the Security Events entry.
+- Remember: the demo only shows the on-time / late / early popups for a shift that exists **today** - check the schedule beforehand.
+
 **Closing line:**
 "The key wins of this project: attendance via facial recognition that works offline, one system for HR that replaces paper/Excel, and AI-assisted management decisions - all role-protected and secure."
 
@@ -234,6 +263,18 @@ A: The admin account is a fixed reserved credential. Employees use the OTP email
 **Q: How do you prevent someone guessing passwords?**
 A: Five failed attempts trigger a 60-second lockout, plus the password policy and bcrypt hashing.
 
+**Q: Can an employee clock in when they have no shift, or after their shift ended?**
+A: No. The server refuses it ("No Shift Scheduled Today" / "Shift Over"). It's checked on the backend, so it can't be bypassed from the kiosk screen.
+
+**Q: What if someone clocks in late?**
+A: Up to and including 15 minutes after the shift start is Present. After that the kiosk shows an "You Are Late" warning and still lets them clock in ("Clock In Anyway"); it's recorded as Late and the Workforce Admins are notified.
+
+**Q: What if someone clocks in as another person?**
+A: The face doesn't match, so the kiosk shows an "Identity Verification Failed" warning, logs a security event and alerts the Workforce Admins immediately. Three failed attempts lock the terminal for 60 seconds.
+
+**Q: Why is the system slow on your laptop but fast in Docker?**
+A: Locally each service runs on PHP's built-in single-request server, from a OneDrive folder, with debug mode on. We reduced the load in code (a 15-second identity cache, no face photos in replicas, concurrent replica pushes, bounded lists) and the Docker setup uses 4 workers per service. The remaining slowness is the local hosting setup, not the architecture.
+
 **Q: Where is data stored?**
 A: In 8 separate PostgreSQL databases, one per microservice — `core` holds users/employees/departments/roles, `attendance` holds attendance + security events, `scheduling` holds shifts, `timeoff` holds leave + overtime, `payroll` holds timesheets, `communications` holds notifications, `configuration` holds settings, and `intelligence` holds analytics + AI results. Services that need another service's data keep a small, periodically-synced read-only copy rather than sharing a database.
 
@@ -257,7 +298,7 @@ A: In 8 separate PostgreSQL databases, one per microservice — `core` holds use
 The "scariest" architecture question. Your answer is strong and true, and it has a before/after:
 **this system started as one Laravel monolith. We migrated it to 8 independent microservices using the Strangler Fig pattern — pulling one domain out at a time, verifying it with tests, then moving to the next. That migration is now COMPLETE: all 8 domains (auth/identity, analytics+AI, attendance, scheduling, time-off, payroll, communications, configuration) run as separate Laravel apps, each on its own port, each with its own PostgreSQL database, each independently testable and independently startable.**
 
-> This matches the requirement from the higher department: microservices format. We didn't rewrite the system from scratch — we proved the domain boundaries first inside the monolith (each module already owned its own tables and routes), then physically lifted each one out into its own app + database, one at a time, the safest possible order. Every extraction was verified by that service's own automated test suite before moving to the next. All 118 tests across the 8 services are green.
+> This matches the requirement from the higher department: microservices format. We didn't rewrite the system from scratch — we proved the domain boundaries first inside the monolith (each module already owned its own tables and routes), then physically lifted each one out into its own app + database, one at a time, the safest possible order. Every extraction was verified by that service's own automated test suite before moving to the next. All 178 tests across the 8 services are green.
 
 ## What our system looks like TODAY (Strangler Fig, complete)
 
@@ -291,7 +332,7 @@ The "scariest" architecture question. Your answer is strong and true, and it has
 ```
 
 **The one-line truth (memorize this):**
-> "We migrated this system from a single Laravel monolith to 8 independent microservices using the Strangler Fig pattern — one domain extracted and verified at a time. That migration is complete: every domain (identity, analytics/AI, attendance, scheduling, time-off, payroll, communications, configuration) is now its own Laravel app, its own port, its own database, with 118 automated tests passing across all 8, and the frontend's proxy config is the only thing that routes requests to the right one."
+> "We migrated this system from a single Laravel monolith to 8 independent microservices using the Strangler Fig pattern — one domain extracted and verified at a time. That migration is complete: every domain (identity, analytics/AI, attendance, scheduling, time-off, payroll, communications, configuration) is now its own Laravel app, its own port, its own database, with 178 automated tests passing across all 8, and the frontend's proxy config is the only thing that routes requests to the right one."
 
 ## Why we did it in this order (your honest engineering answer)
 
@@ -335,8 +376,8 @@ Use this as a rapid-fire review. One line = one idea. Cover the right column, th
 |--------|-------------|--------------|----------------|
 | **Login/Auth** | Proves who you are | Email+password checked against a bcrypt hash → issues a token | Nobody else can act as you; every action is traceable |
 | **Employees** | The company's people database | CRUD on the `employees` table; generates `EMP2026xxxx` IDs | THE central entity - every other module hangs off the employee ID |
-| **Face Registration** | Turns a face into a 128-number print | Stores `face_image` + `face_descriptor` JSON per employee | Lets the kiosk verify identity without passwords or staff |
-| **Attendance (kiosk)** | The clock-in/out terminal | Face match (< 0.6 distance) + smart pre-checks → one row in `attendance` | Accurate, tamper-resistant attendance with zero manual work |
+| **Face Registration** | Turns a face into a 128-number print | Stores `face_image` (only in `core`) + `face_descriptor` JSON per employee; other services get just the descriptor | Lets the kiosk verify identity without passwords or staff |
+| **Attendance (kiosk)** | The clock-in/out terminal | Face match (< 0.6 distance) + server-enforced rules (shift required, Present ≤ 15 min / Late after, reason for early leave) → one row in `attendance` | Accurate, tamper-resistant attendance with zero manual work |
 | **HR Attendance** | Fix/correct daily records | Approve, edit, delete rows; computed Late/Present/Absent | Keeps records honest; the audit trail source of truth |
 | **Leave** | Time-off requests | Apply (Pending) → HR Approve/Reject → deducts balance → notify | Balances stay consistent; approved leave stops "Absent" flags |
 | **Overtime** | Extra hours tracking | Same lifecycle as leave, PLUS reconciliation pushes approved OT into attendance + timesheets | Payroll numbers agree across every page |
@@ -347,7 +388,7 @@ Use this as a rapid-fire review. One line = one idea. Cover the right column, th
 | **Reports** | Printable/CSV outputs | Reads live data + formats via `reportHelpers.js` | Proof and paperwork done from one button |
 | **AI Decision Support** | AI insights + one-click actions | Reads 30 days of data → Gemini if online, else rule engine → decision queue | Flags problems HR would miss; actions reuse normal endpoints |
 | **Security Events** | Log of suspicious kiosk activity | `face_mismatch`/`pin_failed` stored Open → HR resolves/escalates | Buddy-punching is caught and reviewable |
-| **Notifications** | In-app bell messages | Backend INSERTs a row; bell polls unread count | People learn of approvals/leaves/SO immediately |
+| **Notifications** | In-app bell messages | Backend INSERTs a row; bell refreshes every 30 s while the tab is visible (newest 200) | People learn of approvals/leaves/SO immediately |
 | **Kiosk Setup** | Configures the door device | PIN hash, location, verification method stored in `settings.kiosk` | The entrance behaves exactly how HR wants |
 | **Settings/Profile** | App config + self-service edits | One settings row (JSON groups); profile edits by owner only | Flexible config; employees can't touch salary/department |
 
@@ -388,7 +429,7 @@ Use this as a rapid-fire review. One line = one idea. Cover the right column, th
 12. Why did we pick each tech? → React=fast UI, Laravel=secure backend (×8, one per domain), PostgreSQL=reliable relational DB (×8), Gemini=smart insights.
 
 ## Database (13-19)
-13. How many tables? → 23 (14 business + 9 Laravel plumbing).
+13. How many tables? → 25 (16 business + 9 Laravel plumbing). The 16 include the two newest: `early_clock_outs` (early-leave reasons) and `audit_events` (the audit trail).
 14. Which table is most important? → `employees` - everything links by `employee_id`.
 15. What is a primary key? → Unique row ID (e.g. `EMP20260001`).
 16. What is a foreign key? → A column pointing to another table's key (attendance.employee_id → employees.id).
@@ -397,13 +438,14 @@ Use this as a rapid-fire review. One line = one idea. Cover the right column, th
 19. How many employees/attendance rows are in the demo? → 12 employees, 190 attendance rows.
 
 ## Attendance rules (20-26)
-20. When is someone Late? → Clock-in more than 15 min after shift start.
-21. When is someone Present? → Clock-in within the 15-min grace.
+20. When is someone Late? → Clock-in more than 15 min after shift start (08:15:01 or later for an 08:00 shift). The server decides, from its own clock.
+21. When is someone Present? → Clock-in within the 15-min grace (08:15:00 is still on time).
 22. When is someone Absent? → No clock-in + no approved leave + past 60-min grace.
 23. What protects an on-leave employee from Absent? → Approved leave covering that date.
-24. What does the kiosk refuse? → No schedule, shift already ended, already clocked in.
-24b. What happens on an early clock-out? → Not refused anymore — it opens a reason picker (Feeling Unwell / Family Emergency / Personal Emergency / Approved Leave / Other), records an `Early Leave` with `minutes_early`, and HR classifies it later (Excused vs Unpaid). Health/emergency reasons also notify admins.
-25. What happens on face mismatch? → Blocked + `face_mismatch` security event + strikes → 60s lockout.
+24. What does the kiosk refuse? → No schedule today, shift already ended, already clocked in, approved leave. All enforced on the server.
+24a. What does the kiosk do when someone is late? → Warns ("You Are Late") but lets them "Clock In Anyway"; recorded Late; admins notified.
+24b. What happens on an early clock-out? → Never refused for a real reason, but a reason must be picked first (Feeling Unwell / Family Emergency / Personal Emergency / Approved Leave / Other). Records an `Early Leave` with `minutes_early`, and HR classifies it later (Excused vs Unpaid). Health/emergency reasons also notify admins.
+25. What happens on face mismatch? → Red warning + `face_mismatch` security event + a high-priority notification to every admin + 3 strikes → 60s lockout.
 26. How does the face match work? → 128-number descriptor compared; distance < 0.6 = match; runs in-browser (offline).
 
 ## Leave & timesheet (27-33)

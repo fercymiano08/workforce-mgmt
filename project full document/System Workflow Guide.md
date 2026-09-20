@@ -64,7 +64,7 @@ Each service is a full, independent Laravel app living at `backend/<name>/` (e.g
 |------|-----------|---------------|------------------|
 | **React** | A JavaScript library for building web screens | 22 page files under `frontend/src/pages/` | Fast, component-based, huge ecosystem; runs in any browser |
 | **Laravel** | A PHP web framework | 8 independent Laravel apps under `backend/<name>/app/` — one per business domain | Secure by default (hashing, validation), clean structure, easy to run as separate services |
-| **PostgreSQL** | A relational database (tables with rows/columns) | 8 databases (one per service), ~23 tables total, plus small "replica" copies of shared reference data (e.g. `employees`) inside services that need to read it without calling another service for every request | Reliable, handles relational + JSON data well, free |
+| **PostgreSQL** | A relational database (tables with rows/columns) | 8 databases (one per service), ~25 tables total, plus small "replica" copies of shared reference data (e.g. `employees`) inside services that need to read it without calling another service for every request | Reliable, handles relational + JSON data well, free |
 
 > If a panelist asks "why PostgreSQL instead of MySQL?" — add: "PostgreSQL handles JSON columns and complex reporting cleanly, and it's what our team is consistent with. MySQL would also work; ours was a deliberate choice for reliability."
 
@@ -107,6 +107,24 @@ Two mechanisms, used for different needs:
 
 1. **Snapshot replication (`SnapshotSyncService` + `php artisan snapshot:sync`, in each service's `app/Services/`)** — services that mostly *read* another service's reference data (e.g. `attendance` needs employees and leave records to compute Late/Absent/On-Leave) keep a local, read-only **replica table**, refreshed from the owning service over HTTP. Fast local reads, slightly stale by design (a sync interval, not real-time) — this is why `attendance` has its own local `Leave` model even though `timeoff` owns leave requests.
 2. **Internal API clients (e.g. `NotificationClient`, `ConfigurationClient`, `PayrollClient`, `TimeoffClient`, `AttendanceClient` — each service only has the clients it actually needs, living in that service's own `app/Services/`)** — for anything that must be current and correct *right now*, a service calls the owning service's `/internal/*` API directly over HTTP, authenticated with a shared service token, instead of writing through a replica. Example: any service that needs to raise a notification calls `communications`' internal API through its own `NotificationClient` rather than writing to a `notifications` table it doesn't own.
+
+### Keeping It Fast And Safe (Performance & Reliability Rules)
+
+Splitting one app into eight means every request can turn into several network calls. These rules keep that from making the system slow or fragile. They were added after profiling the running system, so each one answers a real symptom.
+
+| Rule | What it does | Why it exists / honest trade-off |
+|------|--------------|-----------------------------------|
+| **Identity is cached for 15 seconds** | `EnsureServiceAuthenticated` (in every service except `core`) remembers the answer of `core`'s `/api/auth/me` for 15 s, keyed by a hash of the token | Before, *every* request to *every* service waited on a round-trip to `core`, which is the biggest multiplier on page-load time. Trade-off: a revoked token or changed role is honoured by the other services up to 15 s late. If `core` is down, requests still fail once the cache expires |
+| **Replicas carry the face *descriptor*, never the photo** | `core` strips `face_image` from its snapshot and from employee pushes; only the 128-number `face_descriptor` is copied to other services | A registered face photo is ~40 KB. Copied to 5 services every minute it would grow with headcount (100 employees ≈ 4 MB per sync). Only `core` ever displays the photo |
+| **The employee list is light** | `GET /api/employees` leaves out `faceImage` / `faceDescriptor`; `GET /api/employees/{id}` returns them. The Edit modal fetches them on demand for the one employee being edited | Same reason — a page load should not download every employee's photo |
+| **Replica pushes run concurrently** | Employee pushes (`core`) and shift-schedule pushes (`scheduling`) use Laravel's `Http::pool`, so all target services are called at once | Sequential pushes added every slow target's timeout to the request of the admin who clicked Save |
+| **Notification batches are bounded** | The attendance alert scan looks up "already flagged today" with **one** query, and sends new alerts as one concurrent batch capped at **15 per scan**; the rest follow on the next scan (the "already flagged" check prevents duplicates) | Before, each absent employee cost an unindexed query plus a blocking HTTP call — a busy morning could exceed PHP's 30 s request limit |
+| **Short timeouts on non-critical calls** | Notification and audit calls: 1 s to connect, 3 s total. The early-leave policy reads the *local* settings replica first instead of calling `configuration` | A notification is never worth making someone wait at the kiosk |
+| **Mail can't hang a request** | SMTP has an 8 s timeout (`MAIL_TIMEOUT`); the AI (Gemini) call defaults to 15 s (`GEMINI_TIMEOUT`) | PHP kills any request after 30 s. A dead mail host or slow AI must fail fast, not turn into a 500 |
+| **Lists are bounded** | Notification lists return the newest 200; `GET /api/attendance` accepts optional `?from=&to=` and the HR Dashboard asks for only the last 35 days | The bell is polled every 30 s by every open tab |
+| **The frontend never waits forever** | Every API call has a 45 s timeout; notification polling pauses while the browser tab is hidden and catches up when it becomes visible | A hung service now ends in an error message instead of an endless spinner |
+
+> **Why can the demo laptop still feel slower than Docker?** In "Way 1" (`start-all.ps1`) each service runs on PHP's built-in `php artisan serve`, which handles **one request at a time**, and the project may sit inside a OneDrive-synced folder (slow file reads on Windows). PHP's CLI opcache is also off by default. Docker mode uses 4 workers per service. For the smoothest demo: set `APP_DEBUG=false` and `LOG_LEVEL=warning` in each `backend/<name>/.env`, set `opcache.enable_cli=1` in `php.ini`, and keep the project outside OneDrive — or run the Docker version (see `activator-deactivator.md`).
 
 ### The Golden Rule Of This Architecture
 
@@ -310,7 +328,11 @@ Same endpoints, different verbs: `GET /api/employees/{id}` loads one record into
 | 3 | Backend stores: `face_image` (the photo), `face_descriptor` (JSON — a 128-number mathematical fingerprint of the face), `face_registered = true`, `face_registered_at` timestamp |
 | 4 | From this moment the kiosk can verify this person by face (Module 4) |
 
+**While capturing**, the camera view shows a **face-shaped guide** (an oval with the surroundings dimmed). When the photo is taken it plays a **scan animation** — a sweeping light band and pulsing landmark dots over the face — while the browser computes the descriptor, then shows "Analyzing face…" until the result is ready. The animation uses only CSS transform/opacity, so the browser keeps it moving on the graphics thread even while face-api is busy calculating. (`components/attendance/FaceScanOverlay.jsx`, shared with the kiosk.)
+
 > Why store a *descriptor* instead of just a photo? Comparing two descriptors (just numbers) is fast and happens right in the kiosk browser — no face image ever needs to leave the device during verification.
+>
+> **Where the photo lives:** only in `core`. The other services receive the descriptor (they need it to check faces) but **not** the photo, and the employee list omits both; the Edit modal fetches them for one employee on demand (see *Keeping It Fast And Safe* in Part 1).
 
 ### Tech Trail
 
@@ -334,6 +356,8 @@ Same endpoints, different verbs: `GET /api/employees/{id}` loads one record into
 | Location / Device Name / Timezone | Labels the device and anchors time math |
 | Verification Method | Face recognition vs other methods |
 | Reset Kiosk | Wipes kiosk state back to defaults |
+
+> **If the server is slow or fails** while enabling the kiosk, saving settings or resetting, the screen now shows a clear message ("The server took too long or failed to respond…") and lets you retry, instead of spinning forever.
 
 ### Flow — Entering And Leaving Kiosk Mode
 
@@ -365,6 +389,8 @@ On the terminal, tap anywhere 5 times quickly
 
 > The kiosk device is NOT a logged-in user, so it uses a **device token** instead of a login: entering the kiosk PIN makes the server issue a signed token (valid 24 hours, void the moment the PIN changes) that the terminal sends as `X-Kiosk-Token`. Without it, the directory, face check, log and clock-in endpoints all answer `401 kiosk_locked`; clock-ins are also refused (`423`) while the kiosk is switched off. Only `GET /kiosk/config` and the (rate-limited) PIN check are open. The endpoints return **minimal fields only** (name, photo, department, today's schedule) — salaries, emails, phone numbers and addresses never cross them. Failed PIN attempts are logged as security events by the server itself.
 
+> **The server is the authority, the terminal only explains.** Every attendance rule below is enforced by the `attendance` service (`KioskController`), not just by the screen. The server takes the **date and time from its own clock** (in the kiosk's timezone), looks up the employee's shift itself, and works out **Present / Late** itself — the terminal's clock and its `status` field are ignored. So a wrong tablet clock or a hand-made request cannot record an on-time arrival that never happened. The terminal's popups exist so the employee gets a clear explanation *before* the server would refuse or flag the punch.
+
 ### The Full Clock-In Journey, Step By Step
 
 | Step | Actor | What happens |
@@ -375,44 +401,73 @@ On the terminal, tap anywhere 5 times quickly
 | 4 | Terminal | Opens the camera and runs **face-api.js**: compares the live camera frame against the stored `face_descriptor`. All comparison happens **inside the browser** — fast and private |
 | 5 | Terminal | Match? Continue. Mismatch? → see the security flow below |
 | 6 | Terminal | Runs the **smart pre-checks** (next section) before recording anything |
-| 7 | Terminal | Sends the verified result: `POST /api/kiosk/attendance` (clock-in) or `PUT /api/kiosk/attendance/{id}` (clock-out) |
-| 8 | Backend | Final business rules: duplicate check, Late/On-Time computation, hours math |
-| 9 | Database | One row written/updated in `attendance`; event noted in `security_events` |
-| 10 | Terminal | Green success screen showing the recorded time and status — visible immediately afterward in the HR Attendance page and the employee's My Attendance |
+| 7 | Terminal | Sends the request: `POST /api/kiosk/attendance` (clock-in) or `PUT /api/kiosk/attendance/{id}` (clock-out) |
+| 8 | Backend | **Enforces the rules itself**: duplicate check, approved-leave check, **a scheduled shift must exist**, the **shift must not be over**, then computes the time and **Present/Late** from the server clock; hours math on clock-out; an early clock-out **must carry a reason** |
+| 9 | Database | One row written/updated in `attendance`; a Late arrival also notifies the admins |
+| 10 | Terminal | Green success screen showing the recorded time and status — visible immediately afterward in the HR Attendance page and the employee's My Attendance. If the server refused the punch, the terminal shows the server's own reason in a **"Clock-In Not Allowed"** popup instead |
 
 ### Smart Pre-Checks (Before Anything Is Recorded)
 
-The terminal refuses or warns in several situations — this is what makes the kiosk "smart":
+The checks run **in this order** — the first one that applies wins. Steps 1–3 are also enforced by the server, so the terminal can never be used to skip them.
 
-| Situation | Terminal behavior |
-|-----------|-------------------|
-| Already clocked in, pressing Clock In again | Blocked — suggests Clock Out instead |
-| Clock Out pressed but no clock-in exists today | Blocked — suggests Clock In |
-| **No shift scheduled today** | Clock-in refused — "check your schedule with HR" |
-| Shift already ended | Clock-in refused — "contact HR" |
-| More than **15 minutes late** | Warning shown: "this will be recorded as **Late**" → employee must acknowledge with "Clock In Anyway" |
-| Clocking in more than **60 minutes early** | Gentle warning ("Very Early") → acknowledge to continue |
-| **Clocking out before the shift ends** | Not rejected — the terminal opens the **Early Clock Out** reason picker and records an `Early Leave` (Module 4a). Approved overtime extends the shift end, so clocking out at the adjusted end is a normal clock-out, not early |
+| # | Situation | Terminal popup | Employee can continue? |
+|---|-----------|----------------|------------------------|
+| 0 | Already clocked in, pressing Clock In again | "Already Clocked In Today" — suggests Clock Out | No |
+| 0 | Clock Out pressed but no clock-in exists today | "No Clock-In Found" — suggests Clock In | No |
+| 0 | Approved leave covers today | "On Approved Leave" | No |
+| 0 | The schedule could not be loaded (network hiccup) | "Schedule Unavailable" — nothing is recorded, never guesses a shift | No — try again |
+| 1 | **No shift scheduled today** (or the schedule is not in `Scheduled` status) | "No Shift Scheduled Today" — "check your schedule with HR" | **No — blocked** |
+| 2 | **Shift already ended** (scheduled end + approved overtime) | "Shift Over" — "contact HR" | **No — blocked** |
+| 3 | Later than **15 minutes** after shift start | "You Are Late" — says how many minutes after the start; recorded as **Late**; admins are notified | **Yes** — "Clock In Anyway" |
+| 4 | Before the shift starts | "Clocking In Early" ("Very Early" if more than 60 min) | **Yes** — "Clock In Anyway" |
+| 5 | Within the grace period (start … start + 15 min, **inclusive**) | No popup — recorded straight as **Present** | — |
+| — | **Clocking out before the shift ends** | Early Clock Out **reason picker** — Continue stays disabled until a reason is chosen (Module 4a). Approved overtime extends the shift end, so clocking out at the adjusted end is a normal clock-out | Yes, with a reason |
 
-### Face Mismatch → Strikes → Lockout
+> **History note (good to know for the defense):** the "no shift → blocked" rule is the original design. For a short time the terminal checked *lateness first* and fell back to a default 08:00 start when there was no shift — so at 9:30 pm an employee with no shift was told they were "810 minutes late" and the punch was accepted. That was fixed by (a) restoring the correct order above and (b) moving the rules to the server. It is covered by automated tests (`KioskGuardrailTest`).
+
+### Face Mismatch → Warning → Alert → Strikes → Lockout
 
 ```
 Face does not match the registered descriptor
         │
         ▼
-Attempt blocked. Security event written:
-type = 'face_mismatch', status = 'Open', employee_id attached
+Terminal shows "Identity Verification Failed" (red): clocking in under
+another person's ID is a security violation; the attempt was logged and
+the Workforce Admin has been alerted.
         │
         ▼
-Strike counter increases. Repeat offenses →
-terminal locks for 60 seconds (countdown shown)
+The server (from the kiosk log call) does TWO things:
+  1. writes a security event: type = 'face_mismatch', status = 'Open', employee_id attached
+  2. sends every Workforce Admin a HIGH-priority notification
+     (type 'security_face_mismatch', "Face Mismatch at Kiosk", deep-links to AI Decision Support)
         │
         ▼
-Message explains: "Clocking in under another person's ID is a
-security violation. Please see HR if you believe this is a mistake."
+Strike counter increases. After 3 strikes the terminal locks for
+60 seconds (countdown shown).
 ```
 
-Every one of these events surfaces later in the **Security Events** area of AI Decision Support for HR to resolve or escalate (Module 17).
+Every one of these events also surfaces in the **Security Events** area of AI Decision Support for HR to resolve or escalate (Module 15).
+
+### The Kiosk's Popup Catalog (Every Warning In One Place)
+
+The terminal has one popup component with four tones. Use this table to explain "what does the kiosk say when…?"
+
+| Tone | Title | When | Buttons |
+|------|-------|------|---------|
+| Red (danger) | Identity Verification Failed | Face does not match the ID entered | I Understand |
+| Red | No Shift Scheduled Today | No `Scheduled` shift for today | Back to Home |
+| Red | Shift Over | Now is past the scheduled end (+ approved overtime) | Back to Home |
+| Red | On Approved Leave | Approved leave covers today | Back to Home |
+| Red | Clock-In / Clock-Out Not Allowed | The server refused the punch (shows the server's exact reason, e.g. "state a reason first") | Back to Home |
+| Red | Attendance Not Recorded | A real network/server failure — nothing was saved | Try Again / Cancel |
+| Amber (warning) | You Are Late | More than 15 min after shift start | Clock In Anyway / Cancel |
+| Amber | Schedule Unavailable | The schedule could not be loaded | Back to Home |
+| Blue (info) | Clocking In Early / Very Early | Before the shift start | Clock In Anyway / Cancel |
+| Screens | Already Clocked In Today · No Clock-In Found | Duplicate / missing punch | Suggests the right action |
+| Screen | Terminal locked (60 s countdown) | 3 face-mismatch strikes | — |
+| Success | Clocked In Successfully (green) · Clocked In (Late) (amber) · Clocked In (Early) (blue) · Clocked Out (green) · Clocked Out Early (amber) | After a recorded punch | auto-returns to the start screen |
+
+While the face is being scanned, the camera view shows the same **face-shaped oval with a sweeping scan band and landmark dots**, turning green when identity is confirmed (`FaceScanOverlay.jsx`).
 
 ### Clock-Out Math
 
@@ -429,7 +484,7 @@ The same helper the timesheet generator uses computes these — one source of tr
 
 ### Module 4a — Clocking Out Early (Early Leave)
 
-Clocking out before the scheduled shift end is **allowed** — it just has to be explained. The clock-out no longer gets rejected; the terminal turns it into a reviewable record instead.
+Clocking out before the scheduled shift end is **allowed** — it just has to be explained **first**. The clock-out is never refused for a real reason (someone who is sick must not be trapped at the door), but **no reason = no clock-out**: the picker's Continue button stays disabled until a reason is chosen, and the server enforces it too (an early punch without a reason is answered `422 reason_required` and nothing is saved). Clocking out at or after the scheduled end needs no reason and simply succeeds. The terminal turns an early punch into a reviewable record.
 
 | Step | Actor | What happens |
 |------|-------|--------------|
@@ -450,7 +505,9 @@ Follow-up, two sides:
 
 - Endpoints: `GET /api/kiosk/employees` (directory of minimal fields), `GET /api/kiosk/employees/{employeeId}` (single-employee fallback lookup, also resolves a bare numeric suffix), `GET /api/kiosk/schedule/{employeeId}` (today's shift), `GET /api/kiosk/attendance/{employeeId}` (today's record), `POST /api/kiosk/attendance`, `PUT /api/kiosk/attendance/{id}`, `POST /api/kiosk/log`
 - Early leaves: `GET /api/attendance/early-outs`, `GET /api/attendance/early-outs/employee/{employeeId}`, `GET /api/attendance/early-outs/pending`, `PUT /api/attendance/early-outs/{id}/reason`, `POST /api/attendance/early-outs/{id}/classify`
+- Server answers to remember: `422 {reason: 'no_shift'}`, `422 {reason: 'shift_over'}`, `422 {reason: 'on_approved_leave'}`, `422 {reason: 'reason_required'}`, `409` duplicate clock-in, `423` kiosk switched off, `401 kiosk_locked` missing/expired device token. The terminal shows the server's message for any of these.
 - Tables: `employees` (read minimal), `shift_schedules` (read today), `attendance` (write), `early_clock_outs` (write), `security_events` (write)
+- Automated tests: `KioskGuardrailTest` (no shift, 9:30 pm with no shift, cancelled schedule, shift over, approved-overtime window, 08:15:00 = Present vs 08:15:01 = Late, server clock wins, reason required, clock-out at end needs none, face-mismatch alert), `EarlyClockOutTest`, `KioskDeviceTokenTest`
 
 ---
 
@@ -528,7 +585,8 @@ Creates a notification reminding the employee
 | Manually add a record | `POST /api/attendance` | e.g., someone forgot both punches |
 | Correct a record | `PUT /api/attendance/{id}` | Fix times/hours; audit-friendly |
 | Remove a bad record | `DELETE /api/attendance/{id}` | |
-| Run alert checks | `GET /api/attendance/alerts/check` | Flags anomalies like missed clock-outs |
+| View a date window | `GET /api/attendance?from=YYYY-MM-DD&to=YYYY-MM-DD` | Optional window; with no parameters it returns everything. The HR Dashboard asks only for the last 35 days |
+| Run alert checks | `GET /api/attendance/alerts/check` | Runs when the HR dashboard loads. Flags no-shows, un-closed clock-ins from earlier days, unauthorized overtime and staffing shortage. Efficient by design: one query for "already flagged today", one name lookup per group, alerts sent as one concurrent batch (max 15 per scan — the rest follow on the next scan) |
 | **Review & classify early clock-outs** | `GET /api/attendance/early-outs`, `POST /api/attendance/early-outs/{id}/classify` | One tab; pending badge shows health/emergency cases waiting |
 
 The **Early Clock Outs tab** (badge = count of `Pending Review`) lists every early-out with employee, date, time lost, the reason the employee gave at the kiosk, and current classification. HR opens one and picks `Excused (Sick)` / `Excused (Emergency)` / `Excused (Early Leave)` / `Unpaid` — unpaid early time is deducted from pay, excused is not. The employee can still edit their reason afterwards, but the punch snapshot that HR judged never changes.
@@ -545,6 +603,8 @@ Shift scheduled to start 08:00 (from shift_definitions / shift_schedules)
 ```
 
 An employee with an **Approved leave** covering today is marked on-leave rather than absent.
+
+**Who decides Present vs Late?** The `attendance` **server**, at the moment of the kiosk punch, using its own clock and the employee's scheduled shift start: on time up to and **including** 15 minutes after the start (08:15:00 is still Present), Late from 08:15:01. There is no fallback start time — an employee with no scheduled shift cannot clock in at all, so they can never be marked Late by a guess.
 
 ### Tech Trail
 
@@ -879,6 +939,12 @@ Suspicious attempt at kiosk (wrong face / wrong PIN)
 Event inserted, status = Open
         │
         ▼
+For a face mismatch, every Workforce Admin ALSO gets an immediate
+high-priority notification (bell + Notifications page, type
+'security_face_mismatch') that deep-links here — they don't have to
+wait until someone opens the security section
+        │
+        ▼
 Surfaces in AI Decision Support security section
 (counts feed the health score too)
         │
@@ -907,9 +973,10 @@ Open events raise the system's concern level; resolving them restores the score.
 | Timesheet approved/rejected | Employee |
 | Clock-out reminder requested | Employee |
 | Schedule published/changed | Affected employees (`schedule_change`) |
-| Marked Late | Employee (`attendance_late`) |
-| Clocked out early **with a health/emergency reason** | HR — all admins (`early_clockout_review`, deep-links to the Early Clock Outs tab). Approved-leave/other early-outs stay silent |
-| Security event activity | HR |
+| Clocked in Late at the kiosk | HR — all admins (`attendance_late`) |
+| Clocked out early **with a health/emergency reason** | HR — all admins (`early_clock_out`, deep-links to the Early Clock Outs tab). Approved-leave/other early-outs stay silent |
+| **Face mismatch at the kiosk** (someone clocking in as another person) | HR — all admins, **high priority** (`security_face_mismatch`, deep-links to AI Decision Support) |
+| No-show / un-closed clock-in / unauthorized overtime / staffing shortage (dashboard alert scan) | HR — all admins (`attendance_absent`, `attendance_incomplete`, `attendance_unauthorized_ot`, `staff_shortage`) |
 
 ### Anatomy Of One Notification Row
 
@@ -921,10 +988,12 @@ Open events raise the system's concern level; resolving them restores the score.
 Something happens → backend INSERTs a notification row
         │
         ▼
-Bell polls GET /api/notifications/unread-count  → badge number
+Bell refreshes every 30 s (only while the browser tab is visible,
+and immediately when the tab is shown again)  → badge number
         │
         ▼
 Open dropdown → GET /api/notifications/employee/{myId}
+(both list endpoints return the newest 200)
         │
         ├── click one  → POST /api/notifications/{id}/read (+ navigate to action_url)
         └── "mark all" → POST /api/notifications/read-all
@@ -1003,7 +1072,7 @@ Which tables each module touches (R = read, W = write). This map is logical — 
 
 | Area | Possible values | Who can move them |
 |------|-----------------|-------------------|
-| Attendance daily status | `Present` · `Late` · `Absent` · `Early Leave` | Computed by the system (15-min grace, 60-min absent grace); admin can correct manually |
+| Attendance daily status | `Present` · `Late` · `Absent` · `Early Leave` | Computed by the **server** at the kiosk punch (15-min grace, inclusive; 60-min absent grace); admin can correct manually |
 | Early clock-out record | Reason `provided` by employee at kiosk; classification `Pending Review` → `Excused (Sick)` / `Excused (Emergency)` / `Excused (Early Leave)` / `Unpaid` | Employee edits own reason; Admin classifies — punch snapshot is immutable |
 | Leave request | `Pending` → `Approved` / `Rejected`; employee may `Cancel` while Pending | Employee: apply/cancel own. Admin: approve/reject |
 | Overtime request | `Pending` → `Approved` / `Rejected`; `Cancel` while Pending | Same split as leave |
@@ -1022,6 +1091,14 @@ Which tables each module touches (R = read, W = write). This map is logical — 
 | 30 days | Lookback window the AI analyzes |
 | 5 taps | Secret rhythm to summon the kiosk PIN prompt |
 | 1/day | Rate limit on self "remind me to clock out" nudges |
+| 3 strikes | Face mismatches before the terminal locks |
+| 0.6 | Face-match distance threshold (below = same person) |
+| 15 s | How long a service reuses `core`'s "who is this token?" answer |
+| 15 alerts | Most no-show/overtime alerts one dashboard scan sends |
+| 200 | Newest notifications returned per list |
+| 35 days | Attendance window the HR Dashboard requests |
+| 1 s / 3 s | Connect / total timeout for notification and audit calls |
+| 45 s | Frontend request timeout (the servers cut requests off at ~30 s) |
 
 ## 22. File Map — Where Everything Lives
 
@@ -1039,9 +1116,12 @@ Workforce MGNT/
 │   │   │   ├── Employee/             EmployeeDashboard, MyAttendance, MySchedule,
 │   │   │   │                         Leave, MyTimesheet, Settings
 │   │   │   └── KIOSK/                KioskSetup, AttendanceTerminal
-│   │   ├── components/               shared UI: layout, modals, tables, FaceRecognitionModal
+│   │   ├── components/               shared UI: layout, modals, tables, FaceRecognitionModal,
+│   │   │                             attendance/FaceScanOverlay (face-shaped scan animation)
 │   │   ├── hooks/useNetworkStatus.js online/offline detection
 │   │   ├── services/api.js           ★ ALL backend communication lives here
+│   │   │   services/http.js          shared axios client (token, kiosk token, 45 s timeout)
+│   │   │   services/faceMatchService.js  face-api.js: model load + warm-up + descriptor
 │   │   ├── context/                  AuthContext (session), Toast, Theme
 │   │   ├── constants/                notificationTypes, colors...
 │   │   ├── utils/                    reportHelpers, helpers (timezone-safe math)
@@ -1130,7 +1210,8 @@ Nine times out of ten the bug is one of: stale frontend state (refresh), wrong r
 > **The other 7 services** (`intelligence`, `attendance`, `scheduling`, `timeoff`, `payroll`, `communications`, `configuration`) are equally real microservices — own process, own port, own PostgreSQL database, own tests. None of them share a database with each other or with `core`.
 > **Cross-service data** moves one of two ways: periodic **snapshot replication** for read-mostly reference data (e.g. `attendance`'s local copy of `Leave`), or a direct **internal API call** through a dedicated `*Client` class when the write has to happen right now (e.g. `intelligence` approving a leave through `TimeoffClient`, any service raising a notification through `NotificationClient`).
 >
-> **Kiosk** verifies faces in-browser, refuses impossible punches, logs anything suspicious.
+> **Kiosk** verifies faces in-browser, and its rules are enforced by the `attendance` **server** (no shift or finished shift = refused; up to 15 min after start = Present, later = Late with a warning; leaving early needs a reason). A face mismatch is logged and alerts the Workforce Admins.
+> **Performance rules** keep the split system fast: a 15-second identity cache, replicas that carry the face *descriptor* but not the photo, concurrent replica pushes, bounded lists, short timeouts on non-critical calls (Part 1, *Keeping It Fast And Safe*).
 > **Requests** (leave/OT) follow one pattern: apply → Pending → decide → notify (+ balance/reconciliation side effects) — now spanning `timeoff`, `attendance`, and `communications` instead of one app.
 > **Timesheets** are born automatically from attendance and end locked after HR approval — `payroll` pulls attendance data via replica, not a live cross-database join.
 > **AI** (`intelligence`) reads a replicated snapshot of workforce data, answers with whichever brain is available (Gemini or the rule-based fallback), acts on other services through their internal APIs, and remembers what you've resolved.

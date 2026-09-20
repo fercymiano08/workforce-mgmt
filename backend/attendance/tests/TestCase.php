@@ -5,12 +5,52 @@ namespace Tests;
 use App\Models\Department;
 use App\Models\Role;
 use App\Models\Setting;
+use App\Models\ShiftDefinition;
+use App\Models\ShiftSchedule;
 use App\Models\User;
 use App\Services\KioskDeviceToken;
 use Illuminate\Foundation\Testing\TestCase as BaseTestCase;
+use Illuminate\Support\Carbon;
 
 abstract class TestCase extends BaseTestCase
 {
+    /** The fixed day the kiosk tests run on (a Monday). */
+    protected const KIOSK_TEST_DATE = '2026-09-21';
+
+    /**
+     * Pins "now" to $time on KIOSK_TEST_DATE in the kiosk's timezone (Asia/Manila).
+     * The server - not the terminal - decides the clock-in time and Present/Late,
+     * so a kiosk clock-in test must control the clock. Returns the date key.
+     */
+    protected function freezeKioskClock(string $time = '08:00:00'): string
+    {
+        $this->travelTo(Carbon::parse(self::KIOSK_TEST_DATE.' '.$time, 'Asia/Manila'));
+
+        return self::KIOSK_TEST_DATE;
+    }
+
+    /** Gives the employee a scheduled shift on the given date (default: the kiosk test day). */
+    protected function scheduleShift(string $employeeId, string $start = '08:00:00', string $end = '17:00:00', ?string $date = null): void
+    {
+        ShiftDefinition::firstOrCreate(['id' => 'SHIFT-T'.substr($start, 0, 2).substr($end, 0, 2)], [
+            'name' => "Test Shift {$start}-{$end}",
+            'start_time' => $start,
+            'end_time' => $end,
+            'color' => '#3B82F6',
+        ]);
+
+        $date ??= self::KIOSK_TEST_DATE;
+
+        ShiftSchedule::create([
+            'id' => 'SCH-'.$employeeId.'-'.$date,
+            'employee_id' => $employeeId,
+            'employee_name' => 'Test Employee',
+            'shift_id' => 'SHIFT-T'.substr($start, 0, 2).substr($end, 0, 2),
+            'date' => $date,
+            'status' => 'Scheduled',
+        ]);
+    }
+
     protected function adminUser(): User
     {
         return User::factory()->create([

@@ -79,17 +79,24 @@ export default function KioskSetup() {
     kioskService.load().then((next) => {
       setSettings(next);
       setLogs(kioskService.getLogs());
+    }).catch(() => {
+      toast.error('Could not load kiosk settings', 'The server did not respond. Showing defaults.');
     });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const handleSaveSettings = async () => {
-    const next = await kioskService.updateSettings(form);
-    setSettings(next);
-    await kioskService.log('maintenance', 'Kiosk settings updated', {
-      detail: `Location: ${next.location} · Device: ${next.deviceName}`,
-    });
-    setLogs(kioskService.getLogs());
-    toast.success('Settings saved', 'Kiosk configuration has been updated.');
+    try {
+      const next = await kioskService.updateSettings(form);
+      setSettings(next);
+      await kioskService.log('maintenance', 'Kiosk settings updated', {
+        detail: `Location: ${next.location} · Device: ${next.deviceName}`,
+      });
+      setLogs(kioskService.getLogs());
+      toast.success('Settings saved', 'Kiosk configuration has been updated.');
+    } catch {
+      toast.error('Could not save settings', 'The server did not respond. Please try again.');
+    }
   };
 
   const handleEnableKiosk = () => {
@@ -107,28 +114,38 @@ export default function KioskSetup() {
     setPinSubmitting(true);
     setPinError(null);
 
-    if (pinModal.mode === 'create') {
-      await kioskService.enableKiosk(pin);
-      setSettings(kioskService.getSettings());
-      setLogs(kioskService.getLogs());
-      setPinModal(null);
-      setPinSubmitting(false);
-      toast.success('Kiosk Mode enabled', 'The kiosk PIN now gates the clock-in terminal.');
-      return;
-    }
+    // A failed request must never leave the modal spinning - always release
+    // the submit lock and show the reason.
+    try {
+      if (pinModal.mode === 'create') {
+        await kioskService.enableKiosk(pin);
+        setSettings(kioskService.getSettings());
+        setLogs(kioskService.getLogs());
+        setPinModal(null);
+        toast.success('Kiosk Mode enabled', 'The kiosk PIN now gates the clock-in terminal.');
+        return;
+      }
 
-    const ok = await kioskService.verifyPin(pin);
-    if (ok) {
-      await kioskService.disableKiosk();
-      setSettings(kioskService.getSettings());
-      setLogs(kioskService.getLogs());
-      setPinModal(null);
-      setPinSubmitting(false);
-      toast.success('Kiosk Mode disabled', 'The kiosk is back in setup mode.');
-    } else {
-      await kioskService.log('security', 'Failed attempt to unlock the kiosk (incorrect PIN)');
-      setLogs(kioskService.getLogs());
-      setPinError('Incorrect PIN. Please try again.');
+      const ok = await kioskService.verifyPin(pin);
+      if (ok) {
+        await kioskService.disableKiosk();
+        setSettings(kioskService.getSettings());
+        setLogs(kioskService.getLogs());
+        setPinModal(null);
+        toast.success('Kiosk Mode disabled', 'The kiosk is back in setup mode.');
+      } else {
+        await kioskService.log('security', 'Failed attempt to unlock the kiosk (incorrect PIN)');
+        setLogs(kioskService.getLogs());
+        setPinError('Incorrect PIN. Please try again.');
+      }
+    } catch (error) {
+      const status = error?.response?.status;
+      setPinError(
+        error?.code === 'ECONNABORTED' || !error?.response || status >= 500
+          ? 'The server took too long or failed to respond. Please try again in a moment.'
+          : error?.response?.data?.message || 'Something went wrong. Please try again.'
+      );
+    } finally {
       setPinSubmitting(false);
     }
   };
@@ -146,15 +163,19 @@ export default function KioskSetup() {
   const handleResetAll = async () => {
     setConfirmReset(false);
     const before = kioskService.getSettings();
-    const next = await kioskService.resetAll();
-    setSettings(next);
-    setLogs([]);
-    setForm({
-      location: 'Main Entrance',
-      deviceName: 'Front Door Kiosk',
-      timezone: 'Asia/Manila',
-    });
-    toast.success('Kiosk data reset', `All kiosk data for "${before.deviceName}" was cleared.`);
+    try {
+      const next = await kioskService.resetAll();
+      setSettings(next);
+      setLogs([]);
+      setForm({
+        location: 'Main Entrance',
+        deviceName: 'Front Door Kiosk',
+        timezone: 'Asia/Manila',
+      });
+      toast.success('Kiosk data reset', `All kiosk data for "${before.deviceName}" was cleared.`);
+    } catch {
+      toast.error('Could not reset kiosk data', 'The server did not respond. Please try again.');
+    }
   };
 
   const statCards = useMemo(

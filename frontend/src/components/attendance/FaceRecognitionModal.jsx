@@ -7,6 +7,7 @@ import {
 } from 'lucide-react';
 import Button from '../ui/Button';
 import Badge from '../ui/Badge';
+import FaceScanOverlay from './FaceScanOverlay';
 import useWebcam from '../../hooks/useWebcam';
 import {
   FACE_VERIFICATION_STEPS,
@@ -282,16 +283,15 @@ export default function FaceRecognitionModal({ isOpen, employeeName, employeeId,
                   <div className="absolute right-4 top-4 w-8 h-8 border-r-2 border-t-2 border-blue-400 rounded-tr-lg" />
                   <div className="absolute left-4 bottom-4 w-8 h-8 border-l-2 border-b-2 border-blue-400 rounded-bl-lg" />
                   <div className="absolute right-4 bottom-4 w-8 h-8 border-r-2 border-b-2 border-blue-400 rounded-br-lg" />
-                  {phase === 'verifying' && (
-                    <>
-                      <div className="absolute inset-6 rounded-xl border-2 border-blue-500/50 animate-pulse-soft" />
-                      <div className="absolute left-8 right-8 h-0.5 bg-gradient-to-r from-transparent via-blue-400 to-transparent animate-scanline" />
-                    </>
+                  {isActive && (
+                    <FaceScanOverlay
+                      state={phase === 'result' && result ? 'success' : phase === 'verifying' ? 'scanning' : 'idle'}
+                    />
                   )}
                   {phase === 'result' && result && (
-                    <div className="absolute inset-0 flex items-center justify-center bg-emerald-500/15 animate-fadeIn">
-                      <div className="flex flex-col items-center gap-2 text-emerald-300">
-                        <BadgeCheck className="w-14 h-14 drop-shadow-lg" />
+                    <div className="absolute inset-x-0 bottom-3 flex justify-center animate-fadeIn">
+                      <div className="flex items-center gap-1.5 rounded-full bg-emerald-500/90 px-3 py-1 text-white">
+                        <BadgeCheck className="w-4 h-4" />
                         <p className="text-xs font-semibold tracking-wide">Identity Confirmed</p>
                       </div>
                     </div>

@@ -61,8 +61,20 @@ export function NotificationProvider({ children }) {
   }, [refresh]);
 
   useEffect(() => {
-    const timer = setInterval(refresh, 30000);
-    return () => clearInterval(timer);
+    // Poll only while the tab is visible - background tabs would otherwise keep
+    // hitting the (single-threaded) services all day - and catch up as soon as
+    // the tab is shown again.
+    const timer = setInterval(() => {
+      if (!document.hidden) refresh();
+    }, 30000);
+    const onVisible = () => {
+      if (!document.hidden) refresh();
+    };
+    document.addEventListener('visibilitychange', onVisible);
+    return () => {
+      clearInterval(timer);
+      document.removeEventListener('visibilitychange', onVisible);
+    };
   }, [refresh]);
 
   useEffect(() => {

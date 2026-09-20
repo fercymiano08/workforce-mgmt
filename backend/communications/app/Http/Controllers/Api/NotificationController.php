@@ -28,12 +28,16 @@ class NotificationController extends Controller
 
     private const RETIRED_TYPES = ['employee_added'];
 
+    // The bell is polled every 30s by every open tab, so only the newest are sent.
+    private const LIST_LIMIT = 200;
+
     public function index(): JsonResponse
     {
         $records = Notification::whereNull('employee_id')
             ->whereNotIn('type', self::RETIRED_TYPES)
             ->orderBy('timestamp', 'desc')
             ->orderBy('id')
+            ->limit(self::LIST_LIMIT)
             ->get();
 
         return response()->json(['data' => $records->map->toApiArray()->values()]);
@@ -87,6 +91,7 @@ class NotificationController extends Controller
         $records = Notification::where('employee_id', $employeeId)
             ->whereIn('type', self::EMPLOYEE_VISIBLE_TYPES)
             ->orderBy('timestamp', 'desc')
+            ->limit(self::LIST_LIMIT)
             ->get();
 
         return response()->json(['data' => $records->map->toApiArray()->values()]);
@@ -115,7 +120,7 @@ class NotificationController extends Controller
         $this->scopeToCaller($request, $listQuery);
 
         return response()->json([
-            'data' => $listQuery->orderBy('timestamp', 'desc')->get()->map->toApiArray()->values(),
+            'data' => $listQuery->orderBy('timestamp', 'desc')->limit(self::LIST_LIMIT)->get()->map->toApiArray()->values(),
         ]);
     }
 

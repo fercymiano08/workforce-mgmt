@@ -35,9 +35,12 @@ class AttendanceApiTest extends TestCase
             'department' => 'IT & Systems',
         ]);
 
-        $today = now()->toDateString();
+        $today = $this->freezeKioskClock('08:01:00');
+        $this->scheduleShift($employee->id);
         $this->withHeaders($this->kioskDeviceHeaders());
 
+        // 08:01 is inside the 15-minute grace period, so the server records
+        // Present even though the terminal (wrongly) said Late.
         $this->postJson('/api/kiosk/attendance', [
             'employeeId' => $employee->id,
             'date' => $today,
@@ -45,7 +48,8 @@ class AttendanceApiTest extends TestCase
             'status' => 'Late',
             'location' => 'Main Entrance',
         ])->assertCreated()
-            ->assertJsonPath('data.employeeId', 'EMP20260001');
+            ->assertJsonPath('data.employeeId', 'EMP20260001')
+            ->assertJsonPath('data.status', 'Present');
 
         $this->assertDatabaseHas('attendance', [
             'employee_id' => 'EMP20260001',
@@ -64,11 +68,12 @@ class AttendanceApiTest extends TestCase
 
         $payload = [
             'employeeId' => 'EMP20260001',
-            'date' => now()->toDateString(),
+            'date' => $this->freezeKioskClock('08:00:00'),
             'clockIn' => '08:00:00',
             'status' => 'On Time',
         ];
 
+        $this->scheduleShift('EMP20260001');
         $this->withHeaders($this->kioskDeviceHeaders());
 
         $this->postJson('/api/kiosk/attendance', $payload)->assertCreated();

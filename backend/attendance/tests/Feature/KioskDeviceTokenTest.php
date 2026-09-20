@@ -87,6 +87,8 @@ class KioskDeviceTokenTest extends TestCase
     public function test_a_valid_token_lets_the_device_clock_in(): void
     {
         $this->employee();
+        $this->freezeKioskClock('08:00:00');
+        $this->scheduleShift('EMP20260001');
 
         $this->withHeaders($this->kioskDeviceHeaders())
             ->postJson('/api/kiosk/attendance', $this->clockInPayload())
@@ -110,6 +112,8 @@ class KioskDeviceTokenTest extends TestCase
     public function test_setting_the_pin_gives_the_admins_device_a_working_token(): void
     {
         $this->employee();
+        $this->freezeKioskClock('08:00:00');
+        $this->scheduleShift('EMP20260001');
 
         $token = $this->actingAs($this->adminUser())
             ->postJson('/api/kiosk/pin', ['pin' => '4321'])

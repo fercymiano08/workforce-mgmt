@@ -20,7 +20,10 @@ class EmployeeController extends Controller
 {
     public function index(): JsonResponse
     {
-        $employees = Employee::orderBy('id')->get();
+        // The list stays light: the ~40 KB face photo and the 128-number descriptor
+        // of every employee would otherwise ride along on each page load. They are
+        // returned by show() when a single record is opened.
+        $employees = Employee::orderBy('id')->get()->each->makeHidden(['face_image', 'face_descriptor']);
 
         return response()->json(['data' => $employees->map->toApiArray()->values()]);
     }

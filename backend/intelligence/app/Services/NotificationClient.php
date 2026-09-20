@@ -50,7 +50,7 @@ class NotificationClient
         }
 
         try {
-            Http::timeout(5)
+            Http::connectTimeout(1)->timeout(3)
                 ->withHeader('X-Service-Token', (string) config('svc.token'))
                 ->post(rtrim(config('svc.communications.url'), '/').'/api/internal/notifications', [
                     'type' => $type,

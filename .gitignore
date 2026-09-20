@@ -11,7 +11,12 @@ Thumbs.db
 /.idea/
 
 # Capstone document contains teammates personal CV data - never commit
-/*.docx
+*.docx
 
 # Docker Compose secrets (copy .env.docker.example to .env)
 /.env
+
+# Word/OneDrive temp and lock files
+~WRL*.tmp
+~$*
+*.tmp

@@ -34,7 +34,7 @@ class AuditClient
         }
 
         try {
-            Http::timeout(5)
+            Http::connectTimeout(1)->timeout(3)
                 ->withHeader('X-Service-Token', (string) config('svc.token'))
                 ->post(rtrim(config('svc.auth.url'), '/').'/api/internal/audit', [
                     'service' => 'attendance',

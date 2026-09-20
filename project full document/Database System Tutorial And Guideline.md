@@ -14,7 +14,7 @@
 2. [Connection Details](#2-connection-details)
 3. [The Tools](#3-the-tools)
 4. [Database Concepts You Need To Know](#4-database-concepts-you-need-to-know)
-5. [All 23 Tables Explained](#5-all-23-tables-explained)
+5. [All 25 Tables Explained](#5-all-25-tables-explained)
 6. [Relationships Map](#6-relationships-map)
 7. [pgAdmin 4 Walkthrough](#7-pgadmin-4-walkthrough)
 8. [Essential SQL Queries (Cheat Sheet)](#8-essential-sql-queries-cheat-sheet)
@@ -30,7 +30,7 @@
 |----------|-------|
 | Database Engine | PostgreSQL 18 |
 | Database Names | **8 separate databases, one per microservice** (see table below) |
-| Total Tables | 23 distinct business/table designs (14 originally "business" tables + 9 Laravel framework tables), now **replicated across services as needed** — so the raw row count of `information_schema.tables` per database is higher than 14, because a service keeps read-only local copies of tables it doesn't own |
+| Total Tables | 25 distinct business/table designs (16 "business" tables + 9 Laravel framework tables; `early_clock_outs` and `audit_events` are the two newest), now **replicated across services as needed** — so the raw row count of `information_schema.tables` per database is higher than 16, because a service keeps read-only local copies of tables it doesn't own |
 | Managed By | 8 independent sets of Laravel 13 migrations (one per service) + pgAdmin 4 |
 | Runs On | Local machine (`127.0.0.1:5432`), one PostgreSQL server hosting all 8 databases |
 | Runs On (Docker) | The `postgres` container, published on the host at **`127.0.0.1:5433`**, hosting the same 8 databases (created by `docker/postgres-init/01-create-databases.sh`, data in the `pgdata` Docker volume). It is a **separate** server from the local one on 5432; the password is in the git-ignored `.env` |
@@ -39,9 +39,9 @@ The database (now databases, plural) store everything the system knows: employee
 
 | # | Database | Owning service | Port | Owns (real, writable tables) |
 |---|----------|-----------------|------|-------------------------------|
-| 1 | `workforce_mgnt` | `core` | 8000 | `users`, `employees`, `departments`, `roles`, `personal_access_tokens` |
+| 1 | `workforce_mgnt` | `core` | 8000 | `users`, `employees`, `departments`, `roles`, `personal_access_tokens`, `audit_events` |
 | 2 | `workforce_intel` | `intelligence` | 8001 | `analytics` |
-| 3 | `workforce_attendance` | `attendance` | 8003 | `attendance`, `security_events` |
+| 3 | `workforce_attendance` | `attendance` | 8003 | `attendance`, `security_events`, `early_clock_outs` |
 | 4 | `workforce_scheduling` | `scheduling` | 8004 | `shift_definitions`, `shift_schedules` |
 | 5 | `workforce_timeoff` | `timeoff` | 8005 | `leaves`, `overtime_requests` |
 | 6 | `workforce_payroll` | `payroll` | 8006 | `timesheets` |
@@ -49,6 +49,8 @@ The database (now databases, plural) store everything the system knows: employee
 | 8 | `workforce_configuration` | `configuration` | 8008 | `settings` |
 
 > **Every database also contains read-only replica copies** of a few tables it needs but doesn't own — most commonly `users` and `employees` (nearly every service needs to show a name), and sometimes more depending on the service's job (e.g. `attendance`'s DB also carries a local `leaves` replica so it can tell Present vs On-Leave without calling another service on every request). Those replica tables are refreshed by `SnapshotSyncService` / `php artisan snapshot:sync` — they are NOT the source of truth, and writing to them directly would just get overwritten on the next sync.
+>
+> **One deliberate exception inside the replicas:** the `employees` replica keeps the `face_image` *column* but it is always **empty** — `core` strips the ~40 KB face photo from every snapshot and push (only `face_descriptor`, the 128 numbers, is copied). The real photo exists only in `workforce_mgnt.employees`. Copying photos everywhere would grow every sync with headcount.
 
 ---
 
@@ -103,18 +105,18 @@ Some columns (like `settings.kiosk`) store flexible structured data as JSON inst
 
 ---
 
-## 5. All 23 Tables Explained
+## 5. All 25 Tables Explained
 
 > The tables below are described once, logically — each still means the same thing it always did. What's different post-migration is **where the real, writable copy lives** (see the "Owning service" column and the DB table in Section 1). If a service isn't listed as the owner, any copy it has is a read-only replica.
 
-### Core Business Tables (14) — these appear in the ERD
+### Core Business Tables (16) — 14 appear in the original ERD; `early_clock_outs` and `audit_events` were added later
 
 #### People & Organization
 
 | Table | Purpose | Key Columns |
 |-------|---------|-------------|
 | `users` | Login accounts for the Workforce Admin and Employees | `id`, `employee_id`, `email`, `password`, `role`, `role_label` |
-| `employees` | Full employee profiles including face photo + descriptor for kiosk recognition | `id`, `first_name`, `last_name`, `department`, `position`, `face_descriptor`, `leave_balances` |
+| `employees` | Full employee profiles including face photo (only in `core`) + descriptor for kiosk recognition | `id`, `first_name`, `last_name`, `department`, `position`, `face_image` (core only), `face_descriptor`, `leave_balances` |
 | `departments` | Company departments | `id`, `name`, `head`, `budget`, `employee_count` |
 | `roles` | Job titles per department — powers the Position dropdown | `id`, `department_id` (FK), `name` |
 
@@ -122,7 +124,8 @@ Some columns (like `settings.kiosk`) store flexible structured data as JSON inst
 
 | Table | Purpose | Key Columns |
 |-------|---------|-------------|
-| `attendance` | One row per employee per day: clock in/out, hours, status | `id`, `employee_id` (FK), `date`, `clock_in`, `clock_out`, `total_hours` |
+| `attendance` | One row per employee per day: clock in/out, hours, status. The kiosk writes `date`, `clock_in` and the Present/Late `status` from the **server's** clock and the employee's scheduled shift | `id`, `employee_id` (FK), `date`, `clock_in`, `clock_out`, `total_hours`, `status` |
+| `early_clock_outs` | One row per early clock-out: the reason the employee gave at the kiosk, minutes lost, and HR's Excused/Unpaid classification (immutable punch snapshot) | `id`, `attendance_id`, `employee_id`, `reason_code`, `minutes_early`, `classification` |
 | `timesheets` | Weekly hour summaries submitted for approval | `id`, `employee_id` (FK), `week_start`, `week_end`, `regular_hours`, `status` |
 | `overtime_requests` | OT applications: expected vs approved hours | `id`, `employee_id` (FK), `expected_hours`, `approved_hours`, `status` |
 
@@ -146,7 +149,8 @@ Some columns (like `settings.kiosk`) store flexible structured data as JSON inst
 | Table | Purpose | Key Columns |
 |-------|---------|-------------|
 | `notifications` | In-app alerts shown in the bell dropdown | `id`, `title`, `message`, `employee_id` (nullable FK), `read` |
-| `security_events` | Buddy-punching attempts: face mismatches, failed PINs | `id`, `type`, `message`, `employee_id` (nullable FK), `status` |
+| `security_events` | Buddy-punching attempts: face mismatches, failed PINs. A face mismatch also creates an admin notification (`security_face_mismatch`) | `id`, `type`, `message`, `employee_id` (nullable FK), `status` |
+| `audit_events` | Append-only audit trail: who did what, when, with before/after snapshots (read-only in the admin UI) | `id`, `service`, `event`, `entity_type`, `actor`, `before`, `after` |
 | `settings` | Single-row app config: company info, kiosk PIN hash, AI memory | `company`, `kiosk`, `ai_resolved_insights` |
 | `analytics` | Cached dashboard statistics | `attendance_trend`, `punctuality_score`, etc. |
 
@@ -167,6 +171,7 @@ employees  1 --- *  timesheets          timesheets.employee_id
 employees  1 --- *  shift_schedules     shift_schedules.employee_id
 employees  1 --- *  notifications       notifications.employee_id (nullable)
 employees  1 --- *  security_events     security_events.employee_id (nullable)
+attendance 1 --- 0..1 early_clock_outs  early_clock_outs.attendance_id (also employee_id)
 departments 1 -- *  roles               roles.department_id
 shift_definitions 1 - * shift_schedules shift_schedules.shift_id
 ```
@@ -304,7 +309,7 @@ Note: both restore STRUCTURE only. Live data, if any, lives on the original mach
 | Likely question | Ready answer (plain) |
 |----------------|----------------------|
 | Why PostgreSQL and not MySQL? | Both work; PostgreSQL handles JSON columns and complex reporting cleanly, and it's genuinely free. Our team chose it for reliability. |
-| How many tables did you design? | 14 logical business tables + 9 Laravel framework tables = 23 designs. Post-migration, those 23 are spread across **8 databases** (one per microservice), and several services keep read-only replicas of tables they don't own, so the physical table count per database varies. |
+| How many tables did you design? | 16 logical business tables + 9 Laravel framework tables = 25 designs. Post-migration, those 25 are spread across **8 databases** (one per microservice), and several services keep read-only replicas of tables they don't own, so the physical table count per database varies. |
 | Why 8 databases instead of 1? | Because we migrated to microservices — each service should own its data and be deployable/testable independently. One shared database would mean one service's migration could break seven others. |
 | Which table is the most important? | `employees` — it's the center. Attendance, leaves, overtime, schedules, timesheets all point back to it by `employee_id`, whether as the owning row (in `core`) or a synced replica (everywhere else that needs it). |
 | How do your tables connect across services now? | Two ways: a **snapshot sync** job that copies read-only reference data (like `employees`) into any service's local database on a schedule, or a direct **internal API call** when a write has to happen immediately (e.g. `intelligence` approving a leave calls `timeoff` directly). There is no live cross-database JOIN — that's not physically possible once data is in separate databases. |
@@ -316,6 +321,6 @@ Note: both restore STRUCTURE only. Live data, if any, lives on the original mach
 | Where is the password stored? | In each service's own `backend/<name>/.env` as DB settings, not in code — every `.env` is gitignored so secrets never reach GitHub. |
 | What would happen if a table were deleted? | Re-run `php artisan migrate:fresh --seed` inside that one service's folder to rebuild just that service's database and re-fill it — the other 7 services are untouched, which is itself a demo point about isolation. |
 
-> Strong closing line about the DB: **"Everything still hangs off `employee_id` conceptually, but the 14 business tables now live across 8 independently-owned databases instead of one — which is exactly what the microservices requirement asked for, and it's why analytics and AI now read from a synced snapshot instead of joining live tables directly."**
+> Strong closing line about the DB: **"Everything still hangs off `employee_id` conceptually, but the 16 business tables now live across 8 independently-owned databases instead of one — which is exactly what the microservices requirement asked for, and it's why analytics and AI now read from a synced snapshot instead of joining live tables directly."**
 
 ---

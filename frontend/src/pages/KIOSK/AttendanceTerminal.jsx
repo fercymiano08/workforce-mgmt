@@ -445,7 +445,7 @@ export default function AttendanceTerminal() {
     setNotice({
       tone: 'danger',
       title: 'Identity Verification Failed',
-      message: `The face in the camera does not match ${employee.firstName} ${employee.lastName}'s registered photo. Clocking in under another person's ID is a security violation. This attempt has been logged. Please step aside and see HR if you believe this is a mistake.`,
+      message: `The face in the camera does not match ${employee.firstName} ${employee.lastName}'s registered photo. Clocking in under another person's ID is a security violation. This attempt has been logged and the Workforce Admin has been alerted. Please step aside and see HR if you believe this is a mistake.`,
       confirmLabel: 'I Understand',
       cancelLabel: 'Cancel',
       onConfirm: resetToMode,
@@ -456,37 +456,71 @@ export default function AttendanceTerminal() {
 
   // --- Clock in / out -----------------------------------------------------
 
-  // Runs the shift-aware pre-checks for a clock-in: being late (past the
-  // 15-minute grace period), early arrivals, no schedule today, and a
-  // finished shift all produce a warning the employee can acknowledge and
-  // proceed past - a late clock-in must always be confirmable, never a dead
-  // end back to the start. Clocking in on time records directly.
+  // Runs the shift-aware pre-checks for a clock-in, in this order:
+  //   1. no shift today            -> blocked (nothing to be on time for)
+  //   2. shift already over        -> blocked
+  //   3. later than 15 min past start -> "You Are Late" - can Clock In Anyway
+  //   4. before the shift starts   -> "Clocking In Early" - can Clock In Anyway
+  //   5. otherwise                 -> recorded as Present, no popup
+  // The server enforces 1-3 as well, so this is the friendly explanation of
+  // rules the backend would refuse anyway - never the only guard.
   const evaluateClockIn = () => {
     if (!employee) return;
+
+    // The schedule could not be loaded: don't guess a shift (a default start
+    // time is exactly what once called someone "late" on their day off).
+    if (!shiftInfo) {
+      setNotice({
+        tone: 'warning',
+        title: 'Schedule Unavailable',
+        message: `The terminal could not check ${employee.firstName} ${employee.lastName}'s shift for today. Nothing was recorded. Please try again in a moment or contact HR.`,
+        confirmLabel: 'Back to Home',
+        onConfirm: resetToMode,
+      });
+      setPhase('notice');
+      return;
+    }
+
+    if (!shiftInfo.hasShift || !shiftInfo.startTime) {
+      setNotice({
+        tone: 'danger',
+        title: 'No Shift Scheduled Today',
+        message: `There is no shift scheduled for ${employee.firstName} ${employee.lastName} today. Clocking in without a schedule is not allowed. Please check your schedule with HR.`,
+        confirmLabel: 'Back to Home',
+        onConfirm: resetToMode,
+      });
+      setPhase('notice');
+      return;
+    }
+
     const time = toTimeString(nowInTimezone(timezone));
-    const start = shiftInfo?.hasShift && shiftInfo.startTime
-      ? shiftInfo.startTime
-      : ATTENDANCE_CONFIG.startTime;
+    const start = shiftInfo.startTime;
     const startMin = minutesFromTime(start);
     const nowMin = minutesFromTime(time);
     const grace = ATTENDANCE_CONFIG.gracePeriodMinutes;
 
-    // Schedule could not be determined (network hiccup) - record normally
-    // instead of falsely warning about a missing shift.
-    if (!shiftInfo) {
-      recordAttendance();
+    const end = shiftInfo.endTime || null;
+    const otMin = Math.round(Number(shiftInfo.approvedOvertimeHours || 0) * 60);
+    const endMin = end ? minutesFromTime(end) + otMin : null;
+
+    if (endMin !== null && endMin > startMin && nowMin >= endMin) {
+      setNotice({
+        tone: 'danger',
+        title: 'Shift Over',
+        message: `${employee.firstName} ${employee.lastName}'s shift ended at ${formatTime(end)} today. Clocking in for a finished shift is not allowed - please contact HR.`,
+        confirmLabel: 'Back to Home',
+        onConfirm: resetToMode,
+      });
+      setPhase('notice');
       return;
     }
 
-    // Late is checked FIRST and always offers "Clock In Anyway" - arriving
-    // late (even unscheduled, even after the shift window) is still a valid
-    // clock-in that the employee should be able to confirm, recorded as Late.
     if (nowMin > startMin + grace) {
       const minutesLate = nowMin - startMin;
       setNotice({
         tone: 'warning',
         title: 'You Are Late',
-        message: `Your shift started at ${formatTime(start)}. You are ${minutesLate} ${minutesLate === 1 ? 'minute' : 'minutes'} past the 15-minute grace period, so this clock-in will be recorded as Late.`,
+        message: `Your shift started at ${formatTime(start)}. It is now ${minutesLate} ${minutesLate === 1 ? 'minute' : 'minutes'} after your start time - beyond the ${grace}-minute grace period - so this clock-in will be recorded as Late and reported to HR.`,
         confirmLabel: 'Clock In Anyway',
         cancelLabel: 'Cancel',
         onConfirm: () => { setNotice(null); recordAttendance('late'); },
@@ -511,43 +545,14 @@ export default function AttendanceTerminal() {
       return;
     }
 
-    const end = shiftInfo?.hasShift && shiftInfo.endTime ? shiftInfo.endTime : null;
-    const endMin = end ? minutesFromTime(end) : null;
-
-    if (endMin !== null && endMin > startMin && nowMin >= endMin) {
-      setNotice({
-        tone: 'warning',
-        title: 'Shift Over',
-        message: `${employee.firstName} ${employee.lastName}'s shift ended at ${formatTime(end)} today. Clocking in for a finished shift is not allowed - please contact HR.`,
-        confirmLabel: 'Back to Home',
-        onConfirm: resetToMode,
-      });
-      setPhase('notice');
-      return;
-    }
-
-    if (!shiftInfo?.hasShift) {
-      setNotice({
-        tone: 'warning',
-        title: 'No Shift Scheduled Today',
-        message: `There is no shift scheduled for ${employee.firstName} ${employee.lastName} today, so this clock-in cannot be verified against a shift. Record it anyway?`,
-        confirmLabel: 'Clock In Anyway',
-        cancelLabel: 'Cancel',
-        onConfirm: () => { setNotice(null); recordAttendance(); },
-        onCancel: resetToMode,
-      });
-      setPhase('notice');
-      return;
-    }
-
     recordAttendance();
   };
 
   // Runs the shift-aware pre-check for a clock-out. Leaving before the shift
-  // end is ALWAYS allowed - an employee who is sick or has an emergency must
-  // never be trapped at the terminal. Instead of rejecting the exit, the
-  // terminal opens the early clock-out reason picker so HR has the context to
-  // classify the shortfall afterwards.
+  // end is never refused (an employee who is sick or has an emergency must not
+  // be trapped at the terminal), but the employee must STATE A REASON first:
+  // the terminal opens the early clock-out reason picker and Continue stays
+  // disabled until one is chosen. Clocking out at/after the end just succeeds.
   const evaluateClockOut = () => {
     if (!employee || !todayRecord) return;
 
@@ -622,7 +627,23 @@ export default function AttendanceTerminal() {
       setRecordedAt(time);
       setPhase('success');
       scheduleReset();
-    } catch {
+    } catch (error) {
+      // A 4xx carries the server's own rule ("no shift today", "shift over", "on
+      // approved leave", "state a reason first"...): show that, and don't offer a
+      // retry that can only fail the same way.
+      const status = error?.response?.status;
+      const serverMessage = error?.response?.data?.message;
+      if (status >= 400 && status < 500 && status !== 401 && serverMessage) {
+        setNotice({
+          tone: 'danger',
+          title: action === 'clock-in' ? 'Clock-In Not Allowed' : 'Clock-Out Not Allowed',
+          message: serverMessage,
+          confirmLabel: 'Back to Home',
+          onConfirm: resetToMode,
+        });
+        setPhase('notice');
+        return;
+      }
       setNotice({
         tone: 'danger',
         title: 'Attendance Not Recorded',

@@ -41,6 +41,9 @@ class KioskController extends Controller
 
     private const MAX_LOGS = 200;
 
+    // Minutes after a shift's start that a clock-in still counts as on time.
+    private const LATE_GRACE_MINUTES = 15;
+
     // face-api.js's own convention for its 128-value descriptors: distances
     // at or below this are considered the same person.
     private const FACE_MATCH_THRESHOLD = 0.6;
@@ -142,6 +145,21 @@ class KioskController extends Controller
             'detail' => $employeeId ? ['employee_id' => $employeeId] : null,
             'status' => 'Open',
         ]);
+
+        // Someone tried to clock in as another person: the Workforce Admins are
+        // told right away (bell + Notifications page), not only on review.
+        if ($type === 'face_mismatch') {
+            $employee = $employeeId ? Employee::find($employeeId) : null;
+            $name = $employee ? trim($employee->first_name.' '.$employee->last_name) : ($employeeId ?: 'an employee');
+
+            NotificationService::notifyAdmins(
+                'security_face_mismatch',
+                'Face Mismatch at Kiosk',
+                "Someone tried to clock in as {$name}".($employeeId ? " (#{$employeeId})" : '').' but their face did not match the registered photo.',
+                'high',
+                '/ai-decision-support'
+            );
+        }
     }
 
     public function updateConfig(Request $request): JsonResponse
@@ -344,6 +362,7 @@ class KioskController extends Controller
         $schedule = ShiftSchedule::with('shift')
             ->where('employee_id', $employeeId)
             ->where('date', $dateKey)
+            ->where('status', 'Scheduled')
             ->first();
 
         if (! $schedule || ! $schedule->shift) {
@@ -411,6 +430,14 @@ class KioskController extends Controller
             'location' => 'nullable|string|max:100',
         ]));
 
+        // The server's clock decides the date, the time and Present/Late - never
+        // the terminal's. A wrong device clock or a hand-made request must not be
+        // able to record an on-time arrival that did not happen.
+        $timezone = $this->kioskTimezone();
+        $now = Carbon::now($timezone);
+        $data['date'] = $now->toDateString();
+        $data['clock_in'] = $now->format('H:i:s');
+
         $alreadyClockedIn = Attendance::where('employee_id', $data['employee_id'])
             ->where('date', $data['date'])
             ->exists();
@@ -425,6 +452,41 @@ class KioskController extends Controller
                 'data' => ['reason' => 'on_approved_leave'],
             ], 422);
         }
+
+        // A shift is required. Without one there is nothing to measure "on time" or
+        // "late" against, so the day is refused instead of guessing a start time.
+        $schedule = ShiftSchedule::with('shift')
+            ->where('employee_id', $data['employee_id'])
+            ->where('date', $data['date'])
+            ->where('status', 'Scheduled')
+            ->first();
+
+        if (! $schedule || ! $schedule->shift) {
+            return response()->json([
+                'message' => 'You have no shift scheduled today, so you cannot clock in. Please check your schedule with HR.',
+                'data' => ['reason' => 'no_shift'],
+            ], 422);
+        }
+
+        $shift = $schedule->shift;
+        $effectiveEnd = $this->effectiveShiftEnd(
+            $data['employee_id'],
+            $data['date'],
+            $shift->start_time,
+            $shift->end_time,
+            $timezone
+        );
+
+        if ($effectiveEnd && $now->gte($effectiveEnd)) {
+            return response()->json([
+                'message' => 'Your shift ended at '.$effectiveEnd->format('g:i A').' today. Clocking in for a finished shift is not allowed - please contact HR.',
+                'data' => ['reason' => 'shift_over'],
+            ], 422);
+        }
+
+        // Present up to and including 15 minutes after the shift starts; Late after that.
+        $shiftStart = Carbon::parse($data['date'].' '.$shift->start_time, $timezone);
+        $data['status'] = $now->gt($shiftStart->copy()->addMinutes(self::LATE_GRACE_MINUTES)) ? 'Late' : 'Present';
 
         $record = Attendance::create([
             ...$data,
@@ -506,6 +568,16 @@ class KioskController extends Controller
 
         $clockOut = Carbon::parse($dateKey.' '.$validated['clockOut'], $timezone);
         $isEarly = $effectiveEnd && $clockOut->lt($effectiveEnd);
+
+        // The punch is never blocked for a real reason (sick, emergency), but the
+        // employee must STATE the reason before leaving early - the terminal asks
+        // first, and this makes it binding for any other client too.
+        if ($isEarly && empty($validated['reasonCode'])) {
+            return response()->json([
+                'message' => 'You are clocking out before your shift ends ('.$effectiveEnd->format('g:i A').'). Please state a reason first.',
+                'data' => ['reason' => 'reason_required'],
+            ], 422);
+        }
 
         $data = Attendance::apiFillable($validated);
         if ($isEarly) {

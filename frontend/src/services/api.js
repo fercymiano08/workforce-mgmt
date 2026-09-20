@@ -46,8 +46,9 @@ export const roleService = {
 };
 
 export const attendanceService = {
-  getAll: async () => {
-    const { data } = await http.get('/attendance');
+  // params: optional { from: 'YYYY-MM-DD', to: 'YYYY-MM-DD' } window.
+  getAll: async (params) => {
+    const { data } = await http.get('/attendance', { params });
     return data;
   },
   getById: async (id) => {

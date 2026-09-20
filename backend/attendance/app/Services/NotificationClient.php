@@ -24,6 +24,48 @@ class NotificationClient
         self::push($type, $title, $message, $priority, $actionUrl, null);
     }
 
+    /**
+     * One concurrent HTTP batch instead of N sequential 5s-timeout calls.
+     *
+     * @param  array<int, array{type: string, title: string, message: string, priority: string, actionUrl: ?string}>  $items
+     */
+    public static function notifyAdminsMany(array $items): void
+    {
+        if ($items === []) {
+            return;
+        }
+
+        if (config('svc.notifications_mode', 'remote') === 'local') {
+            foreach ($items as $i) {
+                self::writeLocal($i['type'], $i['title'], $i['message'], $i['priority'], $i['actionUrl'] ?? null, null);
+            }
+
+            return;
+        }
+
+        try {
+            $token = (string) config('svc.token');
+            $url = rtrim(config('svc.communications.url'), '/').'/api/internal/notifications';
+
+            Http::pool(function ($pool) use ($items, $token, $url) {
+                foreach ($items as $n => $i) {
+                    $pool->as((string) $n)->timeout(5)
+                        ->withHeader('X-Service-Token', $token)
+                        ->post($url, [
+                            'type' => $i['type'],
+                            'title' => $i['title'],
+                            'message' => $i['message'],
+                            'priority' => $i['priority'],
+                            'actionUrl' => $i['actionUrl'] ?? null,
+                            'employeeId' => null,
+                        ]);
+                }
+            });
+        } catch (\Throwable $e) {
+            Log::warning('Notification batch push failed', ['error' => $e->getMessage()]);
+        }
+    }
+
     public static function notifyEmployee(
         string $employeeId,
         string $type,
@@ -50,7 +92,7 @@ class NotificationClient
         }
 
         try {
-            Http::timeout(5)
+            Http::connectTimeout(1)->timeout(3)
                 ->withHeader('X-Service-Token', (string) config('svc.token'))
                 ->post(rtrim(config('svc.communications.url'), '/').'/api/internal/notifications', [
                     'type' => $type,

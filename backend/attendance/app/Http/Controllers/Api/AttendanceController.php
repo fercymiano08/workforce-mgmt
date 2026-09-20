@@ -25,6 +25,11 @@ class AttendanceController extends Controller
     // How long past a shift's start time before a no-show is flagged absent.
     private const ABSENT_GRACE_MINUTES = 60;
 
+    // Most alerts one checkAlerts() call will send; the rest follow on the next call.
+    // Kept small because Communications handles one request at a time (~0.5s each),
+    // so the whole batch must finish well inside PHP's 30s request limit.
+    private const MAX_ALERTS_PER_SCAN = 15;
+
     // Same threshold as ShiftController::generateSchedule - a day where more
     // than this share of active employees are on approved leave is a risk.
     private const SHORTAGE_THRESHOLD = 0.2;
@@ -46,16 +51,54 @@ class AttendanceController extends Controller
         $incompleteFlagged = 0;
         $shortageFlagged = false;
 
+        // Everything already flagged today, loaded with ONE query instead of an
+        // unindexed LIKE query per employee. notifyAdmins() leaves employee_id
+        // null, so dedup matches on the marker embedded in each message.
+        $notified = Notification::whereDate('timestamp', $today)
+            ->whereIn('type', ['attendance_absent', 'attendance_incomplete', 'attendance_unauthorized_ot', 'staff_shortage'])
+            ->get(['type', 'message'])
+            ->groupBy('type')
+            ->map(fn ($rows) => $rows->pluck('message')->all())
+            ->all();
+
+        // Alerts are queued here and sent to Communications in ONE concurrent
+        // batch at the end, instead of one blocking HTTP call per employee.
+        $pending = [];
+        $alreadyFlagged = function (string $type, string $needle) use (&$notified, &$pending): bool {
+            foreach ($notified[$type] ?? [] as $message) {
+                if (str_contains($message, $needle)) {
+                    return true;
+                }
+            }
+            foreach ($pending as $item) {
+                if ($item['type'] === $type && str_contains($item['message'], $needle)) {
+                    return true;
+                }
+            }
+
+            return false;
+        };
+        // Bounded per scan: a huge backlog is worked off over successive scans
+        // (the dedup above skips what was already sent) rather than in one request.
+        $queue = function (string $type, string $title, string $message, string $priority, string $actionUrl) use (&$pending): bool {
+            if (count($pending) >= self::MAX_ALERTS_PER_SCAN) {
+                return false;
+            }
+            $pending[] = compact('type', 'title', 'message', 'priority') + ['actionUrl' => $actionUrl];
+
+            return true;
+        };
+
         // Absent: scheduled today, shift start + grace period has passed, no attendance row yet.
         $todaySchedules = ShiftSchedule::with('shift')
             ->where('date', $todayKey)
             ->where('status', 'Scheduled')
             ->get();
 
-        $clockedInToday = Attendance::where('date', $todayKey)->pluck('employee_id')->all();
+        $clockedInToday = array_flip(Attendance::where('date', $todayKey)->pluck('employee_id')->all());
 
         foreach ($todaySchedules as $schedule) {
-            if (in_array($schedule->employee_id, $clockedInToday, true)) {
+            if (isset($clockedInToday[$schedule->employee_id])) {
                 continue;
             }
 
@@ -69,25 +112,19 @@ class AttendanceController extends Controller
                 continue;
             }
 
-            // notifyAdmins() fans out one row per admin with employee_id left
-            // null (it's not "for" any employee recipient) - so dedup has to
-            // match on the employee id embedded in the message text instead.
-            $alreadyFlagged = Notification::where('type', 'attendance_absent')
-                ->whereDate('timestamp', $today)
-                ->where('message', 'like', "%(#{$schedule->employee_id})%")
-                ->exists();
-            if ($alreadyFlagged) {
+            if ($alreadyFlagged('attendance_absent', "(#{$schedule->employee_id})")) {
                 continue;
             }
 
-            NotificationService::notifyAdmins(
+            if ($queue(
                 'attendance_absent',
                 'Possible No-Show',
                 "{$schedule->employee_name} (#{$schedule->employee_id}) was scheduled today but hasn't clocked in.",
                 'high',
                 '/attendance'
-            );
-            $absentFlagged++;
+            )) {
+                $absentFlagged++;
+            }
         }
 
         // Incomplete: clocked in on a day that's already over, never clocked out.
@@ -96,30 +133,28 @@ class AttendanceController extends Controller
             ->where('date', '<', $todayKey)
             ->get();
 
+        $incompleteNames = Employee::whereIn('id', $incompleteRecords->pluck('employee_id')->unique()->all())
+            ->get(['id', 'first_name', 'last_name'])->keyBy('id');
+
         foreach ($incompleteRecords as $record) {
             $recordDateKey = $record->date->toDateString();
 
-            // Same dedup approach as absences: notifyAdmins() leaves
-            // employee_id null, so match on the marker embedded in the message.
-            $alreadyFlagged = Notification::where('type', 'attendance_incomplete')
-                ->whereDate('timestamp', $today)
-                ->where('message', 'like', "%(#{$record->employee_id} / {$recordDateKey})%")
-                ->exists();
-            if ($alreadyFlagged) {
+            if ($alreadyFlagged('attendance_incomplete', "(#{$record->employee_id} / {$recordDateKey})")) {
                 continue;
             }
 
-            $employee = Employee::find($record->employee_id);
+            $employee = $incompleteNames->get($record->employee_id);
             $name = $employee ? trim($employee->first_name.' '.$employee->last_name) : $record->employee_id;
 
-            NotificationService::notifyAdmins(
+            if ($queue(
                 'attendance_incomplete',
                 'Incomplete Attendance Record',
                 "{$name} (#{$record->employee_id} / {$recordDateKey}) clocked in on ".$record->date->format('M d, Y').' but never clocked out.',
                 'medium',
                 '/attendance'
-            );
-            $incompleteFlagged++;
+            )) {
+                $incompleteFlagged++;
+            }
         }
 
         // Unauthorized overtime: clocked past shift end today with no approved
@@ -128,30 +163,30 @@ class AttendanceController extends Controller
         $otRecon = app(OvertimeReconciliationService::class);
         $todayOtRecords = Attendance::where('date', $todayKey)->where('overtime', '>', 0)->get();
 
+        $otNames = Employee::whereIn('id', $todayOtRecords->pluck('employee_id')->unique()->all())
+            ->get(['id', 'first_name', 'last_name'])->keyBy('id');
+
         foreach ($todayOtRecords as $record) {
             if ($otRecon->approvedRequestFor($record->employee_id, $todayKey)) {
                 continue;
             }
 
-            $employee = Employee::find($record->employee_id);
-            $name = $employee ? trim($employee->first_name.' '.$employee->last_name) : $record->employee_id;
-
-            $alreadyFlagged = Notification::where('type', 'attendance_unauthorized_ot')
-                ->whereDate('timestamp', $today)
-                ->where('message', 'like', "%(#{$record->employee_id})%")
-                ->exists();
-            if ($alreadyFlagged) {
+            if ($alreadyFlagged('attendance_unauthorized_ot', "(#{$record->employee_id})")) {
                 continue;
             }
 
-            NotificationService::notifyAdmins(
+            $employee = $otNames->get($record->employee_id);
+            $name = $employee ? trim($employee->first_name.' '.$employee->last_name) : $record->employee_id;
+
+            if ($queue(
                 'attendance_unauthorized_ot',
                 'Unauthorized Overtime',
                 "{$name} (#{$record->employee_id}) clocked {$record->overtime}h of overtime on ".$record->date->format('M d, Y').' without an approved request.',
                 'high',
                 '/attendance'
-            );
-            $unauthorizedOtFlagged++;
+            )) {
+                $unauthorizedOtFlagged++;
+            }
         }
 
         // Staff shortage: re-check today's approved-leave ratio.
@@ -163,22 +198,20 @@ class AttendanceController extends Controller
                 ->count();
 
             if (($onLeaveToday / $activeEmployeeCount) > self::SHORTAGE_THRESHOLD) {
-                $alreadyFlagged = Notification::where('type', 'staff_shortage')
-                    ->whereDate('timestamp', $today)
-                    ->where('message', 'like', "%{$todayKey}%")
-                    ->exists();
-                if (! $alreadyFlagged) {
-                    NotificationService::notifyAdmins(
+                if (! $alreadyFlagged('staff_shortage', $todayKey)
+                    && $queue(
                         'staff_shortage',
                         'Possible Staffing Shortage',
                         "{$onLeaveToday} of {$activeEmployeeCount} employees are on approved leave today (".$today->format('M d, Y').').',
                         'high',
                         '/shifts'
-                    );
+                    )) {
                     $shortageFlagged = true;
                 }
             }
         }
+
+        NotificationService::notifyAdminsMany($pending);
 
         return response()->json(['data' => [
             'absentFlagged' => $absentFlagged,
@@ -188,9 +221,19 @@ class AttendanceController extends Controller
         ]]);
     }
 
-    public function index(): JsonResponse
+    public function index(Request $request): JsonResponse
     {
-        $records = Attendance::orderBy('date', 'desc')->orderBy('id')->get();
+        // Optional window (?from=YYYY-MM-DD&to=YYYY-MM-DD) so screens that only
+        // need recent days don't download the whole history. No params = everything.
+        $range = $request->validate([
+            'from' => 'nullable|date_format:Y-m-d',
+            'to' => 'nullable|date_format:Y-m-d',
+        ]);
+
+        $records = Attendance::query()
+            ->when($range['from'] ?? null, fn ($q, $from) => $q->where('date', '>=', $from))
+            ->when($range['to'] ?? null, fn ($q, $to) => $q->where('date', '<=', $to))
+            ->orderBy('date', 'desc')->orderBy('id')->get();
 
         return response()->json(['data' => $records->map->toApiArray()->values()]);
     }

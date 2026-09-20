@@ -35,18 +35,36 @@ class EmployeeReplicationClient
         }
 
         $payload = (array) $row;
+        // Replicas match on face_descriptor; the photo itself stays in core only.
+        $payload['face_image'] = null;
 
-        foreach ($targets as $url) {
-            try {
-                $response = Http::timeout(3)
-                    ->withHeader('X-Service-Token', (string) config('svc.token'))
-                    ->post(rtrim((string) $url, '/').'/api/internal/employees/sync', $payload);
+        // Fire all pushes at once: sequentially, five slow/down targets meant up
+        // to 5 x 3s added to the HR user's save request. The pool caps that at
+        // the slowest single target.
+        $token = (string) config('svc.token');
+        $urls = array_values(array_map(fn ($u) => rtrim((string) $u, '/'), $targets));
 
-                if ($response->failed()) {
-                    throw new \RuntimeException('sync request failed ('.$response->status().')');
+        try {
+            $responses = Http::pool(function ($pool) use ($urls, $token, $payload) {
+                foreach ($urls as $i => $url) {
+                    $pool->as((string) $i)->timeout(3)
+                        ->withHeader('X-Service-Token', $token)
+                        ->post($url.'/api/internal/employees/sync', $payload);
                 }
-            } catch (\Throwable $e) {
-                Log::warning('Employee replication push failed for '.$url, ['error' => $e->getMessage()]);
+            });
+        } catch (\Throwable $e) {
+            Log::warning('Employee replication push failed', ['error' => $e->getMessage()]);
+
+            return;
+        }
+
+        foreach ($urls as $i => $url) {
+            $response = $responses[(string) $i] ?? null;
+            if (! $response instanceof \Illuminate\Http\Client\Response || $response->failed()) {
+                $reason = $response instanceof \Illuminate\Http\Client\Response
+                    ? 'sync request failed ('.$response->status().')'
+                    : ($response instanceof \Throwable ? $response->getMessage() : 'no response');
+                Log::warning('Employee replication push failed for '.$url, ['error' => $reason]);
             }
         }
     }

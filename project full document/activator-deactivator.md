@@ -40,7 +40,6 @@ docker compose down -v          # stop AND ERASE the Docker database (fresh empt
 - **Something wrong?** `docker compose ps` shows which container is not healthy; `docker compose logs -f core`
   (replace `core` with the service name) shows its live log. In Docker Desktop: **Containers → workforce → click a container → Logs**.
 - Docker uses about **500 MB** of memory in total once running.
-- Full technical description of the Docker setup: `DOCKER GUIDE FOR DEEPSEEK.md` (project root).
 
 ---
 
@@ -138,6 +137,22 @@ Each service owns its own database and can be started, stopped, and debugged ind
 | `configuration` | 8008 | app settings + kiosk configuration |
 
 If you only start `core` and forget the rest, the login page and directory still work, but every other screen will show connection errors — that's expected: each screen now talks straight to the service that owns its data (see `System Workflow Guide.md` for the full request map).
+
+---
+
+## If The System Feels Slow (Way 1 Only)
+
+Running the scripts on a normal laptop is slower than Docker, for reasons that have nothing to do with the code: each service runs on PHP's built-in server, which answers **one request at a time**, and every page load fires several requests at once. If a page or the face scan feels sluggish:
+
+1. **Restart everything once**: `.\stop-all.ps1` then `.\start-all.ps1`. Wait until every port shows `UP` before opening the browser.
+2. **Turn debug mode off** in each `backend/<name>/.env` (all 8): `APP_DEBUG=false` and `LOG_LEVEL=warning`. Debug mode writes a lot to the log on every request.
+3. **Keep the project out of OneDrive** (for example `C:\dev\Workforce MGNT`). OneDrive syncing makes Laravel's many small file reads much slower on Windows.
+4. **Turn on PHP's opcache for the command line.** Open PHP's `php.ini` (run `php --ini` to see where it is) and set `opcache.enable_cli=1`, then restart the services.
+5. **Or just use Docker (Way 2)** — it runs each service with several workers and avoids all of the above.
+
+**A page that spins forever** now ends with an error message after 45 seconds instead of hanging — that means one service is stuck or down. Run `.\start-all.ps1` and read which port shows `DOWN`.
+
+**Before a demo:** the kiosk clock-in only works for an employee who has a **shift scheduled today** (see `System Workflow Guide.md`, Module 4). Check the Shifts page first, or the kiosk will correctly say "No Shift Scheduled Today".
 
 ---
 

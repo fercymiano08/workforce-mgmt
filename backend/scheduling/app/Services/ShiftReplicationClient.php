@@ -36,17 +36,32 @@ class ShiftReplicationClient
 
         $payload = ['rows' => $rows->map(fn ($row) => (array) $row)->values()->all()];
 
-        foreach ($targets as $url) {
-            try {
-                $response = Http::timeout(5)
-                    ->withHeader('X-Service-Token', (string) config('svc.token'))
-                    ->post(rtrim((string) $url, '/').'/api/internal/shift-schedules/sync', $payload);
+        // Pushed to all targets concurrently: sequentially, each slow target added
+        // its own timeout to the request that saved the schedule.
+        $token = (string) config('svc.token');
+        $urls = array_values(array_map(fn ($u) => rtrim((string) $u, '/'), $targets));
 
-                if ($response->failed()) {
-                    throw new \RuntimeException('sync request failed ('.$response->status().')');
+        try {
+            $responses = Http::pool(function ($pool) use ($urls, $token, $payload) {
+                foreach ($urls as $i => $url) {
+                    $pool->as((string) $i)->connectTimeout(1)->timeout(5)
+                        ->withHeader('X-Service-Token', $token)
+                        ->post($url.'/api/internal/shift-schedules/sync', $payload);
                 }
-            } catch (\Throwable $e) {
-                Log::warning('Shift schedule replication push failed for '.$url, ['error' => $e->getMessage()]);
+            });
+        } catch (\Throwable $e) {
+            Log::warning('Shift schedule replication push failed', ['error' => $e->getMessage()]);
+
+            return;
+        }
+
+        foreach ($urls as $i => $url) {
+            $response = $responses[(string) $i] ?? null;
+            if (! $response instanceof \Illuminate\Http\Client\Response || $response->failed()) {
+                $reason = $response instanceof \Illuminate\Http\Client\Response
+                    ? 'sync request failed ('.$response->status().')'
+                    : ($response instanceof \Throwable ? $response->getMessage() : 'no response');
+                Log::warning('Shift schedule replication push failed for '.$url, ['error' => $reason]);
             }
         }
     }

@@ -43,6 +43,16 @@ class NotificationService
         NotificationClient::notifyAdmins($type, $title, $message, $priority, $actionUrl);
     }
 
+    /**
+     * Send several admin notifications in one concurrent batch.
+     *
+     * @param  array<int, array{type: string, title: string, message: string, priority: string, actionUrl: ?string}>  $items
+     */
+    public static function notifyAdminsMany(array $items): void
+    {
+        NotificationClient::notifyAdminsMany($items);
+    }
+
     public static function notifyEmployee(
         string $employeeId,
         string $type,
