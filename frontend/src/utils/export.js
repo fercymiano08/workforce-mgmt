@@ -47,11 +47,7 @@ export function downloadFile(filename, content, mimeType = 'text/plain;charset=u
 }
 
 // lower-cased aliases kept for new self-service pages
-export const toCsv = toCSV;
 export const downloadCsv = downloadCSV;
-
-export const formatPhp = (value, locale = 'en-PH') =>
-  new Intl.NumberFormat(locale, { style: 'currency', currency: 'PHP' }).format(Number(value) || 0);
 
 export const printElementAsPdf = (element, title = '') => {
   const source = element?.outerHTML || '';

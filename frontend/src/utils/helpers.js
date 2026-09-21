@@ -1,5 +1,4 @@
-import { format, formatDistanceToNow, parseISO, differenceInHours, parse } from 'date-fns';
-import clsx from 'clsx';
+import { format, formatDistanceToNow, parseISO } from 'date-fns';
 import { getSystemDateFormat, getSystemTimeFormat } from './appSettings';
 
 export function formatDate(dateStr) {
@@ -69,10 +68,6 @@ export function getInitials(firstName, lastName) {
   return `${first}${last}`.toUpperCase();
 }
 
-export function classNames(...classes) {
-  return clsx(...classes);
-}
-
 export function generateId() {
   return Math.random().toString(36).substring(2, 10) + Date.now().toString(36);
 }
@@ -95,44 +90,4 @@ export function getRelativeTime(dateStr) {
   if (diffDays < 7) return `${diffDays} days ago`;
 
   return formatDistanceToNow(date, { addSuffix: true });
-}
-
-export function calculateDuration(start, end) {
-  if (!start || !end) return 0;
-  const startDate = parse(start, 'HH:mm', new Date());
-  const endDate = parse(end, 'HH:mm', new Date());
-  return differenceInHours(endDate, startDate);
-}
-
-export function getStatusColor(status) {
-  const colorMap = {
-    active: 'bg-green-100 text-green-800',
-    inactive: 'bg-red-100 text-red-800',
-    'on leave': 'bg-yellow-100 text-yellow-800',
-    present: 'bg-green-100 text-green-800',
-    absent: 'bg-red-100 text-red-800',
-    late: 'bg-orange-100 text-orange-800',
-    'half day': 'bg-blue-100 text-blue-800',
-    pending: 'bg-yellow-100 text-yellow-800',
-    approved: 'bg-green-100 text-green-800',
-    rejected: 'bg-red-100 text-red-800',
-    draft: 'bg-gray-100 text-gray-800',
-    submitted: 'bg-blue-100 text-blue-800',
-    completed: 'bg-green-100 text-green-800',
-    scheduled: 'bg-blue-100 text-blue-800',
-    swapped: 'bg-purple-100 text-purple-800',
-    cancelled: 'bg-red-100 text-red-800',
-    overpaid: 'bg-orange-100 text-orange-800',
-    underpaid: 'bg-red-100 text-red-800',
-    correct: 'bg-green-100 text-green-800',
-  };
-  return colorMap[status?.toLowerCase()] || 'bg-gray-100 text-gray-800';
-}
-
-export function debounce(fn, delay) {
-  let timeoutId;
-  return function (...args) {
-    clearTimeout(timeoutId);
-    timeoutId = setTimeout(() => fn.apply(this, args), delay);
-  };
 }

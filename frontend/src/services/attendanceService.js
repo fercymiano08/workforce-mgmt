@@ -1,4 +1,3 @@
-import { generateId } from '../utils/helpers';
 import { ATTENDANCE_CONFIG } from '../utils/attendanceConfig';
 
 export function toDateKey(date = new Date()) {
@@ -85,23 +84,5 @@ export function calculateTimesheetFields(clockIn, clockOut, config = ATTENDANCE_
     overtimeHours: roundHours(overtimeHours),
     totalHours: roundHours(totalHours),
     breakHours: roundHours(calculateBreakHours(clockIn, clockOut, config)),
-  };
-}
-
-export function createAttendanceRecord({ employeeId, now = new Date(), config = ATTENDANCE_CONFIG }) {
-  const clockIn = toTimeString(now);
-  return {
-    id: `ATT-${generateId()}`,
-    employeeId,
-    date: toDateKey(now),
-    clockIn,
-    clockOut: null,
-    status: calculateAttendanceStatus(clockIn, config),
-    regularHours: 0,
-    overtime: 0,
-    totalHours: 0,
-    breakHours: 0,
-    location: config.location,
-    notes: '',
   };
 }
