@@ -472,7 +472,8 @@ The checks run **in this order** — the first one that applies wins. Steps 1–
 | 1 | **No shift scheduled today** (or the schedule is not in `Scheduled` status) | "No Shift Scheduled Today" — "check your schedule with HR" | **No — blocked** |
 | 2 | **Shift already ended** (scheduled end + approved overtime) | "Shift Over" — "contact HR" | **No — blocked** |
 | 3 | Later than **15 minutes** after shift start | "You Are Late" — says how many minutes after the start; recorded as **Late**; admins are notified | **Yes** — "Clock In Anyway" |
-| 4 | Before the shift starts | "Clocking In Early" ("Very Early" if more than 60 min) | **Yes** — "Clock In Anyway" |
+| 3b | More than **30 minutes** before the shift starts | "Too Early To Clock In" — says when the kiosk opens for the shift | **No — blocked** (server: `422 too_early`) |
+| 4 | Between 30 minutes before the start and the start | "Clocking In Early" — the time is recorded, but **paid hours count from the shift start** | **Yes** — "Clock In Anyway" |
 | 5 | Within the grace period (start … start + 15 min, **inclusive**) | No popup — recorded straight as **Present** | — |
 | — | **Clocking out before the shift ends** | Early Clock Out **reason picker** — Continue stays disabled until a reason is chosen (Module 4a). Approved overtime extends the shift end, so clocking out at the adjusted end is a normal clock-out | Yes, with a reason |
 
@@ -517,7 +518,7 @@ The terminal has one popup component with four tones. Use this table to explain 
 | Amber | Schedule Unavailable | The schedule could not be loaded | Back to Home |
 | Amber | Overtime Not Approved | Clocking **out** more than 15 min past the (approved) shift end with no approved overtime covering it — the extra time is **not counted** (the day ends at the approved end) | Clock Out / Go Back |
 | Red/Amber banner | Early-out allowance | On the early clock-out reason screen: "1 of 2 used", or "this one will be recorded as UNEXCUSED" once used up; extra line for *Feeling Unwell* (certificate within 48 h) | — |
-| Blue (info) | Clocking In Early / Very Early | Before the shift start | Clock In Anyway / Cancel |
+| Blue (info) | Clocking In Early | Within 30 minutes before the shift start | Clock In Anyway / Cancel |
 | Screens | Already Clocked In Today · No Clock-In Found | Duplicate / missing punch | Suggests the right action |
 | Screen | Terminal locked (60 s countdown) | 3 face-mismatch strikes | — |
 | Success | Clocked In Successfully (green) · Clocked In (Late) (amber) · Clocked In (Early) (blue) · Clocked Out (green) · Clocked Out Early (amber) | After a recorded punch | auto-returns to the start screen |
@@ -854,7 +855,7 @@ Overtime is any time worked past the shift end (5:00 PM), but it is **paid only 
 paid overtime  =  the SMALLER of  (overtime really worked that day)  and  (overtime approved for that day)
 ```
 
-**How the day's hours are decided (server-side).** The server, not the kiosk screen, works out the hours. A day counts from clock-in to clock-out but **never past the end of the shift plus approved overtime**, so clocking out at 5:03 PM with no approval is recorded as 5:00 PM and adds no overtime. The real punch time is kept separately (`actual_clock_out`). A scheduled job (`attendance:recount-hours`, every minute) re-counts recent days, so **approving a request afterwards brings the minutes back** and cancelling it removes them again. Staying more than 15 minutes past the end with no approval also sends HR an "Unauthorized Overtime" alert.
+**How the day's hours are decided (server-side).** The server, not the kiosk screen, works out the hours. A day counts from the **shift start** (or the real clock-in if the person was later) to clock-out, but **never past the end of the shift plus approved overtime**. Arriving early is recorded but the minutes before the start are not counted (clocking in at 7:40 for an 8:00 shift still counts from 8:00), and clocking out at 5:03 PM with no approval is recorded as 5:00 PM and adds no overtime. The real punch time is kept separately (`actual_clock_out`). A scheduled job (`attendance:recount-hours`, every minute) re-counts recent days, so **approving a request afterwards brings the minutes back** and cancelling it removes them again. Staying more than 15 minutes past the end with no approval also sends HR an "Unauthorized Overtime" alert.
 
 | Situation | Worked past 5 PM | Approved | Paid OT |
 |-----------|------------------|----------|---------|
@@ -1264,7 +1265,8 @@ Which tables each module touches (R = read, W = write). This map is logical — 
 | Number | Meaning |
 |--------|---------|
 | 15 min | Grace period after shift start before a clock-in counts as Late |
-| 60 min | Absence grace before "no show" becomes Absent; also the "very early" threshold for warnings |
+| 60 min | Absence grace before "no show" becomes Absent |
+| 30 min | How early before the shift the kiosk lets someone clock in (earlier is refused; paid time still starts at the shift start) |
 | 60 sec | Kiosk lockout duration after repeat face-mismatch strikes |
 | 30 days | Lookback window the AI analyzes |
 | 5 taps | Secret rhythm to summon the kiosk PIN prompt |

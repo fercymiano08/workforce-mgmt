@@ -478,6 +478,8 @@ class KioskController extends Controller
                 'startTime' => $shift->start_time,
                 'endTime' => $shift->end_time,
                 'approvedOvertimeHours' => $approvedOtHours,
+                // The kiosk opens this many minutes before the shift; paid time still starts at the shift start.
+                'earlyWindowMinutes' => ShiftHours::EARLY_ARRIVAL_MINUTES,
                 // Shown before the employee picks a reason for leaving early.
                 'earlyLeave' => app(EarlyLeaveEnforcer::class)->allowanceFor($employeeId, $dateKey),
             ],
@@ -552,8 +554,17 @@ class KioskController extends Controller
             ], 422);
         }
 
-        // Present up to and including 15 minutes after the shift starts; Late after that.
+        // Too early: the terminal opens a short window before the shift (see ShiftHours::EARLY_ARRIVAL_MINUTES).
         $shiftStart = Carbon::parse($data['date'].' '.$shift->start_time, $timezone);
+        $opensAt = $shiftStart->copy()->subMinutes(ShiftHours::EARLY_ARRIVAL_MINUTES);
+        if ($now->lt($opensAt)) {
+            return response()->json([
+                'message' => 'Your shift starts at '.$shiftStart->format('g:i A').'. You can clock in from '.$opensAt->format('g:i A').' (up to '.ShiftHours::EARLY_ARRIVAL_MINUTES.' minutes before your shift).',
+                'data' => ['reason' => 'too_early', 'opensAt' => $opensAt->format('H:i')],
+            ], 422);
+        }
+
+        // Present up to and including 15 minutes after the shift starts; Late after that.
         $data['status'] = $now->gt($shiftStart->copy()->addMinutes(self::LATE_GRACE_MINUTES)) ? 'Late' : 'Present';
 
         try {
@@ -685,6 +696,8 @@ class KioskController extends Controller
                 $clockOut,
                 ShiftHours::baseEnd($dateKey, $schedule->shift->start_time, $schedule->shift->end_time, $timezone),
                 $effectiveEnd,
+                null,
+                ShiftHours::baseStart($dateKey, $schedule->shift->start_time, $timezone),
             );
             $countedOut = $hours['countedOut'];
             $uncountedMinutes = $hours['uncountedMinutes'];

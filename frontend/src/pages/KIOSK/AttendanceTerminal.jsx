@@ -546,10 +546,23 @@ export default function AttendanceTerminal() {
 
     if (nowMin < startMin) {
       const minutesEarly = startMin - nowMin;
+      const windowMin = Number(shiftInfo.earlyWindowMinutes ?? 30);
+      if (minutesEarly > windowMin) {
+        const opens = `${String(Math.floor((startMin - windowMin) / 60)).padStart(2, '0')}:${String((startMin - windowMin) % 60).padStart(2, '0')}`;
+        setNotice({
+          tone: 'warning',
+          title: 'Too Early To Clock In',
+          message: `Your shift starts at ${formatTime(start)}. You can clock in from ${formatTime(opens)} (up to ${windowMin} minutes before your shift). Please come back then.`,
+          confirmLabel: 'Back to Home',
+          onConfirm: resetToMode,
+        });
+        setPhase('notice');
+        return;
+      }
       setNotice({
         tone: 'info',
-        title: minutesEarly > 60 ? 'Clocking In Very Early' : 'Clocking In Early',
-        message: `Your shift starts at ${formatTime(start)}. You are ${minutesEarly} ${minutesEarly === 1 ? 'minute' : 'minutes'} early.`,
+        title: 'Clocking In Early',
+        message: `Your shift starts at ${formatTime(start)}. You are ${minutesEarly} ${minutesEarly === 1 ? 'minute' : 'minutes'} early. Your time is recorded, but paid hours count from ${formatTime(start)}.`,
         confirmLabel: 'Clock In Anyway',
         cancelLabel: 'Cancel',
         onConfirm: () => { setNotice(null); recordAttendance('early'); },

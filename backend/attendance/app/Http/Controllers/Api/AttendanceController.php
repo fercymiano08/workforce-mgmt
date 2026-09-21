@@ -447,6 +447,8 @@ class AttendanceController extends Controller
             Carbon::parse($dateKey.' '.$clockOut, $timezone),
             ShiftHours::baseEnd($dateKey, $shift->start_time, $shift->end_time, $timezone),
             ShiftHours::effectiveEnd($employeeId, $dateKey, $shift->start_time, $shift->end_time, $timezone),
+            null,
+            ShiftHours::baseStart($dateKey, $shift->start_time, $timezone),
         );
 
         return array_merge($data, [

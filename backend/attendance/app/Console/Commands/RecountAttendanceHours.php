@@ -38,6 +38,7 @@ class RecountAttendanceHours extends Command
                     ShiftHours::baseEnd($dateKey, $shift->start_time, $shift->end_time, $timezone),
                     ShiftHours::effectiveEnd($row->employee_id, $dateKey, $shift->start_time, $shift->end_time, $timezone),
                     (int) round(((float) $row->break_hours) * 60),
+                    ShiftHours::baseStart($dateKey, $shift->start_time, $timezone),
                 );
 
                 $countedOut = $hours['countedOut']->format('H:i:s');

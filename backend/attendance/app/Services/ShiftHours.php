@@ -46,6 +46,15 @@ class ShiftHours
         return $shiftEnds;
     }
 
+    /** How many minutes before the shift starts the kiosk lets a person clock in. Earlier than this is refused. */
+    public const EARLY_ARRIVAL_MINUTES = 30;
+
+    /** The scheduled start of the shift. */
+    public static function baseStart(string $dateKey, string $startTime, string $timezone): Carbon
+    {
+        return Carbon::parse($dateKey.' '.$startTime, $timezone);
+    }
+
     /** The scheduled end of the shift, without any overtime. */
     public static function baseEnd(string $dateKey, string $startTime, string $endTime, string $timezone): Carbon
     {
@@ -58,8 +67,14 @@ class ShiftHours
     /**
      * @return array{countedOut: Carbon, uncountedMinutes: int, regular: float, overtime: float, total: float, break: float}
      */
-    public static function count(Carbon $clockIn, Carbon $actualOut, Carbon $baseEnd, ?Carbon $effectiveEnd, ?int $lunchMinutes = null): array
+    public static function count(Carbon $clockIn, Carbon $actualOut, Carbon $baseEnd, ?Carbon $effectiveEnd, ?int $lunchMinutes = null, ?Carbon $baseStart = null): array
     {
+        // Paid time starts at the shift start, not at the tap-in: arriving early is recorded but is not counted
+        // (the same way time after the end only counts when overtime was approved).
+        if ($baseStart && $clockIn->lt($baseStart)) {
+            $clockIn = $baseStart;
+        }
+
         $countedOut = $actualOut;
         $uncounted = 0;
         if ($effectiveEnd && $actualOut->gt($effectiveEnd)) {

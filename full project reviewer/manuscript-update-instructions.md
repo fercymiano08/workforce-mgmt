@@ -24,7 +24,7 @@ You are helping revise the capstone manuscript **"Design and Development of an A
 | Topic | Fact |
 |-------|------|
 | Architecture | React frontend + **8** Laravel microservices (core, intelligence, attendance, scheduling, time-off, payroll, communications, configuration), each with its own PostgreSQL database. Docker Compose runs 15 containers (unchanged). |
-| Automated tests | **321** automated PHPUnit tests across the 8 services, all passing. The frontend is checked with ESLint and a production build. |
+| Automated tests | **324** automated PHPUnit tests across the 8 services, all passing. The frontend is checked with ESLint and a production build. |
 | Timesheet workflow | Timesheets are built automatically from attendance. The employee submits after the week ends (or the system auto-submits at Monday 12:00 PM); the Workforce Admin approves, or rejects / reopens with a required reason; approved timesheets are sent to payroll once. Only a finished week can be reviewed; hours are frozen after submission and cannot be edited; every step is kept in a history and the audit log. |
 | Payroll service | Produces **weekly timesheets only**. It does **not** produce pay statements. The "My Pay Record / Pay Statement" page and its endpoint were **removed**. |
 | Timesheet figures | Each weekly timesheet records regular hours, overtime worked, overtime approved, and **payable overtime** (`paid_ot_hours`). |
@@ -33,7 +33,7 @@ You are helping revise the capstone manuscript **"Design and Development of an A
 | Shifts | The company has **one shift**: the **Standard Shift, 08:00 to 17:00**. Overtime is **not** a separate shift; it is an extension of the standard shift when an overtime request is approved (the day's end becomes 17:00 plus approved hours). |
 | Attendance statuses | Each attendance record has exactly **one** status: **Present** (clocked in within 15 minutes of the start), **Late** (more than 15 minutes after the start), **Early Leave** (left before the shift ended), **Absent**, or **On Leave**. Reports and charts show **Present as one group split into On Time and Late** (one bar in two colours); Early Leave, Absent and On Leave are separate categories, and nothing is counted twice. |
 | Unpaid lunch break | Deducted automatically **by duration**: once a person has worked at least 5 hours (configurable), 60 minutes (configurable) are taken off the day, whenever lunch was taken. A shorter day loses nothing. There are no break punches. HR sets the numbers on the Settings page; changes apply only to days worked afterwards. |
-| Kiosk rules (enforced by the server) | A clock-in is refused when the employee has no shift today, the shift has already ended, the employee is on approved leave, or is already clocked in. Times use Philippine (Manila) time. |
+| Kiosk rules (enforced by the server) | A clock-in is refused more than 30 minutes before the shift starts (the kiosk opens 30 minutes early, and counted hours start at the shift start), and is also refused when the employee has no shift today, the shift has already ended, the employee is on approved leave, or is already clocked in. Times use Philippine (Manila) time. |
 | Early clock-out | A reason is mandatory. Each employee has **2 free early departures per 30 days**; beyond that the record is unpaid until reviewed. A "sick" claim needs proof (medical certificate) within **48 hours**. The Workforce Admin classifies the record (excused or unpaid). |
 | Leave rules | Past dates are blocked. Overlapping or duplicate requests are refused (button lock, server check, and database rule). **Approved leave blocks scheduling** on those days and stops the no-show (absent) alert. |
 | Leave in working days | A leave request is charged in **working days**: the days the person's work pattern says they work, minus company holidays, counted by the scheduling service when the request is filed and stored on the request. A Friday-to-Monday leave costs 2 days. The form shows the live cost, and a range with no working day is refused. |
@@ -93,9 +93,9 @@ You are helping revise the capstone manuscript **"Design and Development of an A
 
 Replace the "over one hundred" wording with the current figure.
 
-- **Section 3.1.4 Toolstack:** *"(over 100 tests across the eight services)"* → *"(321 tests across the eight services)"*
-- **Section 3.3 Development, Operations, and QA Methodology:** *"Across the eight services there are over one hundred automated tests."* → *"Across the eight services there are 321 automated tests."*
-- **Section 3.3.3 Testing Strategy:** *"Across the eight services, there are over one hundred automated tests that cover the core business rules of each domain."* → *"Across the eight services, there are 321 automated tests that cover the core business rules of each domain."*
+- **Section 3.1.4 Toolstack:** *"(over 100 tests across the eight services)"* → *"(324 tests across the eight services)"*
+- **Section 3.3 Development, Operations, and QA Methodology:** *"Across the eight services there are over one hundred automated tests."* → *"Across the eight services there are 324 automated tests."*
+- **Section 3.3.3 Testing Strategy:** *"Across the eight services, there are over one hundred automated tests that cover the core business rules of each domain."* → *"Across the eight services, there are 324 automated tests that cover the core business rules of each domain."*
 
 ---
 
@@ -120,6 +120,9 @@ Add the sentence(s) at the end of the named bullet in **Section 1.3.2 In-Scope**
 
 **4.6 Security and Accountability** — add (in 1.3.2 Role-Based User Management / System Accountability):
 > *"Employees are signed out automatically after three minutes of inactivity, enforced by the server. Sign-ins, failed sign-ins, password changes, overtime decisions and changes to system settings are written to the audit log, and exporting a report or the audit log requires the administrator to re-enter their password."*
+
+**4.8 Early arrival (add to 4.3)** — add:
+> *"The kiosk accepts a clock-in from 30 minutes before the shift starts; earlier attempts are refused. Time before the scheduled start is recorded but not paid: counted hours begin at the shift start."*
 
 **4.7 Time and Attendance Management** — add:
 > *"A finished day on which an employee was scheduled but never clocked in and had no approved leave is recorded automatically as Absent, so absence figures are complete."*
