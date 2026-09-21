@@ -111,7 +111,16 @@ Add the sentence(s) at the end of the named bullet in **Section 1.3.2 In-Scope**
 > *"The server enforces the attendance rules: a clock-in is refused when the employee has no shift that day, the shift has already ended, or the employee is on approved leave. An employee who clocks in within 15 minutes of the shift start is recorded as Present; later than that, as Late. Leaving early requires a stated reason; each employee has two free early departures per 30 days, and a sick-leave claim must be supported by a medical certificate within 48 hours."*
 
 **4.4 Leave Management** — add:
-> *"Requests for past dates are blocked, and overlapping or duplicate requests are refused. Approved leave prevents shift assignment on those days and suppresses the no-show alert."*
+> *"Requests for past dates are blocked, and overlapping or duplicate requests are refused. Approved leave prevents shift assignment on those days and suppresses the no-show alert. Leave is charged in working days: weekends, company holidays and the person's days off are not deducted from the balance, and the employee sees the cost while choosing the dates."*
+
+**4.5 Automatic Shift Assignment** — add (in 1.3.2 Shift and Schedule Management):
+> *"An administrator can switch on automatic shift assignment. The system then prepares the coming week from each person's work pattern, company holidays, approved leave and department coverage rules, shows a preview before anything is published, records every run as a batch that can be undone, and notifies the affected employees."*
+
+**4.6 Security and Accountability** — add (in 1.3.2 Role-Based User Management / System Accountability):
+> *"Employees are signed out automatically after three minutes of inactivity, enforced by the server. Sign-ins, failed sign-ins, password changes, overtime decisions and changes to system settings are written to the audit log, and exporting a report or the audit log requires the administrator to re-enter their password."*
+
+**4.7 Time and Attendance Management** — add:
+> *"A finished day on which an employee was scheduled but never clocked in and had no approved leave is recorded automatically as Absent, so absence figures are complete."*
 
 ---
 
@@ -142,7 +151,7 @@ DeepSeek cannot edit images. These figures in the manuscript are pictures and sh
 
 | Figure | Source file | What changed |
 |--------|-------------|--------------|
-| Entity Relationship Diagram of All Owning Tables | `workforce mgt erd flowchart reference.drawio` | Added the `early_clock_outs` and `audit_events` tables, and the `paid_ot_hours` column on timesheets. |
+| Entity Relationship Diagram of All Owning Tables | `workforce mgt erd flowchart reference.drawio` | Added the `early_clock_outs` and `audit_events` tables, the `paid_ot_hours` column on timesheets, the `days` (working days) column on leaves, and the timesheet workflow columns. The new scheduling tables (work patterns, holidays, coverage rules, schedule settings, schedule batches and batch items) are described in the Database guide and can be added if space allows. |
 | Process / BPMN flow figures (clock-in, leave, overtime, timesheet, shift scheduling) | `workforce mgt bpmn flowchart reference.drawio` | Labels updated to the latest rules; each page has a yellow "LATEST RULES" note. |
 
 ---
