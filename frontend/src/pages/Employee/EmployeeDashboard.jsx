@@ -293,7 +293,7 @@ export default function EmployeeDashboard() {
                     <p className="text-sm font-semibold text-gray-900 truncate">{formatDate(entry.date)}</p>
                     <p className="text-xs text-gray-400 mt-0.5">{shift?.name} &middot; {shift ? `${formatTime(shift.startTime)} - ${formatTime(shift.endTime)}` : ''}</p>
                   </div>
-                  <Badge variant={entry.status === 'Completed' ? 'success' : entry.status === 'Swapped' ? 'purple' : 'primary'} size="xs">
+                  <Badge variant={entry.status === 'Completed' ? 'success' : 'primary'} size="xs">
                     {entry.status}
                   </Badge>
                 </div>

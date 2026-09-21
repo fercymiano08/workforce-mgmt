@@ -419,7 +419,7 @@ On the terminal, tap anywhere 5 times quickly
 
 ### Tech Trail
 
-- Endpoints: `POST /api/kiosk/config`, `/api/kiosk/pin`, `/api/kiosk/reset` (admin), `GET /api/kiosk/config` (public read of safe fields), `POST /api/kiosk/verify-pin` (public, rate-limited to 10/min; on success returns a signed 24-hour **device token**). Every other kiosk endpoint (employee directory, face check, log, clock-in/out) needs that token in the `X-Kiosk-Token` header
+- Endpoints: `POST /api/kiosk/config`, `/api/kiosk/pin`, `/api/kiosk/reset` (admin), `GET /api/kiosk/config` (public read of safe fields), `POST /api/kiosk/verify-pin` (public, rate-limited to 10/min; on success returns a signed **device token** valid until midnight). Every other kiosk endpoint (employee directory, face check, log, clock-in/out) needs that token in the `X-Kiosk-Token` header
 - Tables: `settings` (kiosk JSON), `security_events`
 
 ---
@@ -430,7 +430,7 @@ On the terminal, tap anywhere 5 times quickly
 
 **Files:** `KIOSK/AttendanceTerminal.jsx`, `FaceRecognitionModal` component, backend `KioskController.php`
 
-> The kiosk device is NOT a logged-in user, so it uses a **device token** instead of a login: entering the kiosk PIN makes the server issue a signed token (valid 24 hours, void the moment the PIN changes) that the terminal sends as `X-Kiosk-Token`. Without it, the directory, face check, log and clock-in endpoints all answer `401 kiosk_locked`; clock-ins are also refused (`423`) while the kiosk is switched off. Only `GET /kiosk/config` and the (rate-limited) PIN check are open. The endpoints return **minimal fields only** (name, photo, department, today's schedule) — salaries, emails, phone numbers and addresses never cross them. Failed PIN attempts are logged as security events by the server itself.
+> The kiosk device is NOT a logged-in user, so it uses a **device token** instead of a login: entering the kiosk PIN makes the server issue a signed token (valid until midnight kiosk time, void the moment the PIN changes) that the terminal sends as `X-Kiosk-Token`. Without it, the directory, face check, log and clock-in endpoints all answer `401 kiosk_locked`; clock-ins are also refused (`423`) while the kiosk is switched off. Only `GET /kiosk/config` and the (rate-limited) PIN check are open. The endpoints return **minimal fields only** (name, photo, department, today's schedule) — salaries, emails, phone numbers and addresses never cross them. Failed PIN attempts are logged as security events by the server itself.
 
 > **The server is the authority, the terminal only explains.** Every attendance rule below is enforced by the `attendance` service (`KioskController`), not just by the screen. The server takes the **date and time from its own clock** (in the kiosk's timezone), looks up the employee's shift itself, and works out **Present / Late** itself — the terminal's clock and its `status` field are ignored. So a wrong tablet clock or a hand-made request cannot record an on-time arrival that never happened. The terminal's popups exist so the employee gets a clear explanation *before* the server would refuse or flag the punch.
 

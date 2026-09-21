@@ -112,13 +112,25 @@ export default function AttendanceTerminal() {
   const searchRef = useRef(null);
   const taps = useRef([]);
 
-  // The server says this device is no longer unlocked (24h expired, or the PIN was changed):
+  // The server says this device is no longer unlocked (the day ended, or the PIN was changed):
   // fall back to the PIN screen instead of showing errors on every clock-in.
   useEffect(() => {
     const relock = () => setUnlocked(false);
     window.addEventListener(KIOSK_LOCKED_EVENT, relock);
     return () => window.removeEventListener(KIOSK_LOCKED_EVENT, relock);
   }, []);
+
+  // The unlock ends at midnight: lock the screen at that moment instead of failing on the next clock-in.
+  const sessionEndsAt = unlocked ? kioskService.sessionEndsAt() : null;
+  const sessionEndLabel = sessionEndsAt
+    ? new Date(sessionEndsAt * 1000).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', timeZone: timezone })
+    : 'midnight';
+  useEffect(() => {
+    if (!sessionEndsAt) return undefined;
+    const wait = Math.max(0, sessionEndsAt * 1000 - Date.now());
+    const timer = setTimeout(() => setUnlocked(false), Math.min(wait, 2 ** 31 - 1));
+    return () => clearTimeout(timer);
+  }, [sessionEndsAt]);
 
   useEffect(() => {
     const clock = setInterval(() => {
@@ -193,7 +205,7 @@ export default function AttendanceTerminal() {
     setTimeout(() => searchRef.current?.focus(), 0);
   };
 
-  // --- Kiosk access PIN gate (one-time per 24 hours) ----------------------
+  // --- Kiosk access PIN gate (once a day: an unlock lasts until midnight) --
 
   const pressLockKey = (digit) => setLockPin((prev) => (prev.length < 4 ? prev + digit : prev));
   const lockBackspace = () => setLockPin((prev) => prev.slice(0, -1));
@@ -805,7 +817,7 @@ export default function AttendanceTerminal() {
     );
   }
 
-  // --- Lock screen: the kiosk access PIN is required once per 24 hours -----
+  // --- Lock screen: the kiosk access PIN is required once a day ------------
   if (!unlocked) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-[#0B1F3A] via-[#0E2747] to-[#0B1F3A] flex flex-col">
@@ -824,7 +836,7 @@ export default function AttendanceTerminal() {
               </div>
               <h2 className="text-xl font-bold text-gray-900 mt-4">Kiosk Unlock</h2>
               <p className="text-xs text-gray-500 mt-1">
-                Enter the kiosk PIN once. The terminal stays open for 24 hours.
+                Enter the PIN to start today's session. It stays unlocked until midnight.
               </p>
 
               <div className="flex justify-center gap-3 mt-6">
@@ -958,7 +970,7 @@ export default function AttendanceTerminal() {
 
               <p className="mt-6 text-center text-xs text-gray-400 flex items-center justify-center gap-1.5">
                 <ShieldCheck className="w-3.5 h-3.5" />
-                Kiosk unlocked for 24 hours · Employees verified with facial recognition
+                Unlocked until {sessionEndLabel} · Employees verified with facial recognition
               </p>
             </div>
           )}

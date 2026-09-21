@@ -18,7 +18,7 @@ const shiftIconColors = {
 const shiftBadgeVariant = { SHIFT004: 'primary', SHIFT005: 'danger' };
 const statusBadgeVariant = {
   Upcoming: 'primary', Scheduled: 'warning', Completed: 'success',
-  Swapped: 'purple', Cancelled: 'danger',
+  Cancelled: 'danger',
 };
 
 const toDateStr = (d) =>

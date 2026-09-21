@@ -260,6 +260,10 @@ export default function KioskSetup() {
                   <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
                   Live since {timeInZone(settings.enabledAt, settings.timezone)}
                 </div>
+                <p className="mt-4 text-xs text-gray-500 max-w-md mx-auto">
+                  Each day the device is unlocked once with the PIN and stays unlocked until midnight ({settings.timezone || 'Asia/Manila'}).
+                  After midnight it asks for the PIN again, ready for the next day. Changing the PIN locks every device immediately.
+                </p>
                 <div className="mt-8">
                   <Button variant="dangerOutline" icon={Power} onClick={handleDisableKiosk}>
                     Disable Kiosk Mode

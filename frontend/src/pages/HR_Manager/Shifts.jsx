@@ -1,6 +1,6 @@
 import { useState, useMemo, useEffect } from 'react';
 import {
-  CalendarDays, Clock, Edit, ArrowLeftRight, Check,
+  CalendarDays, Clock, Edit, Check,
   Zap, Search, FilterX, Wand2, Trash2, AlertTriangle, Bot, UserPlus,
   Flame, ChevronLeft, ChevronRight, Users,
 } from 'lucide-react';
@@ -32,8 +32,8 @@ const shiftBlockBg = {
   SHIFT005: 'bg-red-50 border-red-200 text-red-700',
 };
 const shiftBadgeVariant = { SHIFT004: 'primary', SHIFT005: 'danger' };
-const statusVariant = { Scheduled: 'primary', Completed: 'success', Swapped: 'purple', Cancelled: 'danger' };
-const STATUS_OPTIONS = ['Scheduled', 'Completed', 'Swapped', 'Cancelled'];
+const statusVariant = { Scheduled: 'primary', Cancelled: 'danger' };
+const STATUS_OPTIONS = ['Scheduled', 'Cancelled'];
 
 const toDateKey = (d) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
 const addDays = (d, n) => { const x = new Date(d); x.setDate(x.getDate() + n); return x; };
@@ -74,11 +74,17 @@ export default function Shifts() {
   const allSchedules = useMemo(() => [...(shiftSchedules || [])].sort((a, b) => b.date.localeCompare(a.date)), [shiftSchedules]);
   const stats = useMemo(() => {
     const s = shiftSchedules || [];
+    const now = new Date();
+    const monday = new Date(now.getFullYear(), now.getMonth(), now.getDate() - ((now.getDay() + 6) % 7));
+    const weekStart = toDateKey(monday);
+    const weekEnd = toDateKey(new Date(monday.getFullYear(), monday.getMonth(), monday.getDate() + 6));
+    const today = toDateKey(now);
+    const active = s.filter(x => x.status === 'Scheduled');
     return {
       total: s.length,
-      scheduled: s.filter(x => x.status === 'Scheduled').length,
-      completed: s.filter(x => x.status === 'Completed').length,
-      swapped: s.filter(x => x.status === 'Swapped').length,
+      scheduled: active.length,
+      today: active.filter(x => x.date === today).length,
+      thisWeek: active.filter(x => x.date >= weekStart && x.date <= weekEnd).length,
     };
   }, [shiftSchedules]);
   const departments = useMemo(() => [...new Set(employees.map(e => e.department).filter(Boolean))].sort(), [employees]);
@@ -312,8 +318,8 @@ export default function Shifts() {
   const statsCards = [
     { label: 'Total Assignments', value: stats.total, icon: CalendarDays, color: 'blue' },
     { label: 'Scheduled', value: stats.scheduled, icon: Clock, color: 'amber' },
-    { label: 'Completed', value: stats.completed, icon: Check, color: 'emerald' },
-    { label: 'Swapped', value: stats.swapped, icon: ArrowLeftRight, color: 'purple' },
+    { label: 'Working Today', value: stats.today, icon: Check, color: 'emerald' },
+    { label: 'Scheduled This Week', value: stats.thisWeek, icon: CalendarDays, color: 'purple' },
   ];
   const colorMap = { blue: 'bg-blue-50 text-blue-600', emerald: 'bg-emerald-50 text-emerald-600', amber: 'bg-amber-50 text-amber-600', purple: 'bg-purple-50 text-purple-600' };
   const barMap = { blue: 'bg-blue-500', emerald: 'bg-emerald-500', amber: 'bg-amber-500', purple: 'bg-purple-500' };

@@ -26,8 +26,8 @@ const DEFAULT_SETTINGS = {
 
 const SETTINGS_KEY = 'kiosk_settings_cache';
 
-// The kiosk PIN is a one-time-per-24h security gate. Entering it makes the server issue a
-// signed device token (valid 24h, void as soon as the PIN changes), which is stored in
+// The kiosk PIN is a once-a-day security gate. Entering it makes the server issue a
+// signed device token (valid until midnight kiosk time, void as soon as the PIN changes), which is stored in
 // localStorage so the terminal stays unlocked across a tab close or reboot. The server -
 // not this browser flag - enforces it: every clock-in call needs that token.
 
@@ -103,6 +103,16 @@ export const kioskService = {
       return Boolean(token) && Number(expiresAt) * 1000 > Date.now();
     } catch {
       return false;
+    }
+  },
+
+  // When this device's unlock ends (Unix seconds), or null when it is not unlocked.
+  sessionEndsAt() {
+    try {
+      const { token, expiresAt } = JSON.parse(readStorage(KIOSK_TOKEN_KEY) || '{}');
+      return token && Number(expiresAt) * 1000 > Date.now() ? Number(expiresAt) : null;
+    } catch {
+      return null;
     }
   },
 

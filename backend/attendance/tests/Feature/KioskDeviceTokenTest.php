@@ -193,4 +193,25 @@ class KioskDeviceTokenTest extends TestCase
     {
         $this->getJson('/api/kiosk/config')->assertOk();
     }
+
+    public function test_an_unlock_lasts_until_midnight_however_early_or_late_it_was_made(): void
+    {
+        $this->kioskDeviceHeaders();      // sets a PIN
+        \Illuminate\Support\Carbon::setTestNow(\Illuminate\Support\Carbon::parse('2030-01-14 07:00', 'Asia/Manila'));
+        $morning = \App\Services\KioskDeviceToken::issue();
+        \Illuminate\Support\Carbon::setTestNow(\Illuminate\Support\Carbon::parse('2030-01-14 15:30', 'Asia/Manila'));
+        $afternoon = \App\Services\KioskDeviceToken::issue();
+
+        $midnight = \Illuminate\Support\Carbon::parse('2030-01-15 00:00', 'Asia/Manila')->timestamp;
+        $this->assertSame($midnight, $morning['expiresAt']);
+        $this->assertSame($midnight, $afternoon['expiresAt']);
+
+        \Illuminate\Support\Carbon::setTestNow(\Illuminate\Support\Carbon::parse('2030-01-14 23:59', 'Asia/Manila'));
+        $this->assertTrue(\App\Services\KioskDeviceToken::valid($morning['token']));
+
+        \Illuminate\Support\Carbon::setTestNow(\Illuminate\Support\Carbon::parse('2030-01-15 00:01', 'Asia/Manila'));
+        $this->assertFalse(\App\Services\KioskDeviceToken::valid($morning['token']));
+
+        \Illuminate\Support\Carbon::setTestNow();
+    }
 }

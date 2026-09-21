@@ -13,11 +13,18 @@ use App\Models\Setting;
  * X-Kiosk-Token header. Nothing is stored: the token is `<expiry>.<hmac>`, and
  * the HMAC covers the current PIN hash, so changing or resetting the PIN
  * instantly invalidates every token issued before it.
+ *
+ * A device stays unlocked until the END OF THE DAY (midnight, kiosk time zone), not for a fixed number of
+ * hours: whoever opens the kiosk next morning enters the PIN once and it then lasts the whole working day,
+ * however early or late it was unlocked. The one rule lives in endOfDay() below.
  */
 class KioskDeviceToken
 {
-    /** A device stays unlocked for a day, matching the terminal's own lock timeout. */
-    public const LIFETIME_SECONDS = 86400;
+    /** The moment today's unlock ends: the next midnight in the kiosk's time zone (a Unix timestamp). */
+    public static function endOfDay(): int
+    {
+        return now(ShiftHours::timezone())->addDay()->startOfDay()->timestamp;
+    }
 
     /**
      * @return array{token: string, expiresAt: int}|null null when no PIN is set
@@ -29,7 +36,7 @@ class KioskDeviceToken
             return null;
         }
 
-        $expiresAt = now()->timestamp + self::LIFETIME_SECONDS;
+        $expiresAt = self::endOfDay();
 
         return [
             'token' => $expiresAt.'.'.self::sign($expiresAt, $pinHash),

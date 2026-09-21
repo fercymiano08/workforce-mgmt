@@ -182,7 +182,7 @@ These are the exact things the panel may probe. Say them confidently.
 | **Password policy** | Min 8 + upper + lower + number (enforced on change, reset, and registration). |
 | **Throttling** | Forgot-password and reset endpoints are throttled (limited requests per minute). |
 | **Kiosk PIN** | A PIN is stored only as a SHA-256 hash (a one-way code), never in plain text. |
-| **Kiosk device token** | The device has no login, but entering the kiosk PIN gives it a signed 24-hour token; without the token the kiosk endpoints answer 401. Even with it, it only sees minimal info (never salary, email, phone, address). |
+| **Kiosk device token** | The device has no login, but entering the kiosk PIN gives it a signed token that lasts until midnight (one PIN entry per day); without the token the kiosk endpoints answer 401. Even with it, it only sees minimal info (never salary, email, phone, address). |
 | **Server-enforced attendance rules** | No shift / finished shift = refused, Present vs Late is computed from the *server's* clock, and an early clock-out must carry a reason - all checked on the backend, so the kiosk screen can't be bypassed. |
 | **Face-mismatch alert** | A face that doesn't match the ID entered is logged as a security event AND every Workforce Admin gets a high-priority notification right away. |
 | **Short-lived identity cache** | Services reuse `core`'s "who is this token?" answer for 15 seconds so pages load fast. Trade-off: a revoked token can work up to 15 s longer in the other services. |
