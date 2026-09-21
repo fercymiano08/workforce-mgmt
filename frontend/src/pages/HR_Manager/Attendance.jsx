@@ -1,7 +1,7 @@
 import { useState, useMemo, useEffect } from 'react';
 import { createPortal } from 'react-dom';
 import { useSearchParams } from 'react-router-dom';
-import { CheckCircle, AlertTriangle, Timer, Download, Coffee, MapPin, Clock, X, Check, CheckCheck, ChevronDown, ChevronRight, Hand, ClipboardCheck } from 'lucide-react';
+import { CheckCircle, AlertTriangle, Timer, Coffee, MapPin, Clock, X, Check, CheckCheck, ChevronDown, ChevronRight, Hand, ClipboardCheck } from 'lucide-react';
 import Card from '../../components/ui/Card';
 import Button from '../../components/ui/Button';
 import Badge from '../../components/ui/Badge';
@@ -14,7 +14,6 @@ import { SkeletonTable } from '../../components/ui/LoadingSkeleton';
 import { attendanceService, employeeService, overtimeService } from '../../services/api';
 import { formatHours, toDateKey } from '../../services/attendanceService';
 import { formatDate, formatTime } from '../../utils/helpers';
-import { downloadCSV } from '../../utils/export';
 import useApiData from '../../hooks/useApiData';
 import { useToast } from '../../context/ToastContext';
 import { useAuth } from '../../context/AuthContext';
@@ -189,28 +188,6 @@ export default function Attendance() {
     setSelectedEarly(rec);
   };
 
-  const handleEarlyExport = () => {
-    if (!filteredEarly.length) {
-      toast.error('Nothing to export', 'No early clock-outs match the current filters.');
-      return;
-    }
-    const rows = filteredEarly.map((rec) => ({
-      'Employee ID': rec.employeeId,
-      Employee: `${rec.firstName} ${rec.lastName}`.trim(),
-      Date: rec.date,
-      'Clocked Out': formatTime(rec.actualClockOutTime),
-      'Scheduled End': formatTime(rec.scheduledEndTime),
-      'Time Lost': formatMinutesShort(rec.minutesEarly),
-      Reason: EARLY_CLOCKOUT_REASON_LABELS[rec.reasonCode] || rec.reasonCode || '',
-      Note: rec.reasonNote || '',
-      'Reason Status': rec.reasonStatus || '',
-      Classification: rec.classification || 'PENDING_REVIEW',
-      'Classified By': rec.classifiedBy || '',
-    }));
-    downloadCSV(`early-clockouts-${new Date().toISOString().slice(0, 10)}.csv`, rows);
-    toast.success('Export ready', `Exported ${rows.length} early clock-out records as CSV.`);
-  };
-
   const handleEarlyClassify = async () => {
     if (!selectedEarly || !earlyClassify) return;
     setClassifying(true);
@@ -306,23 +283,6 @@ export default function Attendance() {
   const totalPages = Math.ceil(filtered.length / PAGE_SIZE);
   const paginated = filtered.slice((currentPage - 1) * PAGE_SIZE, currentPage * PAGE_SIZE);
 
-  const handleExport = () => {
-    const rows = filtered.map((a) => ({
-      Employee: `${a.firstName} ${a.lastName}`.trim(),
-      Department: a.department,
-      Date: formatDate(a.date),
-      'Clock In': a.clockIn ? formatTime(a.clockIn) : '',
-      'Clock Out': a.clockOut ? formatTime(a.clockOut) : '',
-      'Regular Hours': a.regularHours || 0,
-      Overtime: a.overtime || 0,
-      'Total Hours': a.totalHours || 0,
-      Status: a.status,
-      Location: a.location,
-    }));
-    downloadCSV('attendance.csv', rows);
-    toast.success('Export Complete', `Exported ${rows.length} attendance record${rows.length === 1 ? '' : 's'} to CSV.`);
-  };
-
   return (
     <div className="space-y-6 animate-fadeIn">
       {/* Header */}
@@ -331,9 +291,6 @@ export default function Attendance() {
           <h1 className="text-2xl font-bold text-gray-900">Time & Attendance</h1>
           <p className="text-[14px] text-gray-500 mt-1">Track employee attendance and working hours</p>
         </div>
-        {activeTab === 'attendance' && (
-          <Button variant="outline" icon={Download} onClick={handleExport}>Export</Button>
-        )}
       </div>
 
       {/* Tabs */}
@@ -686,7 +643,6 @@ export default function Attendance() {
                 <option value="EXCUSED_EARLY_LEAVE">Excused (Early Leave)</option>
                 <option value="UNPAID">Unpaid</option>
               </Select>
-              <Button variant="outline" size="sm" icon={Download} onClick={handleEarlyExport}>Export CSV</Button>
             </div>
           </div>
         </div>

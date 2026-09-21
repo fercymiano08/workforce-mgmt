@@ -2,7 +2,7 @@ import { useState, useMemo } from 'react';
 import { createPortal } from 'react-dom';
 import clsx from 'clsx';
 import {
-  FileText, Clock, AlertTriangle, CheckCircle, Download, Calendar, TrendingUp, Timer, Eye, Send, Info,
+  FileText, Clock, AlertTriangle, CheckCircle, Calendar, TrendingUp, Timer, Eye, Send, Info,
   X, XCircle, CheckCheck, ChevronLeft, ChevronRight, RefreshCw, ArrowUpDown, ArrowUp, ArrowDown, RotateCcw, Banknote,
 } from 'lucide-react';
 import Card from '../../components/ui/Card';
@@ -432,12 +432,6 @@ function AdminTimesheetsView() {
     'Auto-submitted': t.autoSubmitted ? 'Yes' : 'No',
   }));
 
-  const handleExport = () => {
-    if (!rows.length) { toast.error('Nothing to export', 'No timesheets match the current filters.'); return; }
-    downloadCSV(`timesheets-${toDateKey(new Date())}.csv`, csvRows(rows));
-    toast.success('Export ready', `Exported ${rows.length} timesheet${rows.length === 1 ? '' : 's'}.`);
-  };
-
   // Sends every approved timesheet not yet sent to payroll, marks them sent, and downloads the payroll file.
   const sendToPayroll = async () => {
     setBusy(true);
@@ -473,7 +467,6 @@ function AdminTimesheetsView() {
         </div>
         <div className="flex items-center gap-3 flex-wrap">
           <Button variant="outline" icon={RefreshCw} size="md" onClick={() => refreshTimesheets()}>Refresh</Button>
-          <Button variant="outline" icon={Download} size="md" onClick={handleExport}>Export CSV</Button>
           <Button variant="primary" icon={Banknote} size="md" disabled={readyForPayroll.length === 0} onClick={() => setConfirmPayroll(true)}>
             Send to payroll{readyForPayroll.length > 0 ? ` (${readyForPayroll.length})` : ''}
           </Button>

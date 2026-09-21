@@ -902,6 +902,8 @@ Why cached? Chart pages stay instant — heavy aggregation runs once through the
 
 **What it is:** read-only report builder — turn live data into printable documents or CSV exports.
 
+> **Data leaves the system in only a few controlled places:** the Reports page (CSV / Excel / PDF), the timesheets "Send to payroll" file (each approved week only once), and the Audit Logs export. Other pages (Attendance, Analytics, Timesheets) no longer have their own export buttons, and employees can only print their own attendance and timesheets (Print / PDF).
+
 **File:** `HR_Manager/Reports.jsx`, helpers in `utils/reportHelpers.js`
 
 ### Flow

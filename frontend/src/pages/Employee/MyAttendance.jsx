@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import {
   CheckCircle, AlertTriangle, TrendingUp,
-  CalendarDays, MapPin, Filter, Clock, Plus, XCircle, Pencil, LogOut, Download, Printer,
+  CalendarDays, MapPin, Filter, Clock, Plus, XCircle, Pencil, LogOut, Printer,
 } from 'lucide-react';
 import Badge from '../../components/ui/Badge';
 import Button from '../../components/ui/Button';
@@ -18,7 +18,7 @@ import { attendanceService, overtimeService, shiftService } from '../../services
 import { formatDate, formatTime, approvedOvertimeHours, extendTime } from '../../utils/helpers';
 import { formatHours } from '../../services/attendanceService';
 import { didAttend } from '../../utils/constants';
-import { downloadCsv, printElementAsPdf } from '../../utils/export';
+import { printElementAsPdf } from '../../utils/export';
 import {
   EARLY_CLOCKOUT_REASON_OPTIONS,
   EARLY_CLOCKOUT_REASON_LABELS,
@@ -267,24 +267,6 @@ export default function MyAttendance() {
     return filtered.reduce((sum, a) => sum + (a.totalHours || 0), 0);
   }, [filtered]);
 
-  const handleExport = () => {
-    if (!filtered.length) {
-      toast.error('Nothing to export', 'No attendance records match the current period filter.');
-      return;
-    }
-    const rows = filtered.map((a) => ({
-      Date: a.date,
-      Status: a.status || '',
-      'Clock In': a.clockIn ? formatTime(a.clockIn) : '',
-      'Clock Out': a.clockOut ? formatTime(a.clockOut) : '',
-      'Break (h)': a.breakHours || 0,
-      'Overtime (h)': a.overtime || 0,
-      'Total (h)': a.totalHours || 0,
-    }));
-    downloadCsv(`my-attendance-${employeeId}.csv`, rows);
-    toast.success('Export ready', `Exported ${rows.length} attendance records as CSV.`);
-  };
-
   const handlePrint = () => {
     if (!filtered.length || !printRef.current) {
       toast.error('Nothing to print', 'No attendance records match the current period filter.');
@@ -307,7 +289,6 @@ export default function MyAttendance() {
             <span className="font-medium">{formatDate(new Date().toISOString())}</span>
           </div>
           <LiveClock />
-          <Button variant="outline" size="md" icon={Download} onClick={handleExport}>Export CSV</Button>
           <Button variant="outline" size="md" icon={Printer} onClick={handlePrint}>Print / PDF</Button>
         </div>
       </div>

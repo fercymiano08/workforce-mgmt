@@ -1,6 +1,6 @@
 import { useMemo, useRef, useState } from 'react';
 import {
-  CalendarDays, Clock3, Timer, Coffee, Send, BarChart3, ChevronRight, Download, Printer, AlertTriangle, Info,
+  CalendarDays, Clock3, Timer, Coffee, Send, BarChart3, ChevronRight, Printer, AlertTriangle, Info,
 } from 'lucide-react';
 import { useTimesheets, useTimesheetsLoaded, submitTimesheet, refreshTimesheets } from '../../hooks/useTimesheets';
 import { useAuth } from '../../context/AuthContext';
@@ -15,7 +15,7 @@ import useApiData from '../../hooks/useApiData';
 import { attendanceService } from '../../services/api';
 import { toDateKey } from '../../services/attendanceService';
 import { formatDate, formatTime } from '../../utils/helpers';
-import { downloadCsv, printElementAsPdf } from '../../utils/export';
+import { printElementAsPdf } from '../../utils/export';
 import { StatusSteps, HistoryTimeline } from '../../components/timesheets/WorkflowParts';
 import { statusVariant, whenText } from '../../utils/timesheetWorkflow';
 
@@ -167,26 +167,6 @@ export default function MyTimesheet() {
     }
   };
 
-  const handleExport = () => {
-    if (!records.length) {
-      toast.error('Nothing to export', 'You have no saved timesheets yet.');
-      return;
-    }
-    const rows = records.map((t) => ({
-      'Week Start': t.weekStart,
-      'Week End': t.weekEnd,
-      'Regular Hours': t.regularHours || 0,
-      'Overtime Hours': t.overtimeHours || 0,
-      'Break Hours': t.breakHours || 0,
-      'Total Hours': t.totalHours || 0,
-      Status: t.status,
-      'Submitted': t.submittedDate || '',
-      'Approved By': t.approvedBy || '',
-    }));
-    downloadCsv(`my-timesheets-${employeeId}.csv`, rows);
-    toast.success('Export ready', `Exported ${rows.length} timesheets as CSV.`);
-  };
-
   const handlePrint = () => {
     if (!printRef.current) {
       toast.error('Nothing to print', 'No saved timesheets to print.');
@@ -244,7 +224,6 @@ export default function MyTimesheet() {
             <CalendarDays className="w-4 h-4 text-gray-400" />
             <span className="font-medium">{formatDate(new Date().toISOString())}</span>
           </div>
-          <Button variant="outline" size="md" icon={Download} onClick={handleExport}>Export CSV</Button>
           <Button variant="outline" size="md" icon={Printer} onClick={handlePrint}>Print / PDF</Button>
           <Button variant="outline" size="md" icon={CalendarDays} onClick={() => setSelectedWeek(liveWeekRecord)}>
             This Week

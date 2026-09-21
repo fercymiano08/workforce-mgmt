@@ -4,16 +4,13 @@ import {
   XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend, AreaChart, Area
 } from 'recharts';
 import {
-  Clock, PhilippinePeso, Download, Award, Percent, TrendingUp
+  Clock, PhilippinePeso, Award, Percent, TrendingUp
 } from 'lucide-react';
 import Card, { CardHeader, CardTitle, CardDescription } from '../../components/ui/Card';
-import Button from '../../components/ui/Button';
 import Badge from '../../components/ui/Badge';
 import { analyticsService } from '../../services/api';
 import { formatCurrency } from '../../utils/helpers';
-import { downloadCSV } from '../../utils/export';
 import useApiData from '../../hooks/useApiData';
-import { useToast } from '../../context/ToastContext';
 import { SkeletonPage } from '../../components/ui/LoadingSkeleton';
 
 const kpiColors = {
@@ -43,7 +40,6 @@ function ChartEmpty() {
 }
 
 export default function Analytics() {
-  const { toast } = useToast();
   const [range, setRange] = useState('month');
   const { data: analyticsData, loading } = useApiData(
     () => analyticsService.getAll(),
@@ -70,26 +66,6 @@ export default function Analytics() {
     { label: 'Payroll Discrepancy', value: payrollDiscrepancy.length > 0 ? formatCurrency(totalOverpaid + totalUnderpaid) : '—', sub: payrollDiscrepancy.length > 0 ? `${totalDiscrepancies} discrepancies` : undefined, icon: PhilippinePeso, color: 'red' },
   ];
 
-  const payrollRows = payrollDiscrepancy.map(d => ({
-    Employee: d.employeeName,
-    Department: d.department,
-    'Expected Pay': d.expectedPay,
-    'Actual Pay': d.actualPay,
-    Difference: d.difference,
-    Status: d.status,
-  }));
-
-  const handleExport = () => {
-    const rows = kpis.map(k => ({ Metric: k.label, Value: k.value, ...(k.sub ? { Note: k.sub } : {}) }));
-    downloadCSV('workforce-analytics.csv', rows);
-    toast.success('Export Complete', 'Analytics summary exported to CSV.');
-  };
-
-  const handlePayrollExport = () => {
-    downloadCSV('payroll-discrepancies.csv', payrollRows);
-    toast.success('Export Complete', `Exported ${payrollRows.length} discrepancy records to CSV.`);
-  };
-
   if (loading) {
     return <SkeletonPage kpiCount={4} />;
   }
@@ -109,7 +85,6 @@ export default function Analytics() {
               </button>
             ))}
           </div>
-          <Button variant="outline" icon={Download} onClick={handleExport}>Export</Button>
         </div>
       </div>
 
@@ -244,7 +219,6 @@ export default function Analytics() {
         <CardHeader action={
           <div className="flex items-center gap-4">
             <Badge variant="danger" size="sm">{totalDiscrepancies} Discrepancies</Badge>
-            <Button variant="outline" size="sm" icon={Download} onClick={handlePayrollExport}>Export</Button>
           </div>
         }>
           <CardTitle className="flex items-center gap-2">
