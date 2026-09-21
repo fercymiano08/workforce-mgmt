@@ -235,8 +235,18 @@ export const timesheetService = {
     const { data } = await http.put(`/timesheets/${id}`, payload);
     return data;
   },
-  updateStatus: async (id, status, approvedBy) => {
-    const { data } = await http.patch(`/timesheets/${id}/status`, { status, ...(approvedBy ? { approvedBy } : {}) });
+  // status: Submitted (employee) | Approved | Rejected (reason) | Draft = reopen (reason)  (admin)
+  updateStatus: async (id, status, approvedBy, reason) => {
+    const { data } = await http.patch(`/timesheets/${id}/status`, {
+      status,
+      ...(approvedBy ? { approvedBy } : {}),
+      ...(reason ? { reason } : {}),
+    });
+    return data;
+  },
+  // Sends approved timesheets to payroll (each week only once) and returns them.
+  exportForPayroll: async (payload = {}) => {
+    const { data } = await http.post('/timesheets/payroll-export', payload);
     return data;
   },
   delete: async (id) => {

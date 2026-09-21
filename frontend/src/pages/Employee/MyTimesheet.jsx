@@ -1,6 +1,6 @@
 import { useMemo, useRef, useState } from 'react';
 import {
-  CalendarDays, Clock3, Timer, Coffee, Send, BarChart3, ChevronRight, Download, Printer,
+  CalendarDays, Clock3, Timer, Coffee, Send, BarChart3, ChevronRight, Download, Printer, AlertTriangle, Info,
 } from 'lucide-react';
 import { useTimesheets, useTimesheetsLoaded, submitTimesheet, refreshTimesheets } from '../../hooks/useTimesheets';
 import { useAuth } from '../../context/AuthContext';
@@ -16,6 +16,8 @@ import { attendanceService } from '../../services/api';
 import { toDateKey } from '../../services/attendanceService';
 import { formatDate, formatTime } from '../../utils/helpers';
 import { downloadCsv, printElementAsPdf } from '../../utils/export';
+import { StatusSteps, HistoryTimeline } from '../../components/timesheets/WorkflowParts';
+import { statusVariant, whenText } from '../../utils/timesheetWorkflow';
 
 const hours = (value) => `${Number(value || 0).toFixed(1)}h`;
 
@@ -63,6 +65,16 @@ export default function MyTimesheet() {
   );
 
   const latest = records[0];
+
+  // Finished weeks that are waiting for the employee (a returned timesheet always is), oldest first.
+  const actionable = useMemo(
+    () => records
+      .filter((t) => (t.status === 'Draft' && t.weekFinished && (t.totalHours || 0) > 0) || t.status === 'Rejected')
+      .sort((a, b) => a.weekEnd.localeCompare(b.weekEnd)),
+    [records]
+  );
+  const waiting = records.filter((t) => t.status === 'Submitted');
+  const canSubmit = (t) => !!t && (t.status === 'Draft' || t.status === 'Rejected') && t.weekFinished;
 
   // The current calendar week (Mon–Sun) built from this week's attendance, so
   // the page always has a real weekly picture even before a timesheet exists.
@@ -143,14 +155,15 @@ export default function MyTimesheet() {
         { label: 'Total Hours · This Week', value: hours(thisWeek.totalHours), icon: Clock3, accent: 'emerald' },
       ];
 
-  const handleSubmit = async () => {
-    if (!latest || latest.status !== 'Draft') return;
+  const handleSubmit = async (ts) => {
+    if (!canSubmit(ts)) return;
     try {
-      await submitTimesheet(latest.id);
+      await submitTimesheet(ts.id);
       await refreshTimesheets();
-      toast.success('Timesheet Submitted', 'Timesheet submitted successfully for HR review.');
-    } catch {
-      toast.error('Error', 'Failed to submit timesheet.');
+      toast.success('Timesheet Submitted', 'Your timesheet was sent to HR for review.');
+      setSelectedWeek(null);
+    } catch (err) {
+      toast.error('Could not submit', err?.response?.data?.message || 'Failed to submit timesheet.');
     }
   };
 
@@ -236,9 +249,6 @@ export default function MyTimesheet() {
           <Button variant="outline" size="md" icon={CalendarDays} onClick={() => setSelectedWeek(liveWeekRecord)}>
             This Week
           </Button>
-          {latest?.status === 'Draft' && (
-            <Button variant="primary" size="md" icon={Send} onClick={handleSubmit}>Submit Timesheet</Button>
-          )}
         </div>
       </div>
 
@@ -247,6 +257,45 @@ export default function MyTimesheet() {
           <KpiCard key={kpi.label} label={kpi.label} value={kpi.value} icon={kpi.icon} accent={kpi.accent} />
         ))}
       </div>
+
+      {/* What happens next */}
+      {actionable.length > 0 ? (
+        <div className="space-y-3">
+          {actionable.map((t) => (
+            <div key={t.id} className={`rounded-2xl border p-5 ${t.status === 'Rejected' ? 'bg-red-50/60 border-red-200' : 'bg-blue-50/60 border-blue-200'}`}>
+              <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+                <div className="space-y-2 min-w-0">
+                  <p className="text-sm font-semibold text-gray-900">
+                    {t.status === 'Rejected' ? 'Sent back to you' : 'Ready to submit'} · {formatDate(t.weekStart)} – {formatDate(t.weekEnd)} · {hours(t.totalHours)}
+                  </p>
+                  <StatusSteps status={t.status} />
+                  {t.status === 'Rejected' ? (
+                    <p className="text-sm text-red-700 flex items-start gap-2"><AlertTriangle className="w-4 h-4 mt-0.5 shrink-0" /> HR said: &ldquo;{t.statusReason}&rdquo;. Ask HR to correct the attendance if needed, then submit again.</p>
+                  ) : (
+                    <p className="text-sm text-gray-600 flex items-start gap-2"><Info className="w-4 h-4 mt-0.5 shrink-0 text-blue-500" /> Please check the days below and submit before {whenText(t.dueAt)}. After that, the system submits it for you.</p>
+                  )}
+                  {t.statusReason && t.status === 'Draft' && (
+                    <p className="text-xs text-amber-700">HR reopened this timesheet: &ldquo;{t.statusReason}&rdquo;</p>
+                  )}
+                </div>
+                <div className="flex items-center gap-2 shrink-0">
+                  <Button variant="outline" size="md" onClick={() => setSelectedWeek(t)}>Review days</Button>
+                  <Button variant="primary" size="md" icon={Send} onClick={() => handleSubmit(t)}>{t.status === 'Rejected' ? 'Resubmit' : 'Submit'}</Button>
+                </div>
+              </div>
+            </div>
+          ))}
+        </div>
+      ) : (
+        <div className="rounded-2xl border border-gray-100 bg-white p-4 text-sm text-gray-600 flex items-start gap-3">
+          <Info className="w-4 h-4 mt-0.5 text-blue-500 shrink-0" />
+          <p>
+            {waiting.length
+              ? `Your timesheet for ${formatDate(waiting[0].weekStart)} – ${formatDate(waiting[0].weekEnd)} is waiting for HR to review.`
+              : 'Your timesheet builds itself from your clock-ins. When the week ends you will be asked to review and submit it; if you do not, it is submitted for you the next Monday at noon.'}
+          </p>
+        </div>
+      )}
 
       {/* Single Summary Card */}
       <div
@@ -269,7 +318,7 @@ export default function MyTimesheet() {
           </div>
           <div className="flex items-center gap-3">
             {latest && (
-              <Badge variant={latest.status === 'Approved' ? 'success' : latest.status === 'Submitted' ? 'warning' : 'default'} size="sm">
+              <Badge variant={statusVariant[latest.status] || 'default'} size="sm">
                 {latest.status}
               </Badge>
             )}
@@ -308,10 +357,7 @@ export default function MyTimesheet() {
                       </div>
                     </td>
                     <td className="py-2.5 px-2">
-                      <Badge
-                        variant={t.status === 'Approved' ? 'success' : t.status === 'Submitted' ? 'warning' : 'default'}
-                        size="sm"
-                      >
+                      <Badge variant={statusVariant[t.status] || 'default'} size="sm">
                         {t.status}
                       </Badge>
                     </td>
@@ -354,14 +400,9 @@ export default function MyTimesheet() {
                 </>
               ) : (
                 <>
-                  <Badge
-                    variant={selectedWeek.status === 'Approved' ? 'success' : selectedWeek.status === 'Submitted' ? 'warning' : 'default'}
-                    size="sm"
-                  >
-                    {selectedWeek.status}
-                  </Badge>
+                  <StatusSteps status={selectedWeek.status} />
                   {selectedWeek.approvedBy && (
-                    <span className="text-xs text-gray-500">Approved by {selectedWeek.approvedBy}</span>
+                    <span className="text-xs text-gray-500">{selectedWeek.status === 'Rejected' ? 'Reviewed' : 'Approved'} by {selectedWeek.approvedBy}</span>
                   )}
                 </>
               )}
@@ -479,22 +520,30 @@ export default function MyTimesheet() {
               </div>
             )}
 
-            {/* Submit button */}
-            {!selectedWeek.isLive && selectedWeek.status === 'Draft' && (
-              <Button
-                onClick={async () => {
-                  try {
-                    await submitTimesheet(selectedWeek.id);
-                    await refreshTimesheets();
-                    toast.success('Timesheet Submitted', 'Timesheet submitted successfully for HR review.');
-                    setSelectedWeek(null);
-                  } catch {
-                    toast.error('Error', 'Failed to submit timesheet.');
-                  }
-                }}
-              >
-                Submit Timesheet
-              </Button>
+            {!selectedWeek.isLive && selectedWeek.statusReason && (
+              <div className={`rounded-xl px-4 py-3 text-sm ${selectedWeek.status === 'Rejected' ? 'bg-red-50 text-red-700' : 'bg-amber-50 text-amber-700'}`}>
+                <p className="font-semibold">{selectedWeek.status === 'Rejected' ? 'Why it was sent back' : 'Why it was reopened'}</p>
+                <p className="mt-0.5">{selectedWeek.statusReason}</p>
+              </div>
+            )}
+
+            {!selectedWeek.isLive && (
+              <div>
+                <p className="text-sm font-semibold text-gray-900 mb-3">History</p>
+                <HistoryTimeline history={selectedWeek.history} />
+              </div>
+            )}
+
+            {/* Submit button - only once the week is over */}
+            {!selectedWeek.isLive && (selectedWeek.status === 'Draft' || selectedWeek.status === 'Rejected') && (
+              <div className="space-y-2">
+                <Button icon={Send} disabled={!selectedWeek.weekFinished} onClick={() => handleSubmit(selectedWeek)}>
+                  {selectedWeek.status === 'Rejected' ? 'Resubmit Timesheet' : 'Submit Timesheet'}
+                </Button>
+                {!selectedWeek.weekFinished && (
+                  <p className="text-xs text-gray-500">You can submit this timesheet once the week ends on {formatDate(selectedWeek.weekEnd)}.</p>
+                )}
+              </div>
             )}
           </div>
         )}

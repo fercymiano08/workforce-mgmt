@@ -165,7 +165,7 @@ There are three roles. Each role logs in through the same login page but lands o
 | 7 | Attendance `HR_Manager/Attendance.jsx` | Admin | See and correct everyone's daily clock records |
 | 8 | Leave Management `HR_Manager/LeaveManagement.jsx` | Admin | Approve / reject leave requests |
 | 9 | Shifts `HR_Manager/Shifts.jsx` | Admin | Manage shift templates + build weekly schedules |
-| 10 | Timesheets `HR_Manager/Timesheets.jsx` | Admin | Review and approve weekly hour totals |
+| 10 | Timesheets `HR_Manager/Timesheets.jsx` | Admin | Review each employee's week (summary cards, quick filters, sortable table), open a side panel with the day-by-day attendance, then approve or reject — one by one or in bulk |
 | 11 | Reports `HR_Manager/Reports.jsx` | Admin | Build printable/CSV reports from live data |
 | 12 | Analytics `HR_Manager/Analytics.jsx` | Admin | Deep charts: trends, punctuality, productivity |
 | 13 | AI Decision Support `HR_Manager/AIDecisionSupport.jsx` | Admin | AI-generated insights + one-click decision queue |
@@ -469,7 +469,7 @@ The terminal has one popup component with four tones. Use this table to explain 
 | Red | Attendance Not Recorded | A real network/server failure — nothing was saved | Try Again / Cancel |
 | Amber (warning) | You Are Late | More than 15 min after shift start | Clock In Anyway / Cancel |
 | Amber | Schedule Unavailable | The schedule could not be loaded | Back to Home |
-| Amber | Overtime Not Approved | Clocking **out** more than 15 min past the (approved) shift end with no approved overtime covering it — the extra time is recorded but **not paid** | Clock Out / Go Back |
+| Amber | Overtime Not Approved | Clocking **out** more than 15 min past the (approved) shift end with no approved overtime covering it — the extra time is **not counted** (the day ends at the approved end) | Clock Out / Go Back |
 | Red/Amber banner | Early-out allowance | On the early clock-out reason screen: "1 of 2 used", or "this one will be recorded as UNEXCUSED" once used up; extra line for *Feeling Unwell* (certificate within 48 h) | — |
 | Blue (info) | Clocking In Early / Very Early | Before the shift start | Clock In Anyway / Cancel |
 | Screens | Already Clocked In Today · No Clock-In Found | Duplicate / missing punch | Suggests the right action |
@@ -771,16 +771,18 @@ Overtime is any time worked past the shift end (5:00 PM), but it is **paid only 
 paid overtime  =  the SMALLER of  (overtime really worked that day)  and  (overtime approved for that day)
 ```
 
+**How the day's hours are decided (server-side).** The server, not the kiosk screen, works out the hours. A day counts from clock-in to clock-out but **never past the end of the shift plus approved overtime**, so clocking out at 5:03 PM with no approval is recorded as 5:00 PM and adds no overtime. The real punch time is kept separately (`actual_clock_out`). A scheduled job (`attendance:recount-hours`, every minute) re-counts recent days, so **approving a request afterwards brings the minutes back** and cancelling it removes them again. Staying more than 15 minutes past the end with no approval also sends HR an "Unauthorized Overtime" alert.
+
 | Situation | Worked past 5 PM | Approved | Paid OT |
 |-----------|------------------|----------|---------|
-| Stayed late **without** asking | 2 h | 0 | **0 h** — recorded, flagged "Unauthorized Overtime", not paid |
+| Stayed late **without** asking | 2 h | 0 | **0 h** — not counted at all (the record ends at 5:00 PM); HR is alerted if it was more than 15 min |
 | Approved for 2 h, used all of it | 2 h | 2 h | 2 h |
 | Approved for 2 h, left on time | 0 h | 2 h | **0 h** (an unused approval is not paid) |
 | Approved for 2 h, stayed 3 h | 3 h | 2 h | **2 h** (capped at the approval) |
 | Approved for 2 h, stayed 1 h | 1 h | 2 h | 1 h |
 
 - Each weekly timesheet keeps three numbers: `overtime_hours` (worked), `approved_ot_hours` (approved) and **`paid_ot_hours`** (payable — the only overtime that counts). The HR Timesheets screen shows "**Xh not paid**" beside unapproved time, and the employee's timesheet shows "Xh paid · Yh not approved".
-- **The kiosk warns the employee at clock-out**: if they clock out more than 15 minutes after the (approved) end with no approval covering it, an amber **"Overtime Not Approved"** popup says the extra time will be recorded but **not paid** unless HR approves it. The punch is still accepted — nobody is trapped at the door.
+- **The kiosk warns the employee at clock-out**: if they clock out more than 15 minutes after the (approved) end with no approval covering it, an amber **"Overtime Not Approved"** popup says the extra time will **not be counted** unless HR approves it. The punch is still accepted — nobody is trapped at the door.
 - **Approval can come after the fact.** An employee who worked late without asking can file a request for **any day in the past 7 days** (older dates go through HR, who can record any date). HR then decides; if approved, the timesheet is recalculated and the time becomes payable.
 
 ### Tech Trail
@@ -794,47 +796,52 @@ paid overtime  =  the SMALLER of  (overtime really worked that day)  and  (overt
 
 **What it is:** automatic weekly hour summaries built from attendance, then reviewed by the employee and finalized by HR.
 
-**Files:** `Employee/MyTimesheet.jsx`, `HR_Manager/Timesheets.jsx`, backend `TimesheetController.php`, `TimesheetGenerationService.php`
+**Files:** `Employee/MyTimesheet.jsx`, `HR_Manager/Timesheets.jsx`, `components/timesheets/WorkflowParts.jsx`, backend `TimesheetController.php`, `TimesheetWorkflow.php`, `TimesheetGenerationService.php`, `AutoSubmitTimesheets.php`, `RemindAboutTimesheets.php`
 
-### The Cycle
+### The Cycle (Draft → Submitted → Approved → Sent to payroll)
 
 ```
-Week ends
+DURING THE WEEK
+   Every clock-out refreshes the employee's timesheet (status Draft, hours counted by the server)
+   │
+   ▼  Sunday 23:59 (Manila) — the week is FINISHED
+EMPLOYEE SUBMITS   (only possible once the week is over)
+   Monday: the employee gets a "your timesheet is ready" notification
+   → submits it → status "Submitted", submitted_at / submitted_by recorded
+   → NOT submitted by Monday 12:00 PM? The system submits it for them ("auto-submitted");
+     weeks with no hours are left alone
    │
    ▼
-GENERATION (automatic, idempotent)
-   For every employee with completed attendance that week:
-   sum regular_hours, overtime, break, total
-   → INSERT/refresh one `timesheets` row
-     id format TS001, TS002...
-     week_start / week_end stamped
+ADMIN REVIEWS   (the admin's queue opens on "Waiting for review")
+   Warnings shown first: no clock-out, zero hours, overtime not fully paid, attendance changed after submission
+   → Approve                       → status "Approved", reviewed_by / reviewed_at stamped
+   → Reject (a REASON is required) → status "Rejected"; the employee sees the reason, fixes the cause
+                                     (e.g. HR corrects attendance) and resubmits
+   → Reopen (a REASON is required) → back to "Draft", hours refreshed from the latest attendance
+   Nobody reviewed it for 2 days? The admins get one nudge.
    │
    ▼
-EMPLOYEE REVIEW
-   Employee opens My Timesheet, checks the totals
-   → submits it (their own row only): PATCH /api/timesheets/{id}/status
-   → status becomes "Submitted", submitted_date = today
-   (once submitted, the employee can no longer change it)
-   │
-   ▼
-HR DECISION
-   Admin reviews totals (including approved OT from Module 10)
-   → Approved  → approved_by stamped, notification sent
-   → Rejected  → comments required, notification sent
-   │
-   ▼
-LOCKED
-   Approved timesheets are final references for payroll reporting
+SENT TO PAYROLL   (admin: "Send to payroll")
+   Approved timesheets are downloaded as a file and marked as sent — each week goes only once,
+   so it can never be paid twice. After that it can no longer be reopened.
 ```
+
+**Every step is written to the timesheet's history** (who, when, and the reason), which the side panel shows as a timeline.
 
 ### Guardrails
 
 | Rule | Enforced by |
 |------|-------------|
-| Employee can only ever submit **their own** row, and only while it's still awaiting review | Controller checks caller vs row owner inline |
-| Submitted rows freeze for employees | Status check before allowing changes |
-| Admin can set any status | `admin` middleware group |
+| Only a **finished week** can be submitted, approved or rejected | `TimesheetWorkflow` (server) |
+| Legal moves only: Draft/Rejected → Submitted (employee) · Submitted → Approved / Rejected (admin) · Submitted/Approved → Draft = reopen (admin) — nothing else | `TimesheetWorkflow` + `updateStatus` |
+| Employee can only submit **their own** row; the admin cannot submit for them | Controller checks caller vs owner |
+| Rejecting and reopening **need a reason** (at least a few words) | `TimesheetWorkflow` |
+| **Hours are frozen once submitted.** If attendance changes afterwards the hours stay as reviewed, the row is flagged "changed after submission" and the admin reopens it to refresh | `TimesheetGenerationService` (`needs_refresh`) |
+| **Hours cannot be typed in or edited** — they come from attendance; the admin can only add a note | `TimesheetController::update` |
+| A submitted or approved timesheet **cannot be deleted**; a timesheet **sent to payroll cannot be reopened** | Controller / workflow (409) |
 | Generation never duplicates | Idempotent refresh logic |
+| Unsubmitted finished weeks are submitted automatically at **Monday 12:00 PM (Manila)**; reminders and review nudges are sent once | Scheduled commands `timesheets:auto-submit`, `timesheets:remind` (hourly) |
+| Compliance is visible: on-time submissions %, average time to review, number auto-submitted | Admin Timesheets page |
 
 > **What a timesheet actually contains — hours, not money.** The row stores `regular_hours`, `overtime_hours` (what was *actually clocked*), `approved_ot_hours` (what was *approved via requests* — a reconciliation control, see Module 10), `break_hours`, and `total_hours`. There is **no rate, salary, or amount anywhere** — this system's job is to produce a trustworthy weekly block of *payable time*; multiplying it by a rate is the external payroll management system's step.
 
@@ -861,7 +868,7 @@ LOCKED
 | **Absent** | No clock-in and no approved leave | No |
 | **On Leave** | Approved leave covers the day | Not counted against anyone |
 
-Graphs count each status **on its own** — a late arrival appears in the Late bar only, never also in Present. The attendance rate is *attended ÷ (attended + absent)*, so approved leave never lowers it and someone who left early still counts as having come to work.
+**"Present" is a group with two parts: On Time and Late** (everyone who came in, whichever way). The dashboard draws it as **one Present bar split into two colours** — green On Time, amber Late — and the Present Today card shows the total with "X on time · Y late" underneath. **Early Leave stays its own category** (it is about leaving, not arriving), as do Absent and On Leave. Nothing is counted twice, and the stored status values are unchanged. The attendance rate is *attended ÷ (attended + absent)*, so approved leave never lowers it and someone who left early still counts as having come to work.
 
 ### How It Works (Cached Stats Pattern)
 
@@ -1037,6 +1044,8 @@ Open events raise the system's concern level; resolving them restores the score.
 | Event | Notification to |
 |-------|-----------------|
 | Leave submitted | HR |
+| Clock-in / clock-out (normal) | The employee only, low priority — "You clocked out at 5:00 PM. 8 hours counted." Not sent to HR, so the bell stays quiet |
+| Late arrival, staying 15+ min past the end with no approval | HR |
 | Leave approved/rejected | Employee |
 | Overtime submitted | HR |
 | Overtime approved/rejected | Employee |

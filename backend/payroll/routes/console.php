@@ -14,3 +14,8 @@ Artisan::command('inspire', function () {
 // with a 1-minute worst case instead of "only when someone remembers to run
 // snapshot:sync by hand". Started by start-all.ps1 via `schedule:work`.
 Schedule::command('snapshot:sync')->everyMinute()->withoutOverlapping();
+
+// Timesheet workflow: submit unsubmitted finished weeks at the deadline (Monday 12:00 Manila time) and
+// send the one-time reminders. Both are safe to run repeatedly.
+Schedule::command('timesheets:auto-submit')->hourly()->withoutOverlapping();
+Schedule::command('timesheets:remind')->hourly()->withoutOverlapping();

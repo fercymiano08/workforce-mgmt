@@ -306,31 +306,31 @@
         <mxCell id="p4_laneH" value="WORKFORCE ADMIN" style="swimlane;html=1;horizontal=0;startSize=26;fontSize=12;fillColor=#f7f7f7;strokeColor=#666666;" vertex="1" parent="p4_pool">
           <mxGeometry x="28" y="400" width="1112" height="220" as="geometry" />
         </mxCell>
-        <mxCell id="p4_s" value="Week ends" style="ellipse;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;fontSize=9;" vertex="1" parent="p4_laneS">
+        <mxCell id="p4_s" value="Week ends (Sunday)" style="ellipse;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;fontSize=9;" vertex="1" parent="p4_laneS">
           <mxGeometry x="46" y="68" width="60" height="60" as="geometry" />
         </mxCell>
-        <mxCell id="p4_gen" value="Aggregate attendance into weekly timesheet: regular / OT worked / OT approved / paid_ot_hours" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffe6cc;strokeColor=#d79b00;fontSize=11;" vertex="1" parent="p4_laneS">
+        <mxCell id="p4_gen" value="During the week: timesheet builds itself from clock-outs (Draft)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffe6cc;strokeColor=#d79b00;fontSize=11;" vertex="1" parent="p4_laneS">
           <mxGeometry x="150" y="60" width="220" height="76" as="geometry" />
         </mxCell>
-        <mxCell id="p4_rev" value="Review my weekly hours" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;fontSize=11;" vertex="1" parent="p4_laneE">
+        <mxCell id="p4_rev" value="Review my week (allowed once the week is over)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;fontSize=11;" vertex="1" parent="p4_laneE">
           <mxGeometry x="150" y="68" width="150" height="62" as="geometry" />
         </mxCell>
-        <mxCell id="p4_sub" value="Submit timesheet (status Submitted)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;fontSize=11;" vertex="1" parent="p4_laneE">
+        <mxCell id="p4_sub" value="Submit timesheet - or auto-submitted Monday 12:00 PM" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;fontSize=11;" vertex="1" parent="p4_laneE">
           <mxGeometry x="340" y="68" width="170" height="62" as="geometry" />
         </mxCell>
-        <mxCell id="p4_chk" value="Check totals incl. approved OT vs attendance records" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;fontSize=11;" vertex="1" parent="p4_laneH">
+        <mxCell id="p4_chk" value="Check totals and warnings (missing clock-out, zero hours...)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;fontSize=11;" vertex="1" parent="p4_laneH">
           <mxGeometry x="150" y="75" width="200" height="70" as="geometry" />
         </mxCell>
         <mxCell id="p4_gok" value="Figures correct?" style="rhombus;whiteSpace=wrap;html=1;fillColor=#fff2cc;strokeColor=#d6b656;fontSize=10;" vertex="1" parent="p4_laneH">
           <mxGeometry x="400" y="82" width="76" height="56" as="geometry" />
         </mxCell>
-        <mxCell id="p4_fix" value="Employee files correction / note" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;fontSize=11;" vertex="1" parent="p4_laneE">
+        <mxCell id="p4_fix" value="Reject WITH a reason; employee fixes and resubmits" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;fontSize=11;" vertex="1" parent="p4_laneE">
           <mxGeometry x="560" y="68" width="170" height="62" as="geometry" />
         </mxCell>
-        <mxCell id="p4_appr" value="Approve (status Approved, approved_by)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;fontSize=11;" vertex="1" parent="p4_laneH">
+        <mxCell id="p4_appr" value="Approve (hours are frozen)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;fontSize=11;" vertex="1" parent="p4_laneH">
           <mxGeometry x="560" y="140" width="200" height="62" as="geometry" />
         </mxCell>
-        <mxCell id="p4_end" value="Timesheet locked for payroll" style="ellipse;whiteSpace=wrap;html=1;fillColor=#f8cecc;strokeColor=#b85450;strokeWidth=3;fontSize=9;" vertex="1" parent="p4_laneH">
+        <mxCell id="p4_end" value="Send to payroll (once)" style="ellipse;whiteSpace=wrap;html=1;fillColor=#f8cecc;strokeColor=#b85450;strokeWidth=3;fontSize=9;" vertex="1" parent="p4_laneH">
           <mxGeometry x="820" y="148" width="64" height="60" as="geometry" />
         </mxCell>
         <mxCell id="p4_f1" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;endArrow=open;endFill=0;" edge="1" parent="1" source="p4_s" target="p4_gen"><mxGeometry relative="1" as="geometry" /></mxCell>
@@ -342,7 +342,7 @@
         <mxCell id="p4_f7" value="Corrected" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;endArrow=open;endFill=0;fontSize=10;dashed=1;" edge="1" parent="1" source="p4_fix" target="p4_chk"><mxGeometry relative="1" as="geometry" /></mxCell>
         <mxCell id="p4_f8" value="Yes" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;endArrow=open;endFill=0;fontSize=10;" edge="1" parent="1" source="p4_gok" target="p4_appr"><mxGeometry relative="1" as="geometry" /></mxCell>
         <mxCell id="p4_f9" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;endArrow=open;endFill=0;" edge="1" parent="1" source="p4_appr" target="p4_end"><mxGeometry relative="1" as="geometry" /></mxCell>
-      <mxCell id="p4_note" value="LATEST RULES: Each weekly timesheet keeps three overtime figures - overtime_hours (worked), approved_ot_hours (approved) and paid_ot_hours (payable = per-day smaller of the two). HR sees &#x27;not paid&#x27; beside unapproved time." style="rounded=1;whiteSpace=wrap;html=1;fillColor=#fff2cc;strokeColor=#d6b656;align=left;spacingLeft=10;spacingRight=10;fontSize=11;" vertex="1" parent="1"><mxGeometry x="20" y="660" width="1100" height="100" as="geometry" /></mxCell>
+      <mxCell id="p4_note" value="LATEST RULES: Draft -&gt; Submitted -&gt; Approved / Rejected -&gt; sent to payroll. Only a finished week can be submitted or reviewed. Hours freeze once submitted (later attendance changes only raise a warning; the admin reopens with a reason). Rejecting and reopening need a reason. Each approved timesheet is sent to payroll once and then cannot be reopened. Every step is kept in the timesheet&#x27;s history." style="rounded=1;whiteSpace=wrap;html=1;fillColor=#fff2cc;strokeColor=#d6b656;align=left;spacingLeft=10;spacingRight=10;fontSize=11;" vertex="1" parent="1"><mxGeometry x="20" y="660" width="1100" height="100" as="geometry" /></mxCell>
         </root>
     </mxGraphModel>
   </diagram>

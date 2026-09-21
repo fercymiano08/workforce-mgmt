@@ -579,7 +579,7 @@ export default function AttendanceTerminal() {
     }
 
     // Past the (approved) end of the shift by more than the grace period: the extra
-    // time is recorded honestly but only PAID if overtime was approved. Tell the
+    // time is NOT counted unless overtime was approved (the server caps the day at the approved end). Tell the
     // employee now, so nobody stays on believing the extra hours count. The punch
     // itself is never refused - people are never trapped at the door.
     const nowMin = minutesFromTime(toTimeString(nowInTimezone(timezone)));
@@ -592,8 +592,8 @@ export default function AttendanceTerminal() {
         tone: 'warning',
         title: 'Overtime Not Approved',
         message: otHours > 0
-          ? `You are clocking out ${amount} after your approved overtime ended (${formatTime(`${pad(Math.floor(endMin / 60) % 24)}:${pad(endMin % 60)}`)}). That extra time will be recorded but will NOT be paid unless HR approves it. You can send an overtime request from My Attendance.`
-          : `Your shift ended at ${formatTime(shiftInfo.endTime)} and you have no approved overtime. You are clocking out ${amount} later. That extra time will be recorded but will NOT be paid unless HR approves an overtime request for today. You can send one from My Attendance.`,
+          ? `You are clocking out ${amount} after your approved overtime ended (${formatTime(`${pad(Math.floor(endMin / 60) % 24)}:${pad(endMin % 60)}`)}). That extra time will NOT be counted - your day will end at the approved time. To have overtime counted, send an overtime request from My Attendance.`
+          : `Your shift ended at ${formatTime(shiftInfo.endTime)} and you have no approved overtime. You are clocking out ${amount} later. That extra time will NOT be counted - your day will end at ${formatTime(shiftInfo.endTime)}. To have overtime counted, send an overtime request from My Attendance.`,
         confirmLabel: 'Clock Out',
         cancelLabel: 'Go Back',
         onConfirm: () => { setNotice(null); recordAttendance(); },

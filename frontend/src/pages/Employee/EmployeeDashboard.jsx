@@ -2,9 +2,9 @@ import { useMemo } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import {
   Clock, CalendarDays, CalendarCheck, Hourglass,
-  Briefcase, ChevronRight, Plus,
+  Briefcase, Plus,
   Fingerprint, FileText, CalendarClock, Calendar, ArrowRight,
-  Shield, Building2, BadgeCheck, DoorOpen,
+  Shield, Building2, BadgeCheck, DoorOpen, User, Settings,
 } from 'lucide-react';
 import {
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend,
@@ -37,11 +37,14 @@ const dayLabel = (dateStr) => {
   return d.toLocaleDateString('en-US', { weekday: 'short' });
 };
 
+// App-style shortcuts: a big icon tile with a short name underneath (nothing gets cut off).
 const quickActions = [
-  { label: 'My Attendance', description: 'View attendance records', path: '/my-attendance', icon: Fingerprint, bg: 'bg-blue-50', color: 'text-blue-600' },
-  { label: 'Leave Management', description: 'Apply & track leaves', path: '/leave', icon: Calendar, bg: 'bg-emerald-50', color: 'text-emerald-600' },
-  { label: 'My Timesheets', description: 'Review weekly hours', path: '/my-timesheet', icon: FileText, bg: 'bg-purple-50', color: 'text-purple-600' },
-  { label: 'My Schedule', description: 'View upcoming shifts', path: '/my-schedule', icon: CalendarClock, bg: 'bg-amber-50', color: 'text-amber-600' },
+  { label: 'My Attendance', hint: 'Clock-ins & hours', path: '/my-attendance', icon: Fingerprint, tile: 'from-blue-500 to-blue-600 shadow-blue-500/25' },
+  { label: 'Leave', hint: 'Apply & track', path: '/leave', icon: Calendar, tile: 'from-emerald-500 to-emerald-600 shadow-emerald-500/25' },
+  { label: 'My Timesheet', hint: 'Weekly hours', path: '/my-timesheet', icon: FileText, tile: 'from-purple-500 to-purple-600 shadow-purple-500/25' },
+  { label: 'My Schedule', hint: 'Upcoming shifts', path: '/my-schedule', icon: CalendarClock, tile: 'from-amber-500 to-orange-500 shadow-amber-500/25' },
+  { label: 'My Profile', hint: 'Details & contact', path: '/my-profile', icon: User, tile: 'from-sky-500 to-cyan-600 shadow-sky-500/25' },
+  { label: 'Settings', hint: 'Password & look', path: '/settings', icon: Settings, tile: 'from-slate-500 to-slate-600 shadow-slate-500/25' },
 ];
 
 const CustomTooltip = ({ active, payload, label }) => {
@@ -379,21 +382,19 @@ export default function EmployeeDashboard() {
             <h3 className="text-base font-semibold text-gray-900 tracking-tight">Quick Actions</h3>
             <Badge variant="primary" size="sm">{quickActions.length} shortcuts</Badge>
           </div>
-          <div className="flex-1 p-6 pt-2 grid grid-cols-1 sm:grid-cols-2 gap-3 auto-rows-fr">
+          <div className="flex-1 min-h-0 p-4 pt-1 grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-2 gap-2.5 auto-rows-fr">
             {quickActions.map((action) => (
               <button
                 key={action.label}
+                type="button"
                 onClick={() => navigate(action.path)}
-                className="flex items-center gap-3 p-4 bg-white rounded-xl border border-gray-100 hover:bg-gray-50 hover:border-gray-200 transition-colors text-left"
+                className="group flex flex-col items-center justify-center gap-1 p-2 min-w-0 min-h-0 rounded-2xl border border-gray-100 bg-gray-50/60 hover:bg-white hover:border-blue-200 hover:shadow-md hover:-translate-y-0.5 active:translate-y-0 transition-all duration-200 text-center"
               >
-                <div className={`w-10 h-10 rounded-xl flex items-center justify-center shrink-0 ${action.bg}`}>
-                  <action.icon className={`w-5 h-5 ${action.color}`} />
-                </div>
-                <div className="flex-1 min-w-0">
-                  <p className="text-sm font-semibold text-gray-900 truncate">{action.label}</p>
-                  <p className="text-xs text-gray-400 truncate mt-0.5">{action.description}</p>
-                </div>
-                <ChevronRight className="w-4 h-4 text-gray-300 shrink-0" />
+                <span className={`w-11 h-11 rounded-xl bg-gradient-to-br ${action.tile} shadow-md flex items-center justify-center group-hover:scale-105 transition-transform duration-200`}>
+                  <action.icon className="w-5 h-5 text-white" />
+                </span>
+                <span className="text-[13px] font-semibold text-gray-900 leading-tight">{action.label}</span>
+                <span className="text-[10px] text-gray-400 leading-tight">{action.hint}</span>
               </button>
             ))}
           </div>

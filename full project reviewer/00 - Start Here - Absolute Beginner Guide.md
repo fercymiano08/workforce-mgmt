@@ -226,7 +226,7 @@ Two more ideas:
 |---|--------------|-----------|---------------------|
 | 1 | `postgres` | **One** PostgreSQL 18 server holding all **8 databases** (created automatically the first time). Data lives in the `pgdata` volume | `5433` (so it never clashes with a normal PostgreSQL on 5432) |
 | 8 | `core`, `intelligence`, `attendance`, `scheduling`, `timeoff`, `payroll`, `communications`, `configuration` | The **8 Laravel microservices**. All eight are built from the **same** recipe (`backend.Dockerfile`), told which folder to use with `SERVICE=<name>` | `8000`, `8001`, `8003`–`8008` |
-| 5 | `scheduler-attendance`, `-intelligence`, `-scheduling`, `-timeoff`, `-payroll` | The **same images**, but instead of serving web requests they run `php artisan schedule:work` — the background jobs (the once-a-minute data sync in all five; the attendance one also runs the hourly "sick certificate overdue" check). In the normal scripts these are the hidden PowerShell windows | none |
+| 5 | `scheduler-attendance`, `-intelligence`, `-scheduling`, `-timeoff`, `-payroll` | The **same images**, but instead of serving web requests they run `php artisan schedule:work` — the background jobs (the once-a-minute data sync in all five; the attendance one also runs the hourly "sick certificate overdue" check and a once-a-minute re-count of recent days' hours; the payroll one also runs the hourly timesheet jobs: auto-submit at the Monday-noon deadline, and reminders). In the normal scripts these are the hidden PowerShell windows | none |
 | 1 | `frontend` | The React app **plus nginx**. nginx serves the screens and routes each `/api/...` request to the right service (the Docker version of the Vite proxy — a *router*, **not** an API gateway) | `5173` |
 
 15 = 1 + 8 + 5 + 1.

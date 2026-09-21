@@ -26,14 +26,14 @@ class PayrollApiTest extends TestCase
             'employee_id' => 'EMP20260001',
             'employee_name' => 'Juan Dela Cruz',
             'department' => 'IT & Systems',
-            'date' => now()->toDateString(),
-            'week_start' => now()->startOfWeek()->toDateString(),
-            'week_end' => now()->endOfWeek()->toDateString(),
+            'date' => now()->subWeek()->endOfWeek()->toDateString(),
+            'week_start' => now()->subWeek()->startOfWeek()->toDateString(),
+            'week_end' => now()->subWeek()->endOfWeek()->toDateString(),
             'regular_hours' => 8,
             'overtime_hours' => 0,
             'break_hours' => 1,
             'total_hours' => 8,
-            'status' => 'Pending',
+            'status' => 'Submitted',
         ]);
 
         $this->actingAs($admin)

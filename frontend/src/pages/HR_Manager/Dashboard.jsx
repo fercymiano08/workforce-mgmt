@@ -23,7 +23,7 @@ import {
   employeeService, attendanceService, leaveService, shiftService, analyticsService,
 } from '../../services/api';
 import { toDateKey } from '../../services/attendanceService';
-import { didAttend } from '../../utils/constants';
+import { didAttend, isPresentGroup } from '../../utils/constants';
 import { formatDate } from '../../utils/helpers';
 
 const COLORS = {
@@ -146,8 +146,9 @@ export default function Dashboard() {
   );
 
   const kpi = useMemo(() => {
-    // Present = on time only. Late and Early Leave have their own counts; the rate uses everyone who attended.
-    const presentToday = todaysAttendance.filter((a) => a.status === 'Present').length;
+    // Present = everyone who came in, split into On Time and Late. Early Leave is counted on its own.
+    const onTimeToday = todaysAttendance.filter((a) => a.status === 'Present').length;
+    const presentToday = todaysAttendance.filter((a) => isPresentGroup(a.status)).length;
     const attendedToday = todaysAttendance.filter((a) => didAttend(a.status)).length;
     const lateToday = todaysAttendance.filter((a) => a.status === 'Late').length;
     const onLeave = employees.filter((e) => e.status === 'On Leave').length;
@@ -158,6 +159,7 @@ export default function Dashboard() {
     return {
       totalEmployees: employees.length,
       presentToday,
+      onTimeToday,
       lateToday,
       onLeave,
       attendanceRate,
@@ -174,7 +176,7 @@ export default function Dashboard() {
       const rows = attendance.filter((a) => a.date === key);
       days.push({
         day: label,
-        present: rows.filter((a) => a.status === 'Present').length,
+        onTime: rows.filter((a) => a.status === 'Present').length,
         late: rows.filter((a) => a.status === 'Late').length,
         earlyLeave: rows.filter((a) => a.status === 'Early Leave').length,
         absent: rows.filter((a) => a.status === 'Absent').length,
@@ -251,7 +253,7 @@ export default function Dashboard() {
 
   const kpiCards = [
     { labelKey: 'dashboard.totalEmployees', value: kpi.totalEmployees, icon: Users, change: null, accent: 'blue' },
-    { labelKey: 'dashboard.presentToday', value: kpi.presentToday, icon: CheckCircle, change: null, accent: 'emerald' },
+    { labelKey: 'dashboard.presentToday', value: kpi.presentToday, icon: CheckCircle, change: null, accent: 'emerald', subtext: `${kpi.onTimeToday} on time · ${kpi.lateToday} late` },
     { labelKey: 'dashboard.onLeave', value: kpi.onLeave, icon: CalendarOff, change: null, accent: 'amber' },
     { labelKey: 'dashboard.lateEmployees', value: kpi.lateToday, icon: Clock, change: null, accent: 'red' },
     { labelKey: 'dashboard.attendanceRate', value: `${kpi.attendanceRate}%`, icon: TrendingUp, change: null, accent: 'purple' },
@@ -296,8 +298,9 @@ export default function Dashboard() {
                 <YAxis axisLine={false} tickLine={false} tick={{ fontSize: 12, fill: '#64748B' }} />
                 <Tooltip content={<CustomTooltip />} />
                 <Legend iconType="circle" iconSize={8} wrapperStyle={{ paddingTop: 16, fontSize: 12 }} />
-                <Bar dataKey="present" name="Present" fill={COLORS.emerald} radius={[6, 6, 0, 0]} />
-                <Bar dataKey="late" name="Late" fill={COLORS.amber} radius={[6, 6, 0, 0]} />
+                {/* One Present bar, split into On Time and Late */}
+                <Bar dataKey="onTime" name="Present - On Time" stackId="present" fill={COLORS.emerald} />
+                <Bar dataKey="late" name="Present - Late" stackId="present" fill={COLORS.amber} radius={[6, 6, 0, 0]} />
                 <Bar dataKey="earlyLeave" name="Early Leave" fill={COLORS.sky} radius={[6, 6, 0, 0]} />
                 <Bar dataKey="absent" name="Absent" fill={COLORS.red} radius={[6, 6, 0, 0]} />
               </BarChart>

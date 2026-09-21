@@ -18,7 +18,7 @@ class RoleBoundaryTest extends TestCase
 
     private const ADMIN_ONLY = [
         ['GET', '/api/timesheets'],
-        ['POST', '/api/timesheets'],
+        ['POST', '/api/timesheets/payroll-export'],
         ['PUT', '/api/timesheets/TS001'],
         ['DELETE', '/api/timesheets/TS001'],
     ];
@@ -81,8 +81,8 @@ class RoleBoundaryTest extends TestCase
         $employee = $this->otpEmployeeUser();
         Timesheet::create([
             'id' => 'TS901', 'employee_id' => 'EMP-OTP', 'employee_name' => 'Juan',
-            'department' => 'IT & Systems', 'date' => now()->toDateString(),
-            'week_start' => now()->startOfWeek()->toDateString(), 'week_end' => now()->endOfWeek()->toDateString(),
+            'department' => 'IT & Systems', 'date' => now()->subWeek()->endOfWeek()->toDateString(),
+            'week_start' => now()->subWeek()->startOfWeek()->toDateString(), 'week_end' => now()->subWeek()->endOfWeek()->toDateString(),
             'regular_hours' => 8, 'overtime_hours' => 0, 'break_hours' => 1, 'total_hours' => 8, 'status' => 'Draft',
         ]);
 

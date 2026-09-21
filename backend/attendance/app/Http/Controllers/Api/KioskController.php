@@ -16,6 +16,7 @@ use App\Services\ConfigurationClient;
 use App\Services\EarlyLeaveEnforcer;
 use App\Services\NotificationService;
 use App\Services\PayrollClient;
+use App\Services\ShiftHours;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use App\Services\KioskDeviceToken;
@@ -516,6 +517,17 @@ class KioskController extends Controller
             );
         }
 
+        // A quiet confirmation for the employee, so they can see the punch was recorded.
+        $inAt = Carbon::parse($record->date->toDateString().' '.$record->clock_in)->format('g:i A');
+        NotificationService::notifyEmployee(
+            $record->employee_id,
+            'attendance_clock_in',
+            'Clocked In',
+            'You clocked in at '.$inAt.($record->status === 'Late' ? ' (late).' : ' (on time).'),
+            'low',
+            '/my-attendance'
+        );
+
         return response()->json(['data' => $record->toApiArray()], 201);
     }
 
@@ -597,6 +609,30 @@ class KioskController extends Controller
             ], 422);
         }
 
+        // The SERVER decides which hours count - the terminal's own arithmetic is not trusted.
+        // Time is counted only up to the effective end of the shift: 5:00 PM, or later when an
+        // overtime request was approved. Minutes past that with no approval do not count (the real
+        // punch is kept in actual_clock_out, so a later approval can still bring them back).
+        $countedOut = $clockOut;
+        $uncountedMinutes = 0;
+        if ($effectiveEnd && $schedule && $schedule->shift) {
+            $hours = ShiftHours::count(
+                Carbon::parse($dateKey.' '.$record->clock_in, $timezone),
+                $clockOut,
+                ShiftHours::baseEnd($dateKey, $schedule->shift->start_time, $schedule->shift->end_time, $timezone),
+                $effectiveEnd,
+                $timezone,
+                $dateKey,
+            );
+            $countedOut = $hours['countedOut'];
+            $uncountedMinutes = $hours['uncountedMinutes'];
+            $validated['regularHours'] = $hours['regular'];
+            $validated['overtime'] = $hours['overtime'];
+            $validated['totalHours'] = $hours['total'];
+            $validated['breakHours'] = $hours['break'];
+            $validated['clockOut'] = $countedOut->format('H:i:s');
+        }
+
         $data = Attendance::apiFillable($validated);
         if ($isEarly) {
             // The day's attendance status becomes its own category: the
@@ -604,7 +640,22 @@ class KioskController extends Controller
             $data['status'] = 'Early Leave';
         }
 
+        $data['actual_clock_out'] = $clockOut->format('H:i:s');
+
         $record->update($data);
+
+        // A few minutes over is normal; staying well past the end with no approval is worth HR's attention.
+        if ($uncountedMinutes > self::LATE_GRACE_MINUTES) {
+            $employee = Employee::find($record->employee_id);
+            $name = $employee ? trim($employee->first_name.' '.$employee->last_name) : $record->employee_id;
+            NotificationService::notifyAdmins(
+                'attendance_unauthorized_ot',
+                'Unauthorized Overtime',
+                "{$name} (#{$record->employee_id}) stayed {$uncountedMinutes} minutes past the end of the shift without an approved overtime request. That time was not counted.",
+                'high',
+                '/attendance'
+            );
+        }
 
         $earlyLeave = null;
         if ($isEarly) {
@@ -612,6 +663,19 @@ class KioskController extends Controller
             // Verified, not just recorded: free allowance, proof for SICK, alerts to every
             // admin, copycat detection. The punch stays accepted either way.
             $earlyLeave = $early ? app(EarlyLeaveEnforcer::class)->applyAtPunch($early) : null;
+        }
+
+        if (! $isEarly) {
+            $fresh = $record->fresh();
+            $message = 'You clocked out at '.$countedOut->format('g:i A').'. '.rtrim(rtrim(number_format((float) $fresh->total_hours, 2), '0'), '.').' hours counted';
+            if ((float) $fresh->overtime > 0) {
+                $message .= ', including '.rtrim(rtrim(number_format((float) $fresh->overtime, 2), '0'), '.').' h of approved overtime';
+            }
+            $message .= '.';
+            if ($uncountedMinutes > 0) {
+                $message .= ' The last '.$uncountedMinutes.' minute'.($uncountedMinutes === 1 ? '' : 's').' after '.$countedOut->format('g:i A').' were not counted (no approved overtime).';
+            }
+            NotificationService::notifyEmployee($record->employee_id, 'attendance_clock_out', 'Clocked Out', $message, 'low', '/my-attendance');
         }
 
         PayrollClient::syncForEmployee($record->employee_id);
@@ -662,28 +726,7 @@ class KioskController extends Controller
      */
     private function effectiveShiftEnd(string $employeeId, string $dateKey, ?string $startTime, ?string $endTime, string $timezone): ?Carbon
     {
-        if (! $startTime || ! $endTime) {
-            return null;
-        }
-
-        $shiftStarts = Carbon::parse($dateKey.' '.$startTime, $timezone);
-        $shiftEnds = Carbon::parse($dateKey.' '.$endTime, $timezone);
-
-        if ($shiftEnds->lte($shiftStarts)) {
-            $shiftEnds->addDay();
-        }
-
-        $approvedOtHours = OvertimeRequest::where('employee_id', $employeeId)
-            ->where('date', $dateKey)
-            ->where('status', 'Approved')
-            ->get()
-            ->sum(fn (OvertimeRequest $r) => (float) ($r->approved_hours ?? $r->expected_hours ?? 0));
-
-        if ($approvedOtHours > 0) {
-            $shiftEnds->addMinutes((int) round($approvedOtHours * 60));
-        }
-
-        return $shiftEnds;
+        return ShiftHours::effectiveEnd($employeeId, $dateKey, $startTime, $endTime, $timezone);
     }
 
     /**

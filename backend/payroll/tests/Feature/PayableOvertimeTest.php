@@ -131,4 +131,23 @@ class PayableOvertimeTest extends TestCase
 
         $this->assertEquals(0.0, $this->week()->paid_ot_hours);
     }
+
+    public function test_a_generated_timesheet_starts_as_draft_and_its_owner_can_submit_it(): void
+    {
+        $this->employee();
+        $this->workDay(self::MONDAY, 0);
+
+        $sheet = $this->week();
+        $this->assertSame('Draft', $sheet->status);
+
+        $user = \App\Models\User::factory()->create([
+            'employee_id' => 'EMP20260001', 'role' => 'Employee', 'role_label' => 'Employee', 'email' => 'juan@workforcepro.com',
+        ]);
+        \Illuminate\Support\Carbon::setTestNow('2030-01-21 09:00:00');   // the week has ended
+        $this->actingAs($user)
+            ->patchJson('/api/timesheets/'.$sheet->id.'/status', ['status' => 'Submitted'])
+            ->assertOk()
+            ->assertJsonPath('data.status', 'Submitted');
+        \Illuminate\Support\Carbon::setTestNow();
+    }
 }

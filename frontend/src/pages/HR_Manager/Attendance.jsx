@@ -277,8 +277,9 @@ export default function Attendance() {
   const todayRecords = useMemo(() => enriched.filter(a => a.date === todayStr), [enriched, todayStr]);
 
   const stats = useMemo(() => ({
-    present: todayRecords.filter(a => a.status === 'Present').length,
+    onTime: todayRecords.filter(a => a.status === 'Present').length,
     late: todayRecords.filter(a => a.status === 'Late').length,
+    present: todayRecords.filter(a => a.status === 'Present' || a.status === 'Late').length,
     absent: todayRecords.filter(a => a.status === 'Absent').length,
     avgOvertime: todayRecords.length ? (todayRecords.reduce((s, a) => s + (a.overtime || 0), 0) / todayRecords.length).toFixed(1) : '0.0',
   }), [todayRecords]);
@@ -369,8 +370,8 @@ export default function Attendance() {
       {/* Stats */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
         {[
-          { label: 'Present Today', value: stats.present, icon: CheckCircle, color: 'emerald' },
-          { label: 'Late Today', value: stats.late, icon: AlertTriangle, color: 'red' },
+          { label: 'Present Today', value: stats.present, sub: `${stats.onTime} on time · ${stats.late} late`, icon: CheckCircle, color: 'emerald' },
+          { label: 'Late (within Present)', value: stats.late, icon: AlertTriangle, color: 'red' },
           { label: 'Absent Today', value: stats.absent, icon: Coffee, color: 'amber' },
           { label: 'Avg Overtime', value: `${stats.avgOvertime}h`, icon: Timer, color: 'blue' },
         ].map(s => {
@@ -382,6 +383,7 @@ export default function Attendance() {
                 <div>
                   <p className="text-sm text-gray-500">{s.label}</p>
                   <p className="text-2xl font-bold text-gray-900 mt-1">{s.value}</p>
+                  {s.sub && <p className="text-xs text-gray-400 mt-0.5">{s.sub}</p>}
                 </div>
                 <div className={`w-12 h-12 rounded-xl flex items-center justify-center ${colorMap[s.color]}`}>
                   <s.icon className="w-6 h-6" />

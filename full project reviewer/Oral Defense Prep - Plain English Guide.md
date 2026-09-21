@@ -108,7 +108,7 @@ Browser (frontend) → sends a request to `/api/...` → the frontend's router (
 | Clock in later than that | Popup **"You Are Late"** → can still "Clock In Anyway" → recorded **Late**, admins notified |
 | Clock in before the shift starts | Popup "Clocking In Early" → can continue |
 | Clock out before the shift end | Must **state a reason first** (reason picker) → recorded "Early Leave" |
-| Clock out at/after the shift end | "Clocked Out" - success. If it is more than 15 min past the end with no approved overtime: amber **"Overtime Not Approved"** warning - the extra time is recorded but not paid |
+| Clock out at/after the shift end | "Clocked Out" - success. If it is more than 15 min past the end with no approved overtime: amber **"Overtime Not Approved"** warning - the extra time is not counted (the day ends at the approved end) |
 | Someone else's face | Red **"Identity Verification Failed"** warning, security event logged, **Workforce Admins alerted**, 3 strikes = 60 s lockout |
 
 > **Key defense point:** these rules are enforced by the **server**, not just the screen. The server uses its own clock and looks up the shift itself, so a wrong tablet clock or a hand-made request can't fake an on-time punch. The popups just explain the rule to the employee first.
@@ -127,7 +127,7 @@ Browser (frontend) → sends a request to `/api/...` → the frontend's router (
 2. HR **assigns a schedule** (shift times) - or auto-generates schedules for everyone.
 3. Each day the employee **clocks in/out** (face at the kiosk).
 4. If they can't come in, they **file a leave request**; HR **approves or rejects** it, and a "leave balance" is updated.
-5. Weekly, the system builds a **timesheet** (hours worked) which the employee can submit; HR can approve. Employees can also open a live **"This Week"** timesheet and a **history** of past weeks right from the My Timesheet page.
+5. Weekly, the system builds a **timesheet** (hours worked). When the week ends the employee reviews and submits it (or the system submits it Monday noon); HR approves it, or rejects it with a reason, and approved ones go to payroll once. Employees can also open a live **"This Week"** timesheet and a **history** of past weeks right from the My Timesheet page.
 6. If they work extra hours, they can file an **overtime request**, which HR approves (can be done in bulk).
 
 ## Flow 4 - The "brain": Analytics + AI decision support (HR only)
@@ -150,7 +150,7 @@ Use these as quick talking points. Say each in ONE breath.
 - **Attendance** - "Who was present and when. Clock-in/out records for everyone, with alerts if something's wrong."
 - **Leave** - "Time off requests. Employees file, HR approves/rejects, and balances are updated."
 - **Overtime** - "Extra hours worked. Employees request, HR approves (even in bulk)."
-- **Timesheets** - "A weekly summary of hours with a live 'This Week' popup and a history table. Employees submit, HR approves."
+- **Timesheets** - "A weekly summary of hours with a live 'This Week' popup and a history table. Employees submit after the week ends, HR approves or rejects with a reason."
 
 **Workforce Admin only:**
 - **Employees / Registration** - "The company directory. HR adds, edits, and removes employees, and each one automatically gets a login account."
@@ -332,7 +332,7 @@ The "scariest" architecture question. Your answer is strong and true, and it has
 ```
 
 **The one-line truth (memorize this):**
-> "We migrated this system from a single Laravel monolith to 8 independent microservices using the Strangler Fig pattern — one domain extracted and verified at a time. That migration is complete: every domain (identity, analytics/AI, attendance, scheduling, time-off, payroll, communications, configuration) is now its own Laravel app, its own port, its own database, with 229 automated tests passing across all 8, and the frontend's proxy config is the only thing that routes requests to the right one."
+> "We migrated this system from a single Laravel monolith to 8 independent microservices using the Strangler Fig pattern — one domain extracted and verified at a time. That migration is complete: every domain (identity, analytics/AI, attendance, scheduling, time-off, payroll, communications, configuration) is now its own Laravel app, its own port, its own database, with 269 automated tests passing across all 8, and the frontend's proxy config is the only thing that routes requests to the right one."
 
 ## Why we did it in this order (your honest engineering answer)
 
@@ -382,7 +382,7 @@ Use this as a rapid-fire review. One line = one idea. Cover the right column, th
 | **Leave** | Time-off requests | Apply (Pending) → HR Approve/Reject → deducts balance → notify | Balances stay consistent; approved leave stops "Absent" flags |
 | **Overtime** | Extra hours tracking | Same lifecycle as leave, PLUS reconciliation pushes approved OT into attendance + timesheets | Payroll numbers agree across every page |
 | **Shifts/Schedules** | Who works when | Templates + generated/edited assignments in `shift_schedules` | Drives kiosk validation, Late/Present math, coverage analysis |
-| **Timesheets** | Weekly hour summaries + a live "This Week" popup + full history | Auto-generated from attendance → "This Week" opens a live per-day breakdown; employee submits → HR approves → locked | Payroll-friendly, auditable, no manual summing |
+| **Timesheets** | Weekly hour summaries + a live "This Week" popup + full history | Auto-generated from attendance → "This Week" opens a live per-day breakdown; employee submits (or auto-submitted Monday noon) → HR approves / rejects with a reason → sent to payroll once; hours freeze after submitting | Payroll-friendly, auditable, no manual summing |
 | **Dashboard** | Today's numbers at a glance | Reads cached aggregates + live counts | Manager sees the company in 5 seconds |
 | **Analytics** | Deep trend charts | `AnalyticsService` pre-computes 6 JSON sections into `analytics` table | Instant chart loads; heavy math runs once |
 | **Reports** | Printable/CSV outputs | Reads live data + formats via `reportHelpers.js` | Proof and paperwork done from one button |
@@ -442,7 +442,7 @@ Use this as a rapid-fire review. One line = one idea. Cover the right column, th
 21. When is someone Present? → Clock-in within the 15-min grace (08:15:00 is still on time).
 22. When is someone Absent? → No clock-in + no approved leave + past 60-min grace.
 23. What protects an on-leave employee from Absent? → Approved leave covering that date.
-24a2. What happens if I work past 5 PM without an approved overtime request? → It is recorded but NOT paid; the kiosk warns you at clock-out. Overtime is paid only for time that was approved AND worked (the smaller of the two, per day). You can file a request for a day in the past week and HR can still approve it.
+24a2. What happens if I work past 5 PM without an approved overtime request? → It is NOT counted: your day ends at 5:00 PM even if you tap out at 5:03, and the kiosk warns you at clock-out. The real punch is kept, so HR can still bring the time back by approving a request. Overtime is paid only for time that was approved AND worked (the smaller of the two, per day). You can file a request for a day in the past week and HR can still approve it.
 24. What does the kiosk refuse? → No schedule today, shift already ended, already clocked in, approved leave. All enforced on the server.
 24a. What does the kiosk do when someone is late? → Warns ("You Are Late") but lets them "Clock In Anyway"; recorded Late; admins notified.
 24b. What happens on an early clock-out? → Never refused for a real reason, but a reason must be picked first (Feeling Unwell / Family Emergency / Personal Emergency / Other). It is treated as a CLAIM, not a fact: 2 free early clock-outs per 30 days, the 3rd is unexcused automatically; a sick claim needs a medical certificate within 48 hours or it becomes unexcused; the admins are alerted about EVERY early clock-out; 3 people using the same excuse the same day is flagged.

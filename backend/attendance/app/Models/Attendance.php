@@ -15,7 +15,7 @@ class Attendance extends Model
     protected $keyType = 'string';
 
     protected $fillable = [
-        'id', 'employee_id', 'date', 'clock_in', 'clock_out', 'status', 'overtime',
+        'id', 'employee_id', 'date', 'clock_in', 'clock_out', 'actual_clock_out', 'status', 'overtime',
         'regular_hours', 'total_hours', 'break_hours', 'location', 'notes',
     ];
 
@@ -25,6 +25,7 @@ class Attendance extends Model
             'date' => 'date:Y-m-d',
             'clock_in' => 'string',
             'clock_out' => 'string',
+            'actual_clock_out' => 'string',
             'overtime' => 'float',
             'regular_hours' => 'float',
             'total_hours' => 'float',

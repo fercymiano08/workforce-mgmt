@@ -18,3 +18,7 @@ Schedule::command('snapshot:sync')->everyMinute()->withoutOverlapping();
 
 // A SICK early clock-out without a medical certificate by its deadline becomes unexcused.
 Schedule::command('early-outs:expire-certificates')->hourly()->withoutOverlapping();
+
+// Approving (or withdrawing) an overtime request changes which minutes of a past day count. The
+// real clock-out is kept, so re-count the recent days a minute after the request data arrives.
+Schedule::command('attendance:recount-hours')->everyMinute()->withoutOverlapping();

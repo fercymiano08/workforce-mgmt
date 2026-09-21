@@ -254,8 +254,10 @@ export default function MyAttendance() {
     });
   }, [myAttendance, periodFilter]);
 
-  const presentCount = filtered.filter((a) => a.status === 'Present').length;
+  // Days Present = days I came in, split into on time and late (leaving early is counted separately).
+  const onTimeCount = filtered.filter((a) => a.status === 'Present').length;
   const lateCount = filtered.filter((a) => a.status === 'Late').length;
+  const presentCount = onTimeCount + lateCount;
   // Days the employee actually came to work (on time, late, or left early). Approved leave is not counted against them.
   const totalWorkingDays = filtered.filter((a) => didAttend(a.status)).length;
   const countedDays = filtered.filter((a) => a.status !== 'On Leave').length;
@@ -344,8 +346,8 @@ export default function MyAttendance() {
         <>
       {/* Stats Cards */}
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-5">
-        <KpiCard label="Days Present" value={presentCount} icon={CheckCircle} accent="emerald" />
-        <KpiCard label="Days Late" value={lateCount} icon={AlertTriangle} accent="amber" />
+        <KpiCard label="Days Present" value={presentCount} icon={CheckCircle} accent="emerald" subtext={`${onTimeCount} on time · ${lateCount} late`} />
+        <KpiCard label="Of which Late" value={lateCount} icon={AlertTriangle} accent="amber" />
         <KpiCard label="Attendance Rate" value={`${attendanceRate}%`} icon={TrendingUp} accent="blue" />
       </div>
 

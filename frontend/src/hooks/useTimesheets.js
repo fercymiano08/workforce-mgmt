@@ -75,6 +75,15 @@ export function approveTimesheet(id, approvedBy) {
   return timesheetService.updateStatus(id, 'Approved', approvedBy);
 }
 
-export function rejectTimesheet(id) {
-  return timesheetService.updateStatus(id, 'Rejected');
+export function rejectTimesheet(id, reason) {
+  return timesheetService.updateStatus(id, 'Rejected', undefined, reason);
+}
+
+// Sends a submitted or approved timesheet back to the employee (needs a reason).
+export function reopenTimesheet(id, reason) {
+  return timesheetService.updateStatus(id, 'Draft', undefined, reason);
+}
+
+export function exportTimesheetsForPayroll(payload) {
+  return timesheetService.exportForPayroll(payload);
 }
