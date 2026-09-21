@@ -231,6 +231,45 @@ class AuthTest extends TestCase
         $this->assertTrue(password_verify('BrandNew@123', $user->password));
     }
 
+    public function test_a_reset_code_older_than_five_minutes_is_rejected(): void
+    {
+        $this->otpEmployeeUser();
+
+        DB::table('password_reset_tokens')->insert([
+            'email' => 'employee@workforcepro.com',
+            'token' => Hash::make('123456'),
+            'created_at' => now()->subMinutes(6),
+        ]);
+
+        $this->postJson('/api/auth/reset-password', [
+            'email' => 'employee@workforcepro.com',
+            'otp' => '123456',
+            'password' => 'BrandNew@123',
+            'password_confirmation' => 'BrandNew@123',
+        ])->assertStatus(422)->assertJsonValidationErrors('otp');
+
+        $user = User::where('email', 'employee@workforcepro.com')->first();
+        $this->assertFalse(password_verify('BrandNew@123', $user->password));
+    }
+
+    public function test_a_reset_code_just_under_five_minutes_old_still_works(): void
+    {
+        $this->otpEmployeeUser();
+
+        DB::table('password_reset_tokens')->insert([
+            'email' => 'employee@workforcepro.com',
+            'token' => Hash::make('123456'),
+            'created_at' => now()->subMinutes(4)->subSeconds(30),
+        ]);
+
+        $this->postJson('/api/auth/reset-password', [
+            'email' => 'employee@workforcepro.com',
+            'otp' => '123456',
+            'password' => 'BrandNew@123',
+            'password_confirmation' => 'BrandNew@123',
+        ])->assertOk();
+    }
+
     public function test_reset_password_rejects_an_invalid_otp(): void
     {
         $this->otpEmployeeUser();

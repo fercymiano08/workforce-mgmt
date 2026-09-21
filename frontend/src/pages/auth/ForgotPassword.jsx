@@ -147,7 +147,7 @@ export default function ForgotPassword() {
             <>
               <h2 className="text-2xl font-bold text-gray-900 tracking-tight">Check your email</h2>
               <p className="text-sm text-gray-500 mt-1.5 mb-8">
-                A 6-digit code was sent to <span className="font-medium text-gray-700">{email}</span>. It expires in 10 minutes.
+                A 6-digit code was sent to <span className="font-medium text-gray-700">{email}</span>. It expires in 5 minutes.
               </p>
               <form onSubmit={handleReset} className="space-y-4">
                 <Input label="Reset Code" placeholder="000000" value={otp} onChange={(e) => setOtp(e.target.value.replace(/\D/g, '').slice(0, 6))} className="text-center text-lg tracking-[0.35em] font-mono" required autoFocus />

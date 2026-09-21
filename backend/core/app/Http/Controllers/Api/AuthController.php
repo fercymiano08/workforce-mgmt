@@ -16,6 +16,9 @@ use Laravel\Sanctum\PersonalAccessToken;
 
 class AuthController extends Controller
 {
+    /** How long a password-reset code stays valid. */
+    private const OTP_MINUTES = 5;
+
     private const MAX_LOGIN_ATTEMPTS = 5;
 
     private const LOGIN_LOCKOUT_SECONDS = 60;
@@ -135,7 +138,7 @@ class AuthController extends Controller
                     "Hi {$name},\n\n"
                     . "Your WorkForce Pro password reset code is:\n\n"
                     . "   {$otp}\n\n"
-                    . "This code expires in 10 minutes. If you did not request a reset, ignore this email.",
+                    . "This code expires in ".self::OTP_MINUTES." minutes. If you did not request a reset, ignore this email.",
                     fn ($m) => $m->to($request->email)->subject('WorkForce Pro — Password Reset Code')
                 );
             } catch (\Throwable $e) {
@@ -164,7 +167,8 @@ class AuthController extends Controller
 
         if (
             ! $record
-            || now()->diffInMinutes($record->created_at) > 10
+            // (diffInMinutes is negative for a past date in this Carbon version, so compare the moments themselves)
+            || \Illuminate\Support\Carbon::parse($record->created_at)->lt(now()->subMinutes(self::OTP_MINUTES))
             || ! Hash::check($request->otp, $record->token)
         ) {
             throw ValidationException::withMessages([

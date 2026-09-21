@@ -13,7 +13,9 @@ use Illuminate\Database\Eloquent\Model;
  */
 class AuditEvent extends Model
 {
-    use ApiSerializable;
+    use ApiSerializable {
+        toApiArray as protected baseApiArray;
+    }
 
     public $timestamps = false;
 
@@ -28,6 +30,13 @@ class AuditEvent extends Model
             'before' => 'array',
             'after' => 'array',
             'meta' => 'array',
+            'created_at' => 'datetime',
         ];
+    }
+
+    /** The shared serializer drops created_at; for an audit trail the timestamp is the point. */
+    public function toApiArray(): array
+    {
+        return [...$this->baseApiArray(), 'createdAt' => $this->created_at?->toIso8601String()];
     }
 }

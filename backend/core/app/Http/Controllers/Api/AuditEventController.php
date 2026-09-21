@@ -36,11 +36,13 @@ class AuditEventController extends Controller
         if ($actor = (string) $request->input('actor')) {
             $query->where('actor', 'ilike', '%'.$actor.'%');
         }
-        if ($from = (string) $request->input('from')) {
-            $query->where('created_at', '>=', $from.' 00:00:00');
+        // The dates are calendar days as the company sees them (Manila), but events are stored in UTC,
+        // so convert the day's start and end to UTC before comparing.
+        if ($from = $this->manilaDay((string) $request->input('from'))) {
+            $query->where('created_at', '>=', $from->startOfDay()->utc());
         }
-        if ($to = (string) $request->input('to')) {
-            $query->where('created_at', '<=', $to.' 23:59:59');
+        if ($to = $this->manilaDay((string) $request->input('to'))) {
+            $query->where('created_at', '<=', $to->endOfDay()->utc());
         }
         if ($search = (string) $request->input('search')) {
             $query->where(function ($q) use ($search): void {
@@ -56,6 +58,14 @@ class AuditEventController extends Controller
 
         $paginator = $query->paginate($perPage, ['*'], 'page', $page);
 
+        // Headline numbers for the page (whole trail, not the current filter). Days follow Manila time.
+        $manilaToday = now('Asia/Manila')->startOfDay();
+        $stats = [
+            'today' => \App\Models\AuditEvent::where('created_at', '>=', $manilaToday->copy()->utc())->count(),
+            'week' => \App\Models\AuditEvent::where('created_at', '>=', $manilaToday->copy()->subDays(6)->utc())->count(),
+            'people' => \App\Models\AuditEvent::whereNotNull('actor')->distinct()->count('actor'),
+        ];
+
         return response()->json([
             'data' => collect($paginator->items())->map->toApiArray()->values(),
             'meta' => [
@@ -64,8 +74,21 @@ class AuditEventController extends Controller
                 'page' => $paginator->currentPage(),
                 'lastPage' => $paginator->lastPage(),
                 'services' => \App\Models\AuditEvent::query()->distinct()->pluck('service')->values(),
+                'stats' => $stats,
                 'requestId' => Str::uuid()->toString(),
             ],
         ]);
+    }
+
+    private function manilaDay(string $date): ?\Illuminate\Support\Carbon
+    {
+        if ($date === '') {
+            return null;
+        }
+        try {
+            return \Illuminate\Support\Carbon::parse($date, 'Asia/Manila');
+        } catch (\Throwable) {
+            return null;
+        }
     }
 }

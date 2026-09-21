@@ -85,7 +85,7 @@ Browser (frontend) → sends a request to `/api/...` → the frontend's router (
 **Extra defense points:**
 - Wrong password → error. After **5 wrong attempts**, a **60-second cool-down** (lockout).
 - Passwords must be **8+ characters with uppercase, lowercase, and a number**.
-- Forgot password → a **6-digit code (OTP)** is emailed; valid **10 minutes**, one-time use.
+- Forgot password → a **6-digit code (OTP)** is emailed; valid **5 minutes**, one-time use.
 - Workforce Admin (admin) account **cannot** reset via forgot-password (it's the reserved owner account).
 
 ## Flow 2 - Attendance with facial recognition (the kiosk)
@@ -177,7 +177,7 @@ These are the exact things the panel may probe. Say them confidently.
 | **Sanctum tokens** | The login "ID badge". Each badge belongs to one user and is revoked on logout. |
 | **Password hashing (bcrypt)** | Passwords are scrambled before storage, so even the database can't reveal the original. |
 | **Role-based access (RBAC)** | Employees and Workforce Admin see different menus. Admin-only routes are protected server-side. |
-| **OTP reset** | Forgot password sends a 6-digit code that expires in 10 minutes and works only once. |
+| **OTP reset** | Forgot password sends a 6-digit code that expires in 5 minutes and works only once. |
 | **Login lockout** | 5 wrong attempts = 60-second cool-down (stops guessing/brute-force). |
 | **Password policy** | Min 8 + upper + lower + number (enforced on change, reset, and registration). |
 | **Throttling** | Forgot-password and reset endpoints are throttled (limited requests per minute). |
@@ -462,7 +462,7 @@ Use this as a rapid-fire review. One line = one idea. Cover the right column, th
 34. How are passwords stored? → bcrypt hash (one-way scramble), never readable.
 35. Login lockout? → 5 wrong attempts → 60-second cool-down.
 36. Password policy? → 8+ chars, uppercase, lowercase, digit.
-37. OTP reset? → 6-digit code by email, 10-minute expiry, one-time use.
+37. OTP reset? → 6-digit code by email, 5-minute expiry, one-time use.
 38. Why can't admin self-reset? → It's the reserved owner account.
 39. How is the kiosk secured if it has no login? → PIN unlock gives the device a signed, expiring token that every clock-in call must send; the PIN check is rate-limited; the token dies when the PIN changes; and the endpoints return minimal fields only (name, photo, dept, today's schedule) - never salary/email/phone/address.
 40. Where is the kiosk PIN stored? → SHA-256 hash in settings.kiosk.
