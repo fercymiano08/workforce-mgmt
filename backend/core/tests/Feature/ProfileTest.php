@@ -96,4 +96,59 @@ class ProfileTest extends TestCase
         $this->assertSame('IT & Systems', $fresh->department);
         $this->assertSame('+63 917 555 1234', $fresh->phone);
     }
+
+    public function test_the_profile_does_not_expose_salary_or_the_face_template(): void
+    {
+        $employee = $this->employee();
+        $employee->update(['face_image' => 'data:image/jpeg;base64,xyz', 'face_descriptor' => array_fill(0, 128, 0.1), 'face_registered' => true]);
+
+        $response = $this->actingAs($this->employeeUser($employee->id))->getJson('/api/profile')->assertOk();
+
+        $response->assertJsonMissingPath('data.salary')
+            ->assertJsonMissingPath('data.faceImage')
+            ->assertJsonMissingPath('data.faceDescriptor')
+            ->assertJsonPath('data.faceRegistered', true);   // the status is still shown
+    }
+
+    public function test_an_invalid_phone_number_is_refused(): void
+    {
+        $user = $this->employeeUser($this->employee()->id);
+
+        foreach (['abc', '12', 'call me maybe', '<script>alert(1)</script>'] as $bad) {
+            $this->actingAs($user)->putJson('/api/profile', ['phone' => $bad])
+                ->assertStatus(422)->assertJsonValidationErrors('phone');
+        }
+        $this->actingAs($user)->putJson('/api/profile', ['emergencyPhone' => 'nope'])
+            ->assertStatus(422)->assertJsonValidationErrors('emergencyPhone');
+    }
+
+    public function test_common_phone_formats_are_accepted(): void
+    {
+        $user = $this->employeeUser($this->employee()->id);
+
+        foreach (['+63 917 555 1234', '09175551234', '(02) 8123-4567', '0917-555-1234'] as $ok) {
+            $this->actingAs($user)->putJson('/api/profile', ['phone' => $ok])->assertOk();
+        }
+    }
+
+    public function test_the_photo_must_be_a_reasonably_small_image(): void
+    {
+        $user = $this->employeeUser($this->employee()->id);
+
+        $this->actingAs($user)->putJson('/api/profile', ['avatar' => 'https://evil.example/x.png'])
+            ->assertStatus(422)->assertJsonValidationErrors('avatar');
+        $this->actingAs($user)->putJson('/api/profile', ['avatar' => 'data:image/jpeg;base64,'.str_repeat('A', 800000)])
+            ->assertStatus(422)->assertJsonValidationErrors('avatar');
+    }
+
+    public function test_the_photo_can_be_removed(): void
+    {
+        $employee = $this->employee();
+        $employee->update(['avatar' => 'data:image/jpeg;base64,abc']);
+
+        $this->actingAs($this->employeeUser($employee->id))->putJson('/api/profile', ['avatar' => ''])
+            ->assertOk();
+
+        $this->assertEmpty($employee->fresh()->avatar);
+    }
 }

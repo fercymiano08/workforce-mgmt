@@ -25,7 +25,6 @@ class RoleBoundaryTest extends TestCase
 
     private const OTHER_EMPLOYEE = [
         ['GET', '/api/timesheets/employee/EMP-OTHER'],
-        ['GET', '/api/timesheets/pay/employee/EMP-OTHER'],
     ];
 
     public function test_anonymous_requests_are_rejected_everywhere(): void

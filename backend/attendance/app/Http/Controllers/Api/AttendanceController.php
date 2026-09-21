@@ -101,8 +101,14 @@ class AttendanceController extends Controller
 
         $clockedInToday = array_flip(Attendance::where('date', $todayKey)->pluck('employee_id')->all());
 
+        // Someone on approved leave is not a no-show even if a shift exists for the day.
+        $onLeaveToday = array_flip(Leave::where('status', 'Approved')
+            ->whereDate('start_date', '<=', $todayKey)
+            ->whereDate('end_date', '>=', $todayKey)
+            ->pluck('employee_id')->all());
+
         foreach ($todaySchedules as $schedule) {
-            if (isset($clockedInToday[$schedule->employee_id])) {
+            if (isset($clockedInToday[$schedule->employee_id]) || isset($onLeaveToday[$schedule->employee_id])) {
                 continue;
             }
 

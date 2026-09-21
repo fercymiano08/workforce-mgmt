@@ -19,7 +19,7 @@ export const LEAVE_TYPES = ['Vacation', 'Sick', 'Emergency', 'Special'];
 
 export const LEAVE_STATUSES = ['Pending', 'Approved', 'Rejected'];
 
-export const SHIFT_TYPES = ['Morning', 'Afternoon', 'Night', 'Flexible'];
+export const SHIFT_TYPES = ['Morning', 'Afternoon', 'Night', 'Standard'];
 
 export const ATTENDANCE_STATUSES = ['Present', 'Absent', 'Late', 'Half Day', 'Early Leave', 'On Leave'];
 

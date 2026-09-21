@@ -117,16 +117,16 @@
         <mxCell id="p1_scr" value="Success screen (time + status)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;fontSize=11;" vertex="1" parent="p1_laneK">
           <mxGeometry x="970" y="182" width="130" height="62" as="geometry" />
         </mxCell>
-        <mxCell id="p1_dup" value="Duplicate check: already clocked today?" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffe6cc;strokeColor=#d79b00;fontSize=11;" vertex="1" parent="p1_laneB">
+        <mxCell id="p1_dup" value="Server guards: shift today? shift over? on approved leave? already clocked in?" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffe6cc;strokeColor=#d79b00;fontSize=11;" vertex="1" parent="p1_laneB">
           <mxGeometry x="60" y="95" width="160" height="76" as="geometry" />
         </mxCell>
-        <mxCell id="p1_edup" value="Rejected" style="ellipse;whiteSpace=wrap;html=1;fillColor=#f8cecc;strokeColor=#b85450;strokeWidth=3;fontSize=9;" vertex="1" parent="p1_laneB">
+        <mxCell id="p1_edup" value="Refused (422 + reason)" style="ellipse;whiteSpace=wrap;html=1;fillColor=#f8cecc;strokeColor=#b85450;strokeWidth=3;fontSize=9;" vertex="1" parent="p1_laneB">
           <mxGeometry x="260" y="196" width="52" height="52" as="geometry" />
         </mxCell>
-        <mxCell id="p1_glate" value="Before shift start?" style="rhombus;whiteSpace=wrap;html=1;fillColor=#fff2cc;strokeColor=#d6b656;fontSize=10;" vertex="1" parent="p1_laneB">
+        <mxCell id="p1_glate" value="More than 15 min after start?" style="rhombus;whiteSpace=wrap;html=1;fillColor=#fff2cc;strokeColor=#d6b656;fontSize=10;" vertex="1" parent="p1_laneB">
           <mxGeometry x="266" y="100" width="70" height="70" as="geometry" />
         </mxCell>
-        <mxCell id="p1_calc" value="Compute status, regular hours, OT" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffe6cc;strokeColor=#d79b00;fontSize=11;" vertex="1" parent="p1_laneB">
+        <mxCell id="p1_calc" value="Present (&lt;=15 min) or Late; hours; OT only if approved" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffe6cc;strokeColor=#d79b00;fontSize=11;" vertex="1" parent="p1_laneB">
           <mxGeometry x="376" y="95" width="150" height="76" as="geometry" />
         </mxCell>
         <mxCell id="p1_ins" value="INSERT row into attendance table" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffe6cc;strokeColor=#d79b00;fontSize=11;" vertex="1" parent="p1_laneB">
@@ -155,7 +155,8 @@
         <mxCell id="p1_f18" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;endArrow=open;endFill=0;" edge="1" parent="1" source="p1_calc" target="p1_ins"><mxGeometry relative="1" as="geometry" /></mxCell>
         <mxCell id="p1_f19" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;endArrow=open;endFill=0;" edge="1" parent="1" source="p1_ins" target="p1_scr"><mxGeometry relative="1" as="geometry" /></mxCell>
         <mxCell id="p1_f20" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;endArrow=open;endFill=0;" edge="1" parent="1" source="p1_scr" target="p1_eok"><mxGeometry relative="1" as="geometry" /></mxCell>
-      </root>
+      <mxCell id="p1_note" value="LATEST RULES (server-enforced, Manila time): Clock-in is refused with no shift today, after the shift ended, on approved leave, or if already clocked in. Present = within 15 minutes of the start (inclusive), otherwise Late. Clock-out before the shift end requires a reason (early_clock_outs row); 2 free early leaves per 30 days, then unpaid until reviewed; SICK needs proof within 48 hours. Approved overtime extends the day&#x27;s end to 5:00 PM + approved hours." style="rounded=1;whiteSpace=wrap;html=1;fillColor=#fff2cc;strokeColor=#d6b656;align=left;spacingLeft=10;spacingRight=10;fontSize=11;" vertex="1" parent="1"><mxGeometry x="20" y="840" width="1100" height="100" as="geometry" /></mxCell>
+        </root>
     </mxGraphModel>
   </diagram>
 
@@ -180,7 +181,7 @@
         <mxCell id="p2_form" value="Fill form: leave type, dates, reason" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;fontSize=11;" vertex="1" parent="p2_laneE">
           <mxGeometry x="150" y="75" width="160" height="70" as="geometry" />
         </mxCell>
-        <mxCell id="p2_gvalid" value="End date before start date?" style="rhombus;whiteSpace=wrap;html=1;fillColor=#fff2cc;strokeColor=#d6b656;fontSize=10;" vertex="1" parent="p2_laneE">
+        <mxCell id="p2_gvalid" value="Past date, overlap or duplicate?" style="rhombus;whiteSpace=wrap;html=1;fillColor=#fff2cc;strokeColor=#d6b656;fontSize=10;" vertex="1" parent="p2_laneE">
           <mxGeometry x="356" y="72" width="86" height="76" as="geometry" />
         </mxCell>
         <mxCell id="p2_submit" value="Submit application" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;fontSize=11;" vertex="1" parent="p2_laneE">
@@ -189,7 +190,7 @@
         <mxCell id="p2_eerr" value="Fix dates" style="text;html=1;fontSize=10;fontColor=#999999;" vertex="1" parent="p2_laneE">
           <mxGeometry x="360" y="170" width="80" height="30" as="geometry" />
         </mxCell>
-        <mxCell id="p2_val" value="Re-validate + INSERT into leaves (status Pending)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#e1d5e7;strokeColor=#9673a6;fontSize=11;" vertex="1" parent="p2_laneB">
+        <mxCell id="p2_val" value="Re-validate + INSERT into leaves (Pending)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#e1d5e7;strokeColor=#9673a6;fontSize=11;" vertex="1" parent="p2_laneB">
           <mxGeometry x="150" y="72" width="180" height="70" as="geometry" />
         </mxCell>
         <mxCell id="p2_nhr" value="Notify HR (notification created)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#e1d5e7;strokeColor=#9673a6;fontSize=11;" vertex="1" parent="p2_laneB">
@@ -207,7 +208,7 @@
         <mxCell id="p2_rej" value="Set status Rejected (+ comments)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#e1d5e7;strokeColor=#9673a6;fontSize=11;" vertex="1" parent="p2_laneH">
           <mxGeometry x="480" y="150" width="170" height="62" as="geometry" />
         </mxCell>
-        <mxCell id="p2_appset" value="Set status Approved, approved_by, dates" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#e1d5e7;strokeColor=#9673a6;fontSize=11;" vertex="1" parent="p2_laneB">
+        <mxCell id="p2_appset" value="Set Approved (blocks scheduling that day)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#e1d5e7;strokeColor=#9673a6;fontSize=11;" vertex="1" parent="p2_laneB">
           <mxGeometry x="700" y="30" width="170" height="62" as="geometry" />
         </mxCell>
         <mxCell id="p2_nemp" value="Notify employee of decision" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#e1d5e7;strokeColor=#9673a6;fontSize=11;" vertex="1" parent="p2_laneB">
@@ -230,7 +231,8 @@
         <mxCell id="p2_f12" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;endArrow=open;endFill=0;" edge="1" parent="1" source="p2_rej" target="p2_nemp"><mxGeometry relative="1" as="geometry" /></mxCell>
         <mxCell id="p2_f13" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;endArrow=open;endFill=0;" edge="1" parent="1" source="p2_appset" target="p2_nemp"><mxGeometry relative="1" as="geometry" /></mxCell>
         <mxCell id="p2_f14" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;endArrow=open;endFill=0;" edge="1" parent="1" source="p2_nemp" target="p2_end"><mxGeometry relative="1" as="geometry" /></mxCell>
-      </root>
+      <mxCell id="p2_note" value="LATEST RULES: Past dates are blocked; overlapping or duplicate requests are refused (server check + button lock + DB guard). Approved leave also blocks scheduling that day and stops the no-show (Absent) alert." style="rounded=1;whiteSpace=wrap;html=1;fillColor=#fff2cc;strokeColor=#d6b656;align=left;spacingLeft=10;spacingRight=10;fontSize=11;" vertex="1" parent="1"><mxGeometry x="20" y="700" width="1100" height="100" as="geometry" /></mxCell>
+        </root>
     </mxGraphModel>
   </diagram>
 
@@ -261,7 +263,7 @@
         <mxCell id="p3_gapp" value="Approve?" style="rhombus;whiteSpace=wrap;html=1;fillColor=#fff2cc;strokeColor=#d6b656;fontSize=11;fontStyle=1;" vertex="1" parent="p3_laneH">
           <mxGeometry x="410" y="77" width="66" height="56" as="geometry" />
         </mxCell>
-        <mxCell id="p3_hours" value="Set approved_hours + approved_at" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffe6cc;strokeColor=#d79b00;fontSize=11;" vertex="1" parent="p3_laneB">
+        <mxCell id="p3_hours" value="Set approved_hours + approved_at (extends shift end)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffe6cc;strokeColor=#d79b00;fontSize=11;" vertex="1" parent="p3_laneB">
           <mxGeometry x="530" y="24" width="180" height="62" as="geometry" />
         </mxCell>
         <mxCell id="p3_rej" value="Set status Rejected (+ comments)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffe6cc;strokeColor=#d79b00;fontSize=11;" vertex="1" parent="p3_laneH">
@@ -284,7 +286,8 @@
         <mxCell id="p3_f6" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;endArrow=open;endFill=0;" edge="1" parent="1" source="p3_hours" target="p3_store"><mxGeometry relative="1" as="geometry" /></mxCell>
         <mxCell id="p3_f7" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;endArrow=open;endFill=0;" edge="1" parent="1" source="p3_rej" target="p3_ntf"><mxGeometry relative="1" as="geometry" /></mxCell>
         <mxCell id="p3_f8" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;endArrow=open;endFill=0;" edge="1" parent="1" source="p3_store" target="p3_end"><mxGeometry relative="1" as="geometry" /></mxCell>
-      </root>
+      <mxCell id="p3_note" value="LATEST RULES: Overtime is not a separate shift - approval extends the single Standard Shift. Paid overtime per day = the smaller of (hours worked past 5 PM) and (hours approved). Unapproved or rejected overtime is recorded honestly but never paid." style="rounded=1;whiteSpace=wrap;html=1;fillColor=#fff2cc;strokeColor=#d6b656;align=left;spacingLeft=10;spacingRight=10;fontSize=11;" vertex="1" parent="1"><mxGeometry x="20" y="660" width="1100" height="100" as="geometry" /></mxCell>
+        </root>
     </mxGraphModel>
   </diagram>
 
@@ -306,7 +309,7 @@
         <mxCell id="p4_s" value="Week ends" style="ellipse;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;fontSize=9;" vertex="1" parent="p4_laneS">
           <mxGeometry x="46" y="68" width="60" height="60" as="geometry" />
         </mxCell>
-        <mxCell id="p4_gen" value="Aggregate attendance rows into weekly timesheet (regular / OT / break hours)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffe6cc;strokeColor=#d79b00;fontSize=11;" vertex="1" parent="p4_laneS">
+        <mxCell id="p4_gen" value="Aggregate attendance into weekly timesheet: regular / OT worked / OT approved / paid_ot_hours" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffe6cc;strokeColor=#d79b00;fontSize=11;" vertex="1" parent="p4_laneS">
           <mxGeometry x="150" y="60" width="220" height="76" as="geometry" />
         </mxCell>
         <mxCell id="p4_rev" value="Review my weekly hours" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;fontSize=11;" vertex="1" parent="p4_laneE">
@@ -339,7 +342,8 @@
         <mxCell id="p4_f7" value="Corrected" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;endArrow=open;endFill=0;fontSize=10;dashed=1;" edge="1" parent="1" source="p4_fix" target="p4_chk"><mxGeometry relative="1" as="geometry" /></mxCell>
         <mxCell id="p4_f8" value="Yes" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;endArrow=open;endFill=0;fontSize=10;" edge="1" parent="1" source="p4_gok" target="p4_appr"><mxGeometry relative="1" as="geometry" /></mxCell>
         <mxCell id="p4_f9" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;endArrow=open;endFill=0;" edge="1" parent="1" source="p4_appr" target="p4_end"><mxGeometry relative="1" as="geometry" /></mxCell>
-      </root>
+      <mxCell id="p4_note" value="LATEST RULES: Each weekly timesheet keeps three overtime figures - overtime_hours (worked), approved_ot_hours (approved) and paid_ot_hours (payable = per-day smaller of the two). HR sees &#x27;not paid&#x27; beside unapproved time." style="rounded=1;whiteSpace=wrap;html=1;fillColor=#fff2cc;strokeColor=#d6b656;align=left;spacingLeft=10;spacingRight=10;fontSize=11;" vertex="1" parent="1"><mxGeometry x="20" y="660" width="1100" height="100" as="geometry" /></mxCell>
+        </root>
     </mxGraphModel>
   </diagram>
 
@@ -361,13 +365,13 @@
         <mxCell id="p5_s" value="New week approaching" style="ellipse;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;fontSize=9;" vertex="1" parent="p5_laneH">
           <mxGeometry x="46" y="72" width="70" height="64" as="geometry" />
         </mxCell>
-        <mxCell id="p5_def" value="Maintain shift templates (SHIFT001-004)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#fff2cc;strokeColor=#d6b656;fontSize=11;" vertex="1" parent="p5_laneH">
+        <mxCell id="p5_def" value="Maintain the one Standard Shift template (SHIFT004, 08:00-17:00)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#fff2cc;strokeColor=#d6b656;fontSize=11;" vertex="1" parent="p5_laneH">
           <mxGeometry x="156" y="70" width="170" height="68" as="geometry" />
         </mxCell>
-        <mxCell id="p5_wiz" value="Use generate-schedule wizard (range + template)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#fff2cc;strokeColor=#d6b656;fontSize=11;" vertex="1" parent="p5_laneH">
+        <mxCell id="p5_wiz" value="Use generate-schedule wizard (range + Standard Shift)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#fff2cc;strokeColor=#d6b656;fontSize=11;" vertex="1" parent="p5_laneH">
           <mxGeometry x="370" y="70" width="180" height="68" as="geometry" />
         </mxCell>
-        <mxCell id="p5_assign" value="Create shift_schedules rows (employee + shift + date)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffe6cc;strokeColor=#d79b00;fontSize=11;" vertex="1" parent="p5_laneB">
+        <mxCell id="p5_assign" value="Create shift_schedules rows (one per employee/day; refused on approved leave)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffe6cc;strokeColor=#d79b00;fontSize=11;" vertex="1" parent="p5_laneB">
           <mxGeometry x="370" y="66" width="190" height="72" as="geometry" />
         </mxCell>
         <mxCell id="p5_gconf" value="Coverage conflicts?" style="rhombus;whiteSpace=wrap;html=1;fillColor=#fff2cc;strokeColor=#d6b656;fontSize=10;" vertex="1" parent="p5_laneB">
@@ -394,7 +398,8 @@
         <mxCell id="p5_f7" value="No" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;endArrow=open;endFill=0;fontSize=10;" edge="1" parent="1" source="p5_gconf" target="p5_pub"><mxGeometry relative="1" as="geometry" /></mxCell>
         <mxCell id="p5_f8" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;endArrow=open;endFill=0;" edge="1" parent="1" source="p5_pub" target="p5_view"><mxGeometry relative="1" as="geometry" /></mxCell>
         <mxCell id="p5_f9" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;endArrow=open;endFill=0;" edge="1" parent="1" source="p5_view" target="p5_end"><mxGeometry relative="1" as="geometry" /></mxCell>
-      </root>
+      <mxCell id="p5_note" value="LATEST RULES: There is exactly one shift template, the 08:00-17:00 Standard Shift (SHIFT004). One schedule row per employee per day (DB unique index). Scheduling a day with approved leave is refused, and the generator skips leave days." style="rounded=1;whiteSpace=wrap;html=1;fillColor=#fff2cc;strokeColor=#d6b656;align=left;spacingLeft=10;spacingRight=10;fontSize=11;" vertex="1" parent="1"><mxGeometry x="20" y="660" width="1100" height="100" as="geometry" /></mxCell>
+        </root>
     </mxGraphModel>
   </diagram>
 

@@ -26,11 +26,11 @@ import Analytics from './pages/HR_Manager/Analytics';
 import Reports from './pages/HR_Manager/Reports';
 import HRSettings from './pages/HR_Manager/Settings';
 import EmployeeSettings from './pages/Employee/Settings';
+import MyProfile from './pages/Employee/MyProfile';
 import AIDecisionSupport from './pages/HR_Manager/AIDecisionSupport';
 import MyAttendance from './pages/Employee/MyAttendance';
 import MySchedule from './pages/Employee/MySchedule';
 import MyTimesheet from './pages/Employee/MyTimesheet';
-import MyPayRecord from './pages/Employee/MyPayRecord';
 import AuditLogs from './pages/HR_Manager/AuditLogs';
 
 
@@ -81,11 +81,11 @@ function AppRoutes() {
       <Route path="/leave" element={<PrivateLayout><LeaveRoute /></PrivateLayout>} />
       <Route path="/my-attendance" element={<PrivateLayout><EmployeeRoute><MyAttendance /></EmployeeRoute></PrivateLayout>} />
       <Route path="/my-schedule" element={<PrivateLayout><EmployeeRoute><MySchedule /></EmployeeRoute></PrivateLayout>} />
-      <Route path="/my-pay" element={<PrivateLayout><EmployeeRoute><MyPayRecord /></EmployeeRoute></PrivateLayout>} />
       <Route path="/analytics" element={<PrivateLayout adminOnly><Analytics /></PrivateLayout>} />
       <Route path="/reports" element={<PrivateLayout adminOnly><Reports /></PrivateLayout>} />
       <Route path="/ai-decision-support" element={<PrivateLayout adminOnly><AIDecisionSupport /></PrivateLayout>} />
       <Route path="/audit-logs" element={<PrivateLayout adminOnly><AuditLogs /></PrivateLayout>} />
+      <Route path="/my-profile" element={<PrivateLayout><EmployeeRoute><MyProfile /></EmployeeRoute></PrivateLayout>} />
       <Route path="/settings" element={<PrivateLayout><SettingsRoute /></PrivateLayout>} />
 
       <Route path="*" element={<Navigate to="/" replace />} />

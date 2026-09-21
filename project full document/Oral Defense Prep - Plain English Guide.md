@@ -273,7 +273,7 @@ A: Up to and including 15 minutes after the shift start is Present. After that t
 A: The face doesn't match, so the kiosk shows an "Identity Verification Failed" warning, logs a security event and alerts the Workforce Admins immediately. Three failed attempts lock the terminal for 60 seconds.
 
 **Q: Why is the system slow on your laptop but fast in Docker?**
-A: Locally each service runs on PHP's built-in single-request server, from a OneDrive folder, with debug mode on. We reduced the load in code (a 15-second identity cache, no face photos in replicas, concurrent replica pushes, bounded lists) and the Docker setup uses 4 workers per service. The remaining slowness is the local hosting setup, not the architecture.
+A: Every action makes several requests and each one boots the Laravel framework (about half a second on a low-power laptop CPU), locally run on PHP's built-in single-request server. We measured it. We reduced the load in code (a 15-second identity cache, no face photos in replicas, concurrent replica pushes, bounded lists) and the Docker setup uses 4 workers per service. The remaining slowness is mostly the laptop (a low-power CPU, limited free RAM, running on battery) and the one-request-at-a-time local server, not a bug; Docker's 4 workers help.
 
 **Q: Where is data stored?**
 A: In 8 separate PostgreSQL databases, one per microservice — `core` holds users/employees/departments/roles, `attendance` holds attendance + security events, `scheduling` holds shifts, `timeoff` holds leave + overtime, `payroll` holds timesheets, `communications` holds notifications, `configuration` holds settings, and `intelligence` holds analytics + AI results. Services that need another service's data keep a small, periodically-synced read-only copy rather than sharing a database.
@@ -390,7 +390,7 @@ Use this as a rapid-fire review. One line = one idea. Cover the right column, th
 | **Security Events** | Log of suspicious kiosk activity | `face_mismatch`/`pin_failed` stored Open → HR resolves/escalates | Buddy-punching is caught and reviewable |
 | **Notifications** | In-app bell messages | Backend INSERTs a row; bell refreshes every 30 s while the tab is visible (newest 200) | People learn of approvals/leaves/SO immediately |
 | **Kiosk Setup** | Configures the door device | PIN hash, location, verification method stored in `settings.kiosk` | The entrance behaves exactly how HR wants |
-| **Settings/Profile** | App config + self-service edits | One settings row (JSON groups); profile edits by owner only | Flexible config; employees can't touch salary/department |
+| **Settings/Profile** | App config (admin) + a separate My Profile page for employees | One settings row (JSON groups); Employee Settings = password + appearance only; My Profile edits contact info + photo with validation, salary and face template never sent | Flexible config; employees can't touch salary/department; Profile (who I am) is split from Settings (how the app behaves) |
 
 ---
 

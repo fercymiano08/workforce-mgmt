@@ -14,6 +14,7 @@ const routeNames = {
   '/analytics': 'Workforce Analytics',
   '/reports': 'Reports',
   '/settings': 'Settings',
+  '/my-profile': 'My Profile',
   '/kiosk-setup': 'Kiosk Setup',
 };
 

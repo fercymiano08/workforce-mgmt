@@ -4,7 +4,7 @@ use Illuminate\Database\Migrations\Migration;
 use Illuminate\Support\Facades\DB;
 
 /**
- * The company has exactly ONE shift: the 8-to-5 Flexible Shift. Overtime is not a
+ * The company has exactly ONE shift: the 8-to-5 Standard Shift. Overtime is not a
  * shift - it is time added to the end of that shift when an overtime request is
  * approved (the day's effective end becomes 5:00 PM + the approved hours). A
  * separate "Overtime Shift" (5-9 PM) template therefore must not exist, or

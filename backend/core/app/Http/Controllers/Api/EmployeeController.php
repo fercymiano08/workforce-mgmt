@@ -205,6 +205,10 @@ class EmployeeController extends Controller
             return response()->json(['message' => 'No employee profile is associated with this account.'], 404);
         }
 
+        // What the person needs to see on their own profile - NOT their salary (that is a payroll matter)
+        // and NOT their face photo / face template (large, and the template is a biometric)
+        $employee->makeHidden(['salary', 'face_image', 'face_descriptor']);
+
         return response()->json(['data' => $employee->toApiArray()]);
     }
 
@@ -220,17 +224,25 @@ class EmployeeController extends Controller
             return response()->json(['message' => 'No employee profile is associated with this account.'], 404);
         }
 
+        // A phone number is digits with an optional +, spaces, dashes or brackets (7-20 characters).
+        $phoneRule = ['nullable', 'string', 'regex:/^[0-9+()\-\s]{7,20}$/'];
         $validated = $request->validate([
-            'phone' => 'nullable|string|max:50',
-            'address' => 'nullable|string',
+            'phone' => $phoneRule,
+            'address' => 'nullable|string|max:255',
             'emergencyContact' => 'nullable|string|max:100',
-            'emergencyPhone' => 'nullable|string|max:50',
-            'avatar' => 'nullable|string',
+            'emergencyPhone' => $phoneRule,
+            // A small picture only (the page shrinks it to 256px first): an image data URL under ~500 KB.
+            'avatar' => 'nullable|string|max:700000|starts_with:data:image/',
+        ], [
+            'phone.regex' => 'Enter a valid phone number, for example +63 917 555 1234.',
+            'emergencyPhone.regex' => 'Enter a valid emergency contact number, for example +63 917 555 1234.',
+            'avatar.starts_with' => 'The profile photo must be an image.',
+            'avatar.max' => 'That photo is too large. Please choose a smaller picture.',
         ]);
 
         $employee->update(Employee::apiFillable($validated));
 
-        return response()->json(['data' => $employee->fresh()->toApiArray()]);
+        return response()->json(['data' => $employee->fresh()->makeHidden(['salary', 'face_image', 'face_descriptor'])->toApiArray()]);
     }
 
     private function resolveOwnEmployee(Request $request): ?Employee

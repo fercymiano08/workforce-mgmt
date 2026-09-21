@@ -140,9 +140,12 @@ export default function Topbar({ onMenuToggle }) {
                 <p className="text-xs text-gray-500 mt-0.5">{user?.email}</p>
               </div>
               <div className="py-1">
-                <button onClick={() => { navigate('/settings'); setShowProfile(false); }} className="w-full flex items-center gap-2.5 px-4 py-2.5 text-sm text-gray-700 hover:bg-gray-50 transition-colors">
-                  <User className="w-4 h-4 text-gray-400" /> {t('topbar.profile')}
-                </button>
+                {/* Only employees have a profile page; the Workforce Admin account has no employee record. */}
+                {user?.role !== 'Administrator' && (
+                  <button onClick={() => { navigate('/my-profile'); setShowProfile(false); }} className="w-full flex items-center gap-2.5 px-4 py-2.5 text-sm text-gray-700 hover:bg-gray-50 transition-colors">
+                    <User className="w-4 h-4 text-gray-400" /> {t('topbar.profile')}
+                  </button>
+                )}
                 <button onClick={() => { navigate('/settings'); setShowProfile(false); }} className="w-full flex items-center gap-2.5 px-4 py-2.5 text-sm text-gray-700 hover:bg-gray-50 transition-colors">
                   <Settings className="w-4 h-4 text-gray-400" /> {t('topbar.settings')}
                 </button>

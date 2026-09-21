@@ -4,7 +4,7 @@ import {
   LayoutDashboard, Users, Clock, Calendar, FileText,
   CalendarDays, BarChart3, FileBarChart, Settings,
   LogOut, AlertTriangle, Fingerprint, CalendarClock, FileClock,
-  Brain, SlidersHorizontal, Wallet, ScrollText
+  Brain, SlidersHorizontal, ScrollText, User
 } from 'lucide-react';
 import clsx from 'clsx';
 import Avatar from '../ui/Avatar';
@@ -62,7 +62,7 @@ const employeeMenuItems = [
   { path: '/my-schedule', key: 'nav.mySchedule', icon: CalendarClock },
   { path: '/leave', key: 'nav.leave', icon: Calendar },
   { path: '/my-timesheet', key: 'nav.timesheets', icon: FileClock },
-  { path: '/my-pay', key: 'nav.myPay', icon: Wallet },
+  { path: '/my-profile', key: 'nav.myProfile', icon: User },
   { path: '/settings', key: 'nav.settings', icon: Settings },
 ];
 

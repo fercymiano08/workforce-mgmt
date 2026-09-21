@@ -157,7 +157,7 @@ Running the scripts on a normal laptop is slower than Docker, for reasons that h
 
 1. **Restart everything once**: `.\stop-all.ps1` then `.\start-all.ps1`. Wait until every port shows `UP` before opening the browser.
 2. **Turn debug mode off** in each `backend/<name>/.env` (all 8): `APP_DEBUG=false` and `LOG_LEVEL=warning`. Debug mode writes a lot to the log on every request.
-3. **Keep the project out of OneDrive** (for example `C:\dev\Workforce MGNT`). OneDrive syncing makes Laravel's many small file reads much slower on Windows.
+3. **Plug in the charger and close heavy apps** (browser tabs, games). On a low-power laptop, running on battery (especially below ~20%, when Windows' battery saver slows the CPU) and low free RAM are the biggest things you control. We measured that the project's *folder* (OneDrive or not) makes no real difference.
 4. **Or just use Docker (Way 2)** — it runs each service with several workers and avoids all of the above.
 
 **A page that spins forever** now ends with an error message after 45 seconds instead of hanging — that means one service is stuck or down. Run `.\start-all.ps1` and read which port shows `DOWN`.

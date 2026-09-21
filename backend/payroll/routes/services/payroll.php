@@ -10,7 +10,6 @@
 |----------------------------------------------------------------------------
 */
 
-use App\Http\Controllers\Api\PayRecordController;
 use App\Http\Controllers\Api\TimesheetController;
 use Illuminate\Support\Facades\Route;
 
@@ -23,7 +22,6 @@ Route::middleware('svc.auth')->group(function () {
             Route::delete('/{id}', [TimesheetController::class, 'destroy']);
         });
         Route::get('/employee/{employeeId}', [TimesheetController::class, 'byEmployee']);
-        Route::get('/pay/employee/{employeeId}', [PayRecordController::class, 'byEmployee']);
         Route::get('/{id}', [TimesheetController::class, 'show']);
         // Dual rule enforced inline: admin can set any status, employee can only submit their own draft.
         Route::patch('/{id}/status', [TimesheetController::class, 'updateStatus']);

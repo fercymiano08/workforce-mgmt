@@ -70,6 +70,8 @@ class ShiftController extends Controller
             ]);
         }
 
+        $this->assertNotOnApprovedLeave($data['employee_id'], $data['date'], $data['employee_name'] ?? null);
+
         try {
             $record = ShiftSchedule::create([
                 ...$data,
@@ -230,6 +232,26 @@ class ShiftController extends Controller
         ]]);
     }
 
+    /**
+     * Nobody can be scheduled for a day they are on approved leave - they could not clock in
+     * anyway (the kiosk refuses), so the schedule would only create a false 'no-show'.
+     * (Generating a whole range already skips leave days on its own.)
+     */
+    private function assertNotOnApprovedLeave(string $employeeId, string $date, ?string $name = null): void
+    {
+        $leave = Leave::where('employee_id', $employeeId)
+            ->where('status', 'Approved')
+            ->whereDate('start_date', '<=', $date)
+            ->whereDate('end_date', '>=', $date)
+            ->first();
+
+        if ($leave) {
+            throw \Illuminate\Validation\ValidationException::withMessages([
+                'date' => [($name ?: $employeeId).' is on approved '.$leave->leave_type.' leave ('.$leave->start_date->format('M j').' - '.$leave->end_date->format('M j, Y').') on '.Carbon::parse($date)->format('M j, Y').', so a shift cannot be scheduled for that day.'],
+            ]);
+        }
+    }
+
     public function updateSchedule(Request $request, string $id): JsonResponse
     {
         $record = ShiftSchedule::find($id);
@@ -244,6 +266,13 @@ class ShiftController extends Controller
             'date' => 'sometimes|date',
             'status' => 'sometimes|string|max:50',
         ]));
+
+        // Moving a shift onto another day or person is a new assignment: the same leave rule applies.
+        $newEmployee = $data['employee_id'] ?? $record->employee_id;
+        $newDate = isset($data['date']) ? Carbon::parse($data['date'])->toDateString() : $record->date->toDateString();
+        if ($newEmployee !== $record->employee_id || $newDate !== $record->date->toDateString()) {
+            $this->assertNotOnApprovedLeave($newEmployee, $newDate, $data['employee_name'] ?? $record->employee_name);
+        }
 
         $record->update($data);
 

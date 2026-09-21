@@ -74,4 +74,18 @@ class AlertTimezoneTest extends TestCase
 
         $this->assertSame(1, Notification::where('type', 'attendance_absent')->count());
     }
+
+    public function test_someone_on_approved_leave_is_not_reported_as_a_no_show(): void
+    {
+        $this->setUpScheduledEmployee();
+        \App\Models\Leave::create([
+            'id' => 'LVE001', 'employee_id' => 'EMP20260001', 'employee_name' => 'Juan Dela Cruz',
+            'leave_type' => 'Vacation', 'start_date' => self::KIOSK_TEST_DATE, 'end_date' => self::KIOSK_TEST_DATE,
+            'reason' => 'Trip', 'status' => 'Approved', 'applied_date' => '2026-09-01',
+        ]);
+
+        $this->scanAt('10:00:00');   // well past the 60-minute grace
+
+        $this->assertSame(0, Notification::where('type', 'attendance_absent')->count());
+    }
 }

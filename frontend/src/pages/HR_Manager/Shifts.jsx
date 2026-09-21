@@ -156,7 +156,7 @@ export default function Shifts() {
   // instead of opening a form whose Shift dropdown is silently empty.
   const noShiftTemplates = () => {
     if (loadingShiftDefs || (shiftDefs && shiftDefs.length > 0)) return false;
-    toast.error('No shift templates found', 'There are no shift definitions (such as the Flexible Shift) to assign. Reload the page; if this persists, ask the developer to run the scheduling migrations.');
+    toast.error('No shift templates found', 'There are no shift definitions (such as the Standard Shift) to assign. Reload the page; if this persists, ask the developer to run the scheduling migrations.');
     return true;
   };
 

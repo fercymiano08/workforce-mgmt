@@ -1,9 +1,10 @@
 import { useState } from 'react';
-import { Lock, Eye, EyeOff, Key, Info } from 'lucide-react';
+import { Lock, Eye, EyeOff, Key, Info, Check, Circle, Mail } from 'lucide-react';
 import Card, { CardHeader, CardTitle, CardDescription } from '../ui/Card';
 import Button from '../ui/Button';
 import { authService } from '../../services/api';
 import { useToast } from '../../context/ToastContext';
+import { useAuth } from '../../context/AuthContext';
 import { useTheme } from '../../context/ThemeContext';
 
 // Settings content that is genuinely identical for Administrators and
@@ -22,6 +23,7 @@ export function InfoNote({ children }) {
 
 export function AccountSection() {
   const { toast } = useToast();
+  const { user } = useAuth();
   const [showCurrentPass, setShowCurrentPass] = useState(false);
   const [showNewPass, setShowNewPass] = useState(false);
   const [showConfirmPass, setShowConfirmPass] = useState(false);
@@ -67,6 +69,15 @@ export function AccountSection() {
     }
   };
 
+  // Live checklist so people see WHY a password is rejected before they press the button.
+  const requirements = [
+    { label: 'At least 8 characters', ok: passwords.newPass.length >= 8 },
+    { label: 'An uppercase letter', ok: /[A-Z]/.test(passwords.newPass) },
+    { label: 'A lowercase letter', ok: /[a-z]/.test(passwords.newPass) },
+    { label: 'A number', ok: /\d/.test(passwords.newPass) },
+    { label: 'Matches the confirmation', ok: passwords.newPass.length > 0 && passwords.newPass === passwords.confirm },
+  ];
+
   const passwordField = (label, field, show, setShow, icon) => (
     <div className="flex flex-col gap-1.5">
       <label className="text-sm font-medium text-gray-700">{label}</label>
@@ -100,13 +111,25 @@ export function AccountSection() {
           </div>
         </CardHeader>
 
+        {user?.email && (
+          <div className="mb-5 flex items-center gap-2 rounded-xl bg-gray-50 border border-gray-100 px-3.5 py-2.5 text-sm text-gray-600 max-w-md">
+            <Mail className="w-4 h-4 text-gray-400 shrink-0" />
+            <span>Signed in as <span className="font-semibold text-gray-900">{user.email}</span></span>
+          </div>
+        )}
+
         <div className="space-y-4 max-w-md">
           {passwordField('Current Password', 'current', showCurrentPass, setShowCurrentPass, <Lock className="w-4 h-4" />)}
           {passwordField('New Password', 'newPass', showNewPass, setShowNewPass, <Key className="w-4 h-4" />)}
           {passwordField('Confirm New Password', 'confirm', showConfirmPass, setShowConfirmPass, <Key className="w-4 h-4" />)}
-          <p className="text-xs text-gray-400 mt-1">
-            Password must be at least 8 characters long and include an uppercase letter, a lowercase letter, and a number.
-          </p>
+          <ul className="grid grid-cols-1 sm:grid-cols-2 gap-x-4 gap-y-1.5 pt-1">
+            {requirements.map((r) => (
+              <li key={r.label} className={`flex items-center gap-1.5 text-xs ${r.ok ? 'text-emerald-600' : 'text-gray-400'}`}>
+                {r.ok ? <Check className="w-3.5 h-3.5" /> : <Circle className="w-3 h-3" />}
+                {r.label}
+              </li>
+            ))}
+          </ul>
         </div>
 
         <div className="flex justify-end mt-6">

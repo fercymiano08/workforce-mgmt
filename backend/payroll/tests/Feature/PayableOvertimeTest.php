@@ -6,7 +6,6 @@ use App\Models\Attendance;
 use App\Models\Employee;
 use App\Models\OvertimeRequest;
 use App\Models\Timesheet;
-use App\Services\PayRecordService;
 use App\Services\TimesheetGenerationService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
@@ -131,18 +130,5 @@ class PayableOvertimeTest extends TestCase
         $this->approveOvertime(self::MONDAY, 2, 'Rejected');
 
         $this->assertEquals(0.0, $this->week()->paid_ot_hours);
-    }
-
-    public function test_the_pay_record_uses_the_paid_hours_at_the_overtime_premium(): void
-    {
-        $this->employee();
-        $this->workDay(self::MONDAY, 3);
-        $this->approveOvertime(self::MONDAY, 2);
-        $this->week();
-
-        $statement = app(PayRecordService::class)->payRecordFor('EMP20260001')['statements'][0];
-
-        $this->assertEquals(2.0, $statement['otHours']);                       // not 3, not more than approved
-        $this->assertEquals(round(2 * 120 * 1.25, 2), $statement['otPay']);    // 300.00
     }
 }

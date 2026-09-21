@@ -245,13 +245,6 @@ export const timesheetService = {
   },
 };
 
-export const payRecordService = {
-  getByEmployeeId: async (employeeId) => {
-    const { data } = await http.get(`/timesheets/pay/employee/${employeeId}`);
-    return data;
-  },
-};
-
 export const notificationService = {
   getAll: async () => {
     const { data } = await http.get('/notifications');

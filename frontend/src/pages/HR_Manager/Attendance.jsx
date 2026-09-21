@@ -1,4 +1,5 @@
 import { useState, useMemo, useEffect } from 'react';
+import { createPortal } from 'react-dom';
 import { useSearchParams } from 'react-router-dom';
 import { CheckCircle, AlertTriangle, Timer, Download, Coffee, MapPin, Clock, X, Check, CheckCheck, ChevronDown, ChevronRight, Hand, ClipboardCheck } from 'lucide-react';
 import Card from '../../components/ui/Card';
@@ -620,8 +621,8 @@ export default function Attendance() {
       </Card>
 
       {/* Bulk Action Bar */}
-      {anySelected && (
-        <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-40 flex items-center gap-3 bg-gray-900 text-white rounded-2xl shadow-2xl px-6 py-3 animate-fadeIn">
+      {anySelected && createPortal(
+        <div className="fixed bottom-6 left-1/2 lg:left-[calc(50%+130px)] -translate-x-1/2 z-40 flex items-center gap-3 bg-gray-900 text-white rounded-2xl shadow-2xl px-6 py-3">
           <span className="text-sm font-medium">{selectedOtIds.size} selected</span>
           <div className="w-px h-5 bg-gray-700" />
           <Button variant="success" size="sm" icon={CheckCheck} loading={bulkLoading} onClick={() => handleBulkDecision('Approved')}>
@@ -631,7 +632,8 @@ export default function Attendance() {
             Reject
           </Button>
           <button onClick={() => setSelectedOtIds(new Set())} className="ml-1 text-gray-400 hover:text-white transition-colors text-xs">Clear</button>
-        </div>
+        </div>,
+        document.body
       )}
       </>
       ) : (

@@ -23,7 +23,7 @@
     },
     {
       "id": "SHIFT004",
-      "name": "Flexible Shift",
+      "name": "Standard Shift",
       "startTime": "08:00",
       "endTime": "17:00",
       "color": "#3B82F6"
@@ -776,7 +776,7 @@
       },
       {
         "id": "SHIFT004",
-        "name": "Flexible Shift",
+        "name": "Standard Shift",
         "startTime": "08:00",
         "endTime": "17:00",
         "color": "#3B82F6"

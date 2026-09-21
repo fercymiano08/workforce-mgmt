@@ -141,7 +141,7 @@ Some columns (like `settings.kiosk`) store flexible structured data as JSON inst
 
 | Table | Purpose | Key Columns |
 |-------|---------|-------------|
-| `shift_definitions` | The single shift template (Flexible Shift 08:00–17:00). Overtime is not a shift - it extends this one when an overtime request is approved | `id`, `name`, `start_time`, `end_time` |
+| `shift_definitions` | The single shift template (Standard Shift 08:00–17:00). Overtime is not a shift - it extends this one when an overtime request is approved | `id`, `name`, `start_time`, `end_time` |
 | `shift_schedules` | Who works which shift on which date | `id`, `employee_id` (FK), `shift_id` (FK), `date`, `status` |
 
 #### System Support

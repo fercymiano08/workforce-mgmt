@@ -62,7 +62,7 @@ Each service is a full, independent Laravel app living at `backend/<name>/` (e.g
 
 | Tech | What it is | How we use it | Why we picked it |
 |------|-----------|---------------|------------------|
-| **React** | A JavaScript library for building web screens | 22 page files under `frontend/src/pages/` | Fast, component-based, huge ecosystem; runs in any browser |
+| **React** | A JavaScript library for building web screens | 24 page files under `frontend/src/pages/` | Fast, component-based, huge ecosystem; runs in any browser |
 | **Laravel** | A PHP web framework | 8 independent Laravel apps under `backend/<name>/app/` — one per business domain | Secure by default (hashing, validation), clean structure, easy to run as separate services |
 | **PostgreSQL** | A relational database (tables with rows/columns) | 8 databases (one per service), ~25 tables total, plus small "replica" copies of shared reference data (e.g. `employees`) inside services that need to read it without calling another service for every request | Reliable, handles relational + JSON data well, free |
 
@@ -130,7 +130,7 @@ ow() made the alert fire 8 hours late |
 | **Face scanning is warmed up and lean** | The three face-api networks are all warmed with a throw-away pass while the page/modal opens (registration and the kiosk preload the ~7 MB of models early); detection tries a 160 px input first and 320 px as the fallback (was 224/416); redundant re-detection was removed; the result flash and retry pause were shortened | The first scan used to pay a multi-second shader-compile cost and two heavier detection passes. Honest note: these are targeted fixes to the known slow spots; the actual speed still depends on the kiosk's GPU/CPU |
 | **The frontend never waits forever** | Every API call has a 45 s timeout; notification polling pauses while the browser tab is hidden and catches up when it becomes visible | A hung service now ends in an error message instead of an endless spinner |
 
-> **Why can the demo laptop still feel slower than Docker?** In "Way 1" (`start-all.ps1`) each service runs on PHP's built-in `php artisan serve`, which handles **one request at a time**, and the project may sit inside a OneDrive-synced folder (slow file reads on Windows). Docker mode uses 4 workers per service. For the smoothest demo: set `APP_DEBUG=false` and `LOG_LEVEL=warning` in each `backend/<name>/.env` and keep the project outside OneDrive — or run the Docker version (see `activator-deactivator.md`).
+> **Why can the demo laptop still feel slower than Docker?** In "Way 1" (`start-all.ps1`) each service runs on PHP's built-in `php artisan serve`, which handles **one request at a time**, and **every request boots the whole Laravel framework again** (measured on the demo laptop: ~0.5 s per cold request — about 0.1 s to load the code, 0.55 s to boot Laravel, 0.15 s to connect to PostgreSQL). One button click can involve several requests across several services, and the first request after starting is the slowest (nothing is cached yet). The laptop matters too: a low-power CPU, low free RAM and running on battery all slow PHP a lot. We tested moving the project folder out of OneDrive and it made **no difference**. Docker mode uses 4 workers per service. For the smoothest demo: plug in the charger, close heavy apps, set `APP_DEBUG=false` and `LOG_LEVEL=warning` in each `backend/<name>/.env` — or run the Docker version (see `activator-deactivator.md`).
 
 ### The Golden Rule Of This Architecture
 
@@ -175,9 +175,10 @@ There are three roles. Each role logs in through the same login page but lands o
 | 17 | My Schedule `Employee/MySchedule.jsx` | Employee | Upcoming assigned shifts |
 | 18 | Leave `Employee/Leave.jsx` | Employee | Apply for leave, track status, see balances |
 | 19 | My Timesheet `Employee/MyTimesheet.jsx` | Employee | Review own weekly hours and submit them |
-| 20 | Profile / Settings `Employee/Settings.jsx` | Employee | Edit own contact info, change password |
-| 21 | Kiosk Setup `KIOSK/KioskSetup.jsx` | Admin (device) | Configure and lock the entrance tablet into kiosk mode |
-| 22 | Attendance Terminal `KIOSK/AttendanceTerminal.jsx` | Employees at door | The clock-in/clock-out device itself |
+| 20 | My Profile `Employee/MyProfile.jsx` | Employee | Identity, employment, leave balances, face registration status; edit own phone/address/emergency contact/photo |
+| 21 | Settings `Employee/Settings.jsx` | Employee | Change password (live requirements checklist) and appearance only |
+| 22 | Kiosk Setup `KIOSK/KioskSetup.jsx` | Admin (device) | Configure and lock the entrance tablet into kiosk mode |
+| 23 | Attendance Terminal `KIOSK/AttendanceTerminal.jsx` | Employees at door | The clock-in/clock-out device itself |
 
 ---
 
@@ -644,9 +645,9 @@ An employee with an **Approved leave** covering today is marked on-leave rather 
 
 | Code | Name | Hours |
 |------|------|-------|
-| SHIFT004 | Flexible Shift | 08:00 – 17:00 |
+| SHIFT004 | Standard Shift | 08:00 – 17:00 |
 
-> **There is exactly ONE shift: the 8-to-5 Flexible Shift** (this is how the client's company actually works). Templates are reference data — every employee can read them; only the admin can build assignments.
+> **There is exactly ONE shift: the 8-to-5 Standard Shift** (this is how the client's company actually works). Templates are reference data — every employee can read them; only the admin can build assignments.
 >
 > **Overtime is not a shift.** There is deliberately no "Overtime Shift" (5–9 PM) template — nobody can be *scheduled* for overtime. Overtime only happens when an employee's day is **extended**: an approved overtime request moves that day's effective end from 5:00 PM to 5:00 PM + the approved hours (Module 10). A migration removes the old Overtime template from any database that still has it.
 >
@@ -674,6 +675,10 @@ Single rows can be created (`POST /api/shifts/schedules`), edited (`PUT .../{id}
 ### Why Schedules Matter Everywhere Else
 
 The schedule is not decoration. It drives: kiosk clock-in validation (Module 4), Late/Present computation (Module 7), timesheet expectations, and coverage analysis in Analytics/AI.
+
+### Leave Blocks Scheduling
+
+An employee with **approved leave** on a date cannot be given a shift that day: creating or moving a schedule onto such a date is refused by the server (422), and the no-show alert check skips people on approved leave. Shifts created *before* the leave was approved are not auto-cancelled (HR removes them).
 
 ### Tech Trail
 
@@ -774,7 +779,7 @@ paid overtime  =  the SMALLER of  (overtime really worked that day)  and  (overt
 | Approved for 2 h, stayed 3 h | 3 h | 2 h | **2 h** (capped at the approval) |
 | Approved for 2 h, stayed 1 h | 1 h | 2 h | 1 h |
 
-- Each weekly timesheet keeps three numbers: `overtime_hours` (worked), `approved_ot_hours` (approved) and **`paid_ot_hours`** (payable — what payroll uses, at 1.25× the hourly rate). The HR Timesheets screen shows "**Xh not paid**" beside unapproved time, and the employee's timesheet shows "Xh paid · Yh not approved".
+- Each weekly timesheet keeps three numbers: `overtime_hours` (worked), `approved_ot_hours` (approved) and **`paid_ot_hours`** (payable — the only overtime that counts). The HR Timesheets screen shows "**Xh not paid**" beside unapproved time, and the employee's timesheet shows "Xh paid · Yh not approved".
 - **The kiosk warns the employee at clock-out**: if they clock out more than 15 minutes after the (approved) end with no approval covering it, an amber **"Overtime Not Approved"** popup says the extra time will be recorded but **not paid** unless HR approves it. The punch is still accepted — nobody is trapped at the door.
 - **Approval can come after the fact.** An employee who worked late without asking can file a request for **any day in the past 7 days** (older dates go through HR, who can record any date). HR then decides; if approved, the timesheet is recalculated and the time becomes payable.
 
@@ -1061,7 +1066,7 @@ Open dropdown → GET /api/notifications/employee/{myId}
 
 **What it is:** app-wide configuration in one place, plus each user's personal preferences.
 
-**Files:** `HR_Manager/Settings.jsx`, `Employee/Settings.jsx`, backend `SettingsController.php`
+**Files:** `HR_Manager/Settings.jsx`, `Employee/Settings.jsx`, `Employee/MyProfile.jsx`, backend `SettingsController.php`
 
 ### The Single Settings Row
 
@@ -1082,7 +1087,9 @@ Reading is open to any authenticated user (employees need the `system` group for
 
 ### Employee Self-Service Profile
 
-`GET /api/profile` loads your own record; `PUT /api/profile` updates your contact details (phone, address, emergency contact...). You cannot change your own salary, department, or employment status — those belong to the admin.
+Profile and Settings are separate pages. **My Profile** (`/my-profile`) answers "who am I"; **Settings** answers "how the app behaves for me" (password + appearance).
+
+`GET /api/profile` loads your own record with **salary, face photo and face template hidden**; `PUT /api/profile` updates only phone, address, emergency contact/phone and the profile photo. Phones must match digits/+/()/-/spaces (7–20 chars), the photo must be a small image (data URL under ~500 KB), otherwise the server answers 422 with per-field messages. You cannot change your own salary, department, or employment status — those belong to the admin. The old "My Pay Record" page and its payroll endpoint were removed; payroll keeps only timesheets.
 
 ---
 
@@ -1155,7 +1162,6 @@ Which tables each module touches (R = read, W = write). This map is logical — 
 | 48 hours | Deadline to upload a medical certificate for a SICK early clock-out (editable in Settings) |
 | 3 employees | Same reason, same day = "possible early-leave pattern" alert |
 | 7 days | How far back an employee can file an overtime request for a day already worked |
-| 1.25× | Overtime pay premium, applied only to *paid* overtime (approved AND worked) |
 | 200 | Newest notifications returned per list |
 | 35 days | Attendance window the HR Dashboard requests |
 | 1 s / 3 s | Connect / total timeout for notification and audit calls |

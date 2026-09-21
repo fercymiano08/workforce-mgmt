@@ -46,15 +46,15 @@ class ShiftTemplatesAndDuplicatesTest extends TestCase
         ]);
     }
 
-    public function test_flexible_is_the_only_shift_template_on_a_fresh_database(): void
+    public function test_standard_is_the_only_shift_template_on_a_fresh_database(): void
     {
-        $flexible = ShiftDefinition::find('SHIFT004');
+        $standard = ShiftDefinition::find('SHIFT004');
 
-        $this->assertNotNull($flexible, 'the Flexible Shift template must be present');
-        $this->assertSame('Flexible Shift', $flexible->name);
-        $this->assertSame('08:00', substr((string) $flexible->start_time, 0, 5));
-        $this->assertSame('17:00', substr((string) $flexible->end_time, 0, 5));
-        // Flexible is the ONLY template: overtime is an extension of it, not a shift.
+        $this->assertNotNull($standard, 'the Standard Shift template must be present');
+        $this->assertSame('Standard Shift', $standard->name);
+        $this->assertSame('08:00', substr((string) $standard->start_time, 0, 5));
+        $this->assertSame('17:00', substr((string) $standard->end_time, 0, 5));
+        // Standard is the ONLY template: overtime is an extension of it, not a shift.
         $this->assertSame(1, ShiftDefinition::count());
         $this->assertNull(ShiftDefinition::find('SHIFT005'));
     }
@@ -64,10 +64,10 @@ class ShiftTemplatesAndDuplicatesTest extends TestCase
         $this->actingAs($this->admin())->getJson('/api/shifts')
             ->assertOk()
             ->assertJsonFragment(['id' => 'SHIFT004'])
-            ->assertJsonFragment(['name' => 'Flexible Shift']);
+            ->assertJsonFragment(['name' => 'Standard Shift']);
     }
 
-    public function test_assigning_the_flexible_shift_works(): void
+    public function test_assigning_the_standard_shift_works(): void
     {
         $this->employee();
 
@@ -101,7 +101,7 @@ class ShiftTemplatesAndDuplicatesTest extends TestCase
         $this->assign('SHIFT999')->assertStatus(422)->assertJsonValidationErrors('shiftId');
     }
 
-    public function test_automated_generation_uses_the_flexible_shift(): void
+    public function test_automated_generation_uses_the_standard_shift(): void
     {
         $this->employee();
 
@@ -137,5 +137,68 @@ class ShiftTemplatesAndDuplicatesTest extends TestCase
 
         $this->expectException(\Illuminate\Database\UniqueConstraintViolationException::class);
         \App\Models\ShiftSchedule::create(['id' => 'SCH002', 'employee_id' => 'EMP20260001', 'employee_name' => 'Juan', 'shift_id' => 'SHIFT004', 'date' => '2030-01-15', 'status' => 'Scheduled']);
+    }
+
+    private function leave(string $status, string $start, string $end): void
+    {
+        \App\Models\Leave::create([
+            'id' => 'LVE-'.$status.'-'.$start, 'employee_id' => 'EMP20260001', 'employee_name' => 'Juan Dela Cruz',
+            'leave_type' => 'Vacation', 'start_date' => $start, 'end_date' => $end, 'reason' => 'Trip',
+            'status' => $status, 'applied_date' => '2030-01-01',
+        ]);
+    }
+
+    public function test_a_shift_cannot_be_assigned_on_a_day_of_approved_leave(): void
+    {
+        $this->employee();
+        $this->leave('Approved', '2030-01-15', '2030-01-16');
+
+        $this->assign('SHIFT004', '2030-01-15')->assertStatus(422)->assertJsonValidationErrors('date');
+        $this->assign('SHIFT004', '2030-01-16')->assertStatus(422);   // last day of the leave counts too
+
+        $this->assertSame(0, ShiftSchedule::count());
+    }
+
+    public function test_the_day_after_the_leave_is_fine(): void
+    {
+        $this->employee();
+        $this->leave('Approved', '2030-01-15', '2030-01-16');
+
+        $this->assign('SHIFT004', '2030-01-17')->assertCreated();
+    }
+
+    public function test_pending_or_rejected_leave_does_not_block_a_shift(): void
+    {
+        $this->employee();
+        $this->leave('Pending', '2030-01-15', '2030-01-15');
+        $this->leave('Rejected', '2030-01-16', '2030-01-16');
+
+        $this->assign('SHIFT004', '2030-01-15')->assertCreated();
+        $this->assign('SHIFT004', '2030-01-16')->assertCreated();
+    }
+
+    public function test_moving_a_shift_onto_a_leave_day_is_refused(): void
+    {
+        $this->employee();
+        $this->leave('Approved', '2030-01-20', '2030-01-20');
+        $id = $this->assign('SHIFT004', '2030-01-15')->assertCreated()->json('data.id');
+
+        $this->actingAs($this->admin())->putJson('/api/shifts/schedules/'.$id, ['date' => '2030-01-20'])
+            ->assertStatus(422)
+            ->assertJsonValidationErrors('date');
+
+        $this->assertSame('2030-01-15', ShiftSchedule::find($id)->date->toDateString());
+    }
+
+    public function test_generation_skips_the_leave_days(): void
+    {
+        $this->employee();
+        $this->leave('Approved', '2030-01-16', '2030-01-16');   // Wednesday
+
+        $this->actingAs($this->admin())->postJson('/api/shifts/schedules/generate', [
+            'shiftId' => 'SHIFT004', 'startDate' => '2030-01-14', 'endDate' => '2030-01-18',
+        ])->assertOk()
+            ->assertJsonPath('data.created', 4)
+            ->assertJsonPath('data.skippedOnLeave', 1);
     }
 }
