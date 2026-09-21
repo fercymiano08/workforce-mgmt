@@ -480,16 +480,18 @@ While the face is being scanned, the camera view shows the same **face-shaped ov
 
 ### Clock-Out Math
 
-When clocking out, the terminal computes and stores four numbers on the attendance row — **always from the actual punches, never from the schedule** (clock in 10:00 today means the 08:00–10:00 hour is simply not credited):
+When clocking out, the **server** (not the kiosk screen) works out four numbers and stores them on the attendance row — **always from the actual punches, never from the schedule** (clock in 10:00 today means the 08:00–10:00 hour is simply not credited):
 
 | Stored value | What it is |
 |--------------|-----------|
-| `total_hours` | (clock-out − clock-in), minus the **1-hour unpaid lunch** — only if the worked time actually overlaps 12:00–13:00 |
-| `overtime`   | time clocked **past 17:00** (the standard day's end) |
+| `total_hours` | (counted clock-out − clock-in), minus the **unpaid lunch** when enough was worked (see below) |
+| `overtime`   | counted time **past 17:00** (only possible with an approved overtime request) |
 | `regular_hours` | total − overtime |
 | `break_hours` | the deducted lunch, in hours |
 
-The same helper the timesheet generator uses computes these — one source of truth, so attendance history and weekly timesheets always agree.
+**How the lunch break works.** It is deducted **by duration, not by clock time**, the way most enterprise time systems do it: once the person has worked at least the **minimum hours (default 5)**, the **lunch length (default 60 minutes)** is taken off the day — whenever lunch was really taken. A shorter day (a sick early leave at 12:30, a half day) loses nothing. Nobody has to clock out for lunch. HR can change both numbers (or set the length to 0 to switch it off) on **Settings → Early Leave → Unpaid Lunch Break**; a change applies to days worked from then on, and days already counted keep the lunch they were counted with. This matches the Philippine Labor Code idea that a meal break of at least 60 minutes is unpaid.
+
+The same helper (`ShiftHours`) computes these when a day is re-counted after an overtime approval — one source of truth, so attendance history and weekly timesheets always agree.
 
 ### Module 4a — Clocking Out Early (Early Leave)
 

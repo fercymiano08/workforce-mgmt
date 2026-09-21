@@ -207,7 +207,78 @@ function EarlyLeaveSection({ settingsData, onSaved }) {
           <Button icon={Save} onClick={handleSave}>Save Changes</Button>
         </div>
       </Card>
+
+      <LunchBreakCard settingsData={settingsData} onSaved={onSaved} />
     </div>
+  );
+}
+
+// The unpaid lunch: how long, and how many hours must be worked before it is deducted.
+function LunchBreakCard({ settingsData, onSaved }) {
+  const { toast } = useToast();
+  const system = settingsData.system || {};
+  const [form, setForm] = useState({
+    lunch_break_minutes: system.lunch_break_minutes ?? 60,
+    lunch_minimum_hours: system.lunch_minimum_hours ?? 5,
+  });
+
+  const handleSave = async () => {
+    const minutes = Number(form.lunch_break_minutes);
+    const hours = Number(form.lunch_minimum_hours);
+    if (!(minutes >= 0 && minutes <= 180) || !(hours >= 0 && hours <= 12)) {
+      toast.error('Check the numbers', 'Lunch can be 0-180 minutes, and the minimum hours 0-12.');
+      return;
+    }
+    try {
+      // 'system' is replaced wholesale by the API, so keep every value already on the row.
+      await settingsService.update({ system: { ...system, lunch_break_minutes: minutes, lunch_minimum_hours: hours } });
+      toast.success('Lunch break updated', 'It applies to days worked from now on. Past days are not changed.');
+      onSaved?.();
+    } catch {
+      toast.error('Error', 'Failed to save the lunch break.');
+    }
+  };
+
+  return (
+    <Card>
+      <CardHeader>
+        <div>
+          <CardTitle>Unpaid Lunch Break</CardTitle>
+          <CardDescription>Taken off each working day automatically - nobody has to clock out for lunch</CardDescription>
+        </div>
+      </CardHeader>
+
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+        <Input
+          label="Lunch length (minutes)"
+          type="number"
+          min={0}
+          max={180}
+          value={form.lunch_break_minutes}
+          onChange={(e) => setForm((f) => ({ ...f, lunch_break_minutes: e.target.value }))}
+          icon={TimerOff}
+        />
+        <Input
+          label="Only if the person worked at least (hours)"
+          type="number"
+          min={0}
+          max={12}
+          step="0.5"
+          value={form.lunch_minimum_hours}
+          onChange={(e) => setForm((f) => ({ ...f, lunch_minimum_hours: e.target.value }))}
+        />
+      </div>
+
+      <InfoNote>
+        Once someone has worked the minimum hours, the lunch length is taken off their day - whenever lunch was really
+        taken. A shorter day (a sick early leave, a half day) loses nothing. Set the length to 0 to turn the deduction off.
+        Changes apply to days worked from now on; days already counted keep the lunch they were counted with.
+      </InfoNote>
+
+      <div className="flex justify-end mt-6">
+        <Button icon={Save} onClick={handleSave}>Save Changes</Button>
+      </div>
+    </Card>
   );
 }
 

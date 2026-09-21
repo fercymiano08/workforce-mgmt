@@ -37,8 +37,7 @@ class RecountAttendanceHours extends Command
                     Carbon::parse($dateKey.' '.$row->actual_clock_out, $timezone),
                     ShiftHours::baseEnd($dateKey, $shift->start_time, $shift->end_time, $timezone),
                     ShiftHours::effectiveEnd($row->employee_id, $dateKey, $shift->start_time, $shift->end_time, $timezone),
-                    $timezone,
-                    $dateKey,
+                    (int) round(((float) $row->break_hours) * 60),
                 );
 
                 $countedOut = $hours['countedOut']->format('H:i:s');

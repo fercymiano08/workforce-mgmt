@@ -12,15 +12,11 @@ use Illuminate\Support\Carbon;
  * A day counts from clock-in to the moment the person left, but never past the END OF THE SHIFT
  * (5:00 PM), extended only by overtime that HR approved for that date. Minutes after that with
  * no approval are simply not counted. The real punch time is kept separately (`actual_clock_out`)
- * so an overtime request approved afterwards can bring those minutes back.
+ * so an overtime request approved afterwards can bring those minutes back. The unpaid lunch is taken off
+ * by duration (BreakPolicy).
  */
 class ShiftHours
 {
-    /** The unpaid lunch break; a day that overlaps it loses the whole hour. */
-    public const LUNCH_START = '12:00';
-
-    public const LUNCH_END = '13:00';
-
     public static function timezone(): string
     {
         $kiosk = Setting::query()->first()?->kiosk ?? [];
@@ -62,7 +58,7 @@ class ShiftHours
     /**
      * @return array{countedOut: Carbon, uncountedMinutes: int, regular: float, overtime: float, total: float, break: float}
      */
-    public static function count(Carbon $clockIn, Carbon $actualOut, Carbon $baseEnd, ?Carbon $effectiveEnd, string $timezone, string $dateKey): array
+    public static function count(Carbon $clockIn, Carbon $actualOut, Carbon $baseEnd, ?Carbon $effectiveEnd, ?int $lunchMinutes = null): array
     {
         $countedOut = $actualOut;
         $uncounted = 0;
@@ -72,9 +68,10 @@ class ShiftHours
         }
 
         $elapsed = max(0, $clockIn->diffInMinutes($countedOut, false));
-        $lunchStart = Carbon::parse($dateKey.' '.self::LUNCH_START, $timezone);
-        $lunchEnd = Carbon::parse($dateKey.' '.self::LUNCH_END, $timezone);
-        $lunch = ($clockIn->gte($lunchEnd) || $countedOut->lte($lunchStart)) ? 0 : (int) $lunchStart->diffInMinutes($lunchEnd);
+        // Lunch comes off by duration once enough was worked (see BreakPolicy). A re-count passes the minutes
+        // that were deducted originally, so a later change of the policy never rewrites past days.
+        $lunch = $lunchMinutes ?? app(BreakPolicy::class)->deductionFor((int) $elapsed);
+        $lunch = (int) min($lunch, $elapsed);
 
         $total = max(0, $elapsed - $lunch) / 60;
         $overtime = max(0, $baseEnd->diffInMinutes($countedOut, false)) / 60;

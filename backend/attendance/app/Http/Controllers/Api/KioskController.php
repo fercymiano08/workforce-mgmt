@@ -621,8 +621,6 @@ class KioskController extends Controller
                 $clockOut,
                 ShiftHours::baseEnd($dateKey, $schedule->shift->start_time, $schedule->shift->end_time, $timezone),
                 $effectiveEnd,
-                $timezone,
-                $dateKey,
             );
             $countedOut = $hours['countedOut'];
             $uncountedMinutes = $hours['uncountedMinutes'];

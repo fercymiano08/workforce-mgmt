@@ -332,7 +332,7 @@ The "scariest" architecture question. Your answer is strong and true, and it has
 ```
 
 **The one-line truth (memorize this):**
-> "We migrated this system from a single Laravel monolith to 8 independent microservices using the Strangler Fig pattern — one domain extracted and verified at a time. That migration is complete: every domain (identity, analytics/AI, attendance, scheduling, time-off, payroll, communications, configuration) is now its own Laravel app, its own port, its own database, with 273 automated tests passing across all 8, and the frontend's proxy config is the only thing that routes requests to the right one."
+> "We migrated this system from a single Laravel monolith to 8 independent microservices using the Strangler Fig pattern — one domain extracted and verified at a time. That migration is complete: every domain (identity, analytics/AI, attendance, scheduling, time-off, payroll, communications, configuration) is now its own Laravel app, its own port, its own database, with 280 automated tests passing across all 8, and the frontend's proxy config is the only thing that routes requests to the right one."
 
 ## Why we did it in this order (your honest engineering answer)
 

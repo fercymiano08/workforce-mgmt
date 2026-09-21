@@ -21,7 +21,6 @@ import {
   toTimeString,
   minutesFromTime,
   calculateAttendanceStatus,
-  calculateTimesheetFields,
 } from '../../services/attendanceService';
 import { ATTENDANCE_CONFIG } from '../../utils/attendanceConfig';
 
@@ -627,20 +626,16 @@ export default function AttendanceTerminal() {
         setRecordedHours(null);
         setClockInOutcome(outcome);
       } else {
-        const fields = calculateTimesheetFields(todayRecord.clockIn, time);
         const reason = earlyOutReason.reasonCode ? {
           reasonCode: earlyOutReason.reasonCode,
           reasonNote: (earlyOutReason.reasonNote || '').trim() || null,
         } : {};
         const punched = await kioskService.clockOut(todayRecord.id, {
           clockOut: time,
-          regularHours: fields.regularHours,
-          overtime: fields.overtimeHours,
-          totalHours: fields.totalHours,
-          breakHours: fields.breakHours,
           ...reason,
         });
-        setRecordedHours(fields.totalHours);
+        // The server works out which hours count (lunch, shift end, approved overtime); show its answer.
+        setRecordedHours(punched?.data?.totalHours ?? null);
         setClockInOutcome(null);
         setClockOutOutcome(earlyOutReason.reasonCode ? 'early' : null);
         setEarlyLeaveInfo(punched?.earlyLeave || null);
