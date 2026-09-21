@@ -4,6 +4,7 @@ import {
   CartesianGrid, Tooltip, Legend, ResponsiveContainer,
 } from 'recharts';
 import BrandLogo from '../ui/BrandLogo';
+import { useConfirmPassword } from '../../hooks/useConfirmPassword';
 import { downloadCSV, downloadFile, toHTMLTable } from '../../utils/export';
 import { useToast } from '../../context/ToastContext';
 
@@ -61,7 +62,10 @@ function ChartSection({ chart }) {
 
 export default function ReportPreview({ report }) {
   const { toast } = useToast();
+  const { askPassword, passwordModal } = useConfirmPassword();
   if (!report) return null;
+
+  const requestExport = (format) => askPassword(`Export report "${report.title || 'report'}"`, () => handleExport(format));
 
   const handleExport = (format) => {
     const rows = report.rows.map((r) => {
@@ -243,13 +247,13 @@ export default function ReportPreview({ report }) {
       <div className="flex items-center justify-between mb-4 no-print">
         <p className="text-sm text-gray-500">{report.rows.length} record{report.rows.length !== 1 ? 's' : ''} &middot; {report.period}</p>
         <div className="flex items-center gap-2">
-          <button onClick={() => handleExport('csv')} className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold rounded-lg border border-gray-200 text-gray-600 hover:border-blue-300 hover:text-blue-600 transition-colors">
+          <button onClick={() => requestExport('csv')} className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold rounded-lg border border-gray-200 text-gray-600 hover:border-blue-300 hover:text-blue-600 transition-colors">
             <Download className="w-3.5 h-3.5" /> CSV
           </button>
-          <button onClick={() => handleExport('excel')} className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold rounded-lg border border-gray-200 text-gray-600 hover:border-blue-300 hover:text-blue-600 transition-colors">
+          <button onClick={() => requestExport('excel')} className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold rounded-lg border border-gray-200 text-gray-600 hover:border-blue-300 hover:text-blue-600 transition-colors">
             <Download className="w-3.5 h-3.5" /> Excel
           </button>
-          <button onClick={() => handleExport('pdf')} className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold rounded-lg border border-gray-200 text-gray-600 hover:border-blue-300 hover:text-blue-600 transition-colors">
+          <button onClick={() => requestExport('pdf')} className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold rounded-lg border border-gray-200 text-gray-600 hover:border-blue-300 hover:text-blue-600 transition-colors">
             <Printer className="w-3.5 h-3.5" /> Print
           </button>
         </div>
@@ -390,6 +394,7 @@ export default function ReportPreview({ report }) {
           </div>
         </div>
       </div>
+      {passwordModal}
     </div>
   );
 }

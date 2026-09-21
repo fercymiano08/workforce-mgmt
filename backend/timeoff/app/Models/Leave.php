@@ -13,7 +13,7 @@ class Leave extends Model
     protected $keyType = 'string';
 
     protected $fillable = [
-        'id', 'employee_id', 'employee_name', 'leave_type', 'start_date', 'end_date',
+        'id', 'employee_id', 'employee_name', 'leave_type', 'start_date', 'end_date', 'days',
         'reason', 'status', 'applied_date', 'approved_by', 'comments', 'documents',
     ];
 
@@ -23,6 +23,7 @@ class Leave extends Model
             'start_date' => 'date:Y-m-d',
             'end_date' => 'date:Y-m-d',
             'applied_date' => 'date:Y-m-d',
+            'days' => 'float',
             'documents' => 'array',
         ];
     }

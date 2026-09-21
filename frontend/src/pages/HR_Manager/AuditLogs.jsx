@@ -13,6 +13,7 @@ import KpiCard from '../../components/dashboard/KpiCard';
 import { SkeletonTable } from '../../components/ui/LoadingSkeleton';
 import useApiData from '../../hooks/useApiData';
 import { auditService } from '../../services/api';
+import { useConfirmPassword } from '../../hooks/useConfirmPassword';
 import { downloadCsv } from '../../utils/export';
 import { formatDate, formatTime } from '../../utils/helpers';
 import { toDateKey } from '../../services/attendanceService';
@@ -53,6 +54,20 @@ const EVENT_NAMES = {
   'timesheet.deleted': 'Timesheet deleted',
   'attendance.punch_corrected': 'Attendance record corrected',
   'attendance.deleted': 'Attendance record deleted',
+  'overtime.requested': 'Overtime requested',
+  'overtime.status_changed': 'Overtime decision',
+  'overtime.withdrawn': 'Overtime request withdrawn',
+  'overtime.deleted': 'Overtime request deleted',
+  'settings.updated': 'System settings changed',
+  'auth.login': 'Signed in',
+  'auth.login_failed': 'Failed sign-in',
+  'auth.login_locked': 'Sign-in locked (too many attempts)',
+  'auth.logout': 'Signed out',
+  'auth.password_changed': 'Password changed',
+  'auth.password_reset_requested': 'Password reset code requested',
+  'auth.password_reset': 'Password reset',
+  'auth.export_confirmed': 'Password confirmed for an export',
+  'auth.confirm_failed': 'Wrong password when confirming an export',
 };
 
 const RANGES = [
@@ -143,6 +158,20 @@ const sentenceOf = (e) => {
     case 'timesheet.deleted': return `deleted ${person ? `${person}'s` : 'a'} timesheet`;
     case 'attendance.punch_corrected': return `corrected ${person ? `${person}'s` : 'an'} attendance record`;
     case 'attendance.deleted': return `deleted ${person ? `${person}'s` : 'an'} attendance record`;
+    case 'overtime.requested': return `requested overtime${person ? ` (${person})` : ''}`;
+    case 'overtime.status_changed': return `${decision} ${person ? `${person}'s` : 'an'} overtime request`;
+    case 'overtime.withdrawn': return `withdrew ${person ? `${person}'s` : 'an'} overtime request`;
+    case 'overtime.deleted': return `deleted ${person ? `${person}'s` : 'an'} overtime request`;
+    case 'settings.updated': return `changed the ${(e.meta?.sections || []).join(' and ') || 'system'} settings`;
+    case 'auth.login': return 'signed in';
+    case 'auth.login_failed': return `failed to sign in as ${e.meta?.email || 'an unknown account'}`;
+    case 'auth.login_locked': return `was locked out after too many sign-in attempts (${e.meta?.email || 'unknown account'})`;
+    case 'auth.logout': return 'signed out';
+    case 'auth.password_changed': return 'changed their password';
+    case 'auth.password_reset_requested': return 'asked for a password reset code';
+    case 'auth.password_reset': return 'reset their password with an emailed code';
+    case 'auth.export_confirmed': return `confirmed their password to: ${e.meta?.purpose || 'export data'}`;
+    case 'auth.confirm_failed': return `typed a wrong password when trying to: ${e.meta?.purpose || 'export data'}`;
     default: return `${eventName(e.event).toLowerCase()}${person ? ` (${person})` : ''}`;
   }
 };
@@ -234,6 +263,15 @@ export default function AuditLogs() {
     return `${formatDate(toDateKey(d))} ${timeOf(d)}`;
   };
 
+  const { askPassword, passwordModal } = useConfirmPassword();
+  const requestExport = () => {
+    if (!logs.length) {
+      toast.error('Nothing to export', 'No matching audit events.');
+      return;
+    }
+    askPassword('Export audit log', handleExport);
+  };
+
   const handleExport = () => {
     if (!logs.length) {
       toast.error('Nothing to export', 'No matching audit events.');
@@ -289,7 +327,7 @@ export default function AuditLogs() {
         </div>
         <div className="flex items-center gap-3 flex-wrap">
           <Button variant="outline" size="md" icon={RefreshCw} onClick={refresh}>Refresh</Button>
-          <Button variant="outline" size="md" icon={Download} onClick={handleExport}>Export CSV</Button>
+          <Button variant="outline" size="md" icon={Download} onClick={requestExport}>Export CSV</Button>
         </div>
       </div>
 
@@ -524,6 +562,7 @@ export default function AuditLogs() {
         </div>,
         document.body,
       )}
+      {passwordModal}
     </div>
   );
 }

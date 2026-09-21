@@ -1,5 +1,5 @@
-import { createContext, useContext, useState, useCallback, useMemo } from 'react';
-import http, { setToken, clearToken, getToken } from '../services/http';
+import { createContext, useContext, useState, useCallback, useEffect, useMemo } from 'react';
+import http, { setToken, clearToken, getToken, SESSION_ENDED_EVENT } from '../services/http';
 
 const STORAGE_KEY = 'workforce_auth_user';
 
@@ -27,7 +27,8 @@ export function AuthProvider({ children }) {
   const login = useCallback(async (email, password) => {
     try {
       const response = await http.post('/auth/login', { email, password });
-      const sessionUser = response.user;
+      // An employee's login carries a timeout (seconds of inactivity); the idle guard reads it from the user.
+      const sessionUser = { ...response.user, sessionTimeoutSeconds: response.sessionTimeoutSeconds ?? null };
       setToken(response.token);
       setUser(sessionUser);
       setAuthError(null);
@@ -68,6 +69,19 @@ export function AuthProvider({ children }) {
   }, []);
 
   const clearAuthError = useCallback(() => setAuthError(null), []);
+
+  // The server ended the session (the login expired, or was revoked): sign out here too, and let the login
+  // page say why. (Being idle for 3 minutes as an employee is reported by the idle guard before this.)
+  useEffect(() => {
+    const onEnded = () => {
+      try { if (!store()?.getItem('workforce_logout_reason')) store()?.setItem('workforce_logout_reason', 'expired'); } catch { /* ignore */ }
+      clearToken();
+      setUser(null);
+      try { store()?.removeItem(STORAGE_KEY); } catch { /* ignore */ }
+    };
+    window.addEventListener(SESSION_ENDED_EVENT, onEnded);
+    return () => window.removeEventListener(SESSION_ENDED_EVENT, onEnded);
+  }, []);
 
   // Without this, a brand-new object is passed to the Provider on every
   // render of AuthProvider (from ANY state change anywhere above it in the

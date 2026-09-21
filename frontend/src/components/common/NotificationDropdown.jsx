@@ -13,7 +13,7 @@ import EmptyState from '../ui/EmptyState';
 // the panel's own "click outside" listener and the trigger button's onClick
 // toggle both fired on the same click, so closing via the bell button would
 // instantly reopen the dropdown.
-export default function NotificationDropdown({ isOpen }) {
+export default function NotificationDropdown({ isOpen, onClose }) {
   const { notifications, unreadCount, markAsRead, markAllAsRead, deleteNotification } = useNotifications();
   const navigate = useNavigate();
   const [filter, setFilter] = useState('all');
@@ -137,7 +137,12 @@ export default function NotificationDropdown({ isOpen }) {
         )}
       </div>
 
-
+      <button
+        onClick={() => { onClose?.(); navigate('/notifications'); }}
+        className="w-full px-5 py-3 text-[13px] font-medium text-blue-600 hover:bg-blue-50/50 border-t border-gray-100 transition-colors"
+      >
+        See all notifications
+      </button>
     </div>
   );
 }

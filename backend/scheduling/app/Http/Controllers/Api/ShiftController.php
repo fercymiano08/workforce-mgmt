@@ -5,11 +5,12 @@ namespace App\Http\Controllers\Api;
 use App\Http\Controllers\Api\Concerns\AuthorizesEmployeeScope;
 use App\Http\Controllers\Api\Concerns\GeneratesSequentialIds;
 use App\Http\Controllers\Controller;
-use App\Models\Employee;
 use App\Models\Leave;
 use App\Models\ShiftDefinition;
 use App\Models\ShiftSchedule;
+use App\Services\AuditClient;
 use App\Services\NotificationService;
+use App\Services\ScheduleGenerator;
 use App\Services\ShiftReplicationClient;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -18,10 +19,6 @@ use Illuminate\Support\Carbon;
 class ShiftController extends Controller
 {
     use AuthorizesEmployeeScope, GeneratesSequentialIds;
-
-    // A day where more than this share of active employees are on approved
-    // leave gets flagged to HR as a staffing risk.
-    private const SHORTAGE_THRESHOLD = 0.2;
 
     public function definitions(): JsonResponse
     {
@@ -94,18 +91,18 @@ class ShiftController extends Controller
         );
 
         ShiftReplicationClient::pushSchedules([$record->id]);
+        AuditClient::record('schedule.created', 'ShiftSchedule', $record->id, actor: $request->user()?->name, after: $record->toApiArray(), meta: ['employeeId' => $record->employee_id]);
 
         return response()->json(['data' => $record->toApiArray()], 201);
     }
 
     /**
-     * Bulk-generate the recurring schedule for a date range instead of HR
-     * creating one row per employee per day by hand. Skips employees who
-     * already have a schedule for that date, and skips employees with an
-     * approved leave covering that date. Flags any date where too large a
-     * share of the active workforce is on leave.
+     * Generate schedules for a date range. With `preview: true` nothing is created: the answer says what WOULD
+     * be created and what would be skipped and why. Without it the schedules are created and recorded as a
+     * batch that can be undone. The rules (work patterns, holidays, leave, existing shifts, coverage) live in
+     * ScheduleGenerator, shared with the automatic weekly job.
      */
-    public function generateSchedule(Request $request): JsonResponse
+    public function generateSchedule(Request $request, ScheduleGenerator $generator): JsonResponse
     {
         $data = $request->validate([
             'startDate' => 'required|date',
@@ -114,122 +111,16 @@ class ShiftController extends Controller
             'employeeIds' => 'nullable|array',
             'employeeIds.*' => 'string|max:20',
             'skipWeekends' => 'nullable|boolean',
+            'preview' => 'nullable|boolean',
         ]);
 
-        $skipWeekends = $data['skipWeekends'] ?? true;
+        $plan = $generator->plan($data['startDate'], $data['endDate'], $data['shiftId'], $data['employeeIds'] ?? null, (bool) ($data['skipWeekends'] ?? true));
 
-        $employees = filled($data['employeeIds'] ?? null)
-            ? Employee::whereIn('id', $data['employeeIds'])->get()
-            : Employee::where('status', '!=', 'Inactive')->get();
-
-        if ($employees->isEmpty()) {
-            return response()->json(['data' => [
-                'created' => 0, 'skippedExisting' => 0, 'skippedOnLeave' => 0, 'shortageDates' => [],
-            ]]);
+        if ($request->boolean('preview')) {
+            return response()->json(['data' => $generator->summary($plan) + ['preview' => true, 'sample' => array_slice($plan['rows'], 0, 60)]]);
         }
 
-        $start = Carbon::parse($data['startDate'])->startOfDay();
-        $end = Carbon::parse($data['endDate'])->startOfDay();
-
-        $existingDates = ShiftSchedule::whereIn('employee_id', $employees->pluck('id'))
-            ->whereBetween('date', [$start->toDateString(), $end->toDateString()])
-            ->get(['employee_id', 'date'])
-            ->map(fn ($s) => $s->employee_id.'|'.$s->date->toDateString())
-            ->flip();
-
-        $approvedLeaves = Leave::whereIn('employee_id', $employees->pluck('id'))
-            ->where('status', 'Approved')
-            ->where('start_date', '<=', $end->toDateString())
-            ->where('end_date', '>=', $start->toDateString())
-            ->get(['employee_id', 'start_date', 'end_date']);
-
-        $created = 0;
-        $skippedExisting = 0;
-        $skippedOnLeave = 0;
-        $employeesScheduled = []; // employee_id => count of new shifts
-        $shortageDates = [];
-        $createdIds = [];
-
-        for ($day = $start->copy(); $day->lte($end); $day->addDay()) {
-            if ($skipWeekends && $day->isWeekend()) {
-                continue;
-            }
-            $dateKey = $day->toDateString();
-            $onLeaveToday = 0;
-
-            foreach ($employees as $employee) {
-                $onLeave = $approvedLeaves->contains(fn ($l) => $l->employee_id === $employee->id
-                    && $l->start_date->toDateString() <= $dateKey
-                    && $l->end_date->toDateString() >= $dateKey);
-
-                if ($onLeave) {
-                    $onLeaveToday++;
-                    $skippedOnLeave++;
-                    continue;
-                }
-
-                if ($existingDates->has($employee->id.'|'.$dateKey)) {
-                    $skippedExisting++;
-                    continue;
-                }
-
-                try {
-                    $newSchedule = ShiftSchedule::create([
-                        'id' => $this->nextIdFor(ShiftSchedule::class, 'SCH'),
-                        'employee_id' => $employee->id,
-                        'employee_name' => trim($employee->first_name.' '.$employee->last_name),
-                        'shift_id' => $data['shiftId'],
-                        'date' => $dateKey,
-                        'status' => 'Scheduled',
-                    ]);
-                } catch (\Illuminate\Database\UniqueConstraintViolationException) {
-                    // Someone else scheduled this person for this day a moment ago.
-                    $skippedExisting++;
-                    continue;
-                }
-                $createdIds[] = $newSchedule->id;
-                $created++;
-                $employeesScheduled[$employee->id] = ($employeesScheduled[$employee->id] ?? 0) + 1;
-            }
-
-            if ($employees->count() > 0 && ($onLeaveToday / $employees->count()) > self::SHORTAGE_THRESHOLD) {
-                $shortageDates[] = $dateKey;
-                $alreadyFlagged = \App\Models\Notification::where('type', 'staff_shortage')
-                    ->whereDate('timestamp', now())
-                    ->where('message', 'like', "%{$dateKey}%")
-                    ->exists();
-                if (! $alreadyFlagged) {
-                    NotificationService::notifyAdmins(
-                        'staff_shortage',
-                        'Possible Staffing Shortage',
-                        "{$onLeaveToday} of {$employees->count()} employees are on approved leave on ".Carbon::parse($dateKey)->format('M d, Y').'.',
-                        'high',
-                        '/shifts'
-                    );
-                }
-            }
-        }
-
-        foreach ($employeesScheduled as $employeeId => $count) {
-            $employee = $employees->firstWhere('id', $employeeId);
-            NotificationService::notifyEmployee(
-                $employeeId,
-                'shift_assigned',
-                'Schedule Generated',
-                "You've been scheduled {$start->format('M d')} – {$end->format('M d, Y')} ({$count} shift".($count === 1 ? '' : 's').').',
-                'low',
-                '/my-schedule'
-            );
-        }
-
-        ShiftReplicationClient::pushSchedules($createdIds);
-
-        return response()->json(['data' => [
-            'created' => $created,
-            'skippedExisting' => $skippedExisting,
-            'skippedOnLeave' => $skippedOnLeave,
-            'shortageDates' => array_values(array_unique($shortageDates)),
-        ]]);
+        return response()->json(['data' => $generator->commit($plan, 'manual', $request->user()?->name ?: 'Workforce Admin')]);
     }
 
     /**
@@ -274,7 +165,9 @@ class ShiftController extends Controller
             $this->assertNotOnApprovedLeave($newEmployee, $newDate, $data['employee_name'] ?? $record->employee_name);
         }
 
+        $before = $record->toApiArray();
         $record->update($data);
+        AuditClient::record('schedule.updated', 'ShiftSchedule', $record->id, actor: $request->user()?->name, before: $before, after: $record->fresh()->toApiArray(), meta: ['employeeId' => $record->employee_id]);
 
         NotificationService::notifyEmployee(
             $record->employee_id,
@@ -290,13 +183,14 @@ class ShiftController extends Controller
         return response()->json(['data' => $record->fresh()->toApiArray()]);
     }
 
-    public function destroySchedule(string $id): JsonResponse
+    public function destroySchedule(Request $request, string $id): JsonResponse
     {
         $record = ShiftSchedule::find($id);
         if (! $record) {
             return response()->json(['message' => 'Shift schedule not found'], 404);
         }
 
+        AuditClient::record('schedule.deleted', 'ShiftSchedule', $record->id, actor: $request->user()?->name, before: $record->toApiArray(), meta: ['employeeId' => $record->employee_id]);
         $record->delete();
 
         return response()->json(['success' => true]);

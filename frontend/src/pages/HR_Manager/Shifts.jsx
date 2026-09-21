@@ -1,7 +1,7 @@
 import { useState, useMemo, useEffect } from 'react';
 import {
-  CalendarDays, Plus, Clock, Edit, ArrowLeftRight, Check,
-  Zap, Search, FilterX, Wand2, Trash2, AlertTriangle,
+  CalendarDays, Clock, Edit, ArrowLeftRight, Check,
+  Zap, Search, FilterX, Wand2, Trash2, AlertTriangle, Bot, UserPlus,
   Flame, ChevronLeft, ChevronRight, Users,
 } from 'lucide-react';
 import Card, { CardTitle, CardDescription } from '../../components/ui/Card';
@@ -9,6 +9,8 @@ import Button from '../../components/ui/Button';
 import Badge from '../../components/ui/Badge';
 import Avatar from '../../components/ui/Avatar';
 import Modal from '../../components/ui/Modal';
+import EmployeePicker from '../../components/scheduling/EmployeePicker';
+import ScheduleRulesModal from '../../components/scheduling/ScheduleRulesModal';
 import Input, { Select, Textarea } from '../../components/ui/Input';
 import { employeeService, shiftService } from '../../services/api';
 import { formatDate, formatTime } from '../../utils/helpers';
@@ -38,19 +40,6 @@ const addDays = (d, n) => { const x = new Date(d); x.setDate(x.getDate() + n); r
 const startOfWeek = (d) => addDays(d, -((d.getDay() + 6) % 7));
 const DAY_LABELS = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
 
-const countWorkdays = (start, end, skipWeekends) => {
-  if (!start || !end || end < start) return 0;
-  let count = 0;
-  const d = new Date(`${start}T00:00:00`);
-  const last = new Date(`${end}T00:00:00`);
-  while (d <= last) {
-    const dow = d.getDay();
-    if (!skipWeekends || (dow !== 0 && dow !== 6)) count += 1;
-    d.setDate(d.getDate() + 1);
-  }
-  return count;
-};
-
 export default function Shifts() {
   const [employees, setEmployees] = useState([]);
   const { toast } = useToast();
@@ -64,13 +53,15 @@ export default function Shifts() {
   const [departmentFilter, setDepartmentFilter] = useState('');
   const [dateFilter, setDateFilter] = useState('');
   const [statusFilter, setStatusFilter] = useState('');
-  const [generateSearch, setGenerateSearch] = useState('');
   const [isGenerateModalOpen, setIsGenerateModalOpen] = useState(false);
   const [generateStep, setGenerateStep] = useState(1);
   const [generateForm, setGenerateForm] = useState({
-    startDate: '', endDate: '', shiftId: '', skipWeekends: true, scope: 'all', scopeDepartment: '', employeeIds: [],
+    startDate: '', endDate: '', shiftId: '', skipWeekends: true, employeeIds: [],
   });
   const [generateErrors, setGenerateErrors] = useState({});
+  const [preview, setPreview] = useState(null);
+  const [previewing, setPreviewing] = useState(false);
+  const [rulesOpen, setRulesOpen] = useState(false);
   const [generating, setGenerating] = useState(false);
   const [deleteTarget, setDeleteTarget] = useState(null);
   const [deleting, setDeleting] = useState(false);
@@ -226,15 +217,11 @@ export default function Shifts() {
 
   const openGenerate = () => {
     if (noShiftTemplates()) return;
-    setGenerateSearch('');
-    setGenerateForm({ startDate: '', endDate: '', shiftId: standardShift?.id || '', skipWeekends: true, scope: 'all', scopeDepartment: '', employeeIds: [] });
+    setGenerateForm({ startDate: '', endDate: '', shiftId: standardShift?.id || '', skipWeekends: true, employeeIds: [] });
     setGenerateErrors({});
     setGenerateStep(1);
+    setPreview(null);
     setIsGenerateModalOpen(true);
-  };
-
-  const toggleGenerateEmployee = (id) => {
-    setGenerateForm(p => ({ ...p, employeeIds: p.employeeIds.includes(id) ? p.employeeIds.filter(x => x !== id) : [...p.employeeIds, id] }));
   };
 
   const setQuickRange = (type) => {
@@ -255,25 +242,7 @@ export default function Shifts() {
     }
   };
 
-  const filteredGenerateEmployees = useMemo(() => {
-    const q = generateSearch.trim().toLowerCase();
-    return employees.filter(e => !q || `${e.firstName} ${e.lastName} ${e.department}`.toLowerCase().includes(q));
-  }, [employees, generateSearch]);
-  const allFilteredSelected = filteredGenerateEmployees.length > 0 && filteredGenerateEmployees.every(e => generateForm.employeeIds.includes(e.id));
-  const toggleSelectAll = () => {
-    setGenerateForm(p => {
-      const ids = allFilteredSelected ? p.employeeIds.filter(id => !filteredGenerateEmployees.some(e => e.id === id)) : [...new Set([...p.employeeIds, ...filteredGenerateEmployees.map(e => e.id)])];
-      return { ...p, employeeIds: ids };
-    });
-  };
-
-  const workdayCount = countWorkdays(generateForm.startDate, generateForm.endDate, generateForm.skipWeekends);
-  const targetCount = generateForm.scope === 'all'
-    ? employees.filter(e => e.status === 'Active').length
-    : generateForm.scope === 'department'
-    ? employees.filter(e => e.status === 'Active' && e.department === generateForm.scopeDepartment).length
-    : generateForm.employeeIds.length;
-  const estimate = workdayCount * targetCount;
+  const targetCount = generateForm.employeeIds.length;
   const selectedEmployee = employees.find(e => e.id === formData.employeeId);
   const selectedGenShift = (shiftDefs || []).find(s => s.id === generateForm.shiftId);
 
@@ -283,31 +252,54 @@ export default function Shifts() {
   })() : '';
 
 
-  const handleGenerate = async () => {
+  const generateErrorsFor = () => {
     const errs = {};
     if (!generateForm.startDate) errs.startDate = 'Required';
     if (!generateForm.endDate) errs.endDate = 'Required';
     if (generateForm.startDate && generateForm.endDate && generateForm.endDate < generateForm.startDate) errs.endDate = 'Must be on or after the start date';
     if (!generateForm.shiftId) errs.shiftId = 'Required';
-    if (generateForm.scope === 'department' && !generateForm.scopeDepartment) errs.scopeDepartment = 'Select a department';
-    if (generateForm.scope === 'individual' && generateForm.employeeIds.length === 0) errs.employeeIds = 'Select at least one employee';
+    if (generateForm.employeeIds.length === 0) errs.employeeIds = 'Select at least one employee';
+    return errs;
+  };
+
+  const generatePayload = () => ({
+    startDate: generateForm.startDate, endDate: generateForm.endDate, shiftId: generateForm.shiftId,
+    skipWeekends: generateForm.skipWeekends, employeeIds: generateForm.employeeIds,
+  });
+
+  // Step 2 -> 3: ask the server what WOULD happen. Nothing is created yet.
+  const handlePreview = async () => {
+    const errs = generateErrorsFor();
+    setGenerateErrors(errs);
+    if (Object.keys(errs).length > 0) return;
+    setPreviewing(true);
+    try {
+      const result = await shiftService.generateSchedule({ ...generatePayload(), preview: true });
+      setPreview(result?.data || result);
+      setGenerateStep(3);
+    } catch (err) {
+      const data = err?.response?.data;
+      const firstFieldError = data?.errors ? Object.values(data.errors).flat()[0] : null;
+      toast.error('Could not preview', firstFieldError || data?.message || 'The server did not respond. Please try again.');
+    } finally { setPreviewing(false); }
+  };
+
+  const handleGenerate = async () => {
+    const errs = generateErrorsFor();
     setGenerateErrors(errs);
     if (Object.keys(errs).length > 0) return;
     setGenerating(true);
     try {
-      const payload = {
-        startDate: generateForm.startDate, endDate: generateForm.endDate, shiftId: generateForm.shiftId,
-        skipWeekends: generateForm.skipWeekends,
-        ...(generateForm.scope === 'individual' ? { employeeIds: generateForm.employeeIds } : generateForm.scope === 'department' ? { employeeIds: employees.filter(e => e.status === 'Active' && e.department === generateForm.scopeDepartment).map(e => e.id) } : {}),
-      };
-      const result = await shiftService.generateSchedule(payload);
+      const result = await shiftService.generateSchedule(generatePayload());
       await refreshSchedules();
       setIsGenerateModalOpen(false);
       const summary = result?.data || {};
       const parts = [`${summary.created ?? 0} shift${summary.created === 1 ? '' : 's'} created`];
       if (summary.skippedExisting) parts.push(`${summary.skippedExisting} already scheduled`);
+      if (summary.skippedHoliday) parts.push(`${summary.skippedHoliday} skipped for holidays`);
       if (summary.skippedOnLeave) parts.push(`${summary.skippedOnLeave} skipped for approved leave`);
       if (summary.shortageDates?.length) parts.push(`${summary.shortageDates.length} day(s) flagged for staffing shortage`);
+      if (summary.coverageShortages?.length) parts.push(`${new Set(summary.coverageShortages.map(c => c.date)).size} day(s) below minimum coverage`);
       toast.success('Schedule Generated', parts.join(' · '));
     } catch (err) {
       const data = err?.response?.data;
@@ -457,8 +449,9 @@ export default function Shifts() {
               <CardDescription>Assign, review, and manage employee schedules</CardDescription>
             </div>
             <div className="flex items-center gap-2">
-              <Button variant="outline" icon={Wand2} onClick={openGenerate}>Generate Schedule</Button>
-              <Button icon={Plus} onClick={openAdd}>Assign Schedule</Button>
+              {/* Two doors, two different jobs: the system assigning many people (automated), or you assigning one person by hand. */}
+              <Button variant="outline" icon={Bot} onClick={() => setRulesOpen(true)} title="Generate schedules for many people at once, and set the rules for automatic weekly scheduling">Automated Shift Assign</Button>
+              <Button icon={UserPlus} onClick={openAdd} title="Assign one shift to one person by hand">Standard Shift Assign</Button>
             </div>
           </div>
 
@@ -562,70 +555,82 @@ export default function Shifts() {
       </Card>
 
       {/* Assign / Edit Modal */}
-      <Modal isOpen={isModalOpen} onClose={() => setIsModalOpen(false)} title={editingSchedule ? 'Edit Shift Assignment' : 'Assign Schedule'} size="md">
-        <div className="space-y-5">
-          <div>
-            <Select label="Employee" value={formData.employeeId} onChange={e => setFormData({ ...formData, employeeId: e.target.value })} error={formErrors.employeeId}>
-              <option value="">Select Employee</option>
-              {employees.map(emp => <option key={emp.id} value={emp.id}>{emp.firstName} {emp.lastName} - {emp.department}</option>)}
-            </Select>
-            {selectedEmployee && (
-              <div className="mt-3 flex items-center gap-3 px-4 py-3 bg-gray-50 rounded-xl">
-                <Avatar firstName={selectedEmployee.firstName} lastName={selectedEmployee.lastName} size="md" src={selectedEmployee.avatar} />
-                <div className="flex-1 min-w-0">
-                  <p className="text-sm font-semibold text-gray-900">{selectedEmployee.firstName} {selectedEmployee.lastName}</p>
-                  <p className="text-xs text-gray-500">{selectedEmployee.department} · {selectedEmployee.position}</p>
-                </div>
-                <Badge variant="success" size="xs">{selectedEmployee.status}</Badge>
-              </div>
-            )}
+      <Modal isOpen={isModalOpen} onClose={() => setIsModalOpen(false)} title={editingSchedule ? 'Edit Shift Assignment' : 'Standard Shift Assign'} size="xl">
+        <div className="grid grid-cols-1 lg:grid-cols-5 gap-6">
+          <div className="lg:col-span-3 space-y-2 min-w-0">
+            <span className="text-[13px] font-semibold text-gray-700 block">Who is this for?</span>
+            <EmployeePicker mode="single" employees={employees} value={formData.employeeId} onChange={(id) => setFormData({ ...formData, employeeId: id })} error={formErrors.employeeId} listHeight="max-h-[46vh]" />
+            {formErrors.employeeId && <p className="text-xs text-red-500">Choose an employee</p>}
           </div>
-          <div>
-            <span className="text-[13px] font-medium text-gray-700 block mb-1.5">Working Hours</span>
-            {standardShift ? (
-              <div className="flex items-center gap-3 px-4 py-3 rounded-xl border-2 border-blue-100 bg-blue-50/60">
-                <div className={`w-10 h-10 rounded-xl flex items-center justify-center shrink-0 ${shiftIconBg[standardShift.id] || 'text-blue-600 bg-blue-50'}`}>
-                  <Zap className="w-5 h-5" />
+
+          <div className="lg:col-span-2 space-y-5">
+            <div>
+              <span className="text-[13px] font-semibold text-gray-700 block mb-1.5">Selected employee</span>
+              {selectedEmployee ? (
+                <div className="flex items-center gap-3 px-4 py-3 bg-blue-50/60 border border-blue-100 rounded-xl">
+                  <Avatar firstName={selectedEmployee.firstName} lastName={selectedEmployee.lastName} size="md" src={selectedEmployee.avatar} />
+                  <div className="flex-1 min-w-0">
+                    <p className="text-sm font-semibold text-gray-900 truncate">{selectedEmployee.firstName} {selectedEmployee.lastName}</p>
+                    <p className="text-xs text-gray-500 truncate">{selectedEmployee.department} · {selectedEmployee.position}</p>
+                  </div>
+                  <Badge variant="success" size="xs">{selectedEmployee.status}</Badge>
                 </div>
-                <div className="flex-1 min-w-0">
-                  <p className="text-sm font-semibold text-gray-900">{standardShift.name}</p>
-                  <p className="text-xs text-gray-500">Standard working hours</p>
+              ) : <p className="text-xs text-gray-400 px-1">Pick someone from the list on the left.</p>}
+            </div>
+
+            <div>
+              <span className="text-[13px] font-semibold text-gray-700 block mb-1.5">Working hours</span>
+              {standardShift ? (
+                <div className="flex items-center gap-3 px-4 py-3 rounded-xl border-2 border-blue-100 bg-blue-50/60">
+                  <div className={`w-10 h-10 rounded-xl flex items-center justify-center shrink-0 ${shiftIconBg[standardShift.id] || 'text-blue-600 bg-blue-50'}`}>
+                    <Zap className="w-5 h-5" />
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <p className="text-sm font-semibold text-gray-900">{standardShift.name}</p>
+                    <p className="text-xs text-gray-500">Standard working hours</p>
+                  </div>
+                  <div className="text-right">
+                    <p className="text-sm font-bold text-gray-900">{formatTime(standardShift.startTime)}</p>
+                    <p className="text-xs text-gray-500">to {formatTime(standardShift.endTime)}</p>
+                  </div>
                 </div>
-                <div className="text-right">
-                  <p className="text-sm font-bold text-gray-900">{formatTime(standardShift.startTime)}</p>
-                  <p className="text-xs text-gray-500">to {formatTime(standardShift.endTime)}</p>
-                </div>
-              </div>
-            ) : <p className="text-xs text-gray-400">No shift definition available.</p>}
-            <p className="text-xs text-gray-400 mt-1.5 flex items-center gap-1">
-              <Clock className="w-3 h-3" /> Hours worked beyond {standardShift ? formatTime(standardShift.endTime) : '5:00 PM'} are tracked as overtime.
-            </p>
+              ) : <p className="text-xs text-gray-400">No shift definition available.</p>}
+              <p className="text-xs text-gray-400 mt-1.5 flex items-center gap-1">
+                <Clock className="w-3 h-3" /> Hours worked beyond {standardShift ? formatTime(standardShift.endTime) : '5:00 PM'} only count with an approved overtime request.
+              </p>
+            </div>
+
+            <div>
+              <Input label="Date" type="date" value={formData.date} onChange={e => setFormData({ ...formData, date: e.target.value })} error={formErrors.date} />
+              {formData.date && <p className="text-xs text-gray-400 mt-1.5">{new Date(`${formData.date}T00:00:00`).toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}</p>}
+            </div>
+            <Textarea label="Notes" value={formData.notes} onChange={e => setFormData({ ...formData, notes: e.target.value })} placeholder="Optional notes about this assignment..." rows={2} />
           </div>
-          <div>
-            <Input label="Date" type="date" value={formData.date} onChange={e => setFormData({ ...formData, date: e.target.value })} error={formErrors.date} />
-            {formData.date && <p className="text-xs text-gray-400 mt-1.5">{new Date(`${formData.date}T00:00:00`).toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}</p>}
-          </div>
-          <Textarea label="Notes" value={formData.notes} onChange={e => setFormData({ ...formData, notes: e.target.value })} placeholder="Optional notes about this assignment..." rows={2} />
         </div>
         <div className="flex justify-end gap-3 mt-6 pt-4 border-t border-gray-100">
           <Button variant="outline" onClick={() => setIsModalOpen(false)}>Cancel</Button>
-          <Button onClick={handleSave}>{editingSchedule ? 'Save Changes' : 'Assign Schedule'}</Button>
+          <Button onClick={handleSave}>{editingSchedule ? 'Save Changes' : 'Assign Shift'}</Button>
         </div>
       </Modal>
 
       {/* Generate Schedule — 2-Step Wizard */}
-      <Modal isOpen={isGenerateModalOpen} onClose={() => setIsGenerateModalOpen(false)} title="Generate Schedule" size="lg">
+      <Modal isOpen={isGenerateModalOpen} onClose={() => setIsGenerateModalOpen(false)} title="Automated Shift Assign - Generate a schedule" size="xl">
         {/* Step indicator */}
         <div className="flex items-center gap-3 mb-5">
-          <div className={`flex items-center gap-2 ${generateStep === 1 ? 'text-blue-600' : 'text-emerald-600'}`}>
-            <span className={`w-7 h-7 rounded-full flex items-center justify-center text-xs font-bold ${generateStep === 1 ? 'bg-blue-100 text-blue-700' : 'bg-emerald-100 text-emerald-700'}`}>1</span>
-            <span className="text-sm font-semibold">When & What</span>
-          </div>
-          <div className="flex-1 h-px bg-gray-200" />
-          <div className={`flex items-center gap-2 ${generateStep === 2 ? 'text-blue-600' : 'text-gray-400'}`}>
-            <span className={`w-7 h-7 rounded-full flex items-center justify-center text-xs font-bold ${generateStep === 2 ? 'bg-blue-100 text-blue-700' : 'bg-gray-100 text-gray-400'}`}>2</span>
-            <span className="text-sm font-semibold">Who</span>
-          </div>
+          {[['When & What'], ['Who'], ['Review']].map(([label], idx) => {
+            const n = idx + 1;
+            const done = generateStep > n;
+            const current = generateStep === n;
+            return (
+              <div key={label} className="flex items-center gap-3 flex-1 last:flex-none">
+                <div className={`flex items-center gap-2 ${current ? 'text-blue-600' : done ? 'text-emerald-600' : 'text-gray-400'}`}>
+                  <span className={`w-7 h-7 rounded-full flex items-center justify-center text-xs font-bold ${current ? 'bg-blue-100 text-blue-700' : done ? 'bg-emerald-100 text-emerald-700' : 'bg-gray-100 text-gray-400'}`}>{done ? <Check className="w-3.5 h-3.5" /> : n}</span>
+                  <span className="text-sm font-semibold">{label}</span>
+                </div>
+                {n < 3 && <div className="flex-1 h-px bg-gray-200" />}
+              </div>
+            );
+          })}
         </div>
 
         {generateStep === 1 && (
@@ -682,7 +687,7 @@ export default function Shifts() {
 
             <div className="flex items-center gap-3 p-3 bg-gray-50 rounded-xl">
               <input type="checkbox" id="skipWE" checked={generateForm.skipWeekends} onChange={e => setGenerateForm({ ...generateForm, skipWeekends: e.target.checked })} className="w-4 h-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500" />
-              <label htmlFor="skipWE" className="text-sm text-gray-700 cursor-pointer">Skip Saturdays and Sundays</label>
+              <label htmlFor="skipWE" className="text-sm text-gray-700 cursor-pointer">Follow each person's work days (usually Monday to Friday - set per department under Automation & rules)</label>
             </div>
           </div>
         )}
@@ -697,97 +702,92 @@ export default function Shifts() {
                 <p className="text-sm font-semibold text-gray-900">{selectedGenShift?.name || 'No shift selected'}</p>
                 <p className="text-xs text-gray-500">
                   {generateForm.startDate && generateForm.endDate ? `${formatDate(generateForm.startDate)} – ${formatDate(generateForm.endDate)}` : 'No dates set'}
-                  {generateForm.skipWeekends ? ' · Weekdays only' : ''}
+                  {generateForm.skipWeekends ? ' · Following work patterns' : ' · Every day of the week'}
                 </p>
               </div>
             </div>
 
             <div>
-              <span className="text-[13px] font-semibold text-gray-700 block mb-3">Choose Employees</span>
-              <div className="grid grid-cols-3 gap-2 p-1 bg-gray-100 rounded-xl mb-4">
-                {[
-                  { key: 'all', label: 'All Active' },
-                  { key: 'department', label: 'By Department' },
-                  { key: 'individual', label: 'Select Individuals' },
-                ].map(opt => (
-                  <button key={opt.key} onClick={() => setGenerateForm(p => ({ ...p, scope: opt.key, scopeDepartment: p.scopeDepartment || '', employeeIds: [] }))} className={`py-2 px-3 text-xs font-semibold rounded-lg transition-all ${generateForm.scope === opt.key ? 'bg-white text-blue-700 shadow-sm' : 'text-gray-500 hover:text-gray-700'}`}>{opt.label}</button>
-                ))}
-              </div>
-
-              {generateForm.scope === 'all' && (
-                <p className="text-sm text-gray-500">All <span className="font-semibold text-gray-900">{employees.filter(e => e.status === 'Active').length}</span> active employees will be scheduled automatically.</p>
-              )}
-
-              {generateForm.scope === 'department' && (
-                <div>
-                  <Select label="Department" value={generateForm.scopeDepartment} onChange={e => setGenerateForm(p => ({ ...p, scopeDepartment: e.target.value }))} error={generateErrors.scopeDepartment}>
-                    <option value="">Select a department...</option>
-                    {departments.map(d => <option key={d} value={d}>{d}</option>)}
-                  </Select>
-                  {generateForm.scopeDepartment && (
-                    <p className="text-xs text-gray-500 mt-1.5">
-                      <span className="font-semibold text-gray-900">{employees.filter(e => e.status === 'Active' && e.department === generateForm.scopeDepartment).length}</span> active employee{employees.filter(e => e.status === 'Active' && e.department === generateForm.scopeDepartment).length === 1 ? '' : 's'} in this department
-                    </p>
-                  )}
-                </div>
-              )}
-
-              {generateForm.scope === 'individual' && (
-                <div className="mt-2 border border-gray-200 rounded-xl">
-                  <div className="p-2.5 border-b border-gray-100 flex items-center gap-2">
-                    <Input icon={Search} placeholder="Search employees..." value={generateSearch} onChange={e => setGenerateSearch(e.target.value)} className="py-2" />
-                    <label className="flex items-center gap-1.5 px-2 cursor-pointer whitespace-nowrap">
-                      <input type="checkbox" checked={allFilteredSelected} onChange={toggleSelectAll} className="w-4 h-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500" />
-                      <span className="text-xs font-medium text-gray-600">Select all</span>
-                    </label>
-                  </div>
-                  <div className="max-h-44 overflow-y-auto divide-y divide-gray-50">
-                    {filteredGenerateEmployees.map(emp => (
-                      <label key={emp.id} className="flex items-center gap-2.5 px-3 py-2 cursor-pointer hover:bg-gray-50">
-                        <input type="checkbox" checked={generateForm.employeeIds.includes(emp.id)} onChange={() => toggleGenerateEmployee(emp.id)} className="w-4 h-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500" />
-                        <Avatar firstName={emp.firstName} lastName={emp.lastName} size="xs" src={emp.avatar} />
-                        <span className="text-sm text-gray-700">{emp.firstName} {emp.lastName} <span className="text-gray-400">— {emp.department}</span></span>
-                      </label>
-                    ))}
-                    {filteredGenerateEmployees.length === 0 && <p className="px-3 py-4 text-xs text-gray-400 text-center">No employees found.</p>}
-                  </div>
-                </div>
-              )}
+              <span className="text-[13px] font-semibold text-gray-700 block mb-2">Choose employees</span>
+              <p className="text-xs text-gray-400 mb-3">Pick a department, then a role, then tick the people to schedule. You can repeat this for other departments, and your ticks stay.</p>
+              <EmployeePicker mode="multi" employees={employees} value={generateForm.employeeIds} onChange={(ids) => setGenerateForm(p => ({ ...p, employeeIds: ids }))} error={generateErrors.employeeIds} listHeight="max-h-[38vh]" />
               {generateErrors.employeeIds && <p className="text-xs text-red-500 mt-1.5">{generateErrors.employeeIds}</p>}
             </div>
 
-            {estimate > 0 && (
-              <div className="bg-emerald-50 border border-emerald-200 rounded-xl p-4 space-y-1.5">
-                <div className="flex items-center gap-2">
-                  <Check className="w-4 h-4 text-emerald-600" />
-                  <p className="text-sm font-semibold text-emerald-800">Ready to generate</p>
+          </div>
+        )}
+
+        {generateStep === 3 && preview && (
+          <div className="space-y-5">
+            <div className="rounded-2xl border border-emerald-200 bg-emerald-50/60 p-5">
+              <p className="text-sm font-semibold text-emerald-800 flex items-center gap-2"><Check className="w-4 h-4" /> This is what will happen - nothing has been created yet</p>
+              <p className="text-3xl font-bold text-emerald-700 mt-2">{preview.created.toLocaleString()} <span className="text-base font-semibold">shifts</span></p>
+              <p className="text-sm text-emerald-700 mt-1">for {preview.employees} employee{preview.employees === 1 ? '' : 's'} · {formatDate(preview.startDate)} – {formatDate(preview.endDate)} · {selectedGenShift?.name}</p>
+            </div>
+
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+              {[
+                ['Already scheduled', preview.skippedExisting],
+                ['On approved leave', preview.skippedOnLeave],
+                ['Holidays', preview.skippedHoliday],
+                ['Day off (work pattern)', preview.skippedOffDay],
+              ].map(([label, n]) => (
+                <div key={label} className="rounded-xl border border-gray-100 bg-white p-3">
+                  <p className="text-xl font-bold text-gray-900">{n}</p>
+                  <p className="text-[11px] text-gray-500 leading-tight">{label} <span className="text-gray-400">(skipped)</span></p>
                 </div>
-                <p className="text-sm text-emerald-700 pl-6">
-                  <span className="font-bold">{estimate.toLocaleString()}</span> schedules across <span className="font-bold">{workdayCount}</span> working day{workdayCount === 1 ? '' : 's'}
-                </p>
-                <p className="text-xs text-emerald-600 pl-6">
-                  {selectedGenShift?.name} · {generateForm.skipWeekends ? 'Weekdays only' : 'Including weekends'}
-                  {generateForm.scope === 'all' ? ` · All ${targetCount} active employees` : generateForm.scope === 'department' ? ` · ${targetCount} employees in ${generateForm.scopeDepartment}` : ` · ${targetCount} selected employees`}
-                </p>
+              ))}
+            </div>
+
+            {Object.keys(preview.holidays || {}).length > 0 && (
+              <p className="text-xs text-gray-500">Holidays in this range: {Object.entries(preview.holidays).map(([d, n]) => `${formatDate(d)} (${n})`).join(', ')}.</p>
+            )}
+
+            {(preview.coverageShortages?.length > 0 || preview.shortageDates?.length > 0) && (
+              <div className="rounded-xl border border-amber-200 bg-amber-50/70 p-4 space-y-2">
+                <p className="text-sm font-semibold text-amber-800 flex items-center gap-2"><AlertTriangle className="w-4 h-4" /> Check before publishing</p>
+                <ul className="text-sm text-amber-800 space-y-1 max-h-32 overflow-y-auto">
+                  {preview.coverageShortages.map((c) => <li key={`${c.date}-${c.department}`}>• {formatDate(c.date)}: {c.department} would have {c.have} scheduled, needs at least {c.need}</li>)}
+                  {preview.shortageDates.map((d) => <li key={d}>• {formatDate(d)}: many employees are on approved leave</li>)}
+                </ul>
               </div>
             )}
+
+            {Object.keys(preview.perDay || {}).length > 0 && (
+              <div>
+                <p className="text-[13px] font-semibold text-gray-700 mb-2">Shifts per day</p>
+                <div className="flex items-end gap-1 h-20">
+                  {(() => { const max = Math.max(...Object.values(preview.perDay)); return Object.entries(preview.perDay).map(([d, n]) => (
+                    <div key={d} className="flex-1 min-w-[6px] max-w-8 bg-blue-500/80 rounded-t" style={{ height: `${Math.max(8, (n / max) * 100)}%` }} title={`${formatDate(d)}: ${n}`} />
+                  )); })()}
+                </div>
+              </div>
+            )}
+
+            {preview.created === 0 && <p className="text-sm text-gray-500">Nothing would be created: everyone is already scheduled, on leave, or off on those days.</p>}
           </div>
         )}
 
         <div className="flex justify-between gap-3 mt-6 pt-4 border-t border-gray-100">
-          {generateStep === 2 ? (
-            <Button variant="outline" onClick={() => setGenerateStep(1)}>Back</Button>
+          {generateStep > 1 ? (
+            <Button variant="outline" onClick={() => setGenerateStep(generateStep - 1)} disabled={generating || previewing}>Back</Button>
           ) : <div />}
-          {generateStep === 1 ? (
-            <Button onClick={() => { const errs = {}; if (!generateForm.startDate) errs.startDate = 'Required'; if (!generateForm.endDate) errs.endDate = 'Required'; if (generateForm.startDate && generateForm.endDate && generateForm.endDate < generateForm.startDate) errs.endDate = 'Must be on or after the start date'; if (!generateForm.shiftId) errs.shiftId = 'Required'; setGenerateErrors(errs); if (Object.keys(errs).length === 0) setGenerateStep(2); }} icon={Zap}>Next</Button>
-          ) : (
+          {generateStep === 1 && (
+            <Button onClick={() => { const errs = generateErrorsFor(); delete errs.employeeIds; setGenerateErrors(errs); if (Object.keys(errs).length === 0) setGenerateStep(2); }}>Next: choose employees</Button>
+          )}
+          {generateStep === 2 && (
+            <Button onClick={handlePreview} loading={previewing} icon={Search}>Preview{targetCount > 0 ? ` for ${targetCount} employee${targetCount === 1 ? '' : 's'}` : ''}</Button>
+          )}
+          {generateStep === 3 && (
             <div className="flex gap-2">
               <Button variant="outline" onClick={() => setIsGenerateModalOpen(false)} disabled={generating}>Cancel</Button>
-              <Button onClick={handleGenerate} loading={generating} icon={Wand2}>Generate Schedule</Button>
+              <Button onClick={handleGenerate} loading={generating} icon={Wand2} disabled={!preview || preview.created === 0}>Publish schedule</Button>
             </div>
           )}
         </div>
       </Modal>
+
+      <ScheduleRulesModal isOpen={rulesOpen} onClose={() => setRulesOpen(false)} employees={employees} shiftDefs={shiftDefs} onChanged={() => refreshSchedules()} onGenerateNow={() => { setRulesOpen(false); openGenerate(); }} />
 
       {/* Delete Confirmation */}
       <Modal isOpen={!!deleteTarget} onClose={closeDeleteSchedule} title="Delete Shift Assignment" size="sm">

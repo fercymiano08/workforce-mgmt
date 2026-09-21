@@ -1,0 +1,119 @@
+// Smoke test: opens the RUNNING system in a real browser (Edge), logs in, visits every page for the role,
+// and reports anything broken - a crashed page, an error in the console, a failed API call, an empty screen.
+// It also takes a screenshot of every page (scripts/smoke-output/), so a person can look through them fast.
+//
+//   npm run smoke                                   # administrator, every admin page
+//   SMOKE_EMPLOYEE_EMAIL=... SMOKE_EMPLOYEE_PASSWORD=... npm run smoke -- --role employee
+//
+// The system must be running first (start-all.ps1). Exit code 1 when anything fails.
+import puppeteer from 'puppeteer-core';
+import fs from 'node:fs';
+import path from 'node:path';
+import { fileURLToPath } from 'node:url';
+
+const here = path.dirname(fileURLToPath(import.meta.url));
+const out = path.join(here, 'smoke-output');
+const BASE = process.env.SMOKE_BASE || 'http://localhost:5173';
+const EDGE = process.env.SMOKE_BROWSER || 'C:/Program Files (x86)/Microsoft/Edge/Application/msedge.exe';
+const role = process.argv.includes('--role') ? process.argv[process.argv.indexOf('--role') + 1] : 'admin';
+
+const ACCOUNTS = {
+  admin: { email: process.env.SMOKE_ADMIN_EMAIL || 'admin@workforcepro.com', password: process.env.SMOKE_ADMIN_PASSWORD || 'Admin@123' },
+  employee: { email: process.env.SMOKE_EMPLOYEE_EMAIL, password: process.env.SMOKE_EMPLOYEE_PASSWORD },
+};
+
+// [name, path, text that must appear on a healthy page]
+const PAGES = {
+  admin: [
+    ['dashboard', '/', 'Dashboard'], ['employees', '/employees', 'Employee'], ['attendance', '/attendance', 'Attendance'],
+    ['shifts', '/shifts', 'Schedule'], ['timesheets', '/timesheets', 'Timesheets'], ['leave', '/leave', 'Leave'],
+    ['analytics', '/analytics', 'Analytics'], ['reports', '/reports', 'Report'], ['ai', '/ai-decision-support', 'AI'],
+    ['audit-logs', '/audit-logs', 'Audit Logs'], ['notifications', '/notifications', 'Notifications'], ['settings', '/settings', 'Settings'],
+    ['kiosk-setup', '/kiosk-setup', 'Kiosk'], ['employee-registration', '/employee-registration', 'Employee'],
+  ],
+  employee: [
+    ['dashboard', '/', 'Dashboard'], ['my-attendance', '/my-attendance', 'Attendance'], ['my-schedule', '/my-schedule', 'Schedule'],
+    ['my-timesheet', '/my-timesheet', 'Timesheet'], ['leave', '/leave', 'Leave'], ['my-profile', '/my-profile', 'Profile'],
+    ['notifications', '/notifications', 'Notifications'], ['settings', '/settings', 'Settings'],
+  ],
+};
+// What an employee must NOT be able to open
+const FORBIDDEN_FOR_EMPLOYEE = ['/employees', '/attendance', '/shifts', '/timesheets', '/analytics', '/reports', '/audit-logs', '/kiosk-setup', '/ai-decision-support'];
+
+// API answers that are normal (an administrator has no personal profile, etc.)
+const EXPECTED_API_ERRORS = [/\/api\/profile/, /\/api\/auth\/logout/];
+
+if (!ACCOUNTS[role]?.email) {
+  console.error(`No login for role "${role}". Set SMOKE_${role.toUpperCase()}_EMAIL and SMOKE_${role.toUpperCase()}_PASSWORD.`);
+  process.exit(2);
+}
+fs.mkdirSync(out, { recursive: true });
+
+const browser = await puppeteer.launch({ executablePath: EDGE, headless: true, args: ['--no-sandbox'], defaultViewport: { width: 1440, height: 900 } });
+const page = await browser.newPage();
+const problems = [];
+let current = 'login';
+page.on('pageerror', (e) => problems.push([current, 'page error', String(e.message).slice(0, 200)]));
+page.on('console', (m) => {
+  if (m.type() !== 'error') return;
+  const t = m.text();
+  if (/favicon|Failed to load resource/.test(t)) return;   // network failures are reported below with their URL
+  problems.push([current, 'console error', t.slice(0, 200)]);
+});
+page.on('response', (r) => {
+  const url = r.url();
+  if (!url.includes('/api/') || r.status() < 400) return;
+  if (EXPECTED_API_ERRORS.some((re) => re.test(url))) return;
+  problems.push([current, `API ${r.status()}`, url.replace(BASE, '')]);
+});
+
+const settle = async () => { await page.waitForNetworkIdle({ idleTime: 700, timeout: 12000 }).catch(() => {}); await new Promise((r) => setTimeout(r, 400)); };
+
+// --- log in like a person would
+await page.goto(`${BASE}/login`, { waitUntil: 'domcontentloaded' });
+await page.type('input[type="email"]', ACCOUNTS[role].email);
+await page.type('input[type="password"]', ACCOUNTS[role].password);
+await Promise.all([page.waitForNavigation({ waitUntil: 'domcontentloaded', timeout: 20000 }).catch(() => {}), page.click('button[type="submit"]')]);
+await settle();
+if (page.url().includes('/login')) {
+  console.error('Login failed - check the smoke account credentials.');
+  await browser.close();
+  process.exit(2);
+}
+
+const rows = [];
+for (const [name, route, mustSee] of PAGES[role]) {
+  current = name;
+  const before = problems.length;
+  await page.goto(`${BASE}${route}`, { waitUntil: 'domcontentloaded' });
+  await settle();
+  const text = await page.evaluate(() => document.body.innerText || '');
+  await page.screenshot({ path: path.join(out, `${role}-${name}.png`) });
+
+  if (text.trim().length < 80) problems.push([name, 'blank page', `${text.trim().length} characters on screen`]);
+  else if (!text.toLowerCase().includes(mustSee.toLowerCase())) problems.push([name, 'unexpected page', `"${mustSee}" not found (redirected to ${page.url().replace(BASE, '')}?)`]);
+  if (/something went wrong|unexpected error|cannot read prop/i.test(text)) problems.push([name, 'error screen', 'the page shows an error message']);
+  rows.push([name, problems.length === before ? 'ok' : 'PROBLEM']);
+}
+
+if (role === 'employee') {
+  for (const route of FORBIDDEN_FOR_EMPLOYEE) {
+    current = `boundary ${route}`;
+    await page.goto(`${BASE}${route}`, { waitUntil: 'domcontentloaded' });
+    await settle();
+    const stayed = page.url().replace(BASE, '') === route;
+    if (stayed) problems.push([`boundary ${route}`, 'role boundary', 'an employee could open an administrator page']);
+    rows.push([`boundary ${route}`, stayed ? 'PROBLEM' : 'blocked']);
+  }
+}
+
+await browser.close();
+
+console.log(`\nSmoke test - ${role} - ${PAGES[role].length} pages${role === 'employee' ? ` + ${FORBIDDEN_FOR_EMPLOYEE.length} boundary checks` : ''}`);
+for (const [n, s] of rows) console.log(`  ${s === 'ok' || s === 'blocked' ? 'PASS' : 'FAIL'}  ${n}`);
+if (problems.length) {
+  console.log(`\n${problems.length} problem(s):`);
+  for (const [where, kind, detail] of problems) console.log(`  [${where}] ${kind}: ${detail}`);
+  process.exit(1);
+}
+console.log('\nAll pages loaded without a crash, console error or failed API call. Screenshots: frontend/scripts/smoke-output/');

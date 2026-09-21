@@ -234,15 +234,16 @@ export default function Attendance() {
       await refreshOvertime();
       setSelectedOvertime(null);
       toast.success(
-        status === 'Approved' ? 'Overtime Approved' : 'Overtime Rejected',
-        `Overtime request has been ${status.toLowerCase()}.`
+        status === 'Approved' ? 'Overtime Approved' : status === 'Pending' ? 'Overtime Reopened' : 'Overtime Rejected',
+        status === 'Pending' ? 'The request is waiting for a decision again.' : `Overtime request has been ${status.toLowerCase()}.`
       );
     } catch {
-      toast.error('Error', `Failed to ${status === 'Approved' ? 'approve' : 'reject'} overtime request.`);
+      toast.error('Error', `Failed to ${status === 'Approved' ? 'approve' : status === 'Pending' ? 'reopen' : 'reject'} overtime request.`);
     }
   };
 
   const todayStr = toDateKey(new Date());
+  const yesterdayStr = (() => { const d = new Date(todayStr); d.setDate(d.getDate() - 1); return toDateKey(d); })();
 
   const enriched = useMemo(() => {
     return (attendanceRecords || []).map(a => {
@@ -257,9 +258,9 @@ export default function Attendance() {
     onTime: todayRecords.filter(a => a.status === 'Present').length,
     late: todayRecords.filter(a => a.status === 'Late').length,
     present: todayRecords.filter(a => a.status === 'Present' || a.status === 'Late').length,
-    absent: todayRecords.filter(a => a.status === 'Absent').length,
+    absent: enriched.filter(a => a.status === 'Absent' && a.date === yesterdayStr).length,
     avgOvertime: todayRecords.length ? (todayRecords.reduce((s, a) => s + (a.overtime || 0), 0) / todayRecords.length).toFixed(1) : '0.0',
-  }), [todayRecords]);
+  }), [todayRecords, enriched, yesterdayStr]);
 
   const filtered = useMemo(() => {
     return enriched.filter(a => {
@@ -289,7 +290,13 @@ export default function Attendance() {
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
           <h1 className="text-2xl font-bold text-gray-900">Time & Attendance</h1>
-          <p className="text-[14px] text-gray-500 mt-1">Track employee attendance and working hours</p>
+          <p className="text-[14px] text-gray-500 mt-1">
+            {activeTab === 'overtime'
+              ? 'Decide on overtime requests. Only approved overtime is counted and paid.'
+              : activeTab === 'early'
+                ? 'Review employees who clocked out before the end of their shift.'
+                : 'Who came in, who was late and who was absent. Days are closed automatically after midnight.'}
+          </p>
         </div>
       </div>
 
@@ -328,9 +335,9 @@ export default function Attendance() {
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
         {[
           { label: 'Present Today', value: stats.present, sub: `${stats.onTime} on time · ${stats.late} late`, icon: CheckCircle, color: 'emerald' },
-          { label: 'Late (within Present)', value: stats.late, icon: AlertTriangle, color: 'red' },
-          { label: 'Absent Today', value: stats.absent, icon: Coffee, color: 'amber' },
-          { label: 'Avg Overtime', value: `${stats.avgOvertime}h`, icon: Timer, color: 'blue' },
+          { label: 'Late Today', value: stats.late, icon: AlertTriangle, color: 'red' },
+          { label: 'Absent Yesterday', value: stats.absent, sub: 'Recorded automatically after each day', icon: Coffee, color: 'amber' },
+          { label: 'Avg Overtime Today', value: `${stats.avgOvertime}h`, icon: Timer, color: 'blue' },
         ].map(s => {
           const colorMap = { emerald: 'bg-emerald-50 text-emerald-600', red: 'bg-red-50 text-red-600', amber: 'bg-amber-50 text-amber-600', blue: 'bg-blue-50 text-blue-600' };
           const barMap = { emerald: 'bg-emerald-500', red: 'bg-red-500', amber: 'bg-amber-500', blue: 'bg-blue-500' };
@@ -796,6 +803,12 @@ export default function Attendance() {
               <div>
                 <p className="text-xs text-gray-400">Comments</p>
                 <p className="text-sm text-gray-700 mt-1 italic">{selectedOvertime.comments}</p>
+              </div>
+            )}
+            {(selectedOvertime.status === 'Approved' || selectedOvertime.status === 'Rejected') && (
+              <div className="flex items-center justify-between gap-3 pt-4 border-t border-gray-100">
+                <p className="text-xs text-gray-500">Changed your mind? Reopening puts it back in the queue and changes which hours count. It is recorded in the Audit Logs.</p>
+                <Button variant="outline" onClick={() => handleOvertimeDecision('Pending')}>Reopen</Button>
               </div>
             )}
             {selectedOvertime.status === 'Pending' && (

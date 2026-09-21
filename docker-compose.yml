@@ -234,6 +234,8 @@ services:
       SVC_PAYROLL_MODE: 'remote'
       SVC_CONFIGURATION_MODE: 'remote'
       SVC_DEPENDENCIES: '[{"url":"http://core:8000","tables":["employees"]},{"url":"http://communications:8007","tables":["notifications"]}]'
+      SCHEDULING_SERVICE_URL: 'http://scheduling:8004'
+      SVC_SCHEDULING_MODE: 'remote'
     healthcheck:
       test: ["CMD", "php", "-r", "$$r = @file_get_contents('http://127.0.0.1:8005/up'); exit($$r !== false && strpos($$r, 'Fatal error') === false ? 0 : 1);"]
       interval: 10s
@@ -433,6 +435,8 @@ services:
       AUTH_SERVICE_URL: 'http://core:8000'
       COMMS_SERVICE_URL: 'http://communications:8007'
       SVC_DEPENDENCIES: '[{"url":"http://core:8000","tables":["employees"]},{"url":"http://communications:8007","tables":["notifications"]}]'
+      SCHEDULING_SERVICE_URL: 'http://scheduling:8004'
+      SVC_SCHEDULING_MODE: 'remote'
       SVC_AUTH_MODE: 'remote'
       SVC_NOTIFICATIONS_MODE: 'remote'
       SVC_PAYROLL_MODE: 'remote'

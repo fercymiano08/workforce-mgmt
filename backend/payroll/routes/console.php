@@ -19,3 +19,7 @@ Schedule::command('snapshot:sync')->everyMinute()->withoutOverlapping();
 // send the one-time reminders. Both are safe to run repeatedly.
 Schedule::command('timesheets:auto-submit')->hourly()->withoutOverlapping();
 Schedule::command('timesheets:remind')->hourly()->withoutOverlapping();
+
+// The attendance copy above refreshes once a minute; rebuild the recent timesheets right behind it so a
+// change (a punch, an overtime approval) reaches the timesheet within a minute or two.
+Schedule::command('timesheets:refresh')->everyMinute()->withoutOverlapping();

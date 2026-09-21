@@ -244,7 +244,7 @@ After login, the backend issues a personal access token (stored in the `personal
 
 **What it is:** the front door. Proves who you are and gives you a session.
 
-**Files:** `auth/Login.jsx`, `auth/ForgotPassword.jsx`, `auth/ResetPassword.jsx`, backend `AuthController.php`
+**Files:** `auth/Login.jsx`, `auth/ForgotPassword.jsx`, `auth/ResetPassword.jsx`, `components/common/IdleSessionGuard.jsx`, backend `AuthController.php`
 
 ### Flow A — Logging In
 
@@ -269,11 +269,14 @@ User clicks "Forgot password?"
 POST /api/auth/forgot-password   (email address)
         │
         ▼
-Backend creates a one-time reset token
+Backend creates a one-time 6-digit code (stored hashed) and emails it
 → stores it in the `password_reset_tokens` table
+→ the code is valid for ONE MINUTE only: after 60 seconds it is useless
+  and the user has to ask for a new code (the screen shows a live
+  countdown and a "Send a new code" button)
         │
         ▼
-User submits new password + token
+User submits new password + code
         │
         ▼
 POST /api/auth/reset-password
@@ -282,13 +285,46 @@ POST /api/auth/reset-password
 → old tokens invalidated
 ```
 
+### Flow B2 — Session Timeout (Employees: 3 Minutes Of Inactivity)
+
+An **employee** who is completely inactive for **3 minutes** is signed out automatically. Administrators are never timed out. It is enforced by the **server**, not just by the screen:
+
+```
+Employee logs in → the token is created with an expiry (now + 3 min)
+        │
+        ▼
+While the person really uses the system (mouse, keys, touch, scroll):
+the browser calls POST /api/auth/keep-alive  (at most once per 10 s)
+→ the server pushes the token's expiry to "now + 3 min"
+        │
+        ▼
+Background requests (notification polling) do NOT extend it
+        │
+        ▼
+Inactive for 2 min 30 s → a "Are you still there?" warning with a 30-second
+countdown ("Stay signed in" keeps the session)
+        │
+        ▼
+3 minutes with no activity → the token expires: the browser signs out and the
+login page says "You were signed out after 3 minutes of inactivity"
+Every service refuses the expired token (they all verify it with core)
+```
+
+Because the expiry lives in the token, closing the laptop lid or leaving a tab open cannot leave a session alive. (Logins made before this rule keep working until the person signs in again.)
+
+### Flow B3 — Sensitive Actions Leave A Trail
+
+* **Sign-ins and password events are audited** (core writes them): `auth.login`, `auth.login_failed`, `auth.login_locked` (5 failed tries), `auth.logout`, `auth.password_changed`, `auth.password_reset_requested`, `auth.password_reset`.
+* **Exports ask for the password again.** Exporting a report (CSV / Excel / PDF) or the audit log opens "Confirm it's you"; the server checks the password (`POST /api/auth/confirm-password`, 5 wrong tries per minute) and records `auth.export_confirmed` (or `auth.confirm_failed`) with what it was for. We use the password rather than an emailed code because the administrator account is a fixed login, not a real mailbox.
+* **Other changes now audited too:** overtime requested / decided / reopened / withdrawn / deleted (`overtime.*`), and any change to the company / system / kiosk settings (`settings.updated`, with the before and after of what changed).
+
 ### Flow C — Change Password (while logged in)
 
 Profile/settings page → `POST /api/auth/change-password` → verifies current password first → hashes and stores the new one.
 
 ### Tech Trail
 
-- Endpoints: `/api/auth/login`, `/logout`, `/me`, `/forgot-password`, `/reset-password`, `/change-password`
+- Endpoints: `/api/auth/login`, `/logout`, `/me`, `/keep-alive`, `/forgot-password`, `/reset-password`, `/change-password`
 - Tables: `users`, `password_reset_tokens`, `personal_access_tokens`, `sessions`
 
 ---
@@ -602,6 +638,10 @@ Creates a notification reminding the employee
 
 **File:** `HR_Manager/Attendance.jsx`
 
+**Absent days are recorded automatically.** A day that is over, where the person had a scheduled shift, never clocked in and had no approved leave, is written as an **Absent** record by `attendance:mark-absent` (00:10 Manila time, again at noon as a safety net; only finished days, only once per person/day). Before this, the Absent numbers on the dashboards, analytics and AI only counted records typed in by hand. The page's Absent card therefore shows **yesterday**.
+
+**Overtime decisions can be reopened.** An approved or rejected overtime request has a **Reopen** button that puts it back in the queue (the hours that count change accordingly); every decision and reopening is written to the Audit Logs.
+
 ### What You Can Do
 
 | Feature | Endpoint | Notes |
@@ -641,7 +681,7 @@ An employee with an **Approved leave** covering today is marked on-leave rather 
 
 **What it is:** two connected pieces — the **templates** (what a shift is) and the **assignments** (who works which template on which day).
 
-**Files:** `HR_Manager/Shifts.jsx`, backend `ShiftController.php`
+**Files:** `HR_Manager/Shifts.jsx`, `components/scheduling/EmployeePicker.jsx` (Department → Role → Employee picker), `components/scheduling/ScheduleRulesModal.jsx`, backend `ShiftController.php`, `ScheduleGenerator.php`, `ScheduleRulesController.php`, `AutoGenerateSchedules.php`
 
 ### The Active Shift Templates (`shift_definitions`)
 
@@ -657,14 +697,37 @@ An employee with an **Approved leave** covering today is marked on-leave rather 
 >
 > **One shift per person per day.** Assigning a second shift to someone who already has one that day is refused with a message naming the existing assignment; running the automated generator twice creates nothing new the second time (it reports the days as "already scheduled").
 
-### Flow A — Building A Week (Generate Wizard)
+### Flow A — Generating Schedules (Preview → Publish → Undo)
+
+One engine (`ScheduleGenerator`) serves both the admin's **Automated Shift Assign** dialog (its Generate wizard) and the **automatic weekly job**. It works in two separate steps, so nothing is created until someone decides:
 
 | Step | What happens |
 |------|--------------|
-| 1 | Admin picks a date range + which template(s) and employees |
-| 2 | `POST /api/shifts/schedules/generate` |
-| 3 | Backend loops the range × employees and inserts `shift_schedules` rows: `employee_id`, `employee_name`, `shift_id`, `date`, `status = 'Scheduled'` |
-| 4 | Existing rows in the range are refreshed rather than duplicated (idempotent) |
+| **Plan** | The engine works out what *would* be created and everything skipped, and why. The wizard's step 3 (**Review**) shows it: shifts to create, skipped for *already scheduled / approved leave / holidays / day off*, days below minimum coverage, and shifts per day. **Nothing is written.** |
+| **Publish** | `POST /api/shifts/schedules/generate` creates the shifts and records the run as a **batch** (`BAT001`...), notifies each employee, warns the admins about shortages, writes an **audit** entry, and copies the new shifts to the other services. |
+| **Undo** | *Automation & rules → History → Undo* removes the shifts that batch created **that have not happened yet** (shifts on days already passed stay, because attendance may rely on them) and tells the employees. |
+
+**Who gets scheduled on which day** — the rules, in this order: an employee's **own work pattern**, else their **department's pattern**, else the **usual days** (Monday–Friday unless changed). Nobody is scheduled on a **holiday**, on **approved leave**, or twice on the same day. **Coverage rules** (a minimum number of scheduled people per department per day) never block anything: they produce warnings.
+
+### Flow A2 — Automatic Scheduling (the "automated" part)
+
+Switched on under **Shifts → Automation & rules → Automatic** (it is OFF by default). A scheduled job (`schedules:auto-generate`, checked hourly) does the following **by itself**, once per week, at the chosen day and hour (default **Friday 5:00 PM**, Manila time):
+
+1. Takes the coming week (or the next 1–4 weeks, as configured).
+2. Schedules **every active employee** on their work days — skipping holidays, approved leave and shifts that already exist.
+3. Records it as a batch (created by "System"), notifies the employees, and sends the admins one summary: *"42 shifts created for 10 employees; skipped: 3 for approved leave, 1 for holidays. 1 day is below minimum coverage. Review or undo it on the Shifts page."*
+
+A week that already has an automatic run — even one that was undone — is never re-created by the next hourly check.
+
+| Setting (Automation & rules) | What it controls |
+|------------------------------|------------------|
+| **Automatic** | On/off, the day and hour it runs, how many weeks ahead, the usual work days, the shift used |
+| **Work patterns** | Which days a department or one employee works (e.g. Retail Mon–Sat, or one person Tue–Sat) |
+| **Holidays** | A company calendar of days nobody is scheduled (starter list of Philippine holidays, editable) |
+| **Coverage** | Minimum scheduled people per department per day |
+| **History** | Every generation (manual or automatic) with Undo |
+
+Every one of these changes is written to the audit log (schedule assigned / moved / deleted, generation, undo, rule changes).
 
 ### Flow B — Manual Adjustments
 
@@ -693,7 +756,15 @@ An employee with **approved leave** on a date cannot be given a shift that day: 
 
 **What it is:** the full lifecycle of time-off: employee applies, admin decides, balances update, everybody gets notified.
 
-**Files:** `Employee/Leave.jsx`, `HR_Manager/LeaveManagement.jsx`, backend `LeaveController.php`
+**Files:** `Employee/Leave.jsx`, `HR_Manager/LeaveManagement.jsx`, backend `LeaveController.php`, `SchedulingClient.php` (time-off) and `WorkingDays.php` (scheduling)
+
+### Leave Costs Working Days, Not Calendar Days
+
+A leave request is charged in **working days**: the days the person's work pattern says they work (their own pattern, else their department's, else the usual days), **minus company holidays**. A Friday-to-Monday leave costs **2** days of balance, not 4. While the employee picks dates the form shows the live cost ("This will use 2 working days of your balance (4 calendar days; weekends, holidays and days off are not counted)"). The server does the counting: time-off asks the scheduling service (`POST /api/internal/working-days`) when the request is filed, stores the result in `leaves.days`, refuses a range with no working day at all, and checks the balance against it. If scheduling cannot be reached, Monday-Friday is used so an outage never blocks a request. Old requests keep their calendar-day cost (backfilled).
+
+### The Administrator's Queue (Leave Management)
+
+The page opens on **Pending Approvals**. Tick several requests and **Approve / Reject selected** in one go. Each pending row warns "N teammates also off", and the detail window shows **Team impact**: which colleagues of the same department are off or waiting on the same days, and how much of the team that is (30% or more turns red).
 
 ### Leave Statuses (The Life Of A Request)
 
@@ -842,6 +913,7 @@ SENT TO PAYROLL   (admin: "Send to payroll")
 | **Hours cannot be typed in or edited** — they come from attendance; the admin can only add a note | `TimesheetController::update` |
 | A submitted or approved timesheet **cannot be deleted**; a timesheet **sent to payroll cannot be reopened** | Controller / workflow (409) |
 | Generation never duplicates | Idempotent refresh logic |
+| A change made elsewhere (a punch, an overtime approval) reaches the timesheet within a minute or two: the payroll service rebuilds the last 6 weeks from its copy of attendance right after the copy refreshes | Scheduled command `timesheets:refresh` (every minute) |
 | Unsubmitted finished weeks are submitted automatically at **Monday 12:00 PM (Manila)**; reminders and review nudges are sent once | Scheduled commands `timesheets:auto-submit`, `timesheets:remind` (hourly) |
 | Compliance is visible: on-time submissions %, average time to review, number auto-submitted | Admin Timesheets page |
 
@@ -859,6 +931,8 @@ SENT TO PAYROLL   (admin: "Send to payroll")
 **What it is:** the numbers layer. Dashboard = today's cockpit; Analytics = deep-dive charts.
 
 **Files:** `HR_Manager/Dashboard.jsx`, `HR_Manager/Analytics.jsx`, backend `AnalyticsController.php`, `AnalyticsService.php`
+
+**"Needs your attention"** sits at the top of the administrator's dashboard: four tiles (leave requests, overtime requests, early clock-outs, timesheets waiting for approval) with a count each and a link straight to the right page. When all four are zero it says "Nothing is waiting for you".
 
 ### What Each Attendance Status Means (One Record = One Status)
 
@@ -1042,6 +1116,8 @@ Open events raise the system's concern level; resolving them restores the score.
 **What it is:** the system's internal mail. Any workflow that affects you drops a message; the bell icon shows the count.
 
 **Files:** bell component in the layout, `constants/notificationTypes.js`, backend `NotificationController.php`
+
+**Notifications page (`/notifications`, both roles):** the bell shows the newest 8; **See all notifications** opens the full page, with All / Unread / Important tabs, search, grouping by day, mark-all-read, delete and click-to-open.
 
 **Who sees what:** the admins share one inbox (notifications with no employee attached). An employee sees **every** notification addressed to them — outcomes, reminders, shift changes, clock-in/out confirmations, certificate deadlines — and never the admins' or another employee's. The bell refreshes every 30 seconds while the tab is open; a failed refresh keeps what is already shown.
 

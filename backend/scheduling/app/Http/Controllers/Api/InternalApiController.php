@@ -28,6 +28,20 @@ class InternalApiController extends Controller
         return response()->json(['data' => $snapshot]);
     }
 
+    /** How many working days a range holds for one employee (work pattern minus holidays). */
+    public function workingDays(Request $request, \App\Services\WorkingDays $workingDays): JsonResponse
+    {
+        $this->authorizeService($request);
+
+        $data = $request->validate([
+            'employeeId' => 'required|string|max:20',
+            'startDate' => 'required|date',
+            'endDate' => 'required|date|after_or_equal:startDate',
+        ]);
+
+        return response()->json(['data' => $workingDays->count($data['employeeId'], $data['startDate'], $data['endDate'])]);
+    }
+
     public function syncEmployee(Request $request): JsonResponse
     {
         $this->authorizeService($request);

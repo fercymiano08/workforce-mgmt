@@ -65,7 +65,7 @@ class Employee extends Model
             ->where('status', 'Approved')
             ->get()
             ->groupBy('leave_type')
-            ->map(fn ($rows) => (float) $rows->sum(fn ($l) => $l->start_date->diffInDays($l->end_date) + 1))
+            ->map(fn ($rows) => (float) $rows->sum(fn ($l) => $l->days ?? ($l->start_date->diffInDays($l->end_date) + 1)))
             ->all();
     }
 

@@ -19,6 +19,16 @@ export default function Login() {
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
   const [lockout, setLockout] = useState(0);
+  // Why they are here, when they were signed out (read once, then forgotten)
+  const [notice] = useState(() => {
+    try {
+      const reason = window.sessionStorage.getItem('workforce_logout_reason');
+      window.sessionStorage.removeItem('workforce_logout_reason');
+      if (reason === 'idle') return 'You were signed out after 3 minutes of inactivity. Please sign in again.';
+      if (reason === 'expired') return 'Your session has ended. Please sign in again.';
+    } catch { /* ignore */ }
+    return '';
+  });
 
   useEffect(() => {
     if (lockout <= 0) return;
@@ -106,6 +116,12 @@ export default function Login() {
           <h2 className="text-2xl font-bold text-gray-900 tracking-tight">Welcome back</h2>
           <p className="text-sm text-gray-500 mt-1.5 mb-8">Sign in to your account to continue</p>
 
+          {notice && !error && (
+            <div className="flex items-start gap-2.5 bg-amber-50 border border-amber-100 text-amber-800 text-sm rounded-xl px-4 py-3 mb-5">
+              <AlertCircle className="w-4 h-4 mt-0.5 shrink-0" />
+              <span>{notice}</span>
+            </div>
+          )}
           {error && (
             <div className="flex items-start gap-2.5 bg-red-50 border border-red-100 text-red-700 text-sm rounded-xl px-4 py-3 mb-5">
               <AlertCircle className="w-4 h-4 mt-0.5 shrink-0" />

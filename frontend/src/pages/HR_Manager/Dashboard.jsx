@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import {
   Users, CheckCircle, CalendarOff, Clock, TrendingUp,
-  Calendar, Briefcase, Check, X, ArrowRight, Inbox,
+  Calendar, Briefcase, Check, X, ArrowRight, Inbox, FileText, LogOut, CheckCircle2,
 } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import {
@@ -20,7 +20,7 @@ import { useAuth } from '../../context/AuthContext';
 import { useToast } from '../../context/ToastContext';
 import { useNotifications } from '../../context/NotificationContext';
 import {
-  employeeService, attendanceService, leaveService, shiftService, analyticsService,
+  employeeService, attendanceService, leaveService, shiftService, analyticsService, overtimeService, timesheetService,
 } from '../../services/api';
 import { toDateKey } from '../../services/attendanceService';
 import { didAttend, isPresentGroup } from '../../utils/constants';
@@ -98,6 +98,8 @@ export default function Dashboard() {
   const [schedules, setSchedules] = useState([]);
   const [shiftDefs, setShiftDefs] = useState([]);
   const [analytics, setAnalytics] = useState(null);
+  // Things waiting for a decision from the administrator, other than leave (which is already loaded)
+  const [waiting, setWaiting] = useState({ overtime: 0, early: 0, timesheets: 0 });
 
   useEffect(() => {
     let active = true;
@@ -109,8 +111,11 @@ export default function Dashboard() {
       shiftService.getSchedules(),
       shiftService.getAllShifts(),
       analyticsService.getAll().catch(() => null),
+      overtimeService.getAll().catch(() => []),
+      attendanceService.getEarlyClockOutsPending().catch(() => []),
+      timesheetService.getAll().catch(() => []),
     ])
-      .then(([emps, att, lvs, scheds, defs, an]) => {
+      .then(([emps, att, lvs, scheds, defs, an, ot, early, sheets]) => {
         if (!active) return;
         setEmployees(emps);
         setAttendance(att);
@@ -118,6 +123,11 @@ export default function Dashboard() {
         setSchedules(scheds);
         setShiftDefs(defs);
         setAnalytics(an);
+        setWaiting({
+          overtime: (ot || []).filter((r) => r.status === 'Pending').length,
+          early: (early || []).length,
+          timesheets: (sheets || []).filter((s) => s.status === 'Submitted').length,
+        });
       })
       .catch(() => {
         // leave states empty; empty states will render
@@ -216,7 +226,7 @@ export default function Dashboard() {
           name: l.employeeName,
           type: l.leaveType,
           dates: `${formatDate(l.startDate)} - ${formatDate(l.endDate)}`,
-          days: countDays(l.startDate, l.endDate),
+          days: l.days != null ? Number(l.days) : countDays(l.startDate, l.endDate),
           reason: l.reason,
         })),
     [leaves]
@@ -259,6 +269,13 @@ export default function Dashboard() {
     { labelKey: 'dashboard.attendanceRate', value: `${kpi.attendanceRate}%`, icon: TrendingUp, change: null, accent: 'purple' },
   ];
 
+  const attention = [
+    { label: 'Leave requests to decide', count: pendingLeaveRequests.length, to: '/leave', icon: Calendar },
+    { label: 'Overtime requests to decide', count: waiting.overtime, to: '/attendance?tab=overtime', icon: Clock },
+    { label: 'Early clock-outs to review', count: waiting.early, to: '/attendance?view=early', icon: LogOut },
+    { label: 'Timesheets to approve', count: waiting.timesheets, to: '/timesheets', icon: FileText },
+  ];
+
   const visibleLeaveRequests = pendingLeaveRequests.slice(0, 5);
   const visibleSchedule = todaySchedule.slice(0, 5);
 
@@ -285,6 +302,34 @@ export default function Dashboard() {
         {kpiCards.map((card) => (
           <KpiCard key={card.labelKey} {...card} label={t(card.labelKey)} />
         ))}
+      </div>
+
+      {/* Needs your attention: everything waiting for a decision, one click from the right page */}
+      <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-5">
+        <div className="flex items-center justify-between mb-3">
+          <h2 className="text-base font-semibold text-gray-900">Needs your attention</h2>
+          {attention.every((a) => a.count === 0) && (
+            <span className="flex items-center gap-1.5 text-sm text-emerald-600 font-medium"><CheckCircle2 className="w-4 h-4" /> Nothing is waiting for you</span>
+          )}
+        </div>
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
+          {attention.map((a) => (
+            <Link
+              key={a.label}
+              to={a.to}
+              className={`group flex items-center gap-3 rounded-xl border px-4 py-3 transition-colors ${a.count > 0 ? 'border-amber-200 bg-amber-50/60 hover:bg-amber-50' : 'border-gray-100 bg-gray-50/50 hover:bg-gray-50'}`}
+            >
+              <div className={`w-10 h-10 rounded-xl flex items-center justify-center shrink-0 ${a.count > 0 ? 'bg-amber-100 text-amber-700' : 'bg-gray-100 text-gray-400'}`}>
+                <a.icon className="w-5 h-5" />
+              </div>
+              <div className="min-w-0">
+                <p className={`text-2xl font-bold leading-none ${a.count > 0 ? 'text-gray-900' : 'text-gray-400'}`}>{a.count}</p>
+                <p className="text-xs text-gray-500 mt-1 truncate">{a.label}</p>
+              </div>
+              <ArrowRight className="w-4 h-4 ml-auto text-gray-300 group-hover:text-blue-500 transition-colors" />
+            </Link>
+          ))}
+        </div>
       </div>
 
       {/* Row 2: Charts - Attendance Overview + Leave Statistics */}

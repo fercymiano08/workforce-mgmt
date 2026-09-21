@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { Briefcase, Mail, ArrowLeft, CheckCircle2, AlertCircle, Lock, Eye, EyeOff } from 'lucide-react';
 import Button from '../../components/ui/Button';
@@ -35,6 +35,10 @@ function PasswordField({ label, value, onChange, autoComplete }) {
   );
 }
 
+// The reset code is good for one minute (the server enforces it). The countdown here is only a courtesy.
+const CODE_SECONDS = 60;
+const clock = (s) => `0:${String(s).padStart(2, '0')}`;
+
 export default function ForgotPassword() {
   const [step, setStep] = useState('request'); // request | verify | done
   const [email, setEmail] = useState('');
@@ -43,6 +47,15 @@ export default function ForgotPassword() {
   const [confirmPassword, setConfirmPassword] = useState('');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
+  const [secondsLeft, setSecondsLeft] = useState(0);
+
+  // Counts down from the moment the code was sent
+  useEffect(() => {
+    if (step !== 'verify' || secondsLeft <= 0) return undefined;
+    const t = setTimeout(() => setSecondsLeft((s) => s - 1), 1000);
+    return () => clearTimeout(t);
+  }, [step, secondsLeft]);
+  const expired = step === 'verify' && secondsLeft <= 0;
 
   const handleRequest = async (e) => {
     e.preventDefault();
@@ -52,6 +65,7 @@ export default function ForgotPassword() {
     try {
       await authService.forgotPassword(email.trim());
       setStep('verify');
+      setSecondsLeft(CODE_SECONDS);
     } catch {
       setError('Something went wrong. Please try again.');
     } finally {
@@ -64,6 +78,7 @@ export default function ForgotPassword() {
   const handleReset = async (e) => {
     e.preventDefault();
     setError('');
+    if (expired) { setError('This code has expired. Please send a new code.'); return; }
     if (otp.trim().length !== 6) { setError('Please enter the 6-digit code.'); return; }
     if (!PASSWORD_REGEX.test(password)) { setError('Password must be at least 8 characters with an uppercase letter, a lowercase letter, and a number.'); return; }
     if (password !== confirmPassword) { setError('Passwords do not match.'); return; }
@@ -76,6 +91,20 @@ export default function ForgotPassword() {
         || err?.response?.data?.message
         || 'This code is invalid or has expired. Please request a new one.';
       setError(msg);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const resend = async () => {
+    setError('');
+    setLoading(true);
+    try {
+      await authService.forgotPassword(email.trim());
+      setOtp('');
+      setSecondsLeft(CODE_SECONDS);
+    } catch {
+      setError('Could not send a new code. Please wait a moment and try again.');
     } finally {
       setLoading(false);
     }
@@ -147,8 +176,14 @@ export default function ForgotPassword() {
             <>
               <h2 className="text-2xl font-bold text-gray-900 tracking-tight">Check your email</h2>
               <p className="text-sm text-gray-500 mt-1.5 mb-8">
-                A 6-digit code was sent to <span className="font-medium text-gray-700">{email}</span>. It expires in 5 minutes.
+                A 6-digit code was sent to <span className="font-medium text-gray-700">{email}</span>. It works for <strong>1 minute</strong> only.
               </p>
+              <div className={`flex items-center justify-between gap-3 rounded-xl px-4 py-3 mb-5 text-sm ${expired ? 'bg-red-50 border border-red-100 text-red-700' : secondsLeft <= 15 ? 'bg-amber-50 border border-amber-100 text-amber-800' : 'bg-blue-50 border border-blue-100 text-blue-800'}`}>
+                <span>{expired ? 'This code has expired.' : <>Code expires in <strong className="tabular-nums">{clock(secondsLeft)}</strong></>}</span>
+                <button type="button" onClick={resend} disabled={loading || (!expired && secondsLeft > 45)} className="font-semibold underline disabled:no-underline disabled:opacity-40">
+                  Send a new code
+                </button>
+              </div>
               <form onSubmit={handleReset} className="space-y-4">
                 <Input label="Reset Code" placeholder="000000" value={otp} onChange={(e) => setOtp(e.target.value.replace(/\D/g, '').slice(0, 6))} className="text-center text-lg tracking-[0.35em] font-mono" required autoFocus />
                 <PasswordField label="New Password" value={password} onChange={(e) => setPassword(e.target.value)} autoComplete="new-password" />
@@ -156,7 +191,7 @@ export default function ForgotPassword() {
                 <p className="text-xs text-gray-400 mt-1">
                   Password must be at least 8 characters long and include an uppercase letter, a lowercase letter, and a number.
                 </p>
-                <Button type="submit" className="w-full mt-2" size="lg" loading={loading}>Reset Password</Button>
+                <Button type="submit" className="w-full mt-2" size="lg" loading={loading} disabled={expired}>Reset Password</Button>
               </form>
               <button type="button" onClick={() => { setError(''); setStep('request'); setOtp(''); }} className="mt-4 w-full text-center text-sm text-gray-500 hover:text-gray-700 font-medium">
                 Use a different email

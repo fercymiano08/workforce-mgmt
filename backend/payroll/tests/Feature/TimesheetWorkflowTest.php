@@ -299,4 +299,41 @@ class TimesheetWorkflowTest extends TestCase
         $this->assertContains('unpaid_overtime', $flags);
         $this->assertNotContains('zero_hours', $flags);
     }
+
+    // --- catching up after the attendance copy refreshes ---------------------------------------------------
+
+    public function test_the_scheduled_refresh_brings_an_editable_timesheet_up_to_date_and_only_flags_a_locked_one(): void
+    {
+        $employee = $this->worker();
+        $this->workDay('2030-01-14');
+        $sheet = $this->sheet();                              // Draft, 8 h
+        $this->at('2030-01-21 09:00:00');
+
+        $this->workDay('2030-01-15');                         // the attendance copy learns about a second day
+        $this->artisan('timesheets:refresh')->assertSuccessful();
+        $this->assertEquals(16.0, $sheet->fresh()->total_hours);              // a draft follows attendance
+
+        $this->actingAs($employee)->patchJson('/api/timesheets/'.$sheet->id.'/status', ['status' => 'Submitted'])->assertOk();
+        $this->workDay('2030-01-16');                         // ...and then a third day, after it was submitted
+        $this->artisan('timesheets:refresh')->assertSuccessful();
+
+        $sheet = $sheet->fresh();
+        $this->assertEquals(16.0, $sheet->total_hours);                        // the submitted hours did not move
+        $this->assertTrue($sheet->needs_refresh);                              // but the admin is warned
+    }
+
+    public function test_the_flag_clears_by_itself_when_attendance_returns_to_what_was_submitted(): void
+    {
+        $employee = $this->worker();
+        $this->workDay('2030-01-14');
+        $sheet = $this->submitted($employee);
+
+        Attendance::where('id', 'ATT-2030-01-14')->update(['total_hours' => 6, 'regular_hours' => 6]);
+        $this->artisan('timesheets:refresh')->assertSuccessful();
+        $this->assertTrue($sheet->fresh()->needs_refresh);
+
+        Attendance::where('id', 'ATT-2030-01-14')->update(['total_hours' => 8, 'regular_hours' => 8]);   // the approval is restored
+        $this->artisan('timesheets:refresh')->assertSuccessful();
+        $this->assertFalse($sheet->fresh()->needs_refresh);
+    }
 }

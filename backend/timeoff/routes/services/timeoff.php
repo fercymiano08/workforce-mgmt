@@ -28,6 +28,7 @@ Route::middleware('svc.auth')->group(function () {
         Route::post('/', [LeaveController::class, 'store']);
         Route::get('/employee/{employeeId}', [LeaveController::class, 'byEmployee']);
         Route::get('/balances/{employeeId}', [LeaveController::class, 'balances']);
+        Route::get('/working-days', [LeaveController::class, 'workingDays']);
         Route::get('/{id}', [LeaveController::class, 'show']);
     });
 

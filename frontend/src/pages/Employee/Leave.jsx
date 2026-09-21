@@ -44,8 +44,9 @@ const leaveBalanceStyle = {
 
 const leaveTypes = ['Vacation', 'Sick', 'Emergency', 'Special', 'Bereavement', 'Unpaid'];
 
-// Inclusive calendar-day count of a leave range, e.g. Jan 01 - Jan 03 = 3 days.
-const countDays = (start, end) => {
+// Days a leave costs: the server's working-day count when it has one, else the inclusive calendar count.
+const countDays = (start, end, counted) => {
+  if (counted != null) return Number(counted);
   if (!start || !end || end < start) return 1;
   const [sy, sm, sd] = start.split('-').map(Number);
   const [ey, em, ed] = end.split('-').map(Number);
@@ -109,6 +110,21 @@ export default function Leave() {
   const [applyForm, setApplyForm] = useState({ leaveType: 'Vacation', startDate: '', endDate: '', reason: '', proofFile: null });
   const [applyErrors, setApplyErrors] = useState({});
   const [proofError, setProofError] = useState('');
+  // Live cost of the chosen dates (working days only), asked from the server as the person picks them
+  const [preview, setPreview] = useState(null);
+  useEffect(() => {
+    let cancelled = false;
+    const { startDate, endDate } = applyForm;
+    if (!currentUser.id || !startDate || !endDate || endDate < startDate) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect -- clearing a stale answer when the dates are incomplete
+      setPreview(null);
+      return undefined;
+    }
+    leaveService.workingDays(currentUser.id, startDate, endDate)
+      .then((r) => { if (!cancelled) setPreview(r); })
+      .catch(() => { if (!cancelled) setPreview(null); });
+    return () => { cancelled = true; };
+  }, [applyForm, currentUser.id]);
 
   const MAX_PROOF_SIZE = 5 * 1024 * 1024; // 5MB
 
@@ -348,7 +364,7 @@ export default function Leave() {
               {paginated.map((leave) => {
                 const style = leaveBalanceStyle[leave.leaveType] || {};
                 const TypeIcon = style.icon || Calendar;
-                const days = countDays(leave.startDate, leave.endDate);
+                const days = countDays(leave.startDate, leave.endDate, leave.days);
                 return (
                   <button
                     key={leave.id}
@@ -554,6 +570,17 @@ export default function Leave() {
               error={applyErrors.endDate}
             />
           </div>
+          {preview && (
+            <div className={`rounded-lg border px-3 py-2 text-[13px] ${preview.days < 1 ? 'border-red-200 bg-red-50 text-red-700' : 'border-blue-200 bg-blue-50 text-blue-800'}`}>
+              {preview.days < 1
+                ? 'These dates have no working days (weekend, holiday or day off). Pick different dates.'
+                : <>This will use <strong>{preview.days} working {preview.days === 1 ? 'day' : 'days'}</strong> of your balance
+                  {preview.calendarDays > preview.days && ` (${preview.calendarDays} calendar days; weekends, holidays and days off are not counted)`}.</>}
+              {Object.keys(preview.holidays || {}).length > 0 && (
+                <div className="text-xs mt-0.5">Holiday: {Object.entries(preview.holidays).map(([d, n]) => `${n} (${formatDate(d)})`).join(', ')}</div>
+              )}
+            </div>
+          )}
           <Textarea
             label="Reason"
             required

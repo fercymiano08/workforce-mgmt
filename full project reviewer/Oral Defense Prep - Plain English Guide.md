@@ -85,7 +85,7 @@ Browser (frontend) → sends a request to `/api/...` → the frontend's router (
 **Extra defense points:**
 - Wrong password → error. After **5 wrong attempts**, a **60-second cool-down** (lockout).
 - Passwords must be **8+ characters with uppercase, lowercase, and a number**.
-- Forgot password → a **6-digit code (OTP)** is emailed; valid **5 minutes**, one-time use.
+- Forgot password → a **6-digit code (OTP)** is emailed; valid **1 minute**, one-time use (then request a new one).
 - Workforce Admin (admin) account **cannot** reset via forgot-password (it's the reserved owner account).
 
 ## Flow 2 - Attendance with facial recognition (the kiosk)
@@ -177,7 +177,7 @@ These are the exact things the panel may probe. Say them confidently.
 | **Sanctum tokens** | The login "ID badge". Each badge belongs to one user and is revoked on logout. |
 | **Password hashing (bcrypt)** | Passwords are scrambled before storage, so even the database can't reveal the original. |
 | **Role-based access (RBAC)** | Employees and Workforce Admin see different menus. Admin-only routes are protected server-side. |
-| **OTP reset** | Forgot password sends a 6-digit code that expires in 5 minutes and works only once. |
+| **OTP reset** | Forgot password sends a 6-digit code that expires in 1 minute and works only once. |
 | **Login lockout** | 5 wrong attempts = 60-second cool-down (stops guessing/brute-force). |
 | **Password policy** | Min 8 + upper + lower + number (enforced on change, reset, and registration). |
 | **Throttling** | Forgot-password and reset endpoints are throttled (limited requests per minute). |
@@ -332,7 +332,7 @@ The "scariest" architecture question. Your answer is strong and true, and it has
 ```
 
 **The one-line truth (memorize this):**
-> "We migrated this system from a single Laravel monolith to 8 independent microservices using the Strangler Fig pattern — one domain extracted and verified at a time. That migration is complete: every domain (identity, analytics/AI, attendance, scheduling, time-off, payroll, communications, configuration) is now its own Laravel app, its own port, its own database, with 280 automated tests passing across all 8, and the frontend's proxy config is the only thing that routes requests to the right one."
+> "We migrated this system from a single Laravel monolith to 8 independent microservices using the Strangler Fig pattern — one domain extracted and verified at a time. That migration is complete: every domain (identity, analytics/AI, attendance, scheduling, time-off, payroll, communications, configuration) is now its own Laravel app, its own port, its own database, with 311 automated tests passing across all 8, and the frontend's proxy config is the only thing that routes requests to the right one."
 
 ## Why we did it in this order (your honest engineering answer)
 
@@ -462,7 +462,7 @@ Use this as a rapid-fire review. One line = one idea. Cover the right column, th
 34. How are passwords stored? → bcrypt hash (one-way scramble), never readable.
 35. Login lockout? → 5 wrong attempts → 60-second cool-down.
 36. Password policy? → 8+ chars, uppercase, lowercase, digit.
-37. OTP reset? → 6-digit code by email, 5-minute expiry, one-time use.
+37. OTP reset? → 6-digit code by email, 1-minute expiry, one-time use. An inactive employee is signed out after 3 minutes (the login token itself expires; admins are not timed out).
 38. Why can't admin self-reset? → It's the reserved owner account.
 39. How is the kiosk secured if it has no login? → PIN unlock gives the device a signed, expiring token that every clock-in call must send; the PIN check is rate-limited; the token dies when the PIN changes; and the endpoints return minimal fields only (name, photo, dept, today's schedule) - never salary/email/phone/address.
 40. Where is the kiosk PIN stored? → SHA-256 hash in settings.kiosk.
@@ -501,3 +501,14 @@ Use this as a rapid-fire review. One line = one idea. Cover the right column, th
 **Say this if asked:** *"Docker lets us start the whole system, all 15 parts, with one command on any laptop without installing PHP, Node or PostgreSQL. It doesn't change any feature. It's a demo/dev setup, not production hosting."*
 
 **Full explanation, file by file:** `00 - Start Here - Absolute Beginner Guide.md` → Section 10. **How to run it:** `activator-deactivator.md` → Way 2.
+
+---
+
+## Newest Additions In One Breath (Say These Confidently)
+
+- **Leave costs working days:** weekends, holidays and days off are not charged. Time-off asks the scheduling service to count them when the request is filed.
+- **Absences are recorded automatically:** a nightly job marks a finished, scheduled day with no clock-in and no approved leave as Absent, so the numbers are honest.
+- **Everything sensitive is audited:** sign-ins, failed sign-ins, password changes, overtime decisions, and any change to settings. Exporting a report or the audit log asks the administrator to type their password again.
+- **Administrator's daily workflow:** the dashboard's "Needs your attention" panel, bulk leave approval with a team-impact view, reopenable overtime decisions, and a Notifications page.
+- **Automated shift assignment** follows work patterns, holidays, approved leave and coverage rules, previews before publishing, and can be undone.
+

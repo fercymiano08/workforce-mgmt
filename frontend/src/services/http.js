@@ -7,6 +7,7 @@ const TOKEN_KEY = 'workforce_auth_token';
 // it expires); it is sent as X-Kiosk-Token on every kiosk call except the two public ones.
 export const KIOSK_TOKEN_KEY = 'kiosk_device_token';
 export const KIOSK_LOCKED_EVENT = 'kiosk-device-locked';
+export const SESSION_ENDED_EVENT = 'workforce:session-ended';
 const KIOSK_OPEN_PATHS = ['/kiosk/config', '/kiosk/verify-pin'];
 
 const store = () => {
@@ -97,7 +98,11 @@ http.interceptors.response.use(
         try { window.localStorage.removeItem(KIOSK_TOKEN_KEY); } catch { /* ignore */ }
         window.dispatchEvent(new Event(KIOSK_LOCKED_EVENT));
       } else {
+        const hadToken = !!read(TOKEN_KEY);
         remove(TOKEN_KEY);
+        // Tell the app the login is over (it signs the person out and shows the login page). A failed
+        // login attempt has no token yet, so it is not a "session ended" event.
+        if (hadToken) window.dispatchEvent(new Event(SESSION_ENDED_EVENT));
       }
     }
     return Promise.reject(error);

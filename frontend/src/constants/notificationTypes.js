@@ -14,6 +14,7 @@ export const notificationTypeConfig = {
   leave_cancelled: { icon: XCircle, color: 'text-gray-500', bg: 'bg-gray-50' },
   shift_assigned: { icon: Calendar, color: 'text-blue-500', bg: 'bg-blue-50' },
   schedule_change: { icon: Clock, color: 'text-amber-500', bg: 'bg-amber-50' },
+  schedule_generated: { icon: Calendar, color: 'text-emerald-500', bg: 'bg-emerald-50' },
   clock_out_reminder: { icon: Bell, color: 'text-purple-500', bg: 'bg-purple-50' },
   attendance_reminder: { icon: Bell, color: 'text-purple-500', bg: 'bg-purple-50' },
   timesheet_submitted: { icon: FileText, color: 'text-blue-500', bg: 'bg-blue-50' },

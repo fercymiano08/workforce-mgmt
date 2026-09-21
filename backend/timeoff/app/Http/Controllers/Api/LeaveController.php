@@ -8,6 +8,7 @@ use App\Http\Controllers\Controller;
 use App\Models\Employee;
 use App\Models\Leave;
 use App\Services\AuditClient;
+use App\Services\SchedulingClient;
 use App\Services\NotificationService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -128,15 +129,19 @@ class LeaveController extends Controller
             ]);
         }
 
-        $this->assertSufficientBalance(
-            $data['employee_id'],
-            $data['leave_type'],
-            $data['start_date'],
-            $data['end_date']
-        );
+        // Leave costs WORKING days: nobody is charged for a weekend, a holiday or a day off.
+        $counted = SchedulingClient::workingDays($data['employee_id'], $data['start_date'], $data['end_date']);
+        if ($counted['days'] < 1) {
+            throw ValidationException::withMessages([
+                'startDate' => ['These dates contain no working days (they fall on weekends, holidays or days off). Choose dates that include at least one working day.'],
+            ]);
+        }
+
+        $this->assertSufficientBalance($data['employee_id'], $data['leave_type'], $counted['days']);
 
         $record = Leave::create([
             ...$data,
+            'days' => $counted['days'],
             'id' => $this->nextIdFor(Leave::class, 'LVE'),
         ]);
 
@@ -161,19 +166,28 @@ class LeaveController extends Controller
         return response()->json(['data' => $record->toApiArray()], 201);
     }
 
-    private function assertSufficientBalance(
-        string $employeeId,
-        string $leaveType,
-        string $startDate,
-        string $endDate
-    ): void {
+    /**
+     * What a leave request would cost, before it is filed: the working days in the range and which days were
+     * skipped (holidays, days off). The Leave form shows this as the person picks dates.
+     */
+    public function workingDays(Request $request): JsonResponse
+    {
+        $data = $request->validate([
+            'employeeId' => 'required|string|max:20',
+            'startDate' => 'required|date',
+            'endDate' => 'required|date|after_or_equal:startDate',
+        ]);
+        $this->assertSelfOrAdmin($request, $data['employeeId']);
+
+        return response()->json(['data' => SchedulingClient::workingDays($data['employeeId'], $data['startDate'], $data['endDate'])]);
+    }
+
+    private function assertSufficientBalance(string $employeeId, string $leaveType, float|int $requested): void
+    {
         $employee = Employee::find($employeeId);
         if (! $employee) {
             return;
         }
-
-        $requested = \Carbon\Carbon::parse($startDate)
-            ->diffInDays(\Carbon\Carbon::parse($endDate)) + 1;
 
         $balance = collect($employee->leaveBalances())->firstWhere('type', $leaveType);
         if ($balance && $balance['remaining'] < $requested) {
@@ -205,6 +219,14 @@ class LeaveController extends Controller
         ]));
 
         $before = $record->toApiArray();
+        // Moving the dates moves the cost: count the working days again.
+        if (isset($data['start_date']) || isset($data['end_date'])) {
+            $data['days'] = SchedulingClient::workingDays(
+                $data['employee_id'] ?? $record->employee_id,
+                $data['start_date'] ?? $record->start_date->toDateString(),
+                $data['end_date'] ?? $record->end_date->toDateString(),
+            )['days'];
+        }
         $record->update($data);
 
         AuditClient::record(

@@ -90,6 +90,7 @@ export default function Topbar({ onMenuToggle }) {
           </button>
           <NotificationDropdown
             isOpen={showNotifications}
+            onClose={() => setShowNotifications(false)}
           />
         </div>
 

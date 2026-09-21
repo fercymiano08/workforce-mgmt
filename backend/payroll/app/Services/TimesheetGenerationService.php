@@ -128,6 +128,33 @@ class TimesheetGenerationService
     }
 
     /**
+     * The attendance copy in this service refreshes about once a minute, so the rebuild that the attendance
+     * service triggers at the moment of a change can run on stale data. This catches up: it re-syncs the
+     * timesheets of the last few weeks (editable ones are refreshed, locked ones are only flagged).
+     */
+    public function regenerateRecent(int $weeks = 6): int
+    {
+        $since = Carbon::now()->subWeeks(max(1, $weeks))->startOfWeek(Carbon::MONDAY)->toDateString();
+        $pairs = Attendance::whereNotNull('clock_out')->where('date', '>=', $since)->get(['employee_id', 'date']);
+
+        $seen = [];
+        $count = 0;
+        foreach ($pairs as $row) {
+            $key = $row->employee_id.'|'.Carbon::parse($row->date)->startOfWeek(Carbon::MONDAY)->toDateString();
+            if (isset($seen[$key])) {
+                continue;
+            }
+            $seen[$key] = true;
+
+            if ($this->syncForEmployee($row->employee_id, $row->date)) {
+                $count++;
+            }
+        }
+
+        return $count;
+    }
+
+    /**
      * Regenerate timesheets for every employee/week that has at least one completed attendance
      * record. Idempotent: editable rows are refreshed, locked ones are only flagged if they drifted.
      */

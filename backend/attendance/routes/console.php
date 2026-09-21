@@ -22,3 +22,8 @@ Schedule::command('early-outs:expire-certificates')->hourly()->withoutOverlappin
 // Approving (or withdrawing) an overtime request changes which minutes of a past day count. The
 // real clock-out is kept, so re-count the recent days a minute after the request data arrives.
 Schedule::command('attendance:recount-hours')->everyMinute()->withoutOverlapping();
+
+// Close out each finished day: scheduled, never clocked in, not on approved leave = Absent. Run shortly after
+// midnight Manila time (and again at noon as a safety net); it only ever looks at days that are already over.
+Schedule::command('attendance:mark-absent')->dailyAt('00:10')->timezone('Asia/Manila')->withoutOverlapping();
+Schedule::command('attendance:mark-absent')->dailyAt('12:00')->timezone('Asia/Manila')->withoutOverlapping();

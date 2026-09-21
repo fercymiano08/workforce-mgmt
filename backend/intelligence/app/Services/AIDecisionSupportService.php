@@ -66,7 +66,7 @@ class AIDecisionSupportService
                     'type' => $l->leave_type,
                     'start' => $l->start_date->format('Y-m-d'),
                     'end' => $l->end_date->format('Y-m-d'),
-                    'days' => $l->start_date->diffInDays($l->end_date) + 1,
+                    'days' => $l->days ?? ($l->start_date->diffInDays($l->end_date) + 1),
                     'applied' => $l->applied_date?->format('Y-m-d'),
                     'reason' => $l->reason,
                 ]

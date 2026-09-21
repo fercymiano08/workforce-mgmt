@@ -19,5 +19,7 @@ Route::prefix('auth')->group(function () {
     Route::post('/reset-password', [AuthController::class, 'resetPassword'])->middleware('throttle:6,1');
     Route::post('/logout', [AuthController::class, 'logout'])->middleware('auth:sanctum');
     Route::get('/me', [AuthController::class, 'me'])->middleware('auth:sanctum');
+    Route::post('/confirm-password', [AuthController::class, 'confirmPassword'])->middleware(['auth:sanctum', 'throttle:10,1']);
+    Route::post('/keep-alive', [AuthController::class, 'keepAlive'])->middleware('auth:sanctum');
     Route::post('/change-password', [AuthController::class, 'changePassword'])->middleware('auth:sanctum');
 });

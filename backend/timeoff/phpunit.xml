@@ -38,6 +38,7 @@
     <env name="SVC_PAYROLL_MODE" value="local"/>
     <env name="SVC_CONFIGURATION_MODE" value="local"/>
     <env name="SVC_AUDIT_MODE" value="local"/>
+    <env name="SVC_SCHEDULING_MODE" value="local"/>
     <env name="SERVICE_TOKEN" value="wfp-intel-2026-secret-9f3a7c1e"/>
   </php>
 

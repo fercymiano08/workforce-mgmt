@@ -20,3 +20,4 @@ Thumbs.db
 ~WRL*.tmp
 ~$*
 *.tmp
+frontend/scripts/smoke-output/

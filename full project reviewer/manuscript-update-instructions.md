@@ -24,18 +24,24 @@ You are helping revise the capstone manuscript **"Design and Development of an A
 | Topic | Fact |
 |-------|------|
 | Architecture | React frontend + **8** Laravel microservices (core, intelligence, attendance, scheduling, time-off, payroll, communications, configuration), each with its own PostgreSQL database. Docker Compose runs 15 containers (unchanged). |
-| Automated tests | **280** automated PHPUnit tests across the 8 services, all passing. The frontend is checked with ESLint and a production build. |
+| Automated tests | **311** automated PHPUnit tests across the 8 services, all passing. The frontend is checked with ESLint and a production build. |
 | Timesheet workflow | Timesheets are built automatically from attendance. The employee submits after the week ends (or the system auto-submits at Monday 12:00 PM); the Workforce Admin approves, or rejects / reopens with a required reason; approved timesheets are sent to payroll once. Only a finished week can be reviewed; hours are frozen after submission and cannot be edited; every step is kept in a history and the audit log. |
 | Payroll service | Produces **weekly timesheets only**. It does **not** produce pay statements. The "My Pay Record / Pay Statement" page and its endpoint were **removed**. |
 | Timesheet figures | Each weekly timesheet records regular hours, overtime worked, overtime approved, and **payable overtime** (`paid_ot_hours`). |
 | Overtime pay rule | Overtime is payable only for hours that were **both approved and actually worked**. Per day it is the **smaller** of hours worked past 17:00 and hours approved. The server counts a working day only up to the end of the shift plus approved overtime, so time past 17:00 with no approval is not counted at all (clocking out at 17:03 is recorded as 17:00); the real punch is kept so a later approval can restore the time. |
+| Automatic scheduling | Off by default; when switched on by the admin, a scheduled job prepares the coming week by itself at a chosen day and hour (default Friday 5:00 PM, Manila time): every active employee on their own work days (an employee or department work pattern, else Monday to Friday), skipping holidays, approved leave and shifts that already exist. The admins get a summary. The manual Generate Schedule wizard shows a preview before anything is saved; every generation is a batch that can be undone; coverage rules (minimum staff per department per day) produce warnings; all changes are audited. |
 | Shifts | The company has **one shift**: the **Standard Shift, 08:00 to 17:00**. Overtime is **not** a separate shift; it is an extension of the standard shift when an overtime request is approved (the day's end becomes 17:00 plus approved hours). |
 | Attendance statuses | Each attendance record has exactly **one** status: **Present** (clocked in within 15 minutes of the start), **Late** (more than 15 minutes after the start), **Early Leave** (left before the shift ended), **Absent**, or **On Leave**. Reports and charts show **Present as one group split into On Time and Late** (one bar in two colours); Early Leave, Absent and On Leave are separate categories, and nothing is counted twice. |
 | Unpaid lunch break | Deducted automatically **by duration**: once a person has worked at least 5 hours (configurable), 60 minutes (configurable) are taken off the day, whenever lunch was taken. A shorter day loses nothing. There are no break punches. HR sets the numbers on the Settings page; changes apply only to days worked afterwards. |
 | Kiosk rules (enforced by the server) | A clock-in is refused when the employee has no shift today, the shift has already ended, the employee is on approved leave, or is already clocked in. Times use Philippine (Manila) time. |
 | Early clock-out | A reason is mandatory. Each employee has **2 free early departures per 30 days**; beyond that the record is unpaid until reviewed. A "sick" claim needs proof (medical certificate) within **48 hours**. The Workforce Admin classifies the record (excused or unpaid). |
 | Leave rules | Past dates are blocked. Overlapping or duplicate requests are refused (button lock, server check, and database rule). **Approved leave blocks scheduling** on those days and stops the no-show (absent) alert. |
-| Password recovery | One-time six-digit code emailed to the employee, stored hashed, valid for **five minutes**, single use. |
+| Leave in working days | A leave request is charged in **working days**: the days the person's work pattern says they work, minus company holidays, counted by the scheduling service when the request is filed and stored on the request. A Friday-to-Monday leave costs 2 days. The form shows the live cost, and a range with no working day is refused. |
+| Absent days | A finished day where the person was scheduled, never clocked in and had no approved leave is recorded automatically as **Absent** (a job at 00:10 Manila time), so the absence figures on dashboards and reports are complete. |
+| Audit and export control | Sign-ins, failed sign-ins, lock-outs, password changes, overtime decisions and every change to system settings are written to the audit log. Exporting a report or the audit log requires the administrator to type their password again; the confirmation is recorded. |
+| Administrator workspace | The dashboard opens with a **Needs your attention** panel (leave, overtime, early clock-outs, timesheets waiting), leave requests can be approved in bulk with a team-impact view, decided overtime can be reopened, and a **Notifications** page lists everything sent to a user. |
+| Session timeout | An **employee** who is inactive for **3 minutes** is signed out automatically (a warning with a 30-second countdown appears first). It is enforced by the server: the employee's login token expires 3 minutes after the last real activity, and only real activity (not background refreshes) extends it. Administrators are never timed out. |
+| Password recovery | One-time six-digit code emailed to the employee, stored hashed, valid for **one minute**, single use (after that a new code must be requested). |
 | Audit trail | Records: employee records (created, updated, deleted, face registered), attendance corrections and deletions, leave (created, updated, decision, deleted), timesheet changes, and early clock-out reason updates and classifications. Append-only (entries cannot be edited or deleted). The Audit Logs page shows a plain-language timeline with filters, a detail panel and CSV export. |
 | Employee self-service | A separate **My Profile** page (view identity, employment, leave balances, kiosk face registration status; edit own phone, address, emergency contact and photo, with validation; salary and face data are never shown). **Settings** for employees contains only password change and appearance. |
 
@@ -79,15 +85,15 @@ You are helping revise the capstone manuscript **"Design and Development of an A
 
 - **Section 2.4.6 Cybersecurity.**
 - Old fragment: *"password recovery uses a one-time six-digit code that expires after ten minutes and is stored only in hashed form"*
-- New fragment: *"password recovery uses a one-time six-digit code that expires after five minutes and is stored only in hashed form"*
+- New fragment: *"password recovery uses a one-time six-digit code that expires after one minute and is stored only in hashed form"*
 
 ### 3.3 Number of automated tests (3 places)
 
 Replace the "over one hundred" wording with the current figure.
 
-- **Section 3.1.4 Toolstack:** *"(over 100 tests across the eight services)"* → *"(280 tests across the eight services)"*
-- **Section 3.3 Development, Operations, and QA Methodology:** *"Across the eight services there are over one hundred automated tests."* → *"Across the eight services there are 280 automated tests."*
-- **Section 3.3.3 Testing Strategy:** *"Across the eight services, there are over one hundred automated tests that cover the core business rules of each domain."* → *"Across the eight services, there are 280 automated tests that cover the core business rules of each domain."*
+- **Section 3.1.4 Toolstack:** *"(over 100 tests across the eight services)"* → *"(311 tests across the eight services)"*
+- **Section 3.3 Development, Operations, and QA Methodology:** *"Across the eight services there are over one hundred automated tests."* → *"Across the eight services there are 311 automated tests."*
+- **Section 3.3.3 Testing Strategy:** *"Across the eight services, there are over one hundred automated tests that cover the core business rules of each domain."* → *"Across the eight services, there are 311 automated tests that cover the core business rules of each domain."*
 
 ---
 

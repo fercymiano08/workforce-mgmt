@@ -24,6 +24,7 @@ return [
     'payroll_mode' => env('SVC_PAYROLL_MODE', 'remote'),
     'configuration_mode' => env('SVC_CONFIGURATION_MODE', 'remote'),
     'audit_mode' => env('SVC_AUDIT_MODE', 'remote'),
+    'scheduling_mode' => env('SVC_SCHEDULING_MODE', 'remote'),
 
     'auth' => [
         'url' => env('AUTH_SERVICE_URL', 'http://127.0.0.1:8000'),
@@ -35,6 +36,10 @@ return [
 
     'payroll' => [
         'url' => env('PAYROLL_SERVICE_URL', 'http://127.0.0.1:8006'),
+    ],
+
+    'scheduling' => [
+        'url' => env('SCHEDULING_SERVICE_URL', 'http://127.0.0.1:8004'),
     ],
 
     'configuration' => [

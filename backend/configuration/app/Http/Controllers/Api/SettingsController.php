@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
 use App\Models\Setting;
+use App\Services\AuditClient;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 
@@ -35,7 +36,18 @@ class SettingsController extends Controller
             }
         }
 
+        $before = $settings->toApiArray();
         $settings->update($fill);
+
+        // Company, system and kiosk rules drive pay, lunch, attendance and security: every change is on the record.
+        $after = $settings->fresh()->toApiArray();
+        $changed = array_keys(array_filter($fill, fn ($value, $section) => ($before[$section] ?? null) != ($after[$section] ?? null), ARRAY_FILTER_USE_BOTH));
+        if ($changed) {
+            AuditClient::record('settings.updated', 'Setting', (string) $settings->getKey(),
+                actor: $request->user()?->name, actorId: $request->user()?->employee_id,
+                before: array_intersect_key($before, array_flip($changed)), after: array_intersect_key($after, array_flip($changed)),
+                meta: ['sections' => $changed]);
+        }
 
         return response()->json(['data' => $settings->fresh()->toApiArray()]);
     }

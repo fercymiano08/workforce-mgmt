@@ -6,6 +6,7 @@ use App\Http\Controllers\Api\Concerns\AuthorizesEmployeeScope;
 use App\Http\Controllers\Api\Concerns\GeneratesSequentialIds;
 use App\Http\Controllers\Controller;
 use App\Models\OvertimeRequest;
+use App\Services\AuditClient;
 use App\Services\NotificationService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -94,6 +95,10 @@ class OvertimeRequestController extends Controller
             'id' => $this->nextIdFor(OvertimeRequest::class, 'OT'),
         ]);
 
+        AuditClient::record('overtime.requested', 'OvertimeRequest', $record->id,
+            actor: $request->user()?->name, actorId: $request->user()?->employee_id,
+            after: $record->toApiArray(), meta: ['employeeId' => $record->employee_id]);
+
         NotificationService::notifyAdmins(
             'overtime_requested',
             'New Overtime Request',
@@ -136,6 +141,10 @@ class OvertimeRequestController extends Controller
             // in the system as a "Cancelled" row.
             $record->delete();
 
+            AuditClient::record('overtime.withdrawn', 'OvertimeRequest', $record->id,
+                actor: $request->user()?->name, actorId: $request->user()?->employee_id,
+                before: $record->toApiArray(), meta: ['employeeId' => $record->employee_id]);
+
             NotificationService::notifyAdmins(
                 'overtime_cancelled',
                 'Overtime Request Cancelled',
@@ -147,6 +156,7 @@ class OvertimeRequestController extends Controller
             return response()->json(['success' => true]);
         }
 
+        $before = $record->toApiArray();
         $record->update([
             'status' => $status,
             'approved_by' => $request->input('approvedBy', $record->approved_by),
@@ -158,6 +168,12 @@ class OvertimeRequestController extends Controller
                 ? ($request->input('comments') ?: null)
                 : $record->comments,
         ]);
+
+        // Who decided, and what it was before: a decided overtime request can be reopened, so the trail matters.
+        AuditClient::record('overtime.status_changed', 'OvertimeRequest', $record->id,
+            actor: $request->user()?->name, actorId: $request->user()?->employee_id,
+            before: $before, after: $record->fresh()->toApiArray(),
+            meta: ['status' => $status, 'employeeId' => $record->employee_id, 'was' => $before['status'] ?? null]);
 
         if ($status === 'Approved') {
             NotificationService::notifyEmployee(
@@ -201,6 +217,10 @@ class OvertimeRequestController extends Controller
 
         $record->delete();
 
+        AuditClient::record('overtime.deleted', 'OvertimeRequest', $record->id,
+            actor: $request->user()?->name, actorId: $request->user()?->employee_id,
+            before: $record->toApiArray(), meta: ['employeeId' => $record->employee_id]);
+
         return response()->json(['success' => true]);
     }
 
@@ -222,6 +242,7 @@ class OvertimeRequestController extends Controller
 
         $updated = 0;
         foreach ($records as $record) {
+            $before = $record->toApiArray();
             $record->update([
                 'status' => $status,
                 'approved_by' => $approvedBy ?? $record->approved_by,
@@ -230,6 +251,11 @@ class OvertimeRequestController extends Controller
                     : null,
                 'approved_at' => $status === 'Approved' ? now() : null,
             ]);
+
+            AuditClient::record('overtime.status_changed', 'OvertimeRequest', $record->id,
+                actor: $request->user()?->name, actorId: $request->user()?->employee_id,
+                before: $before, after: $record->fresh()->toApiArray(),
+                meta: ['status' => $status, 'employeeId' => $record->employee_id, 'was' => $before['status'] ?? null, 'bulk' => true]);
 
             if ($status === 'Approved') {
                 NotificationService::notifyEmployee(

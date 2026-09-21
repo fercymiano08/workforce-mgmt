@@ -23,6 +23,7 @@ return [
     'notifications_mode' => env('SVC_NOTIFICATIONS_MODE', 'remote'),
     'payroll_mode' => env('SVC_PAYROLL_MODE', 'remote'),
     'configuration_mode' => env('SVC_CONFIGURATION_MODE', 'remote'),
+    'audit_mode' => env('SVC_AUDIT_MODE', 'remote'),
 
     'auth' => [
         'url' => env('AUTH_SERVICE_URL', 'http://127.0.0.1:8000'),

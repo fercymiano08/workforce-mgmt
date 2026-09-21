@@ -14,3 +14,7 @@ Artisan::command('inspire', function () {
 // case instead of "only when someone remembers to run snapshot:sync by
 // hand". Started by start-all.ps1 via `schedule:work`.
 Schedule::command('snapshot:sync')->everyMinute()->withoutOverlapping();
+
+// Automatic scheduling: checks every hour, and does its work once per week at the day and hour HR chose
+// (only when switched on). See AutoGenerateSchedules.
+Schedule::command('schedules:auto-generate')->hourly()->withoutOverlapping();

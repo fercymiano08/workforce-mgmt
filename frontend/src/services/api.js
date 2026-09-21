@@ -165,6 +165,11 @@ export const leaveService = {
     const { data } = await http.get(`/leaves/balances/${employeeId}`);
     return data;
   },
+  // What a date range would cost: the working days in it, minus weekends, holidays and days off.
+  workingDays: async (employeeId, startDate, endDate) => {
+    const { data } = await http.get('/leaves/working-days', { params: { employeeId, startDate, endDate } });
+    return data;
+  },
   create: async (payload) => {
     const { data } = await http.post('/leaves', payload);
     return data;
@@ -210,6 +215,37 @@ export const shiftService = {
   },
   deleteSchedule: async (id) => {
     const { data } = await http.delete(`/shifts/schedules/${id}`);
+    return data;
+  },
+  // The rules automatic scheduling follows, and the history of generation runs (admin).
+  getRules: async () => {
+    const { data } = await http.get('/shifts/rules');
+    return data;
+  },
+  saveAutomation: async (payload) => {
+    const { data } = await http.put('/shifts/rules/automation', payload);
+    return data;
+  },
+  savePattern: async (payload) => {
+    const { data } = await http.put('/shifts/rules/patterns', payload);
+    return data;
+  },
+  deletePattern: async (id) => http.delete(`/shifts/rules/patterns/${id}`),
+  addHoliday: async (payload) => {
+    const { data } = await http.post('/shifts/rules/holidays', payload);
+    return data;
+  },
+  deleteHoliday: async (id) => http.delete(`/shifts/rules/holidays/${id}`),
+  saveCoverage: async (payload) => {
+    const { data } = await http.put('/shifts/rules/coverage', payload);
+    return data;
+  },
+  getBatches: async () => {
+    const { data } = await http.get('/shifts/batches');
+    return data;
+  },
+  undoBatch: async (id) => {
+    const { data } = await http.delete(`/shifts/batches/${id}`);
     return data;
   },
 };
@@ -351,6 +387,10 @@ export const profileService = {
 };
 
 export const authService = {
+  // Sent while an employee is really using the system, so their (3-minute idle) login stays alive.
+  keepAlive: async () => http.post('/auth/keep-alive'),
+  // Password check before exporting data; the server records it in the audit log with the purpose.
+  confirmPassword: async (password, purpose) => http.post('/auth/confirm-password', { password, purpose }),
   changePassword: async (payload) => {
     const { data } = await http.post('/auth/change-password', payload);
     return data;

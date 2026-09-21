@@ -119,6 +119,8 @@ export default function Employees() {
   const [deptFilter, setDeptFilter] = useState('All');
   const [statusFilter, setStatusFilter] = useState('All');
   const [typeFilter, setTypeFilter] = useState('All');
+  const [roleFilter, setRoleFilter] = useState('All');      // only the roles of the chosen department
+  const [faceMissingOnly, setFaceMissingOnly] = useState(false);
   const [viewMode, setViewMode] = useState('grid');
   const [currentPage, setCurrentPage] = useState(1);
   const [selectedEmployee, setSelectedEmployee] = useState(null);
@@ -168,6 +170,12 @@ export default function Employees() {
   }, []);
 
   const departments = useMemo(() => ['All', ...new Set(employeesData.map(e => e.department))], [employeesData]);
+  // Department first, then only that department's roles
+  const rolesInFilter = useMemo(() => {
+    const pool = deptFilter === 'All' ? employeesData : employeesData.filter(e => e.department === deptFilter);
+    return ['All', ...new Set(pool.map(e => e.position).filter(Boolean))].sort((a, b) => (a === 'All' ? -1 : b === 'All' ? 1 : a.localeCompare(b)));
+  }, [employeesData, deptFilter]);
+  const faceMissingCount = useMemo(() => employeesData.filter(e => !e.faceRegistered && e.status !== 'Inactive').length, [employeesData]);
   const types = ['All', 'Full-time', 'Part-time', 'Contract'];
   const statuses = ['All', 'Active', 'On Leave', 'Inactive'];
 
@@ -206,9 +214,11 @@ export default function Employees() {
       const matchDept = deptFilter === 'All' || e.department === deptFilter;
       const matchStatus = statusFilter === 'All' || e.status === statusFilter;
       const matchType = typeFilter === 'All' || e.employmentType === typeFilter;
-      return matchSearch && matchDept && matchStatus && matchType;
+      const matchRole = roleFilter === 'All' || e.position === roleFilter;
+      const matchFace = !faceMissingOnly || !e.faceRegistered;
+      return matchSearch && matchDept && matchRole && matchStatus && matchType && matchFace;
     });
-  }, [employeesData, search, deptFilter, statusFilter, typeFilter]);
+  }, [employeesData, search, deptFilter, roleFilter, statusFilter, typeFilter, faceMissingOnly]);
 
   const totalPages = Math.ceil(filtered.length / 12);
   const paginated = filtered.slice((currentPage - 1) * 12, currentPage * 12);
@@ -415,8 +425,11 @@ export default function Employees() {
         <div className="p-4 border-b border-gray-100">
           <div className="flex items-center gap-3 flex-wrap">
             <SearchBar value={search} onChange={(v) => { setSearch(v); setCurrentPage(1); }} placeholder="Search by name, position, or email..." className="flex-1 min-w-[240px]" />
-            <Select value={deptFilter} onChange={(e) => { setDeptFilter(e.target.value); setCurrentPage(1); }} containerClass="w-44">
+            <Select value={deptFilter} onChange={(e) => { setDeptFilter(e.target.value); setRoleFilter('All'); setCurrentPage(1); }} containerClass="w-44">
               {departments.map(d => <option key={d} value={d}>{d === 'All' ? 'All Departments' : d}</option>)}
+            </Select>
+            <Select value={roleFilter} onChange={(e) => { setRoleFilter(e.target.value); setCurrentPage(1); }} containerClass="w-44">
+              {rolesInFilter.map(r => <option key={r} value={r}>{r === 'All' ? (deptFilter === 'All' ? 'All Roles' : `All ${deptFilter} Roles`) : r}</option>)}
             </Select>
             <Select value={statusFilter} onChange={(e) => { setStatusFilter(e.target.value); setCurrentPage(1); }} containerClass="w-36">
               {statuses.map(s => <option key={s} value={s}>{s === 'All' ? 'All Status' : s}</option>)}
@@ -424,6 +437,15 @@ export default function Employees() {
             <Select value={typeFilter} onChange={(e) => { setTypeFilter(e.target.value); setCurrentPage(1); }} containerClass="w-36">
               {types.map(t => <option key={t} value={t}>{t === 'All' ? 'All Types' : t}</option>)}
             </Select>
+            {faceMissingCount > 0 && (
+              <button
+                onClick={() => { setFaceMissingOnly(v => !v); setCurrentPage(1); }}
+                title="People who cannot use the kiosk yet"
+                className={`flex items-center gap-1.5 px-3 py-2.5 rounded-xl border text-[13px] font-medium transition-colors ${faceMissingOnly ? 'bg-amber-100 border-amber-300 text-amber-800' : 'bg-white border-gray-200 text-gray-600 hover:bg-gray-50'}`}
+              >
+                <ScanFace className="w-4 h-4" /> Face not registered ({faceMissingCount})
+              </button>
+            )}
             <div className="flex border border-gray-200 rounded-xl overflow-hidden">
               <button onClick={() => setViewMode('grid')} className={`p-2.5 transition-colors ${viewMode === 'grid' ? 'bg-blue-50 text-blue-600' : 'text-gray-400 hover:bg-gray-50'}`}>
                 <Grid3X3 className="w-4 h-4" />

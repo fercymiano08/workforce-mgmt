@@ -231,14 +231,14 @@ class AuthTest extends TestCase
         $this->assertTrue(password_verify('BrandNew@123', $user->password));
     }
 
-    public function test_a_reset_code_older_than_five_minutes_is_rejected(): void
+    public function test_a_reset_code_older_than_one_minute_is_rejected(): void
     {
         $this->otpEmployeeUser();
 
         DB::table('password_reset_tokens')->insert([
             'email' => 'employee@workforcepro.com',
             'token' => Hash::make('123456'),
-            'created_at' => now()->subMinutes(6),
+            'created_at' => now()->subSeconds(61),
         ]);
 
         $this->postJson('/api/auth/reset-password', [
@@ -252,14 +252,14 @@ class AuthTest extends TestCase
         $this->assertFalse(password_verify('BrandNew@123', $user->password));
     }
 
-    public function test_a_reset_code_just_under_five_minutes_old_still_works(): void
+    public function test_a_reset_code_just_under_one_minute_old_still_works(): void
     {
         $this->otpEmployeeUser();
 
         DB::table('password_reset_tokens')->insert([
             'email' => 'employee@workforcepro.com',
             'token' => Hash::make('123456'),
-            'created_at' => now()->subMinutes(4)->subSeconds(30),
+            'created_at' => now()->subSeconds(50),
         ]);
 
         $this->postJson('/api/auth/reset-password', [

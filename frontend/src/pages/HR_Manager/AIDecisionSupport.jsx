@@ -93,6 +93,13 @@ export default function AIDecisionSupport() {
   const shown = filter === 'all' ? insights : insights.filter((i) => i.severity === filter);
   const visible = shown.filter((i) => !i.resolved || showHandled);
 
+  // "Do this first": the few things that matter most right now, most urgent first
+  const severityRank = { critical: 0, warning: 1, info: 2 };
+  const doFirst = insights
+    .filter((i) => !i.resolved && i.severity in severityRank)
+    .sort((a, b) => severityRank[a.severity] - severityRank[b.severity])
+    .slice(0, 3);
+
   const score = data?.healthScore ?? 0;
   const meta = scoreMeta(score);
   const ringOffset = CIRCUMFERENCE * (1 - Math.min(100, Math.max(0, score)) / 100);
@@ -579,6 +586,37 @@ export default function AIDecisionSupport() {
               </div>
             </div>
           </Card>
+
+          {(doFirst.length > 0 || totalPending > 0) && (
+            <Card className="border-l-4 border-l-blue-500">
+              <div className="flex items-center gap-2 mb-3">
+                <Zap className="w-4.5 h-4.5 text-blue-500" />
+                <h2 className="text-[15px] font-semibold text-gray-900">Do this first</h2>
+                <span className="text-[12px] text-gray-400">The most important things right now</span>
+              </div>
+              <ol className="space-y-2.5">
+                {totalPending > 0 && (
+                  <li className="flex items-start gap-3 text-[13px]">
+                    <span className="mt-0.5 w-5 h-5 shrink-0 rounded-full bg-amber-100 text-amber-700 text-[11px] font-bold flex items-center justify-center">1</span>
+                    <span className="text-gray-700">
+                      <strong>Decide the {totalPending} waiting request{totalPending === 1 ? '' : 's'}</strong>
+                      {' '}({[securityItems.length && `${securityItems.length} security`, leaveItems.length && `${leaveItems.length} leave`, overtimeItems.length && `${overtimeItems.length} overtime`].filter(Boolean).join(', ')}).{' '}
+                      <a href="#decision-queue" className="text-blue-600 font-medium hover:underline">Go to the queue</a>
+                    </span>
+                  </li>
+                )}
+                {doFirst.map((i, idx) => {
+                  const step = idx + (totalPending > 0 ? 2 : 1);
+                  return (
+                    <li key={i.id} className="flex items-start gap-3 text-[13px]">
+                      <span className={`mt-0.5 w-5 h-5 shrink-0 rounded-full text-[11px] font-bold flex items-center justify-center ${i.severity === 'critical' ? 'bg-red-100 text-red-700' : 'bg-gray-100 text-gray-600'}`}>{step}</span>
+                      <span className="text-gray-700"><strong>{i.title}.</strong> {i.recommendation || i.message}</span>
+                    </li>
+                  );
+                })}
+              </ol>
+            </Card>
+          )}
 
           <div id="decision-queue" className="flex flex-wrap items-center justify-between gap-2">
             <div className="flex items-center gap-2">

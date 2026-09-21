@@ -124,7 +124,7 @@ Some columns (like `settings.kiosk`) store flexible structured data as JSON inst
 
 | Table | Purpose | Key Columns |
 |-------|---------|-------------|
-| `attendance` | One row per employee per day: clock in/out, hours, status. The kiosk writes `date`, `clock_in` and the Present/Late `status` from the **server's** clock and the employee's scheduled shift | `id`, `employee_id` (FK), `date`, `clock_in`, `clock_out` (the COUNTED end of the day - never past the shift end plus approved overtime), `actual_clock_out` (the real tap-out, kept so a later overtime approval can restore time), `total_hours`, `status` |
+| `attendance` | One row per employee per day: clock in/out, hours, status (an `Absent` row is written automatically after a finished day with a shift, no clock-in and no approved leave). The kiosk writes `date`, `clock_in` and the Present/Late `status` from the **server's** clock and the employee's scheduled shift | `id`, `employee_id` (FK), `date`, `clock_in`, `clock_out` (the COUNTED end of the day - never past the shift end plus approved overtime), `actual_clock_out` (the real tap-out, kept so a later overtime approval can restore time), `total_hours`, `status` |
 | `early_clock_outs` | One row per early clock-out: the reason the employee gave at the kiosk, minutes lost, proof (medical certificate) and its deadline `proof_due_at`, and the Excused/Unpaid classification - set automatically at the punch when the free allowance is used up or a sick certificate is overdue, otherwise by HR (immutable punch snapshot) | `id`, `attendance_id`, `employee_id`, `reason_code`, `minutes_early`, `proof_due_at`, `classification` |
 | `timesheets` | Weekly hour summaries that move Draft → Submitted → Approved / Rejected → sent to payroll. `overtime_hours` = worked, `approved_ot_hours` = approved, `paid_ot_hours` = payable (per day the smaller of the two). Workflow columns: `submitted_at`, `submitted_by`, `auto_submitted`, `reviewed_at`, `status_reason` (why it was rejected or reopened), `needs_refresh` (attendance changed after it was locked), `reminded_at`, `nudged_at`, `exported_at` (sent to payroll), and `history` (JSON timeline of every step) | `id`, `employee_id` (FK), `week_start`, `week_end`, `regular_hours`, `overtime_hours`, `paid_ot_hours`, `status` |
 | `overtime_requests` | OT applications: expected vs approved hours | `id`, `employee_id` (FK), `expected_hours`, `approved_hours`, `status` |
@@ -133,7 +133,7 @@ Some columns (like `settings.kiosk`) store flexible structured data as JSON inst
 
 | Table | Purpose | Key Columns |
 |-------|---------|-------------|
-| `leaves` | Leave applications with approval workflow | `id`, `employee_id` (FK), `leave_type`, `start_date`, `end_date`, `status` |
+| `leaves` | Leave applications with approval workflow. `days` = the WORKING days the request costs (work pattern minus holidays, counted by the scheduling service when it is filed) | `id`, `employee_id` (FK), `leave_type`, `start_date`, `end_date`, `days`, `status` |
 
 > Note: leave balances are stored as a JSON column inside `employees.leave_balances`, not a separate table.
 
@@ -143,6 +143,11 @@ Some columns (like `settings.kiosk`) store flexible structured data as JSON inst
 |-------|---------|-------------|
 | `shift_definitions` | The single shift template (Standard Shift 08:00–17:00). Overtime is not a shift - it extends this one when an overtime request is approved | `id`, `name`, `start_time`, `end_time` |
 | `shift_schedules` | Who works which shift on which date | `id`, `employee_id` (FK), `shift_id` (FK), `date`, `status` |
+| `schedule_settings` | The one row of automatic-scheduling settings: on/off, the day and hour it runs, weeks ahead, the usual work days, the shift | `auto_enabled`, `run_day`, `run_hour`, `weeks_ahead`, `default_work_days` |
+| `work_patterns` | Which weekdays a department or one employee works (overrides the usual days) | `scope` (department / employee), `scope_key`, `work_days` |
+| `holidays` | Days nobody is scheduled | `date` (unique), `name` |
+| `coverage_rules` | The minimum scheduled people per department per day | `department` (unique), `min_staff` |
+| `schedule_batches` / `schedule_batch_items` | Every generation (manual or automatic) and which shifts it created, so it can be reviewed and undone | `source`, `created_by`, `start_date`, `end_date`, `status` / `batch_id`, `schedule_id` |
 
 #### System Support
 

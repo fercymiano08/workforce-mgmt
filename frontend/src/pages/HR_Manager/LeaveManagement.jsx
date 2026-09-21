@@ -1,7 +1,7 @@
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useCallback } from 'react';
 import {
   Calendar, CheckCircle, XCircle, Clock, FileText, Eye,
-  Users, Hourglass, ThumbsUp, ThumbsDown,
+  Users, Hourglass, ThumbsUp, ThumbsDown, AlertTriangle,
 } from 'lucide-react';
 import Card from '../../components/ui/Card';
 import Button from '../../components/ui/Button';
@@ -11,7 +11,7 @@ import SearchBar from '../../components/ui/SearchBar';
 import { Select, Textarea } from '../../components/ui/Input';
 import Modal from '../../components/ui/Modal';
 import { Pagination } from '../../components/ui/Table';
-import { leaveService } from '../../services/api';
+import { leaveService, employeeService } from '../../services/api';
 import { formatDate } from '../../utils/helpers';
 import { useToast } from '../../context/ToastContext';
 import { useAuth } from '../../context/AuthContext';
@@ -35,13 +35,17 @@ const leaveTypeVariant = {
   'Half Day': 'info',
 };
 
-const allTabs = ['All Requests', 'Pending Approvals'];
+const allTabs = ['Pending Approvals', 'All Requests'];
+
+// Two date ranges (YYYY-MM-DD strings) share at least one day
+const overlaps = (a, b) => a.startDate <= b.endDate && b.startDate <= a.endDate;
 const statuses = ['All', 'Pending', 'Approved', 'Rejected', 'Cancelled'];
 const leaveTypes = ['All', 'Vacation', 'Sick', 'Emergency', 'Special', 'Bereavement', 'Unpaid', 'Half Day'];
 
 const ROWS_PER_PAGE = 8;
 
-const countDays = (start, end) => {
+const countDays = (start, end, counted) => {
+  if (counted != null) return Number(counted);
   const ms = new Date(end).getTime() - new Date(start).getTime();
   return Math.max(1, Math.round(ms / 86400000) + 1);
 };
@@ -52,7 +56,10 @@ export default function LeaveManagement() {
 
   const { data: leaves, setData: setLeaves, loading } = useApiData(() => leaveService.getAll(), []);
 
-  const [activeTab, setActiveTab] = useState('All Requests');
+  const { data: employees } = useApiData(() => employeeService.getAll(), []);
+
+  const [activeTab, setActiveTab] = useState('Pending Approvals');
+  const [selectedIds, setSelectedIds] = useState([]);
   const [search, setSearch] = useState('');
   const [statusFilter, setStatusFilter] = useState('All');
   const [typeFilter, setTypeFilter] = useState('All');
@@ -74,6 +81,29 @@ export default function LeaveManagement() {
     };
   }, [leaves, pendingCount]);
 
+  // Who is in which department, so a request can show what it does to the team
+  const departmentOf = useMemo(() => {
+    const map = {};
+    (employees || []).forEach((e) => { map[e.id] = e.department; });
+    return map;
+  }, [employees]);
+  const headcount = useMemo(() => {
+    const map = {};
+    (employees || []).filter((e) => e.status !== 'Inactive').forEach((e) => { map[e.department] = (map[e.department] || 0) + 1; });
+    return map;
+  }, [employees]);
+
+  // Colleagues of the same department who are off (approved) or waiting (pending) on any of the same days
+  const teamImpact = useCallback((leave) => {
+    const dept = departmentOf[leave.employeeId];
+    if (!dept) return { dept: null, others: [] };
+    const others = (leaves || []).filter((l) => l.id !== leave.id
+      && (l.status === 'Approved' || l.status === 'Pending')
+      && departmentOf[l.employeeId] === dept
+      && overlaps(l, leave));
+    return { dept, others, headcount: headcount[dept] || 0 };
+  }, [leaves, departmentOf, headcount]);
+
   const filtered = useMemo(() => {
     return (leaves || []).filter((l) => {
       if (activeTab === 'Pending Approvals' && l.status !== 'Pending') return false;
@@ -83,6 +113,21 @@ export default function LeaveManagement() {
       return matchSearch && matchStatus && matchType;
     });
   }, [leaves, activeTab, search, statusFilter, typeFilter]);
+
+  const pendingOnPage = filtered.filter((l) => l.status === 'Pending');
+  const toggleSelected = (id) => setSelectedIds((ids) => (ids.includes(id) ? ids.filter((x) => x !== id) : [...ids, id]));
+
+  const handleBulk = async (status) => {
+    const approvedBy = user ? `${user.firstName} ${user.lastName}`.trim() : 'HR Admin';
+    const chosen = (leaves || []).filter((l) => selectedIds.includes(l.id) && l.status === 'Pending');
+    const results = await Promise.allSettled(chosen.map((l) => leaveService.updateStatus(l.id, status, approvedBy)));
+    const done = chosen.filter((_, i) => results[i].status === 'fulfilled').map((l) => l.id);
+    setLeaves((prev) => prev.map((l) => (done.includes(l.id) ? { ...l, status, approvedBy } : l)));
+    setSelectedIds([]);
+    const failed = chosen.length - done.length;
+    if (done.length) toast.success(status === 'Approved' ? 'Leave approved' : 'Leave rejected', `${done.length} request${done.length === 1 ? '' : 's'} ${status.toLowerCase()}.`);
+    if (failed) toast.error('Some failed', `${failed} request${failed === 1 ? '' : 's'} could not be updated.`);
+  };
 
   const totalPages = Math.ceil(filtered.length / ROWS_PER_PAGE);
   const paginated = filtered.slice((currentPage - 1) * ROWS_PER_PAGE, currentPage * ROWS_PER_PAGE);
@@ -164,7 +209,7 @@ export default function LeaveManagement() {
           {allTabs.map((tab) => (
             <button
               key={tab}
-              onClick={() => { setActiveTab(tab); setCurrentPage(1); setSearch(''); setStatusFilter('All'); setTypeFilter('All'); }}
+              onClick={() => { setActiveTab(tab); setSelectedIds([]); setCurrentPage(1); setSearch(''); setStatusFilter('All'); setTypeFilter('All'); }}
               className={`px-5 py-3 text-sm font-medium transition-colors relative ${
                 activeTab === tab ? 'text-blue-600' : 'text-gray-500 hover:text-gray-700'
               }`}
@@ -203,12 +248,33 @@ export default function LeaveManagement() {
         </Select>
       </div>
 
+      {selectedIds.length > 0 && (
+        <div className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-blue-200 bg-blue-50 px-4 py-3">
+          <p className="text-sm font-medium text-blue-800">{selectedIds.length} request{selectedIds.length === 1 ? '' : 's'} selected</p>
+          <div className="flex gap-2">
+            <Button variant="outline" size="sm" onClick={() => setSelectedIds([])}>Clear</Button>
+            <Button variant="danger" size="sm" icon={XCircle} onClick={() => handleBulk('Rejected')}>Reject selected</Button>
+            <Button variant="success" size="sm" icon={CheckCircle} onClick={() => handleBulk('Approved')}>Approve selected</Button>
+          </div>
+        </div>
+      )}
+
       {/* Table */}
       <Card padding={false}>
         <div className="overflow-x-auto">
           <table className="w-full">
             <thead>
               <tr className="border-b border-gray-100 bg-gray-50/50">
+                <th className="pl-4 py-3 w-8">
+                  {pendingOnPage.length > 0 && (
+                    <input
+                      type="checkbox"
+                      aria-label="Select all pending requests"
+                      checked={pendingOnPage.every((l) => selectedIds.includes(l.id))}
+                      onChange={(e) => setSelectedIds(e.target.checked ? pendingOnPage.map((l) => l.id) : [])}
+                    />
+                  )}
+                </th>
                 {['Employee', 'Leave Type', 'Duration', 'Reason', 'Status', 'Applied Date', 'Approved By', 'Actions'].map((h) => (
                   <th key={h} className="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">{h}</th>
                 ))}
@@ -217,13 +283,23 @@ export default function LeaveManagement() {
             <tbody className="divide-y divide-gray-50">
               {paginated.length === 0 ? (
                 <tr>
-                  <td colSpan={8} className="px-4 py-12 text-center text-sm text-gray-400">
+                  <td colSpan={9} className="px-4 py-12 text-center text-sm text-gray-400">
                     No leave requests found matching your filters.
                   </td>
                 </tr>
               ) : (
                 paginated.map((leave) => (
                   <tr key={leave.id} className="hover:bg-gray-50/50 transition-colors">
+                    <td className="pl-4 py-3.5 w-8">
+                      {leave.status === 'Pending' && (
+                        <input
+                          type="checkbox"
+                          aria-label={`Select ${leave.employeeName}`}
+                          checked={selectedIds.includes(leave.id)}
+                          onChange={() => toggleSelected(leave.id)}
+                        />
+                      )}
+                    </td>
                     <td className="px-4 py-3.5">
                       <div className="flex items-center gap-3">
                         <Avatar
@@ -246,8 +322,14 @@ export default function LeaveManagement() {
                       <div className="flex items-center gap-1.5 text-sm text-gray-700">
                         <Calendar className="w-3.5 h-3.5 text-gray-400" />
                         {formatDate(leave.startDate)} {leave.startDate !== leave.endDate && `– ${formatDate(leave.endDate)}`}
-                        <span className="text-xs text-gray-400">({countDays(leave.startDate, leave.endDate)}d)</span>
+                        <span className="text-xs text-gray-400">({countDays(leave.startDate, leave.endDate, leave.days)}d)</span>
                       </div>
+                      {leave.status === 'Pending' && teamImpact(leave).others.length > 0 && (
+                        <p className="mt-1 flex items-center gap-1 text-xs text-amber-600">
+                          <AlertTriangle className="w-3 h-3" />
+                          {teamImpact(leave).others.length} teammate{teamImpact(leave).others.length === 1 ? '' : 's'} also off
+                        </p>
+                      )}
                     </td>
                     <td className="px-4 py-3.5 text-sm text-gray-600 max-w-[200px] truncate">{leave.reason}</td>
                     <td className="px-4 py-3.5">
@@ -301,9 +383,36 @@ export default function LeaveManagement() {
               <Calendar className="w-4 h-4 text-gray-500" />
               <span className="text-sm font-medium text-gray-700">
                 {formatDate(selectedLeave.startDate)} {selectedLeave.startDate !== selectedLeave.endDate && `– ${formatDate(selectedLeave.endDate)}`}
-                <span className="text-gray-400 ml-1.5">({countDays(selectedLeave.startDate, selectedLeave.endDate)} day(s))</span>
+                <span className="text-gray-400 ml-1.5">({countDays(selectedLeave.startDate, selectedLeave.endDate, selectedLeave.days)} day(s))</span>
               </span>
             </div>
+
+            {(() => {
+              const impact = teamImpact(selectedLeave);
+              if (!impact.dept) return null;
+              const off = impact.others.length + 1;
+              const crowded = impact.headcount > 0 && off / impact.headcount >= 0.3;
+              return (
+                <div className={`rounded-xl border px-4 py-3 ${impact.others.length === 0 ? 'border-emerald-200 bg-emerald-50' : crowded ? 'border-red-200 bg-red-50' : 'border-amber-200 bg-amber-50'}`}>
+                  <p className="text-xs font-semibold uppercase tracking-wide text-gray-600 mb-1">Team impact · {impact.dept}</p>
+                  {impact.others.length === 0 ? (
+                    <p className="text-sm text-emerald-800">Nobody else in {impact.dept} is off on these days.</p>
+                  ) : (
+                    <>
+                      <p className="text-sm text-gray-800">
+                        {off} of {impact.headcount} people in {impact.dept} would be off{crowded ? ' — that is a large part of the team.' : '.'}
+                      </p>
+                      <ul className="mt-1.5 text-xs text-gray-600 space-y-0.5">
+                        {impact.others.slice(0, 5).map((o) => (
+                          <li key={o.id}>{o.employeeName} · {formatDate(o.startDate)}{o.startDate !== o.endDate && ` – ${formatDate(o.endDate)}`} ({o.status.toLowerCase()})</li>
+                        ))}
+                        {impact.others.length > 5 && <li>+{impact.others.length - 5} more</li>}
+                      </ul>
+                    </>
+                  )}
+                </div>
+              );
+            })()}
 
             <div>
               <p className="text-xs font-medium text-gray-500 uppercase tracking-wide mb-1">Reason</p>

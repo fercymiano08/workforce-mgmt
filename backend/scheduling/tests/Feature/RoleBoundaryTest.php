@@ -21,6 +21,13 @@ class RoleBoundaryTest extends TestCase
         ['POST', '/api/shifts/schedules/generate'],
         ['PUT', '/api/shifts/schedules/SCH001'],
         ['DELETE', '/api/shifts/schedules/SCH001'],
+        ['GET', '/api/shifts/rules'],
+        ['PUT', '/api/shifts/rules/automation'],
+        ['PUT', '/api/shifts/rules/patterns'],
+        ['POST', '/api/shifts/rules/holidays'],
+        ['PUT', '/api/shifts/rules/coverage'],
+        ['GET', '/api/shifts/batches'],
+        ['DELETE', '/api/shifts/batches/BAT001'],
     ];
 
     private const OTHER_EMPLOYEE = [

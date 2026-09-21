@@ -3,6 +3,7 @@ import { AuthProvider, useAuth } from './context/AuthContext';
 import { RoleProvider } from './context/RoleContext';
 import { ToastProvider } from './context/ToastContext';
 import { NotificationProvider } from './context/NotificationContext';
+import IdleSessionGuard from './components/common/IdleSessionGuard';
 import { ThemeProvider } from './context/ThemeContext';
 import { LanguageProvider } from './context/LanguageContext';
 import { InsightsProvider } from './context/InsightsContext';
@@ -32,6 +33,7 @@ import MyAttendance from './pages/Employee/MyAttendance';
 import MySchedule from './pages/Employee/MySchedule';
 import MyTimesheet from './pages/Employee/MyTimesheet';
 import AuditLogs from './pages/HR_Manager/AuditLogs';
+import Notifications from './pages/Notifications';
 
 
 // Renders the right dashboard for whoever is logged in, without needing a
@@ -86,6 +88,7 @@ function AppRoutes() {
       <Route path="/ai-decision-support" element={<PrivateLayout adminOnly><AIDecisionSupport /></PrivateLayout>} />
       <Route path="/audit-logs" element={<PrivateLayout adminOnly><AuditLogs /></PrivateLayout>} />
       <Route path="/my-profile" element={<PrivateLayout><EmployeeRoute><MyProfile /></EmployeeRoute></PrivateLayout>} />
+      <Route path="/notifications" element={<PrivateLayout><Notifications /></PrivateLayout>} />
       <Route path="/settings" element={<PrivateLayout><SettingsRoute /></PrivateLayout>} />
 
       <Route path="*" element={<Navigate to="/" replace />} />
@@ -104,6 +107,7 @@ export default function App() {
                 <RoleProvider>
                   <InsightsProvider>
                     <AppRoutes />
+                    <IdleSessionGuard />
                   </InsightsProvider>
                 </RoleProvider>
               </NotificationProvider>
