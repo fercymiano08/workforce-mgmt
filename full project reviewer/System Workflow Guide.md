@@ -388,7 +388,15 @@ Same endpoints, different verbs: `GET /api/employees/{id}` loads one record into
 
 **What it is:** the admin screen that turns an ordinary tablet/PC at the entrance into a locked-down time clock.
 
-**File:** `KIOSK/KioskSetup.jsx`, backend `SettingsController.php`, `KioskController.php`
+**File:** `KIOSK/KioskSetup.jsx` (page) with `components/kiosk/` (`KioskStatusHero`, `KioskStatTiles`, `KioskWaitingList`, `KioskReadiness`, `KioskActivityTimeline`, `KioskPreview`), backend `SettingsController.php`, `KioskController.php`
+
+**Kiosk Management is a live control room** with four tabs:
+* **Overview:** a status card (kiosk live or in setup mode, a live countdown to the end of today's unlock at midnight, the enable/disable button); four tiles for today (clocked in against scheduled, clocked out, **not clocked in**, **security alerts** = wrong PINs and face mismatches, not successful unlocks); the last clock event; a **Waiting to clock in** list (scheduled, shift started, no clock-in, not on leave, with minutes late); and a **Readiness check** (PIN set, kiosk on, employees without a registered face with a link to fix them, and a button that tests this device's camera and face models). It refreshes every 15 seconds and shows "Connection lost - retrying" if the server stops answering.
+* **Activity:** the log as a timeline grouped by day, with filters (all, clock-ins and outs, security, system) and search; real alerts are highlighted in red.
+* **Settings:** location, device name and time zone, with a live preview of the kiosk screen and a Save button that is only enabled when something changed.
+* **Maintenance:** reboot, update check and a separate danger zone for resetting all kiosk data.
+
+The activity log names employees, so it is **not** part of the public kiosk config: `GET /api/kiosk/logs` (administrator only) serves it, and `GET /api/kiosk/overview` (administrator only) computes today's numbers on the server in the kiosk's time zone.
 
 ### What You Can Do
 
@@ -419,7 +427,7 @@ On the terminal, tap anywhere 5 times quickly
 
 ### Tech Trail
 
-- Endpoints: `POST /api/kiosk/config`, `/api/kiosk/pin`, `/api/kiosk/reset` (admin), `GET /api/kiosk/config` (public read of safe fields), `POST /api/kiosk/verify-pin` (public, rate-limited to 10/min; on success returns a signed **device token** valid until midnight). Every other kiosk endpoint (employee directory, face check, log, clock-in/out) needs that token in the `X-Kiosk-Token` header
+- Endpoints: `POST /api/kiosk/config`, `/api/kiosk/pin`, `/api/kiosk/reset`, `GET /api/kiosk/logs`, `GET /api/kiosk/overview` (admin), `GET /api/kiosk/config` (public read of safe fields, no activity log), `POST /api/kiosk/verify-pin` (public, rate-limited to 10/min; on success returns a signed **device token** valid until midnight). Every other kiosk endpoint (employee directory, face check, log, clock-in/out) needs that token in the `X-Kiosk-Token` header
 - Tables: `settings` (kiosk JSON), `security_events`
 
 ---

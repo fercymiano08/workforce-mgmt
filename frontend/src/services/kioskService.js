@@ -12,15 +12,12 @@ import { nowInTimezone } from '../utils/helpers';
 // terminal with the previously known settings, instead of flashing the
 // "Clock-Ins Disabled" screen until the server responds.
 
-const MAX_LOGS = 200;
-
 const DEFAULT_SETTINGS = {
   location: 'Main Entrance',
   deviceName: 'Front Door Kiosk',
   timezone: 'Asia/Manila',
   active: false,
   enabledAt: null,
-  logs: [],
   hasPin: false,
 };
 
@@ -48,7 +45,9 @@ function loadCachedSettings() {
     const raw = readStorage(SETTINGS_KEY);
     if (raw) {
       const parsed = JSON.parse(raw);
-      return { ...DEFAULT_SETTINGS, ...parsed, logs: parsed.logs || [] };
+      // (the activity log is no longer part of the public config; drop any copy an older version cached)
+      delete parsed.logs;
+      return { ...DEFAULT_SETTINGS, ...parsed };
     }
   } catch { /* corrupted cache - fall through to defaults */ }
   return { ...DEFAULT_SETTINGS };
@@ -67,10 +66,6 @@ export const kioskService = {
     return { ...cache };
   },
 
-  getLogs() {
-    return [...(cache.logs || [])];
-  },
-
   // Pulls the backend kiosk config into this session's cache. Works on the
   // public /kiosk page because GET /api/kiosk/config requires no auth token.
   async load() {
@@ -81,6 +76,18 @@ export const kioskService = {
       // backend unreachable - keep whatever this session already knows
     }
     return this.getSettings();
+  },
+
+  // Administrator only: the activity log (names and clock times are not public).
+  async loadLogs() {
+    const { data } = await http.get('/kiosk/logs');
+    return data || [];
+  },
+
+  // Administrator only: today's numbers, who is still to clock in, and what is not ready yet.
+  async loadOverview() {
+    const { data } = await http.get('/kiosk/overview');
+    return data;
   },
 
   async updateSettings(data) {
@@ -174,7 +181,6 @@ export const kioskService = {
         detail: extra.detail || null,
         employeeId: extra.employeeId || null,
       });
-      merge({ logs: [data, ...(cache.logs || [])].slice(0, MAX_LOGS) });
       return { ...data };
     } catch {
       return null;

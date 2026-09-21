@@ -24,7 +24,7 @@ You are helping revise the capstone manuscript **"Design and Development of an A
 | Topic | Fact |
 |-------|------|
 | Architecture | React frontend + **8** Laravel microservices (core, intelligence, attendance, scheduling, time-off, payroll, communications, configuration), each with its own PostgreSQL database. Docker Compose runs 15 containers (unchanged). |
-| Automated tests | **311** automated PHPUnit tests across the 8 services, all passing. The frontend is checked with ESLint and a production build. |
+| Automated tests | **315** automated PHPUnit tests across the 8 services, all passing. The frontend is checked with ESLint and a production build. |
 | Timesheet workflow | Timesheets are built automatically from attendance. The employee submits after the week ends (or the system auto-submits at Monday 12:00 PM); the Workforce Admin approves, or rejects / reopens with a required reason; approved timesheets are sent to payroll once. Only a finished week can be reviewed; hours are frozen after submission and cannot be edited; every step is kept in a history and the audit log. |
 | Payroll service | Produces **weekly timesheets only**. It does **not** produce pay statements. The "My Pay Record / Pay Statement" page and its endpoint were **removed**. |
 | Timesheet figures | Each weekly timesheet records regular hours, overtime worked, overtime approved, and **payable overtime** (`paid_ot_hours`). |
@@ -40,6 +40,7 @@ You are helping revise the capstone manuscript **"Design and Development of an A
 | Absent days | A finished day where the person was scheduled, never clocked in and had no approved leave is recorded automatically as **Absent** (a job at 00:10 Manila time), so the absence figures on dashboards and reports are complete. |
 | Audit and export control | Sign-ins, failed sign-ins, lock-outs, password changes, overtime decisions and every change to system settings are written to the audit log. Exporting a report or the audit log requires the administrator to type their password again; the confirmation is recorded. |
 | Administrator workspace | The dashboard opens with a **Needs your attention** panel (leave, overtime, early clock-outs, timesheets waiting), leave requests can be approved in bulk with a team-impact view, decided overtime can be reopened, and a **Notifications** page lists everything sent to a user. |
+| Kiosk Management | The administrator's kiosk screen is a live control room: state of the kiosk and a countdown to the end of the day's unlock, today's clock-ins against scheduled, employees scheduled but not yet clocked in, security alerts (wrong PIN, face mismatch), a readiness check (PIN set, employees without a registered face, camera and face models), and an activity timeline with filters. The kiosk activity log is no longer part of the public kiosk configuration; it is served only to administrators. |
 | Kiosk unlock | The kiosk terminal is unlocked once a day with the PIN and stays unlocked **until midnight (Manila time)**, then asks for the PIN again for the next day. Changing the PIN locks every device immediately. If the manuscript says the kiosk stays unlocked for 24 hours, change it to this. |
 | Session timeout | An **employee** who is inactive for **3 minutes** is signed out automatically (a warning with a 30-second countdown appears first). It is enforced by the server: the employee's login token expires 3 minutes after the last real activity, and only real activity (not background refreshes) extends it. Administrators are never timed out. |
 | Password recovery | One-time six-digit code emailed to the employee, stored hashed, valid for **one minute**, single use (after that a new code must be requested). |
@@ -92,9 +93,9 @@ You are helping revise the capstone manuscript **"Design and Development of an A
 
 Replace the "over one hundred" wording with the current figure.
 
-- **Section 3.1.4 Toolstack:** *"(over 100 tests across the eight services)"* → *"(311 tests across the eight services)"*
-- **Section 3.3 Development, Operations, and QA Methodology:** *"Across the eight services there are over one hundred automated tests."* → *"Across the eight services there are 311 automated tests."*
-- **Section 3.3.3 Testing Strategy:** *"Across the eight services, there are over one hundred automated tests that cover the core business rules of each domain."* → *"Across the eight services, there are 311 automated tests that cover the core business rules of each domain."*
+- **Section 3.1.4 Toolstack:** *"(over 100 tests across the eight services)"* → *"(315 tests across the eight services)"*
+- **Section 3.3 Development, Operations, and QA Methodology:** *"Across the eight services there are over one hundred automated tests."* → *"Across the eight services there are 315 automated tests."*
+- **Section 3.3.3 Testing Strategy:** *"Across the eight services, there are over one hundred automated tests that cover the core business rules of each domain."* → *"Across the eight services, there are 315 automated tests that cover the core business rules of each domain."*
 
 ---
 

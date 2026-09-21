@@ -24,6 +24,8 @@ class RoleBoundaryTest extends TestCase
         ['GET', '/api/attendance/early-outs'],
         ['GET', '/api/attendance/early-outs/pending'],
         ['POST', '/api/attendance/early-outs/EO001/classify'],
+        ['GET', '/api/kiosk/logs'],
+        ['GET', '/api/kiosk/overview'],
         ['POST', '/api/kiosk/config'],
         ['POST', '/api/kiosk/pin'],
         ['POST', '/api/kiosk/reset'],

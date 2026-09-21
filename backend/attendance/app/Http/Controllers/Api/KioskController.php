@@ -50,6 +50,69 @@ class KioskController extends Controller
     // at or below this are considered the same person.
     private const FACE_MATCH_THRESHOLD = 0.6;
 
+    /** The activity log (employee names, clock times, security attempts): Administrator only. */
+    public function logs(): JsonResponse
+    {
+        return response()->json(['data' => $this->kiosk()['logs'] ?? []]);
+    }
+
+    /**
+     * Everything the Kiosk Management screen shows at a glance, worked out on the server in the kiosk's own
+     * time zone: today's counts, who has not clocked in, what is not ready yet, and the latest activity.
+     */
+    public function overview(): JsonResponse
+    {
+        $timezone = ShiftHours::timezone();
+        $today = now($timezone)->toDateString();
+        $startUtc = now($timezone)->startOfDay()->utc();
+        $kiosk = $this->kiosk();
+        $logs = collect($kiosk['logs'] ?? []);
+        $todayLogs = $logs->filter(fn ($l) => isset($l['at']) && Carbon::parse($l['at'])->gte($startUtc));
+
+        $records = Attendance::where('date', $today)->get(['employee_id', 'clock_in', 'clock_out']);
+        $clockedIn = $records->pluck('employee_id')->flip();
+        $onLeave = Leave::where('status', 'Approved')->whereDate('start_date', '<=', $today)->whereDate('end_date', '>=', $today)
+            ->pluck('employee_id')->flip();
+
+        $scheduled = ShiftSchedule::with('shift')->where('date', $today)->where('status', 'Scheduled')->get();
+        $now = now($timezone);
+        // Not clocked in yet: scheduled, not on leave, and the shift has already started
+        $waiting = $scheduled
+            ->filter(fn ($s) => ! isset($clockedIn[$s->employee_id]) && ! isset($onLeave[$s->employee_id])
+                && $s->shift && Carbon::parse($today.' '.$s->shift->start_time, $timezone)->lte($now))
+            ->map(fn ($s) => [
+                'employeeId' => $s->employee_id,
+                'name' => $s->employee_name,
+                'shiftStart' => substr((string) $s->shift->start_time, 0, 5),
+                'minutesLate' => (int) Carbon::parse($today.' '.$s->shift->start_time, $timezone)->diffInMinutes($now),
+            ])->sortByDesc('minutesLate')->values();
+
+        $active = Employee::where('status', 'Active');
+        $readiness = [
+            'pinSet' => ! empty($kiosk['pinHash']),
+            'kioskActive' => (bool) $kiosk['active'],
+            'withoutFace' => (clone $active)->where(fn ($q) => $q->where('face_registered', false)->orWhereNull('face_registered'))->count(),
+            'activeEmployees' => (clone $active)->count(),
+        ];
+
+        $last = $logs->first(fn ($l) => in_array($l['type'] ?? '', ['clock-in', 'clock-out'], true));
+
+        return response()->json(['data' => [
+            'today' => $today,
+            'timezone' => $timezone,
+            'sessionEndsAt' => now($timezone)->addDay()->startOfDay()->toISOString(),
+            'clockIns' => $records->whereNotNull('clock_in')->count(),
+            'clockOuts' => $records->whereNotNull('clock_out')->count(),
+            'scheduledToday' => $scheduled->count(),
+            // Only real alerts (wrong PIN, face mismatch): a successful unlock is also a "security" entry but not a problem
+            'failedAttempts' => $todayLogs->filter(fn ($l) => ($l['type'] ?? '') === 'security'
+                && preg_match('/^(failed|face mismatch)/i', (string) ($l['message'] ?? '')))->count(),
+            'lastActivity' => $last,
+            'waiting' => $waiting,
+            'readiness' => $readiness,
+        ]]);
+    }
+
     public function config(): JsonResponse
     {
         return response()->json(['data' => $this->publicConfig()]);
@@ -777,7 +840,7 @@ class KioskController extends Controller
             'active' => (bool) $kiosk['active'],
             'enabledAt' => $kiosk['enabledAt'],
             'hasPin' => ! empty($kiosk['pinHash']),
-            'logs' => $kiosk['logs'] ?? [],
+            // No activity log here: this endpoint is open to anyone, and the log names employees.
         ];
     }
 

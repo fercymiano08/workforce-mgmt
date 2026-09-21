@@ -45,6 +45,8 @@ Route::middleware('svc.auth')->group(function () {
 
     // Kiosk device configuration - Administrator only.
     Route::middleware('admin')->prefix('kiosk')->group(function () {
+        Route::get('/logs', [KioskController::class, 'logs']);
+        Route::get('/overview', [KioskController::class, 'overview']);
         Route::post('/config', [KioskController::class, 'updateConfig']);
         Route::post('/pin', [KioskController::class, 'setPin']);
         Route::post('/reset', [KioskController::class, 'reset']);
