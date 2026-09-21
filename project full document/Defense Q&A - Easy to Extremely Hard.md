@@ -235,6 +235,32 @@ A kiosk cannot verify "I'm sick", so we don't trust the reason — we verify wha
 **Q69. Why not just block early clock-outs unless a supervisor approves?**
 Because someone who is genuinely ill or has an emergency must never be trapped at the terminal. So the punch is always accepted, and the consequence (excused vs unexcused) is decided by rules and by HR afterwards. That is safer and fairer than gatekeeping at the door.
 
+**Q70. In simple words, what is Docker and why does your system use it?**
+Docker packs each part of the system — the database, each microservice, the background schedulers and the frontend — together with everything it needs into a sealed "container", so it behaves the same on any computer. Our system is nine-plus programs that must be installed, configured and started in order; Docker turns that into one command (`docker compose up -d --build`). It does not change any feature — it changes how the system is built, started and isolated.
+
+**Q71. What's the difference between an image and a container?**
+An image is the frozen, ready-to-run package built from a recipe (a Dockerfile); a container is an image that is running. Like a recipe versus the dish being cooked: one image can be started as many containers.
+
+**Q72. You have 8 services — do you have 8 Dockerfiles?**
+No, one. `backend.Dockerfile` is the recipe for all eight Laravel services; we pass `SERVICE=<name>` when building and it copies the right folder from `backend/`. The frontend has its own Dockerfile (a two-stage build: Node builds the React files, nginx serves them). That is 2 Dockerfiles for 15 containers.
+
+**Q73. What are the 15 containers?**
+1 PostgreSQL (holding all 8 databases), 8 microservices, 5 schedulers (the same images running `php artisan schedule:work` for the background sync and hourly jobs) and 1 frontend (React + nginx).
+
+**Q74. Where does the data live when you stop Docker? What does `down -v` do?**
+In a Docker *volume* (`pgdata`), stored outside the containers, so `docker compose down` keeps everything. `docker compose down -v` also deletes the volume — a completely empty fresh system. The Docker database is also separate from the local PostgreSQL the scripts use, so data added in one mode does not appear in the other.
+
+**Q75. I changed the code but the Docker version didn't change. Why?**
+Because Docker copied the code into the image when it was built. A running container uses that copy, so after code changes you rebuild with `docker compose up -d --build`. The scripts mode reads your files live, so it doesn't have this rule.
+
+**Q76. Inside Docker the services call each other at `http://core:8000`, not `127.0.0.1`. Why?**
+Each container has its own private network address, so `127.0.0.1` would mean "myself". Docker gives every container a name that other containers can use, like an internal phone book, so `core` always finds the auth service wherever it is running. The nginx container uses the same names in its routing table.
+
+**Q77. Is nginx in your Docker setup an API gateway?**
+No. It is a reverse proxy: it serves the React files and forwards each `/api/...` prefix to the service that owns it, exactly like the Vite dev proxy. It does no authentication, rate limiting or filtering — every service still validates the token by asking `core`.
+
+**Q78. Is this production-ready?**
+No, and we say so. It is a development/demonstration setup on one machine: PHP's built-in server (4 workers) rather than PHP-FPM, no HTTPS or domain, no image registry, no CI/CD, database port exposed on the laptop, secrets in a local `.env`. For real hosting we would add a domain with HTTPS, PHP-FPM behind nginx, managed secrets, backups and a deployment pipeline.
 ---
 
 ## How to use this the night before

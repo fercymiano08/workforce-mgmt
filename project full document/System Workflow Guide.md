@@ -1232,6 +1232,11 @@ Workforce MGNT/
 │      tests/                        this service's own offline test suite
 │      .env                          DB credentials for ITS OWN database, plus
 │                                     AUTH_SERVICE_URL, SERVICE_TOKEN, SVC_AUTH_MODE
+├── docker-compose.yml               Docker: the conductor's sheet for all 15 containers (see Start Here §10)
+├── docker/                          Docker recipes: backend.Dockerfile (all 8 services), frontend.Dockerfile,
+│                                     nginx.conf (the /api routing table), backend-entrypoint.sh (runs migrations),
+│                                     postgres-init/ (creates the 8 databases)
+├── .env.docker.example              template for the git-ignored .env that holds Docker's secrets
 ├── start-all.ps1                     boots all 8 services + the frontend, health-checks /up
 └── stop-all.ps1                      stops everything start-all.ps1 started
 ```

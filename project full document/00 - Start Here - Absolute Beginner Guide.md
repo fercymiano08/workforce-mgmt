@@ -184,4 +184,131 @@ This will make or break your confidence more than any Q&A. Memorize this section
 5. Open `activator-deactivator.md` and physically run `.\start-all.ps1` yourself at least once before tomorrow, so the first time you see it work isn't in front of the panel.
 6. Skim `Database System Tutorial And Guideline.md` for the database side, and `System Workflow Guide.md` if you want the full, detailed reference (it's long — treat it as a dictionary, not something to memorize front to back).
 
+> **New to Docker?** Read Section 10 below — it explains, from zero, what Docker is and what every Docker file in this project does.
+
 **Last thing:** you don't need to know how to code to lead this defense. You need to know the STORY — what the system does, why it's shaped the way it is, and where to look when something needs explaining. That story is entirely inside this one file. Read it twice more tonight and you'll be fine.
+
+---
+
+## 10. Docker, from zero — what it is and why this project has it
+
+You added Docker recently and never had to understand it. This section fixes that. No prior knowledge needed.
+
+### 10.1 The problem Docker solves
+
+Our system is **not one program**. To run it on a computer you need: PHP 8.4 with the right extensions, Composer, Node 22, PostgreSQL 18, **eight** databases created, **eight** `.env` files with matching secrets, and **nine** programs started in the right order. On *your* laptop that's all done. On your teammate's laptop, or the panel's, or a server — you'd have to do every step again by hand, and something would be slightly different. That's the famous excuse: *"but it works on my laptop!"*
+
+**Docker's answer:** pack each part of the system, *together with everything it needs*, into a sealed box. That box behaves **identically on any computer that has Docker**.
+
+> **Analogy — a food-truck park.** Without Docker, opening the system on a new computer is like building 15 kitchens from scratch, finding a different stove in each. With Docker, you have 15 **sealed food trucks** — each already has its own stove, ingredients and staff. You just park them and turn the key.
+
+### 10.2 The six words you need (everything else is detail)
+
+| Word | Plain meaning | Analogy |
+|------|---------------|---------|
+| **Image** | A frozen, ready-to-run package of one program plus everything it needs. Built once. | The **recipe with all ingredients pre-packed** |
+| **Container** | An image that is **running right now** | The **dish being cooked** from that recipe |
+| **Dockerfile** | The text file of steps that *builds* an image | The **written recipe** |
+| **docker-compose.yml** | One file that describes **all** the containers, how they connect, what order they start in, and their secrets | The **conductor's sheet** for the whole orchestra |
+| **Volume** | A storage place that lives **outside** the container, so data survives when the container is deleted | The **fridge** — the food truck can leave, the food stays |
+| **Port mapping** (`5173:80`) | Door number on *your laptop* → door number *inside* the container | A **street address** forwarding to a room inside the building |
+
+Two more ideas:
+
+- **Containers talk to each other by name.** Inside Docker, the attendance service reaches the auth service at `http://core:8000` — **`core`, not `127.0.0.1`**. Docker gives every container a name that works like a private intercom. (That is why `docker-compose.yml` is full of `http://core:8000` while the normal scripts use `http://127.0.0.1:8000`.)
+- **Health checks.** Each container is asked "are you alive?" every 10 seconds. `depends_on` makes a container **wait** until the ones it needs say "yes" (e.g. nothing starts until PostgreSQL is ready).
+
+### 10.3 What is actually inside OUR Docker setup — 15 containers
+
+`docker compose up` starts **15 containers**:
+
+| # | Container(s) | What it is | Port on your laptop |
+|---|--------------|-----------|---------------------|
+| 1 | `postgres` | **One** PostgreSQL 18 server holding all **8 databases** (created automatically the first time). Data lives in the `pgdata` volume | `5433` (so it never clashes with a normal PostgreSQL on 5432) |
+| 8 | `core`, `intelligence`, `attendance`, `scheduling`, `timeoff`, `payroll`, `communications`, `configuration` | The **8 Laravel microservices**. All eight are built from the **same** recipe (`backend.Dockerfile`), told which folder to use with `SERVICE=<name>` | `8000`, `8001`, `8003`–`8008` |
+| 5 | `scheduler-attendance`, `-intelligence`, `-scheduling`, `-timeoff`, `-payroll` | The **same images**, but instead of serving web requests they run `php artisan schedule:work` — the background jobs (the once-a-minute data sync in all five; the attendance one also runs the hourly "sick certificate overdue" check). In the normal scripts these are the hidden PowerShell windows | none |
+| 1 | `frontend` | The React app **plus nginx**. nginx serves the screens and routes each `/api/...` request to the right service (the Docker version of the Vite proxy — a *router*, **not** an API gateway) | `5173` |
+
+15 = 1 + 8 + 5 + 1.
+
+### 10.4 Every Docker file in this project — what it does
+
+| File | Purpose in one line |
+|------|--------------------|
+| `docker-compose.yml` | The conductor's sheet: defines all 15 containers, their ports, secrets, start order and health checks. Uses a shared block (`x-backend`) so the settings common to all 8 services are written once |
+| `.env` *(git-ignored, you create it)* | The **secrets**: database password, the shared service token, the app key, optional Gemini key. Template: `.env.docker.example`. Never committed to GitHub |
+| `.env.docker.example` | A blank template of `.env` — copy it to `.env` and fill it in |
+| `.dockerignore` | A "do **not** pack this" list: `vendor`, `node_modules`, `.env`, logs, the docs, `.git`… keeps images small and keeps secrets out of them |
+| `docker/backend.Dockerfile` | The recipe for the **8 backend images**: start from PHP 8.4 → add PHP extensions + Composer → `composer install` → copy that service's code → set permissions → start the web server |
+| `docker/backend-entrypoint.sh` | A tiny script that runs **before** each backend container starts: if `RUN_MIGRATIONS=true` it creates/updates that service's database tables (`php artisan migrate`), and for `core` it also adds the fixed admin, departments and roles (`db:seed`) |
+| `docker/frontend.Dockerfile` | A **two-stage** recipe: stage 1 uses Node to *build* the React app into plain files; stage 2 throws Node away and puts just those files into a small nginx image |
+| `docker/nginx.conf` | nginx's routing table: `/api/attendance` → the attendance container, `/api/leaves` → timeoff … everything else under `/api` → core; every other URL → the React app. Also allows uploads up to 20 MB (face photos, leave proof) |
+| `docker/postgres-init/01-create-databases.sh` | Runs **once**, the very first time the database volume is created: makes the 8 empty databases |
+
+### 10.5 What happens when you type `docker compose up -d --build`
+
+1. Docker reads `.env` for the secrets.
+2. **Build** (slow the first time, 10+ minutes; fast afterwards because Docker remembers finished steps): the backend recipe runs 8 times (once per service) and the frontend recipe once.
+3. **`postgres` starts.** The first time only, it creates the 8 databases. Everyone else waits until its health check passes.
+4. **`core` starts.** Its entrypoint runs the migrations and seeds the admin, departments and roles. Others wait until `core` is healthy — every service asks `core` "who is this user?".
+5. The other 7 services start; each runs **its own** migrations on its own database.
+6. The 5 schedulers start once their service is healthy.
+7. `frontend` starts last (it waits for all 8 services).
+8. You open **http://localhost:5173**. Same app, same login.
+
+### 10.6 The two ways to run the system (and why both exist)
+
+| | **Scripts** (`start-all.ps1`) | **Docker** (`docker compose`) |
+|---|---|---|
+| Runs | PHP and Vite **directly on your laptop** | Everything **inside containers** |
+| Needs installed | PHP, Composer, Node, PostgreSQL | **Only Docker Desktop** |
+| Your code | **Live** — edit a file, it changes immediately | A **copy baked into the image** (see 10.7) |
+| Database | Your local PostgreSQL (`5432`) | A separate one **inside Docker** (`5433`) |
+| Web server | PHP's built-in server, **one request at a time** | PHP's built-in server with **4 workers**, so requests overlap |
+| Best for | Daily development and debugging | Demoing on **any** computer, a clean start, showing the system is deployable |
+
+Both use the **same ports (8000–8008, 5173)** — so run **only one at a time**. And their **data is separate**: an employee added in Scripts mode does **not** exist in Docker mode.
+
+### 10.7 The one rule that trips everyone up: Docker keeps a COPY of your code
+
+When an image is built, your code is **copied into it**. Change a file afterwards and the running container **does not notice**. After changing code (or pulling new commits) you must rebuild:
+
+```
+docker compose up -d --build
+```
+
+The first build is slow; rebuilds are quick because unchanged steps are reused. (Scripts mode has no such rule — it reads your files live.) So if a fix "isn't showing up" in Docker, the answer is almost always: **rebuild**.
+
+### 10.8 What Docker changed — and what it did not
+
+- **Did NOT change:** any feature, screen or business rule. Same code, same behavior.
+- **Changed:** *how it is built, started and isolated.* One command starts everything; it behaves the same on any machine; each part is walled off from the others (which mirrors the microservices idea).
+- **Bonus:** 4 workers per service instead of 1, so it feels faster than the scripts on a slow laptop. This is also why the **database itself** now refuses duplicate attendance/shift rows — with several workers, two simultaneous requests could otherwise both slip past an application check.
+
+### 10.9 Everyday commands (run in a terminal at the project folder, Docker Desktop open)
+
+| Command | What it does |
+|---------|--------------|
+| `docker compose up -d --build` | Build (if needed) and start everything in the background. **First time, or after code changes** |
+| `docker compose up -d` | Start everything (no rebuild) |
+| `docker compose ps` | Show every container and whether it is `healthy` |
+| `docker compose logs -f core` | Live log of one service (replace `core`) — the first place to look when something breaks |
+| `docker compose restart core` | Restart just one service |
+| `docker compose down` | Stop everything — **your data is kept** |
+| `docker compose down -v` | Stop **and erase the database volume** — a brand-new empty system. Careful! |
+
+### 10.10 When something goes wrong
+
+- **"Cannot connect to the Docker daemon"** → Docker Desktop isn't open. Start it (whale icon in the tray) and wait until it says running.
+- **"port is already allocated"** → the scripts version is still running. Run `.\stop-all.ps1` first.
+- **A container says `unhealthy`** → `docker compose logs <name>` and read the last lines.
+- **You changed code but nothing changed** → rebuild (10.7).
+- **Want a completely fresh start** → `docker compose down -v` then `docker compose up -d --build`.
+
+### 10.11 Honest limits (say these if asked)
+
+Docker here is a **development / demonstration setup on one machine**, not production hosting: the containers use PHP's built-in server (not PHP-FPM), there is no HTTPS or domain, no image registry, no automatic deployment pipeline, and the database port is published on your laptop. Secrets live in a local `.env` file. For real hosting you'd add a domain + HTTPS, PHP-FPM behind nginx, a secrets manager, backups and a CI/CD pipeline.
+
+### 10.12 The one-paragraph answer for the panel
+
+> "Docker packages each part of our system — the database, the eight microservices, the background schedulers and the frontend — into sealed containers that behave the same on any computer. One command, `docker compose up -d --build`, starts all 15 containers in the right order, creates the eight databases, and runs each service's migrations. It doesn't change what the system does; it changes how it's built and started, so we can demo it on any machine without installing PHP, Node or PostgreSQL first. It's a development setup, not production hosting."

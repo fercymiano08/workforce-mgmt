@@ -40,6 +40,17 @@ docker compose down -v          # stop AND ERASE the Docker database (fresh empt
 - **Something wrong?** `docker compose ps` shows which container is not healthy; `docker compose logs -f core`
   (replace `core` with the service name) shows its live log. In Docker Desktop: **Containers → workforce → click a container → Logs**.
 - Docker uses about **500 MB** of memory in total once running.
+- **⚠ Docker keeps a COPY of the code.** If you change code (or pull new commits), run `docker compose up -d --build` again — a plain `up -d` keeps running the old copy. Way 1 (the scripts) has no such rule. New to Docker? `00 - Start Here - Absolute Beginner Guide.md` → **Section 10** explains it from zero, file by file.
+
+**Which way should I use?**
+
+| Situation | Use |
+|-----------|-----|
+| Coding, fixing bugs, checking a change quickly | **Way 1** (scripts) — your edits show up immediately |
+| Demoing on another computer, or wanting a clean start | **Way 2** (Docker) — nothing to install but Docker Desktop |
+| Something is slow on the scripts | Try **Way 2** — it runs 4 workers per service instead of 1 |
+
+Never both at once (same ports), and remember their databases are separate.
 
 ---
 

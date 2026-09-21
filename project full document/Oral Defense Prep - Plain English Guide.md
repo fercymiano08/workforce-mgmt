@@ -484,3 +484,20 @@ Use this as a rapid-fire review. One line = one idea. Cover the right column, th
 52. What is "Timesheet History"? → The list below the My Timesheet summary card: every saved week (range, status, Regular/Overtime/Total hours, submitted date). Clicking a row reopens that week's full popup.
 
 ---
+
+---
+
+# PART 15 - Docker in one minute (you WILL be asked "what's Docker?")
+
+**The idea:** Docker puts each part of the system in a sealed **container** so it runs identically on any computer. It changes *how the system is started*, not *what it does*.
+
+**The 5 things to remember:**
+1. **Image** = the packed recipe; **container** = that recipe running. (`Dockerfile` builds an image.)
+2. **`docker-compose.yml`** = the conductor's sheet that starts all **15 containers** in order: 1 PostgreSQL (8 databases), 8 microservices, 5 background schedulers, 1 frontend (React + nginx).
+3. **One command** starts everything: `docker compose up -d --build`. It builds the images, creates the 8 databases the first time, and each service runs its own migrations.
+4. **Data survives** in a volume (`down` keeps it, `down -v` erases it). Docker's database is **separate** from the local one the scripts use.
+5. **Docker keeps a copy of the code** — after any change, rebuild with `--build`.
+
+**Say this if asked:** *"Docker lets us start the whole system, all 15 parts, with one command on any laptop without installing PHP, Node or PostgreSQL. It doesn't change any feature. It's a demo/dev setup, not production hosting."*
+
+**Full explanation, file by file:** `00 - Start Here - Absolute Beginner Guide.md` → Section 10. **How to run it:** `activator-deactivator.md` → Way 2.
