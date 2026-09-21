@@ -48,7 +48,7 @@ export function NotificationProvider({ children }) {
         ].slice(-4));
       }
     } catch {
-      setNotifications([]);
+      // A failed poll (server busy, brief network drop) keeps the list already on screen instead of emptying the bell.
     }
   }, [user]);
 

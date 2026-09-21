@@ -1041,6 +1041,8 @@ Open events raise the system's concern level; resolving them restores the score.
 
 **Files:** bell component in the layout, `constants/notificationTypes.js`, backend `NotificationController.php`
 
+**Who sees what:** the admins share one inbox (notifications with no employee attached). An employee sees **every** notification addressed to them — outcomes, reminders, shift changes, clock-in/out confirmations, certificate deadlines — and never the admins' or another employee's. The bell refreshes every 30 seconds while the tab is open; a failed refresh keeps what is already shown.
+
 ### Who Creates Notifications (Creation Points)
 
 | Event | Notification to |

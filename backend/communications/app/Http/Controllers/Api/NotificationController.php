@@ -15,17 +15,12 @@ class NotificationController extends Controller
     use AuthorizesEmployeeScope, GeneratesSequentialIds;
 
     /**
-     * Employees only ever see the OUTCOME of their own requests
-     * (approved / rejected / cancelled). Internal chatter like request
-     * submissions and reminders is admin-side only. Legacy 'employee_added'
+     * A notification with an employee_id was sent TO that employee, so they see all of it: outcomes,
+     * reminders, shift changes, clock-in/out confirmations, certificate deadlines. What is meant for the
+     * admins has no employee_id and is never returned to an employee. (This used to be a short allow-list
+     * of eight types, which silently hid every newer employee notification.) Legacy 'employee_added'
      * rows are hidden everywhere: account creation is no longer announced.
      */
-    private const EMPLOYEE_VISIBLE_TYPES = [
-        'leave_approved', 'leave_rejected', 'leave_cancelled',
-        'overtime_approved', 'overtime_rejected', 'overtime_cancelled',
-        'timesheet_approved', 'timesheet_rejected',
-    ];
-
     private const RETIRED_TYPES = ['employee_added'];
 
     // The bell is polled every 30s by every open tab, so only the newest are sent.
@@ -89,7 +84,7 @@ class NotificationController extends Controller
         $this->assertSelfOrAdmin($request, $employeeId);
 
         $records = Notification::where('employee_id', $employeeId)
-            ->whereIn('type', self::EMPLOYEE_VISIBLE_TYPES)
+            ->whereNotIn('type', self::RETIRED_TYPES)
             ->orderBy('timestamp', 'desc')
             ->limit(self::LIST_LIMIT)
             ->get();
@@ -164,6 +159,6 @@ class NotificationController extends Controller
         }
 
         $query->where('employee_id', $user?->employee_id)
-            ->whereIn('type', self::EMPLOYEE_VISIBLE_TYPES);
+            ->whereNotIn('type', self::RETIRED_TYPES);
     }
 }
