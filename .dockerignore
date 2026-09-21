@@ -10,7 +10,7 @@
 **/storage/framework/views/*
 frontend/dist
 logs
-project full document
+full project reviewer
 *.docx
 *.md
 *.ps1

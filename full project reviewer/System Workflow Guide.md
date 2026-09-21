@@ -1171,7 +1171,7 @@ Which tables each module touches (R = read, W = write). This map is logical — 
 
 ```
 Workforce MGNT/
-├── project full document/            ← docs (you are here)
+├── full project reviewer/               ← docs (you are here)
 ├── frontend/
 │   ├── src/
 │   │   ├── pages/
