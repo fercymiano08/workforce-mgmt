@@ -16,6 +16,16 @@ export default defineConfig({
   plugins: [react(), tailwindcss()],
   server: {
     proxy: {
+      // Service-to-service endpoints must never be reachable from the browser side: they talk to each other
+      // directly, guarded by a shared token, so the public proxy answers 404 for them.
+      '/api/internal': {
+        target: 'http://127.0.0.1:8000',
+        bypass: (req, res) => {
+          res.statusCode = 404;
+          res.end('Not found');
+          return false;
+        },
+      },
       '/api/analytics': {
         target: 'http://127.0.0.1:8001',
         changeOrigin: true,

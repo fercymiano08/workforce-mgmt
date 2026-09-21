@@ -42,4 +42,24 @@ class MarkAbsentDaysTest extends TestCase
         $this->assertSame(0, Attendance::where('employee_id', 'E-TODAY')->count());
         $this->assertSame('Present', Attendance::where('employee_id', 'E-CAME')->value('status'));
     }
+
+    public function test_correcting_an_absent_day_makes_the_server_count_the_hours(): void
+    {
+        Carbon::setTestNow(Carbon::parse('2030-01-16 09:00', 'Asia/Manila'));
+        $this->scheduleShift('E-FORGOT', date: '2030-01-14');
+        $this->artisan('attendance:mark-absent')->assertSuccessful();
+        $id = Attendance::where('employee_id', 'E-FORGOT')->value('id');
+
+        // the administrator supplies the real times (and even wrong hours): the server ignores the hours it was sent
+        $this->actingAs($this->adminUser())->putJson('/api/attendance/'.$id, [
+            'status' => 'Present', 'clockIn' => '08:00:00', 'clockOut' => '17:03:00', 'totalHours' => 99, 'overtime' => 50,
+        ])->assertOk();
+
+        $row = Attendance::find($id);
+        $this->assertSame('17:00:00', $row->clock_out);          // counted only to the end of the shift
+        $this->assertSame('17:03:00', $row->actual_clock_out);   // the real punch is kept
+        $this->assertEquals(8.0, (float) $row->total_hours);     // 08:00-17:00 less the 1 h lunch
+        $this->assertEquals(0.0, (float) $row->overtime);
+    }
 }
+

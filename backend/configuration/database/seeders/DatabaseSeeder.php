@@ -27,6 +27,12 @@ class DatabaseSeeder extends Seeder
             }
         }
 
+        // A new install starts with the company name filled in (address and contacts are the administrator's to enter).
+        $existing = Setting::find(1);
+        if (empty($fields['company']['name'] ?? null) && empty($existing?->company['name'] ?? null)) {
+            $fields['company'] = array_merge($fields['company'] ?? $existing?->company ?? [], ['name' => 'Archon Nell Incorporated']);
+        }
+
         Setting::updateOrCreate(['id' => 1], $fields);
     }
 }

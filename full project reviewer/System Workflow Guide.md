@@ -312,6 +312,8 @@ Every service refuses the expired token (they all verify it with core)
 
 Because the expiry lives in the token, closing the laptop lid or leaving a tab open cannot leave a session alive. (Logins made before this rule keep working until the person signs in again.)
 
+**Internal endpoints are not public.** Everything under `/api/internal` (service-to-service) is answered with 404 by the public entrance (Vite proxy / nginx); the services reach each other directly with the shared token.
+
 ### Flow B3 — Sensitive Actions Leave A Trail
 
 * **Sign-ins and password events are audited** (core writes them): `auth.login`, `auth.login_failed`, `auth.login_locked` (5 failed tries), `auth.logout`, `auth.password_changed`, `auth.password_reset_requested`, `auth.password_reset`.
@@ -739,7 +741,7 @@ Every one of these changes is written to the audit log (schedule assigned / move
 
 ### Flow B — Manual Adjustments
 
-Single rows can be created (`POST /api/shifts/schedules`), edited (`PUT .../{id}`), or removed (`DELETE .../{id}`). Swaps are just edits.
+Single rows can be created (`POST /api/shifts/schedules`), edited (`PUT .../{id}`), or removed (`DELETE .../{id}`). A shift is changed by editing its row.
 
 ### Flow C — Employee Sees Their Schedule
 
@@ -1178,6 +1180,8 @@ Open dropdown → GET /api/notifications/employee/{myId}
 **What it is:** app-wide configuration in one place, plus each user's personal preferences.
 
 **Files:** `HR_Manager/Settings.jsx`, `Employee/Settings.jsx`, `Employee/MyProfile.jsx`, backend `SettingsController.php`
+
+**Company details:** a new install starts with the company name filled in ("Archon Nell Incorporated"); the address and contact details are entered by the administrator and never guessed. The name saved in Settings > Company Information appears in the header and footer of every report; the login screen and sidebar keep the fixed product branding because they show before or apart from the settings data. Every settings change is written to the audit log.
 
 ### The Single Settings Row
 

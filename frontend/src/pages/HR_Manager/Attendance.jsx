@@ -12,6 +12,7 @@ import Input, { Select, Textarea } from '../../components/ui/Input';
 import { Pagination } from '../../components/ui/Table';
 import { SkeletonTable } from '../../components/ui/LoadingSkeleton';
 import { attendanceService, employeeService, overtimeService } from '../../services/api';
+import { kioskService } from '../../services/kioskService';
 import { formatHours, toDateKey } from '../../services/attendanceService';
 import { formatDate, formatTime } from '../../utils/helpers';
 import useApiData from '../../hooks/useApiData';
@@ -242,7 +243,7 @@ export default function Attendance() {
     }
   };
 
-  const todayStr = toDateKey(new Date());
+  const todayStr = kioskService.today();
   const yesterdayStr = (() => { const d = new Date(todayStr); d.setDate(d.getDate() - 1); return toDateKey(d); })();
 
   const enriched = useMemo(() => {

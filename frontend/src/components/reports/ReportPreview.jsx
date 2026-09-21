@@ -5,6 +5,8 @@ import {
 } from 'recharts';
 import BrandLogo from '../ui/BrandLogo';
 import { useConfirmPassword } from '../../hooks/useConfirmPassword';
+import useApiData from '../../hooks/useApiData';
+import { settingsService } from '../../services/api';
 import { downloadCSV, downloadFile, toHTMLTable } from '../../utils/export';
 import { useToast } from '../../context/ToastContext';
 
@@ -60,9 +62,15 @@ function ChartSection({ chart }) {
   );
 }
 
+// The name is typed by an administrator and goes into the printable report's HTML
+const escapeHtml = (value) => String(value).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+
 export default function ReportPreview({ report }) {
   const { toast } = useToast();
   const { askPassword, passwordModal } = useConfirmPassword();
+  // The company name on the report comes from Settings > Company Information
+  const { data: settingsData } = useApiData(() => settingsService.get(), []);
+  const companyName = (settingsData?.company?.name || 'Archon Nell Incorporated').trim();
   if (!report) return null;
 
   const requestExport = (format) => askPassword(`Export report "${report.title || 'report'}"`, () => handleExport(format));
@@ -188,7 +196,7 @@ export default function ReportPreview({ report }) {
             <div style="display:flex;align-items:center;gap:10px">
               ${logoHtml}
               <div>
-                <div style="font-size:12px;font-weight:700;letter-spacing:1.5px">ARCHON NELL INC.</div>
+                <div style="font-size:12px;font-weight:700;letter-spacing:1.5px">${escapeHtml(companyName.toUpperCase())}</div>
                 <div style="font-size:9px;color:#93c5fd;margin-top:1px">Workforce Management System</div>
               </div>
             </div>
@@ -230,7 +238,7 @@ export default function ReportPreview({ report }) {
         <!-- FILL SPACE + FOOTER -->
         <div style="flex:1"></div>
         <div style="border-top:1px solid #e5e7eb;padding-top:10px;display:flex;justify-content:space-between;font-size:8px;color:#9ca3af;margin-top:auto">
-          <span>Confidential — Archon Nell Inc. | Workforce Management System</span>
+          <span>Confidential — ${escapeHtml(companyName)} | Workforce Management System</span>
           <span>Generated on ${new Date().toLocaleString('en-PH', { dateStyle: 'medium', timeStyle: 'short' })}</span>
         </div>
       </div>
@@ -267,7 +275,7 @@ export default function ReportPreview({ report }) {
             <div className="flex items-center gap-3">
               <BrandLogo variant="icon" className="w-10 h-10" />
               <div>
-                <p className="text-sm font-bold tracking-wide">ARCHON NELL INC.</p>
+                <p className="text-sm font-bold tracking-wide uppercase">{companyName}</p>
                 <p className="text-[11px] text-blue-200">Workforce Management System</p>
               </div>
             </div>
@@ -389,7 +397,7 @@ export default function ReportPreview({ report }) {
         {/* Footer */}
         <div className="report-footer bg-gray-50 border-t border-gray-200 px-8 py-4">
           <div className="flex items-center justify-between">
-            <p className="text-[11px] text-gray-400">Confidential — Archon Nell Inc. | Workforce Management System</p>
+            <p className="text-[11px] text-gray-400">Confidential — {companyName} | Workforce Management System</p>
             <p className="text-[11px] text-gray-400">Generated on {generatedAt}</p>
           </div>
         </div>

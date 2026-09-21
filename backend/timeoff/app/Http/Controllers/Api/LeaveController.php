@@ -221,11 +221,16 @@ class LeaveController extends Controller
         $before = $record->toApiArray();
         // Moving the dates moves the cost: count the working days again.
         if (isset($data['start_date']) || isset($data['end_date'])) {
-            $data['days'] = SchedulingClient::workingDays(
-                $data['employee_id'] ?? $record->employee_id,
-                $data['start_date'] ?? $record->start_date->toDateString(),
-                $data['end_date'] ?? $record->end_date->toDateString(),
-            )['days'];
+            $start = $data['start_date'] ?? $record->start_date->toDateString();
+            $end = $data['end_date'] ?? $record->end_date->toDateString();
+            if ($end < $start) {
+                throw ValidationException::withMessages(['endDate' => ['The end date cannot be before the start date.']]);
+            }
+            $counted = SchedulingClient::workingDays($data['employee_id'] ?? $record->employee_id, $start, $end);
+            if ($counted['days'] < 1) {
+                throw ValidationException::withMessages(['startDate' => ['These dates contain no working days (they fall on weekends, holidays or days off).']]);
+            }
+            $data['days'] = $counted['days'];
         }
         $record->update($data);
 

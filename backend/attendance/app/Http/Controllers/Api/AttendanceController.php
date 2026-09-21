@@ -10,6 +10,7 @@ use App\Models\Employee;
 use App\Models\Leave;
 use App\Models\Notification;
 use App\Models\ShiftSchedule;
+use App\Services\ShiftHours;
 use App\Services\AuditClient;
 use App\Services\NotificationService;
 use App\Services\OvertimeReconciliationService;
@@ -337,7 +338,7 @@ class AttendanceController extends Controller
             'notes' => 'nullable|string',
         ]));
 
-        $duplicateMessage = ['date' => ['This employee already has an attendance record for that date. Edit the existing one instead of adding another.']];
+        $duplicateMessage = ['date' => ['This employee already has an attendance record for that date (it may have been recorded automatically as Absent). Correct that record instead of adding another.']];
         if (Attendance::where('employee_id', $data['employee_id'])->whereDate('date', $data['date'])->exists()) {
             throw \Illuminate\Validation\ValidationException::withMessages($duplicateMessage);
         }
@@ -399,7 +400,7 @@ class AttendanceController extends Controller
             'notes' => 'nullable|string',
         ]));
 
-        $record->update($data);
+        $record->update($this->withCountedHours($record, $data));
 
         $user = $request->user();
         AuditClient::record(
@@ -416,6 +417,46 @@ class AttendanceController extends Controller
         $this->syncTimesheets($record->employee_id, $record->date);
 
         return response()->json(['data' => $record->fresh()->toApiArray()]);
+    }
+
+    /**
+     * When a punch is corrected, the SERVER counts the hours again from the shift (same rule as the kiosk: only to
+     * the end of the shift plus approved overtime, lunch by duration) instead of trusting the numbers sent with it.
+     * Fixes a day recorded automatically as Absent: give it the real times and the hours follow.
+     */
+    private function withCountedHours(Attendance $record, array $data): array
+    {
+        if (! array_key_exists('clock_in', $data) && ! array_key_exists('clock_out', $data)) {
+            return $data;
+        }
+
+        $clockIn = array_key_exists('clock_in', $data) ? $data['clock_in'] : $record->clock_in;
+        $clockOut = array_key_exists('clock_out', $data) ? $data['clock_out'] : $record->clock_out;
+        $dateKey = ($data['date'] ?? $record->date->toDateString());
+        $dateKey = Carbon::parse($dateKey)->toDateString();
+        $schedule = ShiftSchedule::with('shift')->where('employee_id', $data['employee_id'] ?? $record->employee_id)->where('date', $dateKey)->first();
+        if (! $clockIn || ! $clockOut || ! $schedule || ! $schedule->shift) {
+            return $data;
+        }
+
+        $timezone = ShiftHours::timezone();
+        $shift = $schedule->shift;
+        $employeeId = $data['employee_id'] ?? $record->employee_id;
+        $hours = ShiftHours::count(
+            Carbon::parse($dateKey.' '.$clockIn, $timezone),
+            Carbon::parse($dateKey.' '.$clockOut, $timezone),
+            ShiftHours::baseEnd($dateKey, $shift->start_time, $shift->end_time, $timezone),
+            ShiftHours::effectiveEnd($employeeId, $dateKey, $shift->start_time, $shift->end_time, $timezone),
+        );
+
+        return array_merge($data, [
+            'clock_out' => $hours['countedOut']->format('H:i:s'),
+            'actual_clock_out' => Carbon::parse($clockOut)->format('H:i:s'),
+            'regular_hours' => $hours['regular'],
+            'overtime' => $hours['overtime'],
+            'total_hours' => $hours['total'],
+            'break_hours' => $hours['break'],
+        ]);
     }
 
     public function destroy(string $id): JsonResponse

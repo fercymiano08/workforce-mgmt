@@ -23,6 +23,7 @@ import {
   employeeService, attendanceService, leaveService, shiftService, analyticsService, overtimeService, timesheetService,
 } from '../../services/api';
 import { toDateKey } from '../../services/attendanceService';
+import { kioskService } from '../../services/kioskService';
 import { didAttend, isPresentGroup } from '../../utils/constants';
 import { formatDate } from '../../utils/helpers';
 
@@ -106,7 +107,7 @@ export default function Dashboard() {
     Promise.all([
       employeeService.getAll(),
       // The dashboard only shows today and the last 7 days.
-      attendanceService.getAll({ from: toDateKey(new Date(Date.now() - 35 * 86400000)) }),
+      attendanceService.getAll({ from: (() => { const d = kioskService.now(); d.setDate(d.getDate() - 35); return toDateKey(d); })() }),
       leaveService.getAll(),
       shiftService.getSchedules(),
       shiftService.getAllShifts(),
@@ -149,7 +150,7 @@ export default function Dashboard() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  const today = toDateKey(new Date());
+  const today = kioskService.today();
   const todaysAttendance = useMemo(
     () => attendance.filter((a) => a.date === today),
     [attendance, today]
@@ -179,7 +180,7 @@ export default function Dashboard() {
   const attendanceOverviewData = useMemo(() => {
     const days = [];
     for (let i = 6; i >= 0; i--) {
-      const d = new Date();
+      const d = kioskService.now();
       d.setDate(d.getDate() - i);
       const key = toDateKey(d);
       const label = d.toLocaleDateString('en-US', { weekday: 'short' });
@@ -293,7 +294,7 @@ export default function Dashboard() {
         </div>
         <div className="flex items-center gap-2 text-sm text-gray-500 bg-white px-4 py-2.5 rounded-xl border border-gray-100 shadow-sm">
           <Calendar className="w-4 h-4 text-gray-400" />
-          <span className="font-medium">{formatDate(new Date().toISOString())}</span>
+          <span className="font-medium">{formatDate(today)}</span>
         </div>
       </div>
 

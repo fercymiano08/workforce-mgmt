@@ -66,6 +66,16 @@ export const kioskService = {
     return { ...cache };
   },
 
+  // "Now" as a date whose fields read the kiosk's wall clock, and today's key (YYYY-MM-DD) in that time zone,
+  // so every page agrees with the server about which day it is whatever the browser's own clock says.
+  now() {
+    return nowInTimezone(cache.timezone || 'Asia/Manila');
+  },
+
+  today() {
+    return toDateKey(this.now());
+  },
+
   // Pulls the backend kiosk config into this session's cache. Works on the
   // public /kiosk page because GET /api/kiosk/config requires no auth token.
   async load() {

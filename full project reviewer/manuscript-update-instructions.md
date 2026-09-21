@@ -24,7 +24,7 @@ You are helping revise the capstone manuscript **"Design and Development of an A
 | Topic | Fact |
 |-------|------|
 | Architecture | React frontend + **8** Laravel microservices (core, intelligence, attendance, scheduling, time-off, payroll, communications, configuration), each with its own PostgreSQL database. Docker Compose runs 15 containers (unchanged). |
-| Automated tests | **315** automated PHPUnit tests across the 8 services, all passing. The frontend is checked with ESLint and a production build. |
+| Automated tests | **321** automated PHPUnit tests across the 8 services, all passing. The frontend is checked with ESLint and a production build. |
 | Timesheet workflow | Timesheets are built automatically from attendance. The employee submits after the week ends (or the system auto-submits at Monday 12:00 PM); the Workforce Admin approves, or rejects / reopens with a required reason; approved timesheets are sent to payroll once. Only a finished week can be reviewed; hours are frozen after submission and cannot be edited; every step is kept in a history and the audit log. |
 | Payroll service | Produces **weekly timesheets only**. It does **not** produce pay statements. The "My Pay Record / Pay Statement" page and its endpoint were **removed**. |
 | Timesheet figures | Each weekly timesheet records regular hours, overtime worked, overtime approved, and **payable overtime** (`paid_ot_hours`). |
@@ -93,9 +93,9 @@ You are helping revise the capstone manuscript **"Design and Development of an A
 
 Replace the "over one hundred" wording with the current figure.
 
-- **Section 3.1.4 Toolstack:** *"(over 100 tests across the eight services)"* → *"(315 tests across the eight services)"*
-- **Section 3.3 Development, Operations, and QA Methodology:** *"Across the eight services there are over one hundred automated tests."* → *"Across the eight services there are 315 automated tests."*
-- **Section 3.3.3 Testing Strategy:** *"Across the eight services, there are over one hundred automated tests that cover the core business rules of each domain."* → *"Across the eight services, there are 315 automated tests that cover the core business rules of each domain."*
+- **Section 3.1.4 Toolstack:** *"(over 100 tests across the eight services)"* → *"(321 tests across the eight services)"*
+- **Section 3.3 Development, Operations, and QA Methodology:** *"Across the eight services there are over one hundred automated tests."* → *"Across the eight services there are 321 automated tests."*
+- **Section 3.3.3 Testing Strategy:** *"Across the eight services, there are over one hundred automated tests that cover the core business rules of each domain."* → *"Across the eight services, there are 321 automated tests that cover the core business rules of each domain."*
 
 ---
 

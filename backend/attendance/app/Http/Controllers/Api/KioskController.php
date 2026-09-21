@@ -87,7 +87,8 @@ class KioskController extends Controller
                 'minutesLate' => (int) Carbon::parse($today.' '.$s->shift->start_time, $timezone)->diffInMinutes($now),
             ])->sortByDesc('minutesLate')->values();
 
-        $active = Employee::where('status', 'Active');
+        // Everyone who is not Inactive can be at the door (Active and On Leave), the same count the Employees page uses
+        $active = Employee::where('status', '!=', 'Inactive');
         $readiness = [
             'pinSet' => ! empty($kiosk['pinHash']),
             'kioskActive' => (bool) $kiosk['active'],

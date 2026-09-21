@@ -112,9 +112,11 @@ export default function Leave() {
   const [proofError, setProofError] = useState('');
   // Live cost of the chosen dates (working days only), asked from the server as the person picks them
   const [preview, setPreview] = useState(null);
+  const { startDate: previewStart, endDate: previewEnd } = applyForm;
   useEffect(() => {
     let cancelled = false;
-    const { startDate, endDate } = applyForm;
+    const startDate = previewStart;
+    const endDate = previewEnd;
     if (!currentUser.id || !startDate || !endDate || endDate < startDate) {
       // eslint-disable-next-line react-hooks/set-state-in-effect -- clearing a stale answer when the dates are incomplete
       setPreview(null);
@@ -124,7 +126,7 @@ export default function Leave() {
       .then((r) => { if (!cancelled) setPreview(r); })
       .catch(() => { if (!cancelled) setPreview(null); });
     return () => { cancelled = true; };
-  }, [applyForm, currentUser.id]);
+  }, [previewStart, previewEnd, currentUser.id]);
 
   const MAX_PROOF_SIZE = 5 * 1024 * 1024; // 5MB
 

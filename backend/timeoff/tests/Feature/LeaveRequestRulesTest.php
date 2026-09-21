@@ -16,6 +16,19 @@ class LeaveRequestRulesTest extends TestCase
 {
     use RefreshDatabase;
 
+    /** Wednesday: the tests below are about dates, and leave now costs working days, so "today" must be a weekday. */
+    protected function setUp(): void
+    {
+        parent::setUp();
+        Carbon::setTestNow(Carbon::parse('2030-01-16 10:00', 'Asia/Manila'));
+    }
+
+    protected function tearDown(): void
+    {
+        Carbon::setTestNow();
+        parent::tearDown();
+    }
+
     private function payload(string $start, string $end, array $extra = []): array
     {
         return array_merge([
@@ -54,7 +67,7 @@ class LeaveRequestRulesTest extends TestCase
 
     public function test_an_administrator_may_still_record_a_past_leave(): void
     {
-        $past = Carbon::now('Asia/Manila')->subDays(3)->toDateString();
+        $past = Carbon::now('Asia/Manila')->subDays(2)->toDateString();   // the Monday before
 
         $this->actingAs($this->adminUser())
             ->postJson('/api/leaves', $this->payload($past, $past, ['status' => 'Approved']))

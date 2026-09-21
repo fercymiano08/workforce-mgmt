@@ -263,10 +263,6 @@ export const timesheetService = {
     const { data } = await http.get(`/timesheets/employee/${employeeId}`);
     return data;
   },
-  create: async (payload) => {
-    const { data } = await http.post('/timesheets', payload);
-    return data;
-  },
   update: async (id, payload) => {
     const { data } = await http.put(`/timesheets/${id}`, payload);
     return data;
