@@ -23,6 +23,7 @@ import {
   employeeService, attendanceService, leaveService, shiftService, analyticsService,
 } from '../../services/api';
 import { toDateKey } from '../../services/attendanceService';
+import { didAttend } from '../../utils/constants';
 import { formatDate } from '../../utils/helpers';
 
 const COLORS = {
@@ -145,13 +146,13 @@ export default function Dashboard() {
   );
 
   const kpi = useMemo(() => {
-    const presentToday = todaysAttendance.filter(
-      (a) => a.status !== 'Absent' && a.status !== 'On Leave'
-    ).length;
+    // Present = on time only. Late and Early Leave have their own counts; the rate uses everyone who attended.
+    const presentToday = todaysAttendance.filter((a) => a.status === 'Present').length;
+    const attendedToday = todaysAttendance.filter((a) => didAttend(a.status)).length;
     const lateToday = todaysAttendance.filter((a) => a.status === 'Late').length;
     const onLeave = employees.filter((e) => e.status === 'On Leave').length;
     const attendanceRate = employees.length
-      ? Math.round((presentToday / employees.length) * 1000) / 10
+      ? Math.round((attendedToday / employees.length) * 1000) / 10
       : 0;
 
     return {
@@ -173,8 +174,9 @@ export default function Dashboard() {
       const rows = attendance.filter((a) => a.date === key);
       days.push({
         day: label,
-        present: rows.filter((a) => a.status === 'Present' || a.status === 'Late').length,
+        present: rows.filter((a) => a.status === 'Present').length,
         late: rows.filter((a) => a.status === 'Late').length,
+        earlyLeave: rows.filter((a) => a.status === 'Early Leave').length,
         absent: rows.filter((a) => a.status === 'Absent').length,
       });
     }
@@ -296,6 +298,7 @@ export default function Dashboard() {
                 <Legend iconType="circle" iconSize={8} wrapperStyle={{ paddingTop: 16, fontSize: 12 }} />
                 <Bar dataKey="present" name="Present" fill={COLORS.emerald} radius={[6, 6, 0, 0]} />
                 <Bar dataKey="late" name="Late" fill={COLORS.amber} radius={[6, 6, 0, 0]} />
+                <Bar dataKey="earlyLeave" name="Early Leave" fill={COLORS.sky} radius={[6, 6, 0, 0]} />
                 <Bar dataKey="absent" name="Absent" fill={COLORS.red} radius={[6, 6, 0, 0]} />
               </BarChart>
             </ResponsiveContainer>

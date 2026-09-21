@@ -17,6 +17,7 @@ import useApiData from '../../hooks/useApiData';
 import { attendanceService, overtimeService, shiftService } from '../../services/api';
 import { formatDate, formatTime, approvedOvertimeHours, extendTime } from '../../utils/helpers';
 import { formatHours } from '../../services/attendanceService';
+import { didAttend } from '../../utils/constants';
 import { downloadCsv, printElementAsPdf } from '../../utils/export';
 import {
   EARLY_CLOCKOUT_REASON_OPTIONS,
@@ -255,8 +256,10 @@ export default function MyAttendance() {
 
   const presentCount = filtered.filter((a) => a.status === 'Present').length;
   const lateCount = filtered.filter((a) => a.status === 'Late').length;
-  const totalWorkingDays = filtered.filter((a) => a.status === 'Present' || a.status === 'Late').length;
-  const attendanceRate = filtered.length ? Math.round((totalWorkingDays / filtered.length) * 100) : 0;
+  // Days the employee actually came to work (on time, late, or left early). Approved leave is not counted against them.
+  const totalWorkingDays = filtered.filter((a) => didAttend(a.status)).length;
+  const countedDays = filtered.filter((a) => a.status !== 'On Leave').length;
+  const attendanceRate = countedDays ? Math.round((totalWorkingDays / countedDays) * 100) : 0;
 
   const totalHoursWorked = useMemo(() => {
     return filtered.reduce((sum, a) => sum + (a.totalHours || 0), 0);

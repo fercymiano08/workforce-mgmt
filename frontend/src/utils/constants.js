@@ -1,3 +1,9 @@
+// One attendance record has exactly ONE status: Present (on time), Late, Early Leave (left before
+// the shift ended), Absent, or On Leave. "Attended" = the person actually came to work, whichever of
+// the first three applies. Charts count each status on its own; only rates use "attended".
+export const ATTENDED_STATUSES = ['Present', 'Late', 'Early Leave', 'Half Day'];
+export const didAttend = (status) => ATTENDED_STATUSES.includes(status);
+
 export const EMPLOYMENT_TYPES = ['Full-time', 'Part-time', 'Contract'];
 
 export const EARLY_CLOCKOUT_REASON_OPTIONS = [

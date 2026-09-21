@@ -56,7 +56,7 @@ class AnalyticsService
         for ($i = 0; $i < 12; $i++) {
             $m = $start->copy()->addMonths($i);
             $months->put($m->format('Y-m'), [
-                'month' => $m->format('M Y'), 'present' => 0, 'absent' => 0, 'late' => 0, 'total' => 0,
+                'month' => $m->format('M Y'), 'present' => 0, 'absent' => 0, 'late' => 0, 'earlyLeave' => 0, 'total' => 0,
             ]);
         }
 
@@ -73,6 +73,8 @@ class AnalyticsService
                     $bucket['present']++;
                 } elseif ($record->status === 'Late') {
                     $bucket['late']++;
+                } elseif ($record->status === 'Early Leave') {
+                    $bucket['earlyLeave']++;
                 } elseif ($record->status === 'Absent') {
                     $bucket['absent']++;
                 }
@@ -80,11 +82,15 @@ class AnalyticsService
             });
 
         return $months->map(function ($b) {
-            $rate = $b['total'] > 0 ? round((($b['present'] + $b['late']) / $b['total']) * 100, 1) : 0.0;
+            // Each record has exactly one status. Attendance rate = days the person came in (on time, late or
+            // left early) out of the days they were expected: approved leave is not held against anyone.
+            $attended = $b['present'] + $b['late'] + $b['earlyLeave'];
+            $expected = $attended + $b['absent'];
+            $rate = $expected > 0 ? round(($attended / $expected) * 100, 1) : 0.0;
 
             return [
                 'month' => $b['month'], 'present' => $b['present'], 'absent' => $b['absent'],
-                'late' => $b['late'], 'rate' => $rate,
+                'late' => $b['late'], 'earlyLeave' => $b['earlyLeave'], 'rate' => $rate,
             ];
         })->values()->all();
     }

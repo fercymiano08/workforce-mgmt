@@ -851,6 +851,18 @@ LOCKED
 
 **Files:** `HR_Manager/Dashboard.jsx`, `HR_Manager/Analytics.jsx`, backend `AnalyticsController.php`, `AnalyticsService.php`
 
+### What Each Attendance Status Means (One Record = One Status)
+
+| Status | Meaning | Counts as "attended"? |
+|--------|---------|-----------------------|
+| **Present** | Clocked in on time (within 15 minutes of the start) | Yes |
+| **Late** | Clocked in more than 15 minutes after the start | Yes |
+| **Early Leave** | Left before the shift ended (replaces Present/Late on that day) | Yes |
+| **Absent** | No clock-in and no approved leave | No |
+| **On Leave** | Approved leave covers the day | Not counted against anyone |
+
+Graphs count each status **on its own** — a late arrival appears in the Late bar only, never also in Present. The attendance rate is *attended ÷ (attended + absent)*, so approved leave never lowers it and someone who left early still counts as having come to work.
+
 ### How It Works (Cached Stats Pattern)
 
 ```
@@ -858,7 +870,7 @@ AnalyticsService queries raw tables (attendance, leaves, overtime_requests...)
    │
    ▼
 Computes six prepared sections, stored in the `analytics` table as JSON:
-   attendance_trend          headcounts present/late/absent over time
+   attendance_trend          headcounts present/late/early-leave/absent over time + attendance rate
    department_productivity   per-department comparison
    leave_trend               leave usage over time
    overtime_summary          OT volume and distribution
