@@ -2,6 +2,8 @@ import { useState, useMemo, useEffect, useCallback } from 'react';
 import { Calendar, CheckCircle, Clock, FileText, Plus, XCircle, Palmtree, Heart, AlertTriangle, Star, Flower2, Wallet, Hourglass, ThumbsUp, ThumbsDown, ChevronRight } from 'lucide-react';
 import Card from '../../components/ui/Card';
 import Button from '../../components/ui/Button';
+import TodayBadge from '../../components/common/TodayBadge';
+import { coversToday } from '../../utils/today';
 import Badge from '../../components/ui/Badge';
 import SearchBar from '../../components/ui/SearchBar';
 import EmptyState from '../../components/ui/EmptyState';
@@ -381,6 +383,7 @@ export default function Leave() {
                       <div className="flex items-center gap-2 flex-wrap">
                         <p className="font-semibold text-gray-900">{leave.leaveType} Leave</p>
                         <Badge variant={statusVariant[leave.status]} dot size="xs">{leave.status}</Badge>
+                        {leave.status === 'Approved' && coversToday(leave.startDate, leave.endDate) && <TodayBadge>On leave today</TodayBadge>}
                       </div>
                       <div className="flex items-center gap-1.5 text-sm text-gray-600 mt-1">
                         <Calendar className="w-3.5 h-3.5 text-gray-400 shrink-0" />

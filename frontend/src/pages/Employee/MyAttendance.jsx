@@ -15,6 +15,9 @@ import { useAuth } from '../../context/AuthContext';
 import { useToast } from '../../context/ToastContext';
 import useApiData from '../../hooks/useApiData';
 import { attendanceService, overtimeService, shiftService } from '../../services/api';
+import TodayBadge from '../../components/common/TodayBadge';
+import { todayKey, todayRowClass } from '../../utils/today';
+import { kioskService } from '../../services/kioskService';
 import { formatDate, formatTime, approvedOvertimeHours, extendTime } from '../../utils/helpers';
 import { formatHours } from '../../services/attendanceService';
 import { didAttend } from '../../utils/constants';
@@ -37,16 +40,9 @@ const overtimeStatusVariant = {
 
 // Local (browser) calendar dates - toISOString() is UTC and gives the wrong day in the early morning.
 const localDateKey = (d) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
-const TODAY = localDateKey(new Date());
+const TODAY = todayKey();
 // Overtime can be requested for a day already worked (up to a week back) - HR can approve it afterwards.
-const OT_EARLIEST = localDateKey(new Date(Date.now() - 7 * 86400000));
-
-function toDateKey(date) {
-  const y = date.getFullYear();
-  const m = String(date.getMonth() + 1).padStart(2, '0');
-  const d = String(date.getDate()).padStart(2, '0');
-  return `${y}-${m}-${d}`;
-}
+const OT_EARLIEST = (() => { const d = kioskService.now(); d.setDate(d.getDate() - 7); return localDateKey(d); })();
 
 function formatMinutesShort(minutes) {
   const h = Math.floor(minutes / 60);
@@ -97,16 +93,16 @@ export default function MyAttendance() {
     [overtimeRequests]
   );
 
-  const todayKey = toDateKey(new Date());
+  const todayDay = todayKey();
 
   const activeAttendance = useMemo(
-    () => records?.find((a) => a.date === todayKey && a.clockIn && !a.clockOut) || null,
-    [records, todayKey]
+    () => records?.find((a) => a.date === todayDay && a.clockIn && !a.clockOut) || null,
+    [records, todayDay]
   );
 
   const approvedOtHours = useMemo(
-    () => approvedOvertimeHours(overtimeRequests, todayKey),
-    [overtimeRequests, todayKey]
+    () => approvedOvertimeHours(overtimeRequests, todayDay),
+    [overtimeRequests, todayDay]
   );
 
   const effectiveShiftEnd = useMemo(
@@ -123,7 +119,7 @@ export default function MyAttendance() {
           shiftService.getAllShifts(),
         ]);
         if (cancelled) return;
-        const todays = (schedule || []).find((s) => s.date === todayKey);
+        const todays = (schedule || []).find((s) => s.date === todayDay);
         if (!todays) return;
         const def = (shifts || []).find((s) => s.id === todays.shiftId);
         setTodayShift(def ? { name: def.name, startTime: def.startTime, endTime: def.endTime } : null);
@@ -132,7 +128,7 @@ export default function MyAttendance() {
       }
     })();
     return () => { cancelled = true; };
-  }, [employeeId, todayKey]);
+  }, [employeeId, todayDay]);
 
   const openRequestModal = () => {
     setRequestForm({ date: '', expectedHours: '', reason: '' });
@@ -376,8 +372,10 @@ export default function MyAttendance() {
               </thead>
               <tbody className="divide-y divide-gray-50">
                 {myOvertimeRequests.map((req) => (
-                  <tr key={req.id} className="hover:bg-gray-50/50 transition-colors">
-                    <td className="px-6 py-3.5 text-sm text-gray-900 font-medium whitespace-nowrap">{formatDate(req.date)}</td>
+                  <tr key={req.id} className={`hover:bg-gray-50/50 transition-colors ${todayRowClass(req.date)}`}>
+                    <td className="px-6 py-3.5 text-sm text-gray-900 font-medium whitespace-nowrap">
+                      <span className="inline-flex items-center gap-2">{formatDate(req.date)}{req.date === todayDay && <TodayBadge />}</span>
+                    </td>
                     <td className="px-6 py-3.5 text-sm text-gray-700 whitespace-nowrap">
                       {req.status === 'Approved' && req.approvedHours != null
                         ? <span className="text-emerald-700 font-medium">{formatHours(req.approvedHours)}h approved</span>
@@ -450,8 +448,10 @@ export default function MyAttendance() {
                     {earlyOutRecords.map((rec) => {
                       const classificationMeta = EARLY_CLOCKOUT_CLASSIFICATION_META[rec.classification] || EARLY_CLOCKOUT_CLASSIFICATION_META.PENDING_REVIEW;
                       return (
-                        <tr key={rec.id} className="hover:bg-gray-50/50 transition-colors">
-                          <td className="px-6 py-3.5 text-sm text-gray-900 font-medium whitespace-nowrap">{formatDate(rec.date)}</td>
+                        <tr key={rec.id} className={`hover:bg-gray-50/50 transition-colors ${todayRowClass(rec.date)}`}>
+                          <td className="px-6 py-3.5 text-sm text-gray-900 font-medium whitespace-nowrap">
+                            <span className="inline-flex items-center gap-2">{formatDate(rec.date)}{rec.date === todayDay && <TodayBadge />}</span>
+                          </td>
                           <td className="px-6 py-3.5 text-sm text-gray-700 tabular-nums">{formatTime(rec.actualClockOutTime)}</td>
                           <td className="px-6 py-3.5 text-sm text-gray-500 tabular-nums">{formatTime(rec.scheduledEndTime)}</td>
                           <td className="px-6 py-3.5 text-sm text-amber-600 font-medium">{formatMinutesShort(rec.minutesEarly)}</td>
@@ -550,8 +550,10 @@ export default function MyAttendance() {
                   const inProgress = a.clockIn && !a.clockOut;
                   const finalized = a.clockIn && a.clockOut;
                   return (
-                    <tr key={a.id} className="hover:bg-gray-50/50 transition-colors">
-                      <td className="px-4 py-4 text-sm text-gray-900 font-medium">{formatDate(a.date)}</td>
+                    <tr key={a.id} className={`hover:bg-gray-50/50 transition-colors ${todayRowClass(a.date)}`}>
+                      <td className="px-4 py-4 text-sm text-gray-900 font-medium whitespace-nowrap">
+                        <span className="inline-flex items-center gap-2">{formatDate(a.date)}{a.date === todayDay && <TodayBadge />}</span>
+                      </td>
                       <td className="px-4 py-4 text-sm text-gray-500">{dayName}</td>
                       <td className="px-4 py-4 text-sm text-gray-700">
                         {a.clockIn ? formatTime(a.clockIn) : <span className="text-gray-400">Not Clocked In</span>}

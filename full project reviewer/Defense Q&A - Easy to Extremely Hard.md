@@ -314,3 +314,7 @@ The server. When a clock-in or clock-out is corrected, the server recounts the h
 
 Two rules, both enforced by the server. First, the kiosk opens a **30-minute window** before the shift: someone who taps in earlier is refused with a friendly message saying when it opens. Second, inside the window the tap is recorded as it happened, but **paid hours count from the shift start**, so 20 minutes of early arrival adds nothing. This mirrors what we already do at the end of the day, where time after the shift counts only when an overtime request was approved. Real enterprise systems handle it the same way: record the real punch, pay from the scheduled start, and pay early time only when it is approved.
 
+### How does an employee tell which row is "today" in their schedule and attendance?
+
+Every screen marks it the same way: the row for today has a blue tint, a blue bar on its left edge and a small "Today" pill beside the date (a leave in progress shows "On leave today"). It is deliberately not colour-only, so it is readable for colour-blind users and in print. "Today" is worked out in the kiosk's time zone (Manila), the same day the server uses to decide shifts and attendance, so a phone set to another time zone still highlights the correct row.
+

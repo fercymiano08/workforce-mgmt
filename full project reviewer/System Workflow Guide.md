@@ -585,6 +585,8 @@ A kiosk cannot tell whether "I'm sick" is true — and every employee sees the s
 
 ## Module 5 — Employee Dashboard
 
+> **"Today" is highlighted everywhere an employee looks.** Any row that belongs to today (My Schedule, My Attendance history, overtime and early-clock-out lists, the dashboard's shift list, the day rows of a timesheet) gets a soft blue tint, a blue bar on its left edge and a small **Today** pill next to the date, so the pill does not depend on colour alone. A leave request that is happening right now shows an **On leave today** pill. "Today" always means the day in the kiosk's time zone (Manila), the same day the server uses, whatever the phone's own clock says. The code is one small helper (`utils/today.js`) and one badge (`components/common/TodayBadge.jsx`), so it looks the same on every page.
+
 **What it is:** the employee's personal home page after login.
 
 **File:** `Employee/EmployeeDashboard.jsx`

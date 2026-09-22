@@ -10,6 +10,8 @@ import {
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend,
 } from 'recharts';
 import { useAuth } from '../../context/AuthContext';
+import TodayBadge from '../../components/common/TodayBadge';
+import { todayKey, todayRowClass, coversToday } from '../../utils/today';
 import Badge from '../../components/ui/Badge';
 import Avatar from '../../components/ui/Avatar';
 import Button from '../../components/ui/Button';
@@ -152,10 +154,10 @@ export default function EmployeeDashboard() {
     ? Math.round((myAttendance.filter((a) => a.status === 'Present').length / myAttendance.length) * 100)
     : 0;
 
-  const todayKey = new Date().toISOString().slice(0, 10);
+  const todayDay = todayKey();
   const todayEarly = useMemo(
-    () => (earlyOuts || []).find((e) => e.date === todayKey),
-    [earlyOuts, todayKey]
+    () => (earlyOuts || []).find((e) => e.date === todayDay),
+    [earlyOuts, todayDay]
   );
 
   const earlyInfo = todayEarly ? (
@@ -285,12 +287,12 @@ export default function EmployeeDashboard() {
             {mySchedule.slice().reverse().map((entry) => {
               const shift = (shiftDefs || []).find((s) => s.id === entry.shiftId);
               return (
-                <div key={entry.id} className="px-6 py-3.5 flex items-center gap-3 hover:bg-gray-50 transition-colors">
+                <div key={entry.id} className={`px-6 py-3.5 flex items-center gap-3 hover:bg-gray-50 transition-colors ${todayRowClass(entry.date)}`}>
                   <div className="w-9 h-9 rounded-lg flex items-center justify-center shrink-0 bg-blue-50">
                     <Briefcase className="w-4 h-4 text-blue-500" />
                   </div>
                   <div className="flex-1 min-w-0">
-                    <p className="text-sm font-semibold text-gray-900 truncate">{formatDate(entry.date)}</p>
+                    <p className="text-sm font-semibold text-gray-900 truncate flex items-center gap-2">{formatDate(entry.date)}{entry.date === todayDay && <TodayBadge />}</p>
                     <p className="text-xs text-gray-400 mt-0.5">{shift?.name} &middot; {shift ? `${formatTime(shift.startTime)} - ${formatTime(shift.endTime)}` : ''}</p>
                   </div>
                   <Badge variant={entry.status === 'Completed' ? 'success' : 'primary'} size="xs">
@@ -367,6 +369,7 @@ export default function EmployeeDashboard() {
                     <span className="text-xs text-gray-400">
                       {formatDate(leave.startDate)}{leave.startDate !== leave.endDate ? ` - ${formatDate(leave.endDate)}` : ''}
                     </span>
+                    {leave.status === 'Approved' && coversToday(leave.startDate, leave.endDate) && <TodayBadge>On leave today</TodayBadge>}
                   </div>
                   <p className="text-xs text-gray-500 mt-1.5 line-clamp-2">{leave.reason}</p>
                 </div>

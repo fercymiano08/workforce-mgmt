@@ -5,6 +5,8 @@ import {
 import { useTimesheets, useTimesheetsLoaded, submitTimesheet, refreshTimesheets } from '../../hooks/useTimesheets';
 import { useAuth } from '../../context/AuthContext';
 import { useToast } from '../../context/ToastContext';
+import { todayRowClass } from '../../utils/today';
+import { kioskService } from '../../services/kioskService';
 import Badge from '../../components/ui/Badge';
 import Button from '../../components/ui/Button';
 import Modal from '../../components/ui/Modal';
@@ -79,7 +81,7 @@ export default function MyTimesheet() {
   // The current calendar week (Mon–Sun) built from this week's attendance, so
   // the page always has a real weekly picture even before a timesheet exists.
   const thisWeek = useMemo(() => {
-    const today = new Date();
+    const today = kioskService.now();
     today.setHours(0, 0, 0, 0);
     const monday = getMonday(today);
     const days = Array.from({ length: 7 }, (_, i) => {
@@ -181,7 +183,7 @@ export default function MyTimesheet() {
   const weekRows = useMemo(() => {
     if (!selectedWeek?.weekStart) return [];
     const [y, m, d] = selectedWeek.weekStart.split('-').map(Number);
-    const todayStart = new Date();
+    const todayStart = kioskService.now();
     todayStart.setHours(0, 0, 0, 0);
     return Array.from({ length: 7 }, (_, i) => {
       const date = new Date(y, m - 1, d + i, 0, 0, 0, 0);
@@ -434,7 +436,7 @@ export default function MyTimesheet() {
                     {weekRows.map(({ key, dayLabel, isToday, rec }) => {
                       const worked = rec && (rec.clockIn || WORKED_STATUSES.includes(rec.status));
                       return (
-                        <tr key={key} className={`border-t border-gray-50 ${isToday ? 'bg-blue-50/60' : ''}`}>
+                        <tr key={key} className={`border-t border-gray-50 ${isToday ? todayRowClass(key) : ''}`}>
                           <td className="py-2.5 px-4">
                             <div className="flex items-center gap-2">
                               <p className={`font-semibold ${isToday ? 'text-blue-700' : 'text-gray-900'}`}>{formatDate(key)}</p>

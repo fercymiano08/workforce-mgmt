@@ -3,6 +3,8 @@ import {
   CalendarDays, CalendarClock, Zap, Flame,
   Clock, MapPin, Filter, CalendarOff, CalendarPlus,
 } from 'lucide-react';
+import TodayBadge from '../../components/common/TodayBadge';
+import { todayKey, todayRowClass } from '../../utils/today';
 import Badge from '../../components/ui/Badge';
 import { SkeletonPage } from '../../components/ui/LoadingSkeleton';
 import { useAuth } from '../../context/AuthContext';
@@ -74,7 +76,7 @@ export default function MySchedule() {
   // from mock data) so newly HR-assigned schedules always land in the
   // correct "This Week" / "This Month" window regardless of what dates
   // happen to exist in the seed data.
-  const today = useMemo(() => toDateStr(new Date()), []);
+  const today = useMemo(() => todayKey(), []);
 
   const referenceDate = useMemo(() => {
     if (mySchedules.length === 0) return null;
@@ -117,6 +119,9 @@ export default function MySchedule() {
       return true;
     });
   }, [mySchedules, periodFilter, referenceDate, thisWeek, today]);
+
+  // The history table lists the latest day first, so today and the newest assignments are at the very top
+  const newestFirst = useMemo(() => [...filtered].sort((x, y) => y.date.localeCompare(x.date)), [filtered]);
 
   const locationMap = useMemo(() => {
     const map = {};
@@ -284,15 +289,17 @@ export default function MySchedule() {
                       </td>
                     </tr>
                   ) : (
-                    filtered.map((s) => {
+                    newestFirst.map((s) => {
                       const def = shiftOf(s.shiftId);
                       const dayName = new Date(s.date).toLocaleDateString('en-US', { weekday: 'short' });
                       const status = scheduleStatus(s);
                       const otHours = approvedOtByDate[s.date];
                       const endTime = def && otHours ? extendTime(def.endTime, otHours) : def?.endTime;
                       return (
-                        <tr key={s.id} className="hover:bg-gray-50/50 transition-colors">
-                          <td className="px-6 py-4 text-sm text-gray-900 font-medium whitespace-nowrap">{formatDate(s.date)}</td>
+                        <tr key={s.id} className={`hover:bg-gray-50/50 transition-colors ${todayRowClass(s.date)}`}>
+                          <td className="px-6 py-4 text-sm text-gray-900 font-medium whitespace-nowrap">
+                            <span className="inline-flex items-center gap-2">{formatDate(s.date)}{s.date === today && <TodayBadge />}</span>
+                          </td>
                           <td className="px-6 py-4 text-sm text-gray-500 whitespace-nowrap">{dayName}</td>
                           <td className="px-6 py-4">
                             <Badge variant={shiftBadgeVariant[s.shiftId] || 'default'} size="xs">
