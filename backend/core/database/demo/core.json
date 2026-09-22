@@ -1,0 +1,1837 @@
+{
+ "employees": [
+  {
+   "id": "EMP20269001",
+   "first_name": "Maria Isabel",
+   "last_name": "Santos",
+   "email": "maria.santos@workforcepro.com",
+   "phone": "+639172001111",
+   "department": "Customer Service",
+   "position": "Senior Customer Service Representative",
+   "employment_type": "Full-time",
+   "status": "Active",
+   "hire_date": "2024-03-11",
+   "salary": 32000,
+   "gender": "Female",
+   "date_of_birth": "1995-05-14",
+   "address": "24 Mabini Street, Brgy. San Antonio, Makati City",
+   "emergency_contact": "Roberto Santos",
+   "emergency_phone": "+639171234501",
+   "skills": [],
+   "education": null,
+   "face_registered": false
+  },
+  {
+   "id": "EMP20269002",
+   "first_name": "Juan Carlos",
+   "last_name": "Dela Cruz",
+   "email": "juan.delacruz@workforcepro.com",
+   "phone": "+639172002222",
+   "department": "IT & Systems",
+   "position": "Software Developer",
+   "employment_type": "Full-time",
+   "status": "Active",
+   "hire_date": "2023-07-03",
+   "salary": 58000,
+   "gender": "Male",
+   "date_of_birth": "1994-11-02",
+   "address": "112 Kalayaan Avenue, Brgy. Poblacion, Pasig City",
+   "emergency_contact": "Elena Dela Cruz",
+   "emergency_phone": "+639171234502",
+   "skills": [],
+   "education": null,
+   "face_registered": false
+  },
+  {
+   "id": "EMP20269003",
+   "first_name": "Angelica",
+   "last_name": "Reyes",
+   "email": "angelica.reyes@workforcepro.com",
+   "phone": "+639172003333",
+   "department": "Human Resources",
+   "position": "HR Specialist",
+   "employment_type": "Full-time",
+   "status": "Active",
+   "hire_date": "2022-01-17",
+   "salary": 42000,
+   "gender": "Female",
+   "date_of_birth": "1992-02-27",
+   "address": "58 Rizal Street, Brgy. Kapitolyo, Pasig City",
+   "emergency_contact": "Carmen Reyes",
+   "emergency_phone": "+639171234503",
+   "skills": [],
+   "education": null,
+   "face_registered": false
+  },
+  {
+   "id": "EMP20269004",
+   "first_name": "Ramon",
+   "last_name": "Villanueva",
+   "email": "ramon.villanueva@workforcepro.com",
+   "phone": "+639172004444",
+   "department": "Warehousing & Logistics",
+   "position": "Logistics Coordinator",
+   "employment_type": "Full-time",
+   "status": "Active",
+   "hire_date": "2021-09-06",
+   "salary": 38000,
+   "gender": "Male",
+   "date_of_birth": "1990-08-19",
+   "address": "9 Quirino Highway, Brgy. San Dionisio, Paranaque City",
+   "emergency_contact": "Teresita Villanueva",
+   "emergency_phone": "+639171234504",
+   "skills": [],
+   "education": null,
+   "face_registered": false
+  },
+  {
+   "id": "EMP20269005",
+   "first_name": "Katrina",
+   "last_name": "Mendoza",
+   "email": "katrina.mendoza@workforcepro.com",
+   "phone": "+639172005555",
+   "department": "Finance & Accounting",
+   "position": "Accountant",
+   "employment_type": "Full-time",
+   "status": "Active",
+   "hire_date": "2023-02-20",
+   "salary": 45000,
+   "gender": "Female",
+   "date_of_birth": "1993-06-30",
+   "address": "301 McKinley Road, Brgy. Fort Bonifacio, Taguig City",
+   "emergency_contact": "Antonio Mendoza",
+   "emergency_phone": "+639171234505",
+   "skills": [],
+   "education": null,
+   "face_registered": false
+  },
+  {
+   "id": "EMP20269006",
+   "first_name": "Diego",
+   "last_name": "Fernandez",
+   "email": "diego.fernandez@workforcepro.com",
+   "phone": "+639172006666",
+   "department": "Sales & Merchandising",
+   "position": "Sales Associate",
+   "employment_type": "Contract",
+   "status": "Active",
+   "hire_date": "2025-05-05",
+   "salary": 21000,
+   "gender": "Male",
+   "date_of_birth": "1999-01-08",
+   "address": "77 Shaw Boulevard, Brgy. Wack-Wack, Mandaluyong City",
+   "emergency_contact": "Luisa Fernandez",
+   "emergency_phone": "+639171234506",
+   "skills": [],
+   "education": null,
+   "face_registered": false
+  },
+  {
+   "id": "EMP20269007",
+   "first_name": "Carmela",
+   "last_name": "Aquino",
+   "email": "carmela.aquino@workforcepro.com",
+   "phone": "+639172007777",
+   "department": "Marketing",
+   "position": "Digital Marketing Specialist",
+   "employment_type": "Full-time",
+   "status": "Active",
+   "hire_date": "2024-08-12",
+   "salary": 36000,
+   "gender": "Female",
+   "date_of_birth": "1996-09-21",
+   "address": "15 Ortigas Extension, Brgy. Santolan, Pasig City",
+   "emergency_contact": "Ricardo Aquino",
+   "emergency_phone": "+639171234507",
+   "skills": [],
+   "education": null,
+   "face_registered": false
+  },
+  {
+   "id": "EMP20269008",
+   "first_name": "Jose Miguel",
+   "last_name": "Ramirez",
+   "email": "jose.ramirez@workforcepro.com",
+   "phone": "+639172008888",
+   "department": "Operations",
+   "position": "Team Leader",
+   "employment_type": "Full-time",
+   "status": "Active",
+   "hire_date": "2022-11-14",
+   "salary": 47000,
+   "gender": "Male",
+   "date_of_birth": "1991-04-03",
+   "address": "204 Boni Avenue, Brgy. Addition Hills, Mandaluyong City",
+   "emergency_contact": "Cristina Ramirez",
+   "emergency_phone": "+639171234508",
+   "skills": [],
+   "education": null,
+   "face_registered": false
+  },
+  {
+   "id": "EMP20269009",
+   "first_name": "Lourdes",
+   "last_name": "Bautista",
+   "email": "lourdes.bautista@workforcepro.com",
+   "phone": "+639172009999",
+   "department": "Customer Service",
+   "position": "Customer Service Representative",
+   "employment_type": "Full-time",
+   "status": "Active",
+   "hire_date": "2025-10-06",
+   "salary": 20000,
+   "gender": "Female",
+   "date_of_birth": "2000-12-12",
+   "address": "63 Pasong Tamo Extension, Brgy. Bangkal, Makati City",
+   "emergency_contact": "Fernando Bautista",
+   "emergency_phone": "+639171234509",
+   "skills": [],
+   "education": null,
+   "face_registered": false
+  },
+  {
+   "id": "EMP20269010",
+   "first_name": "Rafael",
+   "last_name": "Castillo",
+   "email": "rafael.castillo@workforcepro.com",
+   "phone": "+639172011110",
+   "department": "Warehousing & Logistics",
+   "position": "Inventory Clerk",
+   "employment_type": "Full-time",
+   "status": "Active",
+   "hire_date": "2024-01-22",
+   "salary": 24000,
+   "gender": "Male",
+   "date_of_birth": "1997-07-25",
+   "address": "18 Aguirre Avenue, Brgy. BF Homes, Paranaque City",
+   "emergency_contact": "Marisol Castillo",
+   "emergency_phone": "+639171234510",
+   "skills": [],
+   "education": null,
+   "face_registered": false
+  }
+ ],
+ "audit": [
+  {
+   "service": "core",
+   "event": "employee.created",
+   "entity_type": "Employee",
+   "entity_id": "EMP20269001",
+   "actor": "John Delgado",
+   "after": {
+    "firstName": "Maria Isabel",
+    "lastName": "Santos",
+    "department": "Customer Service",
+    "position": "Senior Customer Service Representative"
+   },
+   "at": {
+    "w": -7,
+    "d": 0,
+    "t": "09:00"
+   }
+  },
+  {
+   "service": "core",
+   "event": "employee.created",
+   "entity_type": "Employee",
+   "entity_id": "EMP20269002",
+   "actor": "John Delgado",
+   "after": {
+    "firstName": "Juan Carlos",
+    "lastName": "Dela Cruz",
+    "department": "IT & Systems",
+    "position": "Software Developer"
+   },
+   "at": {
+    "w": -7,
+    "d": 0,
+    "t": "09:00"
+   }
+  },
+  {
+   "service": "core",
+   "event": "employee.created",
+   "entity_type": "Employee",
+   "entity_id": "EMP20269003",
+   "actor": "John Delgado",
+   "after": {
+    "firstName": "Angelica",
+    "lastName": "Reyes",
+    "department": "Human Resources",
+    "position": "HR Specialist"
+   },
+   "at": {
+    "w": -7,
+    "d": 0,
+    "t": "09:00"
+   }
+  },
+  {
+   "service": "core",
+   "event": "employee.created",
+   "entity_type": "Employee",
+   "entity_id": "EMP20269004",
+   "actor": "John Delgado",
+   "after": {
+    "firstName": "Ramon",
+    "lastName": "Villanueva",
+    "department": "Warehousing & Logistics",
+    "position": "Logistics Coordinator"
+   },
+   "at": {
+    "w": -7,
+    "d": 0,
+    "t": "09:00"
+   }
+  },
+  {
+   "service": "core",
+   "event": "employee.created",
+   "entity_type": "Employee",
+   "entity_id": "EMP20269005",
+   "actor": "John Delgado",
+   "after": {
+    "firstName": "Katrina",
+    "lastName": "Mendoza",
+    "department": "Finance & Accounting",
+    "position": "Accountant"
+   },
+   "at": {
+    "w": -7,
+    "d": 0,
+    "t": "09:00"
+   }
+  },
+  {
+   "service": "core",
+   "event": "employee.created",
+   "entity_type": "Employee",
+   "entity_id": "EMP20269006",
+   "actor": "John Delgado",
+   "after": {
+    "firstName": "Diego",
+    "lastName": "Fernandez",
+    "department": "Sales & Merchandising",
+    "position": "Sales Associate"
+   },
+   "at": {
+    "w": -7,
+    "d": 0,
+    "t": "09:00"
+   }
+  },
+  {
+   "service": "core",
+   "event": "employee.created",
+   "entity_type": "Employee",
+   "entity_id": "EMP20269007",
+   "actor": "John Delgado",
+   "after": {
+    "firstName": "Carmela",
+    "lastName": "Aquino",
+    "department": "Marketing",
+    "position": "Digital Marketing Specialist"
+   },
+   "at": {
+    "w": -7,
+    "d": 0,
+    "t": "09:00"
+   }
+  },
+  {
+   "service": "core",
+   "event": "employee.created",
+   "entity_type": "Employee",
+   "entity_id": "EMP20269008",
+   "actor": "John Delgado",
+   "after": {
+    "firstName": "Jose Miguel",
+    "lastName": "Ramirez",
+    "department": "Operations",
+    "position": "Team Leader"
+   },
+   "at": {
+    "w": -7,
+    "d": 0,
+    "t": "09:00"
+   }
+  },
+  {
+   "service": "core",
+   "event": "employee.created",
+   "entity_type": "Employee",
+   "entity_id": "EMP20269009",
+   "actor": "John Delgado",
+   "after": {
+    "firstName": "Lourdes",
+    "lastName": "Bautista",
+    "department": "Customer Service",
+    "position": "Customer Service Representative"
+   },
+   "at": {
+    "w": -7,
+    "d": 0,
+    "t": "09:00"
+   }
+  },
+  {
+   "service": "core",
+   "event": "employee.created",
+   "entity_type": "Employee",
+   "entity_id": "EMP20269010",
+   "actor": "John Delgado",
+   "after": {
+    "firstName": "Rafael",
+    "lastName": "Castillo",
+    "department": "Warehousing & Logistics",
+    "position": "Inventory Clerk"
+   },
+   "at": {
+    "w": -7,
+    "d": 0,
+    "t": "09:00"
+   }
+  },
+  {
+   "service": "timeoff",
+   "event": "leave.created",
+   "entity_type": "Leave",
+   "entity_id": "DLVE001",
+   "actor": "Maria Isabel Santos",
+   "after": {
+    "employeeName": "Maria Isabel Santos",
+    "leaveType": "Vacation",
+    "startDate": null,
+    "status": "Pending"
+   },
+   "at": {
+    "w": -7,
+    "d": 2,
+    "t": "10:05"
+   }
+  },
+  {
+   "service": "timeoff",
+   "event": "leave.status_changed",
+   "entity_type": "Leave",
+   "entity_id": "DLVE001",
+   "actor": "John Delgado",
+   "after": {
+    "employeeName": "Maria Isabel Santos",
+    "leaveType": "Vacation",
+    "status": "Approved"
+   },
+   "meta": {
+    "status": "Approved",
+    "employeeId": "EMP20269001"
+   },
+   "at": {
+    "w": -7,
+    "d": 3,
+    "t": "14:20"
+   }
+  },
+  {
+   "service": "timeoff",
+   "event": "leave.created",
+   "entity_type": "Leave",
+   "entity_id": "DLVE002",
+   "actor": "Juan Carlos Dela Cruz",
+   "after": {
+    "employeeName": "Juan Carlos Dela Cruz",
+    "leaveType": "Sick",
+    "startDate": null,
+    "status": "Pending"
+   },
+   "at": {
+    "w": -3,
+    "d": 1,
+    "t": "10:05"
+   }
+  },
+  {
+   "service": "timeoff",
+   "event": "leave.status_changed",
+   "entity_type": "Leave",
+   "entity_id": "DLVE002",
+   "actor": "John Delgado",
+   "after": {
+    "employeeName": "Juan Carlos Dela Cruz",
+    "leaveType": "Sick",
+    "status": "Approved"
+   },
+   "meta": {
+    "status": "Approved",
+    "employeeId": "EMP20269002"
+   },
+   "at": {
+    "w": -3,
+    "d": 2,
+    "t": "14:20"
+   }
+  },
+  {
+   "service": "timeoff",
+   "event": "leave.created",
+   "entity_type": "Leave",
+   "entity_id": "DLVE003",
+   "actor": "Angelica Reyes",
+   "after": {
+    "employeeName": "Angelica Reyes",
+    "leaveType": "Vacation",
+    "startDate": null,
+    "status": "Pending"
+   },
+   "at": {
+    "w": -4,
+    "d": 0,
+    "t": "10:05"
+   }
+  },
+  {
+   "service": "timeoff",
+   "event": "leave.status_changed",
+   "entity_type": "Leave",
+   "entity_id": "DLVE003",
+   "actor": "John Delgado",
+   "after": {
+    "employeeName": "Angelica Reyes",
+    "leaveType": "Vacation",
+    "status": "Approved"
+   },
+   "meta": {
+    "status": "Approved",
+    "employeeId": "EMP20269003"
+   },
+   "at": {
+    "w": -4,
+    "d": 1,
+    "t": "14:20"
+   }
+  },
+  {
+   "service": "timeoff",
+   "event": "leave.created",
+   "entity_type": "Leave",
+   "entity_id": "DLVE004",
+   "actor": "Ramon Villanueva",
+   "after": {
+    "employeeName": "Ramon Villanueva",
+    "leaveType": "Emergency",
+    "startDate": null,
+    "status": "Pending"
+   },
+   "at": {
+    "w": -2,
+    "d": 0,
+    "t": "10:05"
+   }
+  },
+  {
+   "service": "timeoff",
+   "event": "leave.status_changed",
+   "entity_type": "Leave",
+   "entity_id": "DLVE004",
+   "actor": "John Delgado",
+   "after": {
+    "employeeName": "Ramon Villanueva",
+    "leaveType": "Emergency",
+    "status": "Approved"
+   },
+   "meta": {
+    "status": "Approved",
+    "employeeId": "EMP20269004"
+   },
+   "at": {
+    "w": -2,
+    "d": 1,
+    "t": "14:20"
+   }
+  },
+  {
+   "service": "timeoff",
+   "event": "leave.created",
+   "entity_type": "Leave",
+   "entity_id": "DLVE005",
+   "actor": "Katrina Mendoza",
+   "after": {
+    "employeeName": "Katrina Mendoza",
+    "leaveType": "Vacation",
+    "startDate": null,
+    "status": "Pending"
+   },
+   "at": {
+    "w": -4,
+    "d": 3,
+    "t": "10:05"
+   }
+  },
+  {
+   "service": "timeoff",
+   "event": "leave.status_changed",
+   "entity_type": "Leave",
+   "entity_id": "DLVE005",
+   "actor": "John Delgado",
+   "after": {
+    "employeeName": "Katrina Mendoza",
+    "leaveType": "Vacation",
+    "status": "Rejected"
+   },
+   "meta": {
+    "status": "Rejected",
+    "employeeId": "EMP20269005"
+   },
+   "at": {
+    "w": -4,
+    "d": 4,
+    "t": "14:20"
+   }
+  },
+  {
+   "service": "timeoff",
+   "event": "leave.created",
+   "entity_type": "Leave",
+   "entity_id": "DLVE006",
+   "actor": "Diego Fernandez",
+   "after": {
+    "employeeName": "Diego Fernandez",
+    "leaveType": "Special",
+    "startDate": null,
+    "status": "Pending"
+   },
+   "at": {
+    "w": -5,
+    "d": 0,
+    "t": "10:05"
+   }
+  },
+  {
+   "service": "timeoff",
+   "event": "leave.status_changed",
+   "entity_type": "Leave",
+   "entity_id": "DLVE006",
+   "actor": "John Delgado",
+   "after": {
+    "employeeName": "Diego Fernandez",
+    "leaveType": "Special",
+    "status": "Approved"
+   },
+   "meta": {
+    "status": "Approved",
+    "employeeId": "EMP20269006"
+   },
+   "at": {
+    "w": -5,
+    "d": 1,
+    "t": "14:20"
+   }
+  },
+  {
+   "service": "timeoff",
+   "event": "leave.created",
+   "entity_type": "Leave",
+   "entity_id": "DLVE007",
+   "actor": "Angelica Reyes",
+   "after": {
+    "employeeName": "Angelica Reyes",
+    "leaveType": "Vacation",
+    "startDate": null,
+    "status": "Pending"
+   },
+   "at": {
+    "w": -2,
+    "d": 1,
+    "t": "10:05"
+   }
+  },
+  {
+   "service": "timeoff",
+   "event": "leave.status_changed",
+   "entity_type": "Leave",
+   "entity_id": "DLVE007",
+   "actor": "John Delgado",
+   "after": {
+    "employeeName": "Angelica Reyes",
+    "leaveType": "Vacation",
+    "status": "Approved"
+   },
+   "meta": {
+    "status": "Approved",
+    "employeeId": "EMP20269003"
+   },
+   "at": {
+    "w": -2,
+    "d": 2,
+    "t": "14:20"
+   }
+  },
+  {
+   "service": "timeoff",
+   "event": "leave.created",
+   "entity_type": "Leave",
+   "entity_id": "DLVE008",
+   "actor": "Carmela Aquino",
+   "after": {
+    "employeeName": "Carmela Aquino",
+    "leaveType": "Sick",
+    "startDate": null,
+    "status": "Pending"
+   },
+   "at": {
+    "w": 0,
+    "d": 0,
+    "t": "10:05"
+   }
+  },
+  {
+   "service": "timeoff",
+   "event": "leave.created",
+   "entity_type": "Leave",
+   "entity_id": "DLVE009",
+   "actor": "Jose Miguel Ramirez",
+   "after": {
+    "employeeName": "Jose Miguel Ramirez",
+    "leaveType": "Vacation",
+    "startDate": null,
+    "status": "Pending"
+   },
+   "at": {
+    "w": -1,
+    "d": 4,
+    "t": "10:05"
+   }
+  },
+  {
+   "service": "timeoff",
+   "event": "leave.created",
+   "entity_type": "Leave",
+   "entity_id": "DLVE010",
+   "actor": "Maria Isabel Santos",
+   "after": {
+    "employeeName": "Maria Isabel Santos",
+    "leaveType": "Vacation",
+    "startDate": null,
+    "status": "Pending"
+   },
+   "at": {
+    "w": 0,
+    "d": 1,
+    "t": "10:05"
+   }
+  },
+  {
+   "service": "timeoff",
+   "event": "leave.created",
+   "entity_type": "Leave",
+   "entity_id": "DLVE011",
+   "actor": "Lourdes Bautista",
+   "after": {
+    "employeeName": "Lourdes Bautista",
+    "leaveType": "Vacation",
+    "startDate": null,
+    "status": "Pending"
+   },
+   "at": {
+    "w": -1,
+    "d": 2,
+    "t": "10:05"
+   }
+  },
+  {
+   "service": "timeoff",
+   "event": "leave.status_changed",
+   "entity_type": "Leave",
+   "entity_id": "DLVE011",
+   "actor": "John Delgado",
+   "after": {
+    "employeeName": "Lourdes Bautista",
+    "leaveType": "Vacation",
+    "status": "Approved"
+   },
+   "meta": {
+    "status": "Approved",
+    "employeeId": "EMP20269009"
+   },
+   "at": {
+    "w": -1,
+    "d": 3,
+    "t": "14:20"
+   }
+  },
+  {
+   "service": "timeoff",
+   "event": "leave.created",
+   "entity_type": "Leave",
+   "entity_id": "DLVE012",
+   "actor": "Rafael Castillo",
+   "after": {
+    "employeeName": "Rafael Castillo",
+    "leaveType": "Vacation",
+    "startDate": null,
+    "status": "Pending"
+   },
+   "at": {
+    "w": -1,
+    "d": 0,
+    "t": "10:05"
+   }
+  },
+  {
+   "service": "timeoff",
+   "event": "leave.status_changed",
+   "entity_type": "Leave",
+   "entity_id": "DLVE012",
+   "actor": "John Delgado",
+   "after": {
+    "employeeName": "Rafael Castillo",
+    "leaveType": "Vacation",
+    "status": "Cancelled"
+   },
+   "meta": {
+    "status": "Cancelled",
+    "employeeId": "EMP20269010"
+   },
+   "at": {
+    "w": -1,
+    "d": 1,
+    "t": "14:20"
+   }
+  },
+  {
+   "service": "timeoff",
+   "event": "leave.created",
+   "entity_type": "Leave",
+   "entity_id": "DLVE013",
+   "actor": "Lourdes Bautista",
+   "after": {
+    "employeeName": "Lourdes Bautista",
+    "leaveType": "Sick",
+    "startDate": null,
+    "status": "Pending"
+   },
+   "at": {
+    "w": -1,
+    "d": 1,
+    "t": "10:05"
+   }
+  },
+  {
+   "service": "timeoff",
+   "event": "leave.status_changed",
+   "entity_type": "Leave",
+   "entity_id": "DLVE013",
+   "actor": "John Delgado",
+   "after": {
+    "employeeName": "Lourdes Bautista",
+    "leaveType": "Sick",
+    "status": "Rejected"
+   },
+   "meta": {
+    "status": "Rejected",
+    "employeeId": "EMP20269009"
+   },
+   "at": {
+    "w": -1,
+    "d": 2,
+    "t": "14:20"
+   }
+  },
+  {
+   "service": "timeoff",
+   "event": "overtime.requested",
+   "entity_type": "OvertimeRequest",
+   "entity_id": "DOT001",
+   "actor": "Maria Isabel Santos",
+   "after": {
+    "employeeName": "Maria Isabel Santos",
+    "status": "Pending"
+   },
+   "at": {
+    "w": 0,
+    "d": 0,
+    "t": "16:30"
+   }
+  },
+  {
+   "service": "timeoff",
+   "event": "overtime.status_changed",
+   "entity_type": "OvertimeRequest",
+   "entity_id": "DOT001",
+   "actor": "John Delgado",
+   "after": {
+    "employeeName": "Maria Isabel Santos",
+    "status": "Approved"
+   },
+   "meta": {
+    "status": "Approved",
+    "employeeId": "EMP20269001",
+    "was": "Pending"
+   },
+   "at": {
+    "w": 0,
+    "d": 1,
+    "t": "09:40"
+   }
+  },
+  {
+   "service": "timeoff",
+   "event": "overtime.requested",
+   "entity_type": "OvertimeRequest",
+   "entity_id": "DOT002",
+   "actor": "Juan Carlos Dela Cruz",
+   "after": {
+    "employeeName": "Juan Carlos Dela Cruz",
+    "status": "Pending"
+   },
+   "at": {
+    "w": -6,
+    "d": 2,
+    "t": "16:30"
+   }
+  },
+  {
+   "service": "timeoff",
+   "event": "overtime.status_changed",
+   "entity_type": "OvertimeRequest",
+   "entity_id": "DOT002",
+   "actor": "John Delgado",
+   "after": {
+    "employeeName": "Juan Carlos Dela Cruz",
+    "status": "Approved"
+   },
+   "meta": {
+    "status": "Approved",
+    "employeeId": "EMP20269002",
+    "was": "Pending"
+   },
+   "at": {
+    "w": -6,
+    "d": 3,
+    "t": "09:40"
+   }
+  },
+  {
+   "service": "timeoff",
+   "event": "overtime.requested",
+   "entity_type": "OvertimeRequest",
+   "entity_id": "DOT003",
+   "actor": "Juan Carlos Dela Cruz",
+   "after": {
+    "employeeName": "Juan Carlos Dela Cruz",
+    "status": "Pending"
+   },
+   "at": {
+    "w": -5,
+    "d": 2,
+    "t": "16:30"
+   }
+  },
+  {
+   "service": "timeoff",
+   "event": "overtime.status_changed",
+   "entity_type": "OvertimeRequest",
+   "entity_id": "DOT003",
+   "actor": "John Delgado",
+   "after": {
+    "employeeName": "Juan Carlos Dela Cruz",
+    "status": "Approved"
+   },
+   "meta": {
+    "status": "Approved",
+    "employeeId": "EMP20269002",
+    "was": "Pending"
+   },
+   "at": {
+    "w": -5,
+    "d": 3,
+    "t": "09:40"
+   }
+  },
+  {
+   "service": "timeoff",
+   "event": "overtime.requested",
+   "entity_type": "OvertimeRequest",
+   "entity_id": "DOT004",
+   "actor": "Juan Carlos Dela Cruz",
+   "after": {
+    "employeeName": "Juan Carlos Dela Cruz",
+    "status": "Pending"
+   },
+   "at": {
+    "w": -2,
+    "d": 4,
+    "t": "16:30"
+   }
+  },
+  {
+   "service": "timeoff",
+   "event": "overtime.status_changed",
+   "entity_type": "OvertimeRequest",
+   "entity_id": "DOT004",
+   "actor": "John Delgado",
+   "after": {
+    "employeeName": "Juan Carlos Dela Cruz",
+    "status": "Approved"
+   },
+   "meta": {
+    "status": "Approved",
+    "employeeId": "EMP20269002",
+    "was": "Pending"
+   },
+   "at": {
+    "w": -2,
+    "d": 4,
+    "t": "09:40"
+   }
+  },
+  {
+   "service": "timeoff",
+   "event": "overtime.requested",
+   "entity_type": "OvertimeRequest",
+   "entity_id": "DOT005",
+   "actor": "Juan Carlos Dela Cruz",
+   "after": {
+    "employeeName": "Juan Carlos Dela Cruz",
+    "status": "Pending"
+   },
+   "at": {
+    "w": -1,
+    "d": 1,
+    "t": "16:30"
+   }
+  },
+  {
+   "service": "timeoff",
+   "event": "overtime.status_changed",
+   "entity_type": "OvertimeRequest",
+   "entity_id": "DOT005",
+   "actor": "John Delgado",
+   "after": {
+    "employeeName": "Juan Carlos Dela Cruz",
+    "status": "Approved"
+   },
+   "meta": {
+    "status": "Approved",
+    "employeeId": "EMP20269002",
+    "was": "Pending"
+   },
+   "at": {
+    "w": -1,
+    "d": 2,
+    "t": "09:40"
+   }
+  },
+  {
+   "service": "timeoff",
+   "event": "overtime.requested",
+   "entity_type": "OvertimeRequest",
+   "entity_id": "DOT006",
+   "actor": "Juan Carlos Dela Cruz",
+   "after": {
+    "employeeName": "Juan Carlos Dela Cruz",
+    "status": "Pending"
+   },
+   "at": {
+    "w": -1,
+    "d": 2,
+    "t": "16:30"
+   }
+  },
+  {
+   "service": "timeoff",
+   "event": "overtime.status_changed",
+   "entity_type": "OvertimeRequest",
+   "entity_id": "DOT006",
+   "actor": "John Delgado",
+   "after": {
+    "employeeName": "Juan Carlos Dela Cruz",
+    "status": "Approved"
+   },
+   "meta": {
+    "status": "Approved",
+    "employeeId": "EMP20269002",
+    "was": "Pending"
+   },
+   "at": {
+    "w": -1,
+    "d": 3,
+    "t": "09:40"
+   }
+  },
+  {
+   "service": "timeoff",
+   "event": "overtime.requested",
+   "entity_type": "OvertimeRequest",
+   "entity_id": "DOT007",
+   "actor": "Juan Carlos Dela Cruz",
+   "after": {
+    "employeeName": "Juan Carlos Dela Cruz",
+    "status": "Pending"
+   },
+   "at": {
+    "w": 0,
+    "d": 3,
+    "t": "16:30"
+   }
+  },
+  {
+   "service": "timeoff",
+   "event": "overtime.status_changed",
+   "entity_type": "OvertimeRequest",
+   "entity_id": "DOT007",
+   "actor": "John Delgado",
+   "after": {
+    "employeeName": "Juan Carlos Dela Cruz",
+    "status": "Approved"
+   },
+   "meta": {
+    "status": "Approved",
+    "employeeId": "EMP20269002",
+    "was": "Pending"
+   },
+   "at": {
+    "w": 0,
+    "d": 4,
+    "t": "09:40"
+   }
+  },
+  {
+   "service": "timeoff",
+   "event": "overtime.requested",
+   "entity_type": "OvertimeRequest",
+   "entity_id": "DOT008",
+   "actor": "Juan Carlos Dela Cruz",
+   "after": {
+    "employeeName": "Juan Carlos Dela Cruz",
+    "status": "Pending"
+   },
+   "at": {
+    "w": 0,
+    "d": 4,
+    "t": "16:30"
+   }
+  },
+  {
+   "service": "timeoff",
+   "event": "overtime.status_changed",
+   "entity_type": "OvertimeRequest",
+   "entity_id": "DOT008",
+   "actor": "John Delgado",
+   "after": {
+    "employeeName": "Juan Carlos Dela Cruz",
+    "status": "Approved"
+   },
+   "meta": {
+    "status": "Approved",
+    "employeeId": "EMP20269002",
+    "was": "Pending"
+   },
+   "at": {
+    "w": 0,
+    "d": 4,
+    "t": "09:40"
+   }
+  },
+  {
+   "service": "timeoff",
+   "event": "overtime.requested",
+   "entity_type": "OvertimeRequest",
+   "entity_id": "DOT009",
+   "actor": "Ramon Villanueva",
+   "after": {
+    "employeeName": "Ramon Villanueva",
+    "status": "Pending"
+   },
+   "at": {
+    "w": -4,
+    "d": 1,
+    "t": "16:30"
+   }
+  },
+  {
+   "service": "timeoff",
+   "event": "overtime.status_changed",
+   "entity_type": "OvertimeRequest",
+   "entity_id": "DOT009",
+   "actor": "John Delgado",
+   "after": {
+    "employeeName": "Ramon Villanueva",
+    "status": "Approved"
+   },
+   "meta": {
+    "status": "Approved",
+    "employeeId": "EMP20269004",
+    "was": "Pending"
+   },
+   "at": {
+    "w": -4,
+    "d": 2,
+    "t": "09:40"
+   }
+  },
+  {
+   "service": "timeoff",
+   "event": "overtime.requested",
+   "entity_type": "OvertimeRequest",
+   "entity_id": "DOT010",
+   "actor": "Ramon Villanueva",
+   "after": {
+    "employeeName": "Ramon Villanueva",
+    "status": "Pending"
+   },
+   "at": {
+    "w": -4,
+    "d": 2,
+    "t": "16:30"
+   }
+  },
+  {
+   "service": "timeoff",
+   "event": "overtime.status_changed",
+   "entity_type": "OvertimeRequest",
+   "entity_id": "DOT010",
+   "actor": "John Delgado",
+   "after": {
+    "employeeName": "Ramon Villanueva",
+    "status": "Approved"
+   },
+   "meta": {
+    "status": "Approved",
+    "employeeId": "EMP20269004",
+    "was": "Pending"
+   },
+   "at": {
+    "w": -4,
+    "d": 3,
+    "t": "09:40"
+   }
+  },
+  {
+   "service": "timeoff",
+   "event": "overtime.requested",
+   "entity_type": "OvertimeRequest",
+   "entity_id": "DOT011",
+   "actor": "Ramon Villanueva",
+   "after": {
+    "employeeName": "Ramon Villanueva",
+    "status": "Pending"
+   },
+   "at": {
+    "w": -3,
+    "d": 2,
+    "t": "16:30"
+   }
+  },
+  {
+   "service": "timeoff",
+   "event": "overtime.status_changed",
+   "entity_type": "OvertimeRequest",
+   "entity_id": "DOT011",
+   "actor": "John Delgado",
+   "after": {
+    "employeeName": "Ramon Villanueva",
+    "status": "Approved"
+   },
+   "meta": {
+    "status": "Approved",
+    "employeeId": "EMP20269004",
+    "was": "Pending"
+   },
+   "at": {
+    "w": -3,
+    "d": 3,
+    "t": "09:40"
+   }
+  },
+  {
+   "service": "timeoff",
+   "event": "overtime.requested",
+   "entity_type": "OvertimeRequest",
+   "entity_id": "DOT012",
+   "actor": "Ramon Villanueva",
+   "after": {
+    "employeeName": "Ramon Villanueva",
+    "status": "Pending"
+   },
+   "at": {
+    "w": -3,
+    "d": 4,
+    "t": "16:30"
+   }
+  },
+  {
+   "service": "timeoff",
+   "event": "overtime.status_changed",
+   "entity_type": "OvertimeRequest",
+   "entity_id": "DOT012",
+   "actor": "John Delgado",
+   "after": {
+    "employeeName": "Ramon Villanueva",
+    "status": "Approved"
+   },
+   "meta": {
+    "status": "Approved",
+    "employeeId": "EMP20269004",
+    "was": "Pending"
+   },
+   "at": {
+    "w": -3,
+    "d": 4,
+    "t": "09:40"
+   }
+  },
+  {
+   "service": "timeoff",
+   "event": "overtime.requested",
+   "entity_type": "OvertimeRequest",
+   "entity_id": "DOT013",
+   "actor": "Ramon Villanueva",
+   "after": {
+    "employeeName": "Ramon Villanueva",
+    "status": "Pending"
+   },
+   "at": {
+    "w": -2,
+    "d": 4,
+    "t": "16:30"
+   }
+  },
+  {
+   "service": "timeoff",
+   "event": "overtime.status_changed",
+   "entity_type": "OvertimeRequest",
+   "entity_id": "DOT013",
+   "actor": "John Delgado",
+   "after": {
+    "employeeName": "Ramon Villanueva",
+    "status": "Approved"
+   },
+   "meta": {
+    "status": "Approved",
+    "employeeId": "EMP20269004",
+    "was": "Pending"
+   },
+   "at": {
+    "w": -2,
+    "d": 4,
+    "t": "09:40"
+   }
+  },
+  {
+   "service": "timeoff",
+   "event": "overtime.requested",
+   "entity_type": "OvertimeRequest",
+   "entity_id": "DOT014",
+   "actor": "Ramon Villanueva",
+   "after": {
+    "employeeName": "Ramon Villanueva",
+    "status": "Pending"
+   },
+   "at": {
+    "w": -1,
+    "d": 3,
+    "t": "16:30"
+   }
+  },
+  {
+   "service": "timeoff",
+   "event": "overtime.status_changed",
+   "entity_type": "OvertimeRequest",
+   "entity_id": "DOT014",
+   "actor": "John Delgado",
+   "after": {
+    "employeeName": "Ramon Villanueva",
+    "status": "Approved"
+   },
+   "meta": {
+    "status": "Approved",
+    "employeeId": "EMP20269004",
+    "was": "Pending"
+   },
+   "at": {
+    "w": -1,
+    "d": 4,
+    "t": "09:40"
+   }
+  },
+  {
+   "service": "timeoff",
+   "event": "overtime.requested",
+   "entity_type": "OvertimeRequest",
+   "entity_id": "DOT015",
+   "actor": "Ramon Villanueva",
+   "after": {
+    "employeeName": "Ramon Villanueva",
+    "status": "Pending"
+   },
+   "at": {
+    "w": 0,
+    "d": 1,
+    "t": "16:30"
+   }
+  },
+  {
+   "service": "timeoff",
+   "event": "overtime.status_changed",
+   "entity_type": "OvertimeRequest",
+   "entity_id": "DOT015",
+   "actor": "John Delgado",
+   "after": {
+    "employeeName": "Ramon Villanueva",
+    "status": "Approved"
+   },
+   "meta": {
+    "status": "Approved",
+    "employeeId": "EMP20269004",
+    "was": "Pending"
+   },
+   "at": {
+    "w": 0,
+    "d": 2,
+    "t": "09:40"
+   }
+  },
+  {
+   "service": "timeoff",
+   "event": "overtime.requested",
+   "entity_type": "OvertimeRequest",
+   "entity_id": "DOT016",
+   "actor": "Katrina Mendoza",
+   "after": {
+    "employeeName": "Katrina Mendoza",
+    "status": "Pending"
+   },
+   "at": {
+    "w": -5,
+    "d": 2,
+    "t": "16:30"
+   }
+  },
+  {
+   "service": "timeoff",
+   "event": "overtime.status_changed",
+   "entity_type": "OvertimeRequest",
+   "entity_id": "DOT016",
+   "actor": "John Delgado",
+   "after": {
+    "employeeName": "Katrina Mendoza",
+    "status": "Approved"
+   },
+   "meta": {
+    "status": "Approved",
+    "employeeId": "EMP20269005",
+    "was": "Pending"
+   },
+   "at": {
+    "w": -5,
+    "d": 3,
+    "t": "09:40"
+   }
+  },
+  {
+   "service": "timeoff",
+   "event": "overtime.requested",
+   "entity_type": "OvertimeRequest",
+   "entity_id": "DOT017",
+   "actor": "Katrina Mendoza",
+   "after": {
+    "employeeName": "Katrina Mendoza",
+    "status": "Pending"
+   },
+   "at": {
+    "w": -1,
+    "d": 1,
+    "t": "16:30"
+   }
+  },
+  {
+   "service": "timeoff",
+   "event": "overtime.status_changed",
+   "entity_type": "OvertimeRequest",
+   "entity_id": "DOT017",
+   "actor": "John Delgado",
+   "after": {
+    "employeeName": "Katrina Mendoza",
+    "status": "Approved"
+   },
+   "meta": {
+    "status": "Approved",
+    "employeeId": "EMP20269005",
+    "was": "Pending"
+   },
+   "at": {
+    "w": -1,
+    "d": 2,
+    "t": "09:40"
+   }
+  },
+  {
+   "service": "timeoff",
+   "event": "overtime.requested",
+   "entity_type": "OvertimeRequest",
+   "entity_id": "DOT018",
+   "actor": "Katrina Mendoza",
+   "after": {
+    "employeeName": "Katrina Mendoza",
+    "status": "Pending"
+   },
+   "at": {
+    "w": 0,
+    "d": 1,
+    "t": "16:30"
+   }
+  },
+  {
+   "service": "timeoff",
+   "event": "overtime.status_changed",
+   "entity_type": "OvertimeRequest",
+   "entity_id": "DOT018",
+   "actor": "John Delgado",
+   "after": {
+    "employeeName": "Katrina Mendoza",
+    "status": "Approved"
+   },
+   "meta": {
+    "status": "Approved",
+    "employeeId": "EMP20269005",
+    "was": "Pending"
+   },
+   "at": {
+    "w": 0,
+    "d": 2,
+    "t": "09:40"
+   }
+  },
+  {
+   "service": "timeoff",
+   "event": "overtime.requested",
+   "entity_type": "OvertimeRequest",
+   "entity_id": "DOT019",
+   "actor": "Carmela Aquino",
+   "after": {
+    "employeeName": "Carmela Aquino",
+    "status": "Pending"
+   },
+   "at": {
+    "w": -1,
+    "d": 1,
+    "t": "16:30"
+   }
+  },
+  {
+   "service": "timeoff",
+   "event": "overtime.status_changed",
+   "entity_type": "OvertimeRequest",
+   "entity_id": "DOT019",
+   "actor": "John Delgado",
+   "after": {
+    "employeeName": "Carmela Aquino",
+    "status": "Approved"
+   },
+   "meta": {
+    "status": "Approved",
+    "employeeId": "EMP20269007",
+    "was": "Pending"
+   },
+   "at": {
+    "w": -1,
+    "d": 2,
+    "t": "09:40"
+   }
+  },
+  {
+   "service": "timeoff",
+   "event": "overtime.requested",
+   "entity_type": "OvertimeRequest",
+   "entity_id": "DOT020",
+   "actor": "Jose Miguel Ramirez",
+   "after": {
+    "employeeName": "Jose Miguel Ramirez",
+    "status": "Pending"
+   },
+   "at": {
+    "w": -5,
+    "d": 1,
+    "t": "16:30"
+   }
+  },
+  {
+   "service": "timeoff",
+   "event": "overtime.status_changed",
+   "entity_type": "OvertimeRequest",
+   "entity_id": "DOT020",
+   "actor": "John Delgado",
+   "after": {
+    "employeeName": "Jose Miguel Ramirez",
+    "status": "Approved"
+   },
+   "meta": {
+    "status": "Approved",
+    "employeeId": "EMP20269008",
+    "was": "Pending"
+   },
+   "at": {
+    "w": -5,
+    "d": 2,
+    "t": "09:40"
+   }
+  },
+  {
+   "service": "timeoff",
+   "event": "overtime.requested",
+   "entity_type": "OvertimeRequest",
+   "entity_id": "DOT021",
+   "actor": "Jose Miguel Ramirez",
+   "after": {
+    "employeeName": "Jose Miguel Ramirez",
+    "status": "Pending"
+   },
+   "at": {
+    "w": -5,
+    "d": 3,
+    "t": "16:30"
+   }
+  },
+  {
+   "service": "timeoff",
+   "event": "overtime.status_changed",
+   "entity_type": "OvertimeRequest",
+   "entity_id": "DOT021",
+   "actor": "John Delgado",
+   "after": {
+    "employeeName": "Jose Miguel Ramirez",
+    "status": "Approved"
+   },
+   "meta": {
+    "status": "Approved",
+    "employeeId": "EMP20269008",
+    "was": "Pending"
+   },
+   "at": {
+    "w": -5,
+    "d": 4,
+    "t": "09:40"
+   }
+  },
+  {
+   "service": "timeoff",
+   "event": "overtime.requested",
+   "entity_type": "OvertimeRequest",
+   "entity_id": "DOT022",
+   "actor": "Jose Miguel Ramirez",
+   "after": {
+    "employeeName": "Jose Miguel Ramirez",
+    "status": "Pending"
+   },
+   "at": {
+    "w": -2,
+    "d": 2,
+    "t": "16:30"
+   }
+  },
+  {
+   "service": "timeoff",
+   "event": "overtime.status_changed",
+   "entity_type": "OvertimeRequest",
+   "entity_id": "DOT022",
+   "actor": "John Delgado",
+   "after": {
+    "employeeName": "Jose Miguel Ramirez",
+    "status": "Approved"
+   },
+   "meta": {
+    "status": "Approved",
+    "employeeId": "EMP20269008",
+    "was": "Pending"
+   },
+   "at": {
+    "w": -2,
+    "d": 3,
+    "t": "09:40"
+   }
+  },
+  {
+   "service": "timeoff",
+   "event": "overtime.requested",
+   "entity_type": "OvertimeRequest",
+   "entity_id": "DOT023",
+   "actor": "Rafael Castillo",
+   "after": {
+    "employeeName": "Rafael Castillo",
+    "status": "Pending"
+   },
+   "at": {
+    "w": -5,
+    "d": 0,
+    "t": "16:30"
+   }
+  },
+  {
+   "service": "timeoff",
+   "event": "overtime.status_changed",
+   "entity_type": "OvertimeRequest",
+   "entity_id": "DOT023",
+   "actor": "John Delgado",
+   "after": {
+    "employeeName": "Rafael Castillo",
+    "status": "Approved"
+   },
+   "meta": {
+    "status": "Approved",
+    "employeeId": "EMP20269010",
+    "was": "Pending"
+   },
+   "at": {
+    "w": -5,
+    "d": 1,
+    "t": "09:40"
+   }
+  },
+  {
+   "service": "timeoff",
+   "event": "overtime.requested",
+   "entity_type": "OvertimeRequest",
+   "entity_id": "DOT024",
+   "actor": "Rafael Castillo",
+   "after": {
+    "employeeName": "Rafael Castillo",
+    "status": "Pending"
+   },
+   "at": {
+    "w": -5,
+    "d": 1,
+    "t": "16:30"
+   }
+  },
+  {
+   "service": "timeoff",
+   "event": "overtime.status_changed",
+   "entity_type": "OvertimeRequest",
+   "entity_id": "DOT024",
+   "actor": "John Delgado",
+   "after": {
+    "employeeName": "Rafael Castillo",
+    "status": "Approved"
+   },
+   "meta": {
+    "status": "Approved",
+    "employeeId": "EMP20269010",
+    "was": "Pending"
+   },
+   "at": {
+    "w": -5,
+    "d": 2,
+    "t": "09:40"
+   }
+  },
+  {
+   "service": "timeoff",
+   "event": "overtime.requested",
+   "entity_type": "OvertimeRequest",
+   "entity_id": "DOT025",
+   "actor": "Juan Carlos Dela Cruz",
+   "after": {
+    "employeeName": "Juan Carlos Dela Cruz",
+    "status": "Pending"
+   },
+   "at": {
+    "w": -1,
+    "d": 4,
+    "t": "16:30"
+   }
+  },
+  {
+   "service": "timeoff",
+   "event": "overtime.requested",
+   "entity_type": "OvertimeRequest",
+   "entity_id": "DOT026",
+   "actor": "Katrina Mendoza",
+   "after": {
+    "employeeName": "Katrina Mendoza",
+    "status": "Pending"
+   },
+   "at": {
+    "w": -1,
+    "d": 2,
+    "t": "16:30"
+   }
+  },
+  {
+   "service": "timeoff",
+   "event": "overtime.requested",
+   "entity_type": "OvertimeRequest",
+   "entity_id": "DOT027",
+   "actor": "Ramon Villanueva",
+   "after": {
+    "employeeName": "Ramon Villanueva",
+    "status": "Pending"
+   },
+   "at": {
+    "w": -2,
+    "d": 3,
+    "t": "16:30"
+   }
+  },
+  {
+   "service": "timeoff",
+   "event": "overtime.status_changed",
+   "entity_type": "OvertimeRequest",
+   "entity_id": "DOT027",
+   "actor": "John Delgado",
+   "after": {
+    "employeeName": "Ramon Villanueva",
+    "status": "Rejected"
+   },
+   "meta": {
+    "status": "Rejected",
+    "employeeId": "EMP20269004",
+    "was": "Pending"
+   },
+   "at": {
+    "w": -2,
+    "d": 4,
+    "t": "09:40"
+   }
+  },
+  {
+   "service": "timeoff",
+   "event": "overtime.requested",
+   "entity_type": "OvertimeRequest",
+   "entity_id": "DOT028",
+   "actor": "Jose Miguel Ramirez",
+   "after": {
+    "employeeName": "Jose Miguel Ramirez",
+    "status": "Pending"
+   },
+   "at": {
+    "w": -3,
+    "d": 1,
+    "t": "16:30"
+   }
+  },
+  {
+   "service": "timeoff",
+   "event": "overtime.status_changed",
+   "entity_type": "OvertimeRequest",
+   "entity_id": "DOT028",
+   "actor": "John Delgado",
+   "after": {
+    "employeeName": "Jose Miguel Ramirez",
+    "status": "Rejected"
+   },
+   "meta": {
+    "status": "Rejected",
+    "employeeId": "EMP20269008",
+    "was": "Pending"
+   },
+   "at": {
+    "w": -3,
+    "d": 2,
+    "t": "09:40"
+   }
+  }
+ ],
+ "on_leave_this_week": [
+  "EMP20269003"
+ ]
+}

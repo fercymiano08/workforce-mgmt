@@ -1,0 +1,2303 @@
+{
+ "shift": "SHIFT004",
+ "schedules": [
+  [
+   "EMP20269001",
+   "Maria Isabel Santos",
+   -6,
+   0
+  ],
+  [
+   "EMP20269001",
+   "Maria Isabel Santos",
+   -6,
+   1
+  ],
+  [
+   "EMP20269001",
+   "Maria Isabel Santos",
+   -6,
+   2
+  ],
+  [
+   "EMP20269001",
+   "Maria Isabel Santos",
+   -6,
+   3
+  ],
+  [
+   "EMP20269001",
+   "Maria Isabel Santos",
+   -6,
+   4
+  ],
+  [
+   "EMP20269001",
+   "Maria Isabel Santos",
+   -4,
+   0
+  ],
+  [
+   "EMP20269001",
+   "Maria Isabel Santos",
+   -4,
+   1
+  ],
+  [
+   "EMP20269001",
+   "Maria Isabel Santos",
+   -4,
+   2
+  ],
+  [
+   "EMP20269001",
+   "Maria Isabel Santos",
+   -4,
+   3
+  ],
+  [
+   "EMP20269001",
+   "Maria Isabel Santos",
+   -4,
+   4
+  ],
+  [
+   "EMP20269001",
+   "Maria Isabel Santos",
+   -3,
+   0
+  ],
+  [
+   "EMP20269001",
+   "Maria Isabel Santos",
+   -3,
+   1
+  ],
+  [
+   "EMP20269001",
+   "Maria Isabel Santos",
+   -3,
+   2
+  ],
+  [
+   "EMP20269001",
+   "Maria Isabel Santos",
+   -3,
+   3
+  ],
+  [
+   "EMP20269001",
+   "Maria Isabel Santos",
+   -3,
+   4
+  ],
+  [
+   "EMP20269001",
+   "Maria Isabel Santos",
+   -2,
+   0
+  ],
+  [
+   "EMP20269001",
+   "Maria Isabel Santos",
+   -2,
+   1
+  ],
+  [
+   "EMP20269001",
+   "Maria Isabel Santos",
+   -2,
+   2
+  ],
+  [
+   "EMP20269001",
+   "Maria Isabel Santos",
+   -2,
+   3
+  ],
+  [
+   "EMP20269001",
+   "Maria Isabel Santos",
+   -2,
+   4
+  ],
+  [
+   "EMP20269001",
+   "Maria Isabel Santos",
+   -1,
+   0
+  ],
+  [
+   "EMP20269001",
+   "Maria Isabel Santos",
+   -1,
+   1
+  ],
+  [
+   "EMP20269001",
+   "Maria Isabel Santos",
+   -1,
+   2
+  ],
+  [
+   "EMP20269001",
+   "Maria Isabel Santos",
+   -1,
+   3
+  ],
+  [
+   "EMP20269001",
+   "Maria Isabel Santos",
+   -1,
+   4
+  ],
+  [
+   "EMP20269001",
+   "Maria Isabel Santos",
+   0,
+   0
+  ],
+  [
+   "EMP20269001",
+   "Maria Isabel Santos",
+   0,
+   1
+  ],
+  [
+   "EMP20269001",
+   "Maria Isabel Santos",
+   0,
+   2
+  ],
+  [
+   "EMP20269001",
+   "Maria Isabel Santos",
+   0,
+   3
+  ],
+  [
+   "EMP20269001",
+   "Maria Isabel Santos",
+   0,
+   4
+  ],
+  [
+   "EMP20269001",
+   "Maria Isabel Santos",
+   1,
+   0
+  ],
+  [
+   "EMP20269001",
+   "Maria Isabel Santos",
+   1,
+   1
+  ],
+  [
+   "EMP20269001",
+   "Maria Isabel Santos",
+   1,
+   2
+  ],
+  [
+   "EMP20269001",
+   "Maria Isabel Santos",
+   1,
+   3
+  ],
+  [
+   "EMP20269001",
+   "Maria Isabel Santos",
+   1,
+   4
+  ],
+  [
+   "EMP20269002",
+   "Juan Carlos Dela Cruz",
+   -6,
+   0
+  ],
+  [
+   "EMP20269002",
+   "Juan Carlos Dela Cruz",
+   -6,
+   1
+  ],
+  [
+   "EMP20269002",
+   "Juan Carlos Dela Cruz",
+   -6,
+   2
+  ],
+  [
+   "EMP20269002",
+   "Juan Carlos Dela Cruz",
+   -6,
+   3
+  ],
+  [
+   "EMP20269002",
+   "Juan Carlos Dela Cruz",
+   -6,
+   4
+  ],
+  [
+   "EMP20269002",
+   "Juan Carlos Dela Cruz",
+   -5,
+   0
+  ],
+  [
+   "EMP20269002",
+   "Juan Carlos Dela Cruz",
+   -5,
+   1
+  ],
+  [
+   "EMP20269002",
+   "Juan Carlos Dela Cruz",
+   -5,
+   2
+  ],
+  [
+   "EMP20269002",
+   "Juan Carlos Dela Cruz",
+   -5,
+   3
+  ],
+  [
+   "EMP20269002",
+   "Juan Carlos Dela Cruz",
+   -5,
+   4
+  ],
+  [
+   "EMP20269002",
+   "Juan Carlos Dela Cruz",
+   -4,
+   0
+  ],
+  [
+   "EMP20269002",
+   "Juan Carlos Dela Cruz",
+   -4,
+   1
+  ],
+  [
+   "EMP20269002",
+   "Juan Carlos Dela Cruz",
+   -4,
+   2
+  ],
+  [
+   "EMP20269002",
+   "Juan Carlos Dela Cruz",
+   -4,
+   3
+  ],
+  [
+   "EMP20269002",
+   "Juan Carlos Dela Cruz",
+   -4,
+   4
+  ],
+  [
+   "EMP20269002",
+   "Juan Carlos Dela Cruz",
+   -3,
+   0
+  ],
+  [
+   "EMP20269002",
+   "Juan Carlos Dela Cruz",
+   -3,
+   3
+  ],
+  [
+   "EMP20269002",
+   "Juan Carlos Dela Cruz",
+   -3,
+   4
+  ],
+  [
+   "EMP20269002",
+   "Juan Carlos Dela Cruz",
+   -2,
+   0
+  ],
+  [
+   "EMP20269002",
+   "Juan Carlos Dela Cruz",
+   -2,
+   1
+  ],
+  [
+   "EMP20269002",
+   "Juan Carlos Dela Cruz",
+   -2,
+   2
+  ],
+  [
+   "EMP20269002",
+   "Juan Carlos Dela Cruz",
+   -2,
+   3
+  ],
+  [
+   "EMP20269002",
+   "Juan Carlos Dela Cruz",
+   -2,
+   4
+  ],
+  [
+   "EMP20269002",
+   "Juan Carlos Dela Cruz",
+   -1,
+   0
+  ],
+  [
+   "EMP20269002",
+   "Juan Carlos Dela Cruz",
+   -1,
+   1
+  ],
+  [
+   "EMP20269002",
+   "Juan Carlos Dela Cruz",
+   -1,
+   2
+  ],
+  [
+   "EMP20269002",
+   "Juan Carlos Dela Cruz",
+   -1,
+   3
+  ],
+  [
+   "EMP20269002",
+   "Juan Carlos Dela Cruz",
+   -1,
+   4
+  ],
+  [
+   "EMP20269002",
+   "Juan Carlos Dela Cruz",
+   0,
+   0
+  ],
+  [
+   "EMP20269002",
+   "Juan Carlos Dela Cruz",
+   0,
+   1
+  ],
+  [
+   "EMP20269002",
+   "Juan Carlos Dela Cruz",
+   0,
+   2
+  ],
+  [
+   "EMP20269002",
+   "Juan Carlos Dela Cruz",
+   0,
+   3
+  ],
+  [
+   "EMP20269002",
+   "Juan Carlos Dela Cruz",
+   0,
+   4
+  ],
+  [
+   "EMP20269002",
+   "Juan Carlos Dela Cruz",
+   1,
+   0
+  ],
+  [
+   "EMP20269002",
+   "Juan Carlos Dela Cruz",
+   1,
+   1
+  ],
+  [
+   "EMP20269002",
+   "Juan Carlos Dela Cruz",
+   1,
+   2
+  ],
+  [
+   "EMP20269002",
+   "Juan Carlos Dela Cruz",
+   1,
+   3
+  ],
+  [
+   "EMP20269002",
+   "Juan Carlos Dela Cruz",
+   1,
+   4
+  ],
+  [
+   "EMP20269003",
+   "Angelica Reyes",
+   -6,
+   0
+  ],
+  [
+   "EMP20269003",
+   "Angelica Reyes",
+   -6,
+   1
+  ],
+  [
+   "EMP20269003",
+   "Angelica Reyes",
+   -6,
+   2
+  ],
+  [
+   "EMP20269003",
+   "Angelica Reyes",
+   -6,
+   3
+  ],
+  [
+   "EMP20269003",
+   "Angelica Reyes",
+   -6,
+   4
+  ],
+  [
+   "EMP20269003",
+   "Angelica Reyes",
+   -5,
+   0
+  ],
+  [
+   "EMP20269003",
+   "Angelica Reyes",
+   -5,
+   1
+  ],
+  [
+   "EMP20269003",
+   "Angelica Reyes",
+   -5,
+   2
+  ],
+  [
+   "EMP20269003",
+   "Angelica Reyes",
+   -5,
+   3
+  ],
+  [
+   "EMP20269003",
+   "Angelica Reyes",
+   -5,
+   4
+  ],
+  [
+   "EMP20269003",
+   "Angelica Reyes",
+   -4,
+   0
+  ],
+  [
+   "EMP20269003",
+   "Angelica Reyes",
+   -4,
+   1
+  ],
+  [
+   "EMP20269003",
+   "Angelica Reyes",
+   -4,
+   2
+  ],
+  [
+   "EMP20269003",
+   "Angelica Reyes",
+   -4,
+   3
+  ],
+  [
+   "EMP20269003",
+   "Angelica Reyes",
+   -4,
+   4
+  ],
+  [
+   "EMP20269003",
+   "Angelica Reyes",
+   -3,
+   0
+  ],
+  [
+   "EMP20269003",
+   "Angelica Reyes",
+   -3,
+   1
+  ],
+  [
+   "EMP20269003",
+   "Angelica Reyes",
+   -3,
+   2
+  ],
+  [
+   "EMP20269003",
+   "Angelica Reyes",
+   -3,
+   3
+  ],
+  [
+   "EMP20269003",
+   "Angelica Reyes",
+   -3,
+   4
+  ],
+  [
+   "EMP20269003",
+   "Angelica Reyes",
+   -2,
+   0
+  ],
+  [
+   "EMP20269003",
+   "Angelica Reyes",
+   -2,
+   1
+  ],
+  [
+   "EMP20269003",
+   "Angelica Reyes",
+   -2,
+   2
+  ],
+  [
+   "EMP20269003",
+   "Angelica Reyes",
+   -2,
+   3
+  ],
+  [
+   "EMP20269003",
+   "Angelica Reyes",
+   -2,
+   4
+  ],
+  [
+   "EMP20269003",
+   "Angelica Reyes",
+   -1,
+   0
+  ],
+  [
+   "EMP20269003",
+   "Angelica Reyes",
+   -1,
+   1
+  ],
+  [
+   "EMP20269003",
+   "Angelica Reyes",
+   -1,
+   2
+  ],
+  [
+   "EMP20269003",
+   "Angelica Reyes",
+   1,
+   0
+  ],
+  [
+   "EMP20269003",
+   "Angelica Reyes",
+   1,
+   1
+  ],
+  [
+   "EMP20269003",
+   "Angelica Reyes",
+   1,
+   2
+  ],
+  [
+   "EMP20269003",
+   "Angelica Reyes",
+   1,
+   3
+  ],
+  [
+   "EMP20269003",
+   "Angelica Reyes",
+   1,
+   4
+  ],
+  [
+   "EMP20269004",
+   "Ramon Villanueva",
+   -6,
+   0
+  ],
+  [
+   "EMP20269004",
+   "Ramon Villanueva",
+   -6,
+   1
+  ],
+  [
+   "EMP20269004",
+   "Ramon Villanueva",
+   -6,
+   2
+  ],
+  [
+   "EMP20269004",
+   "Ramon Villanueva",
+   -6,
+   3
+  ],
+  [
+   "EMP20269004",
+   "Ramon Villanueva",
+   -6,
+   4
+  ],
+  [
+   "EMP20269004",
+   "Ramon Villanueva",
+   -5,
+   0
+  ],
+  [
+   "EMP20269004",
+   "Ramon Villanueva",
+   -5,
+   1
+  ],
+  [
+   "EMP20269004",
+   "Ramon Villanueva",
+   -5,
+   2
+  ],
+  [
+   "EMP20269004",
+   "Ramon Villanueva",
+   -5,
+   3
+  ],
+  [
+   "EMP20269004",
+   "Ramon Villanueva",
+   -5,
+   4
+  ],
+  [
+   "EMP20269004",
+   "Ramon Villanueva",
+   -4,
+   0
+  ],
+  [
+   "EMP20269004",
+   "Ramon Villanueva",
+   -4,
+   1
+  ],
+  [
+   "EMP20269004",
+   "Ramon Villanueva",
+   -4,
+   2
+  ],
+  [
+   "EMP20269004",
+   "Ramon Villanueva",
+   -4,
+   3
+  ],
+  [
+   "EMP20269004",
+   "Ramon Villanueva",
+   -4,
+   4
+  ],
+  [
+   "EMP20269004",
+   "Ramon Villanueva",
+   -3,
+   0
+  ],
+  [
+   "EMP20269004",
+   "Ramon Villanueva",
+   -3,
+   1
+  ],
+  [
+   "EMP20269004",
+   "Ramon Villanueva",
+   -3,
+   2
+  ],
+  [
+   "EMP20269004",
+   "Ramon Villanueva",
+   -3,
+   3
+  ],
+  [
+   "EMP20269004",
+   "Ramon Villanueva",
+   -3,
+   4
+  ],
+  [
+   "EMP20269004",
+   "Ramon Villanueva",
+   -2,
+   1
+  ],
+  [
+   "EMP20269004",
+   "Ramon Villanueva",
+   -2,
+   2
+  ],
+  [
+   "EMP20269004",
+   "Ramon Villanueva",
+   -2,
+   3
+  ],
+  [
+   "EMP20269004",
+   "Ramon Villanueva",
+   -2,
+   4
+  ],
+  [
+   "EMP20269004",
+   "Ramon Villanueva",
+   -1,
+   0
+  ],
+  [
+   "EMP20269004",
+   "Ramon Villanueva",
+   -1,
+   1
+  ],
+  [
+   "EMP20269004",
+   "Ramon Villanueva",
+   -1,
+   2
+  ],
+  [
+   "EMP20269004",
+   "Ramon Villanueva",
+   -1,
+   3
+  ],
+  [
+   "EMP20269004",
+   "Ramon Villanueva",
+   -1,
+   4
+  ],
+  [
+   "EMP20269004",
+   "Ramon Villanueva",
+   0,
+   0
+  ],
+  [
+   "EMP20269004",
+   "Ramon Villanueva",
+   0,
+   1
+  ],
+  [
+   "EMP20269004",
+   "Ramon Villanueva",
+   0,
+   2
+  ],
+  [
+   "EMP20269004",
+   "Ramon Villanueva",
+   0,
+   3
+  ],
+  [
+   "EMP20269004",
+   "Ramon Villanueva",
+   0,
+   4
+  ],
+  [
+   "EMP20269004",
+   "Ramon Villanueva",
+   1,
+   0
+  ],
+  [
+   "EMP20269004",
+   "Ramon Villanueva",
+   1,
+   1
+  ],
+  [
+   "EMP20269004",
+   "Ramon Villanueva",
+   1,
+   2
+  ],
+  [
+   "EMP20269004",
+   "Ramon Villanueva",
+   1,
+   3
+  ],
+  [
+   "EMP20269004",
+   "Ramon Villanueva",
+   1,
+   4
+  ],
+  [
+   "EMP20269005",
+   "Katrina Mendoza",
+   -6,
+   0
+  ],
+  [
+   "EMP20269005",
+   "Katrina Mendoza",
+   -6,
+   1
+  ],
+  [
+   "EMP20269005",
+   "Katrina Mendoza",
+   -6,
+   2
+  ],
+  [
+   "EMP20269005",
+   "Katrina Mendoza",
+   -6,
+   3
+  ],
+  [
+   "EMP20269005",
+   "Katrina Mendoza",
+   -6,
+   4
+  ],
+  [
+   "EMP20269005",
+   "Katrina Mendoza",
+   -5,
+   0
+  ],
+  [
+   "EMP20269005",
+   "Katrina Mendoza",
+   -5,
+   1
+  ],
+  [
+   "EMP20269005",
+   "Katrina Mendoza",
+   -5,
+   2
+  ],
+  [
+   "EMP20269005",
+   "Katrina Mendoza",
+   -5,
+   3
+  ],
+  [
+   "EMP20269005",
+   "Katrina Mendoza",
+   -5,
+   4
+  ],
+  [
+   "EMP20269005",
+   "Katrina Mendoza",
+   -4,
+   0
+  ],
+  [
+   "EMP20269005",
+   "Katrina Mendoza",
+   -4,
+   1
+  ],
+  [
+   "EMP20269005",
+   "Katrina Mendoza",
+   -4,
+   2
+  ],
+  [
+   "EMP20269005",
+   "Katrina Mendoza",
+   -4,
+   3
+  ],
+  [
+   "EMP20269005",
+   "Katrina Mendoza",
+   -4,
+   4
+  ],
+  [
+   "EMP20269005",
+   "Katrina Mendoza",
+   -3,
+   0
+  ],
+  [
+   "EMP20269005",
+   "Katrina Mendoza",
+   -3,
+   1
+  ],
+  [
+   "EMP20269005",
+   "Katrina Mendoza",
+   -3,
+   2
+  ],
+  [
+   "EMP20269005",
+   "Katrina Mendoza",
+   -3,
+   3
+  ],
+  [
+   "EMP20269005",
+   "Katrina Mendoza",
+   -3,
+   4
+  ],
+  [
+   "EMP20269005",
+   "Katrina Mendoza",
+   -2,
+   0
+  ],
+  [
+   "EMP20269005",
+   "Katrina Mendoza",
+   -2,
+   1
+  ],
+  [
+   "EMP20269005",
+   "Katrina Mendoza",
+   -2,
+   2
+  ],
+  [
+   "EMP20269005",
+   "Katrina Mendoza",
+   -2,
+   3
+  ],
+  [
+   "EMP20269005",
+   "Katrina Mendoza",
+   -2,
+   4
+  ],
+  [
+   "EMP20269005",
+   "Katrina Mendoza",
+   -1,
+   0
+  ],
+  [
+   "EMP20269005",
+   "Katrina Mendoza",
+   -1,
+   1
+  ],
+  [
+   "EMP20269005",
+   "Katrina Mendoza",
+   -1,
+   2
+  ],
+  [
+   "EMP20269005",
+   "Katrina Mendoza",
+   -1,
+   3
+  ],
+  [
+   "EMP20269005",
+   "Katrina Mendoza",
+   -1,
+   4
+  ],
+  [
+   "EMP20269005",
+   "Katrina Mendoza",
+   0,
+   0
+  ],
+  [
+   "EMP20269005",
+   "Katrina Mendoza",
+   0,
+   1
+  ],
+  [
+   "EMP20269005",
+   "Katrina Mendoza",
+   0,
+   2
+  ],
+  [
+   "EMP20269005",
+   "Katrina Mendoza",
+   0,
+   3
+  ],
+  [
+   "EMP20269005",
+   "Katrina Mendoza",
+   0,
+   4
+  ],
+  [
+   "EMP20269005",
+   "Katrina Mendoza",
+   1,
+   0
+  ],
+  [
+   "EMP20269005",
+   "Katrina Mendoza",
+   1,
+   1
+  ],
+  [
+   "EMP20269005",
+   "Katrina Mendoza",
+   1,
+   2
+  ],
+  [
+   "EMP20269005",
+   "Katrina Mendoza",
+   1,
+   3
+  ],
+  [
+   "EMP20269005",
+   "Katrina Mendoza",
+   1,
+   4
+  ],
+  [
+   "EMP20269006",
+   "Diego Fernandez",
+   -6,
+   0
+  ],
+  [
+   "EMP20269006",
+   "Diego Fernandez",
+   -6,
+   1
+  ],
+  [
+   "EMP20269006",
+   "Diego Fernandez",
+   -6,
+   2
+  ],
+  [
+   "EMP20269006",
+   "Diego Fernandez",
+   -6,
+   3
+  ],
+  [
+   "EMP20269006",
+   "Diego Fernandez",
+   -6,
+   4
+  ],
+  [
+   "EMP20269006",
+   "Diego Fernandez",
+   -5,
+   0
+  ],
+  [
+   "EMP20269006",
+   "Diego Fernandez",
+   -5,
+   1
+  ],
+  [
+   "EMP20269006",
+   "Diego Fernandez",
+   -5,
+   2
+  ],
+  [
+   "EMP20269006",
+   "Diego Fernandez",
+   -5,
+   3
+  ],
+  [
+   "EMP20269006",
+   "Diego Fernandez",
+   -5,
+   4
+  ],
+  [
+   "EMP20269006",
+   "Diego Fernandez",
+   -4,
+   0
+  ],
+  [
+   "EMP20269006",
+   "Diego Fernandez",
+   -4,
+   1
+  ],
+  [
+   "EMP20269006",
+   "Diego Fernandez",
+   -4,
+   2
+  ],
+  [
+   "EMP20269006",
+   "Diego Fernandez",
+   -4,
+   3
+  ],
+  [
+   "EMP20269006",
+   "Diego Fernandez",
+   -3,
+   0
+  ],
+  [
+   "EMP20269006",
+   "Diego Fernandez",
+   -3,
+   1
+  ],
+  [
+   "EMP20269006",
+   "Diego Fernandez",
+   -3,
+   2
+  ],
+  [
+   "EMP20269006",
+   "Diego Fernandez",
+   -3,
+   3
+  ],
+  [
+   "EMP20269006",
+   "Diego Fernandez",
+   -3,
+   4
+  ],
+  [
+   "EMP20269006",
+   "Diego Fernandez",
+   -2,
+   0
+  ],
+  [
+   "EMP20269006",
+   "Diego Fernandez",
+   -2,
+   1
+  ],
+  [
+   "EMP20269006",
+   "Diego Fernandez",
+   -2,
+   2
+  ],
+  [
+   "EMP20269006",
+   "Diego Fernandez",
+   -2,
+   3
+  ],
+  [
+   "EMP20269006",
+   "Diego Fernandez",
+   -2,
+   4
+  ],
+  [
+   "EMP20269006",
+   "Diego Fernandez",
+   -1,
+   0
+  ],
+  [
+   "EMP20269006",
+   "Diego Fernandez",
+   -1,
+   1
+  ],
+  [
+   "EMP20269006",
+   "Diego Fernandez",
+   -1,
+   2
+  ],
+  [
+   "EMP20269006",
+   "Diego Fernandez",
+   -1,
+   3
+  ],
+  [
+   "EMP20269006",
+   "Diego Fernandez",
+   -1,
+   4
+  ],
+  [
+   "EMP20269006",
+   "Diego Fernandez",
+   0,
+   0
+  ],
+  [
+   "EMP20269006",
+   "Diego Fernandez",
+   0,
+   1
+  ],
+  [
+   "EMP20269006",
+   "Diego Fernandez",
+   0,
+   2
+  ],
+  [
+   "EMP20269006",
+   "Diego Fernandez",
+   0,
+   3
+  ],
+  [
+   "EMP20269006",
+   "Diego Fernandez",
+   0,
+   4
+  ],
+  [
+   "EMP20269006",
+   "Diego Fernandez",
+   1,
+   0
+  ],
+  [
+   "EMP20269006",
+   "Diego Fernandez",
+   1,
+   1
+  ],
+  [
+   "EMP20269006",
+   "Diego Fernandez",
+   1,
+   2
+  ],
+  [
+   "EMP20269006",
+   "Diego Fernandez",
+   1,
+   3
+  ],
+  [
+   "EMP20269006",
+   "Diego Fernandez",
+   1,
+   4
+  ],
+  [
+   "EMP20269007",
+   "Carmela Aquino",
+   -6,
+   0
+  ],
+  [
+   "EMP20269007",
+   "Carmela Aquino",
+   -6,
+   1
+  ],
+  [
+   "EMP20269007",
+   "Carmela Aquino",
+   -6,
+   2
+  ],
+  [
+   "EMP20269007",
+   "Carmela Aquino",
+   -6,
+   3
+  ],
+  [
+   "EMP20269007",
+   "Carmela Aquino",
+   -6,
+   4
+  ],
+  [
+   "EMP20269007",
+   "Carmela Aquino",
+   -5,
+   0
+  ],
+  [
+   "EMP20269007",
+   "Carmela Aquino",
+   -5,
+   1
+  ],
+  [
+   "EMP20269007",
+   "Carmela Aquino",
+   -5,
+   2
+  ],
+  [
+   "EMP20269007",
+   "Carmela Aquino",
+   -5,
+   3
+  ],
+  [
+   "EMP20269007",
+   "Carmela Aquino",
+   -5,
+   4
+  ],
+  [
+   "EMP20269007",
+   "Carmela Aquino",
+   -4,
+   0
+  ],
+  [
+   "EMP20269007",
+   "Carmela Aquino",
+   -4,
+   1
+  ],
+  [
+   "EMP20269007",
+   "Carmela Aquino",
+   -4,
+   2
+  ],
+  [
+   "EMP20269007",
+   "Carmela Aquino",
+   -4,
+   3
+  ],
+  [
+   "EMP20269007",
+   "Carmela Aquino",
+   -4,
+   4
+  ],
+  [
+   "EMP20269007",
+   "Carmela Aquino",
+   -3,
+   0
+  ],
+  [
+   "EMP20269007",
+   "Carmela Aquino",
+   -3,
+   1
+  ],
+  [
+   "EMP20269007",
+   "Carmela Aquino",
+   -3,
+   2
+  ],
+  [
+   "EMP20269007",
+   "Carmela Aquino",
+   -3,
+   3
+  ],
+  [
+   "EMP20269007",
+   "Carmela Aquino",
+   -3,
+   4
+  ],
+  [
+   "EMP20269007",
+   "Carmela Aquino",
+   -2,
+   0
+  ],
+  [
+   "EMP20269007",
+   "Carmela Aquino",
+   -2,
+   1
+  ],
+  [
+   "EMP20269007",
+   "Carmela Aquino",
+   -2,
+   2
+  ],
+  [
+   "EMP20269007",
+   "Carmela Aquino",
+   -2,
+   3
+  ],
+  [
+   "EMP20269007",
+   "Carmela Aquino",
+   -2,
+   4
+  ],
+  [
+   "EMP20269007",
+   "Carmela Aquino",
+   -1,
+   0
+  ],
+  [
+   "EMP20269007",
+   "Carmela Aquino",
+   -1,
+   1
+  ],
+  [
+   "EMP20269007",
+   "Carmela Aquino",
+   -1,
+   2
+  ],
+  [
+   "EMP20269007",
+   "Carmela Aquino",
+   -1,
+   3
+  ],
+  [
+   "EMP20269007",
+   "Carmela Aquino",
+   -1,
+   4
+  ],
+  [
+   "EMP20269007",
+   "Carmela Aquino",
+   0,
+   0
+  ],
+  [
+   "EMP20269007",
+   "Carmela Aquino",
+   0,
+   1
+  ],
+  [
+   "EMP20269007",
+   "Carmela Aquino",
+   0,
+   2
+  ],
+  [
+   "EMP20269007",
+   "Carmela Aquino",
+   0,
+   3
+  ],
+  [
+   "EMP20269007",
+   "Carmela Aquino",
+   0,
+   4
+  ],
+  [
+   "EMP20269007",
+   "Carmela Aquino",
+   1,
+   0
+  ],
+  [
+   "EMP20269007",
+   "Carmela Aquino",
+   1,
+   1
+  ],
+  [
+   "EMP20269007",
+   "Carmela Aquino",
+   1,
+   2
+  ],
+  [
+   "EMP20269007",
+   "Carmela Aquino",
+   1,
+   3
+  ],
+  [
+   "EMP20269007",
+   "Carmela Aquino",
+   1,
+   4
+  ],
+  [
+   "EMP20269008",
+   "Jose Miguel Ramirez",
+   -6,
+   0
+  ],
+  [
+   "EMP20269008",
+   "Jose Miguel Ramirez",
+   -6,
+   1
+  ],
+  [
+   "EMP20269008",
+   "Jose Miguel Ramirez",
+   -6,
+   2
+  ],
+  [
+   "EMP20269008",
+   "Jose Miguel Ramirez",
+   -6,
+   3
+  ],
+  [
+   "EMP20269008",
+   "Jose Miguel Ramirez",
+   -6,
+   4
+  ],
+  [
+   "EMP20269008",
+   "Jose Miguel Ramirez",
+   -5,
+   0
+  ],
+  [
+   "EMP20269008",
+   "Jose Miguel Ramirez",
+   -5,
+   1
+  ],
+  [
+   "EMP20269008",
+   "Jose Miguel Ramirez",
+   -5,
+   2
+  ],
+  [
+   "EMP20269008",
+   "Jose Miguel Ramirez",
+   -5,
+   3
+  ],
+  [
+   "EMP20269008",
+   "Jose Miguel Ramirez",
+   -5,
+   4
+  ],
+  [
+   "EMP20269008",
+   "Jose Miguel Ramirez",
+   -4,
+   0
+  ],
+  [
+   "EMP20269008",
+   "Jose Miguel Ramirez",
+   -4,
+   1
+  ],
+  [
+   "EMP20269008",
+   "Jose Miguel Ramirez",
+   -4,
+   2
+  ],
+  [
+   "EMP20269008",
+   "Jose Miguel Ramirez",
+   -4,
+   3
+  ],
+  [
+   "EMP20269008",
+   "Jose Miguel Ramirez",
+   -4,
+   4
+  ],
+  [
+   "EMP20269008",
+   "Jose Miguel Ramirez",
+   -3,
+   0
+  ],
+  [
+   "EMP20269008",
+   "Jose Miguel Ramirez",
+   -3,
+   1
+  ],
+  [
+   "EMP20269008",
+   "Jose Miguel Ramirez",
+   -3,
+   2
+  ],
+  [
+   "EMP20269008",
+   "Jose Miguel Ramirez",
+   -3,
+   3
+  ],
+  [
+   "EMP20269008",
+   "Jose Miguel Ramirez",
+   -3,
+   4
+  ],
+  [
+   "EMP20269008",
+   "Jose Miguel Ramirez",
+   -2,
+   0
+  ],
+  [
+   "EMP20269008",
+   "Jose Miguel Ramirez",
+   -2,
+   1
+  ],
+  [
+   "EMP20269008",
+   "Jose Miguel Ramirez",
+   -2,
+   2
+  ],
+  [
+   "EMP20269008",
+   "Jose Miguel Ramirez",
+   -2,
+   3
+  ],
+  [
+   "EMP20269008",
+   "Jose Miguel Ramirez",
+   -2,
+   4
+  ],
+  [
+   "EMP20269008",
+   "Jose Miguel Ramirez",
+   -1,
+   0
+  ],
+  [
+   "EMP20269008",
+   "Jose Miguel Ramirez",
+   -1,
+   1
+  ],
+  [
+   "EMP20269008",
+   "Jose Miguel Ramirez",
+   -1,
+   2
+  ],
+  [
+   "EMP20269008",
+   "Jose Miguel Ramirez",
+   -1,
+   3
+  ],
+  [
+   "EMP20269008",
+   "Jose Miguel Ramirez",
+   -1,
+   4
+  ],
+  [
+   "EMP20269008",
+   "Jose Miguel Ramirez",
+   0,
+   0
+  ],
+  [
+   "EMP20269008",
+   "Jose Miguel Ramirez",
+   0,
+   1
+  ],
+  [
+   "EMP20269008",
+   "Jose Miguel Ramirez",
+   0,
+   2
+  ],
+  [
+   "EMP20269008",
+   "Jose Miguel Ramirez",
+   0,
+   3
+  ],
+  [
+   "EMP20269008",
+   "Jose Miguel Ramirez",
+   0,
+   4
+  ],
+  [
+   "EMP20269008",
+   "Jose Miguel Ramirez",
+   1,
+   0
+  ],
+  [
+   "EMP20269008",
+   "Jose Miguel Ramirez",
+   1,
+   1
+  ],
+  [
+   "EMP20269008",
+   "Jose Miguel Ramirez",
+   1,
+   2
+  ],
+  [
+   "EMP20269008",
+   "Jose Miguel Ramirez",
+   1,
+   3
+  ],
+  [
+   "EMP20269008",
+   "Jose Miguel Ramirez",
+   1,
+   4
+  ],
+  [
+   "EMP20269009",
+   "Lourdes Bautista",
+   -6,
+   0
+  ],
+  [
+   "EMP20269009",
+   "Lourdes Bautista",
+   -6,
+   1
+  ],
+  [
+   "EMP20269009",
+   "Lourdes Bautista",
+   -6,
+   2
+  ],
+  [
+   "EMP20269009",
+   "Lourdes Bautista",
+   -6,
+   3
+  ],
+  [
+   "EMP20269009",
+   "Lourdes Bautista",
+   -6,
+   4
+  ],
+  [
+   "EMP20269009",
+   "Lourdes Bautista",
+   -5,
+   0
+  ],
+  [
+   "EMP20269009",
+   "Lourdes Bautista",
+   -5,
+   1
+  ],
+  [
+   "EMP20269009",
+   "Lourdes Bautista",
+   -5,
+   2
+  ],
+  [
+   "EMP20269009",
+   "Lourdes Bautista",
+   -5,
+   3
+  ],
+  [
+   "EMP20269009",
+   "Lourdes Bautista",
+   -5,
+   4
+  ],
+  [
+   "EMP20269009",
+   "Lourdes Bautista",
+   -4,
+   0
+  ],
+  [
+   "EMP20269009",
+   "Lourdes Bautista",
+   -4,
+   1
+  ],
+  [
+   "EMP20269009",
+   "Lourdes Bautista",
+   -4,
+   2
+  ],
+  [
+   "EMP20269009",
+   "Lourdes Bautista",
+   -4,
+   3
+  ],
+  [
+   "EMP20269009",
+   "Lourdes Bautista",
+   -4,
+   4
+  ],
+  [
+   "EMP20269009",
+   "Lourdes Bautista",
+   -3,
+   0
+  ],
+  [
+   "EMP20269009",
+   "Lourdes Bautista",
+   -3,
+   1
+  ],
+  [
+   "EMP20269009",
+   "Lourdes Bautista",
+   -3,
+   2
+  ],
+  [
+   "EMP20269009",
+   "Lourdes Bautista",
+   -3,
+   3
+  ],
+  [
+   "EMP20269009",
+   "Lourdes Bautista",
+   -3,
+   4
+  ],
+  [
+   "EMP20269009",
+   "Lourdes Bautista",
+   -2,
+   0
+  ],
+  [
+   "EMP20269009",
+   "Lourdes Bautista",
+   -2,
+   1
+  ],
+  [
+   "EMP20269009",
+   "Lourdes Bautista",
+   -2,
+   2
+  ],
+  [
+   "EMP20269009",
+   "Lourdes Bautista",
+   -2,
+   3
+  ],
+  [
+   "EMP20269009",
+   "Lourdes Bautista",
+   -2,
+   4
+  ],
+  [
+   "EMP20269009",
+   "Lourdes Bautista",
+   -1,
+   0
+  ],
+  [
+   "EMP20269009",
+   "Lourdes Bautista",
+   -1,
+   1
+  ],
+  [
+   "EMP20269009",
+   "Lourdes Bautista",
+   -1,
+   2
+  ],
+  [
+   "EMP20269009",
+   "Lourdes Bautista",
+   -1,
+   3
+  ],
+  [
+   "EMP20269009",
+   "Lourdes Bautista",
+   -1,
+   4
+  ],
+  [
+   "EMP20269009",
+   "Lourdes Bautista",
+   0,
+   0
+  ],
+  [
+   "EMP20269009",
+   "Lourdes Bautista",
+   0,
+   1
+  ],
+  [
+   "EMP20269009",
+   "Lourdes Bautista",
+   0,
+   2
+  ],
+  [
+   "EMP20269009",
+   "Lourdes Bautista",
+   0,
+   3
+  ],
+  [
+   "EMP20269009",
+   "Lourdes Bautista",
+   0,
+   4
+  ],
+  [
+   "EMP20269009",
+   "Lourdes Bautista",
+   1,
+   0
+  ],
+  [
+   "EMP20269009",
+   "Lourdes Bautista",
+   1,
+   2
+  ],
+  [
+   "EMP20269009",
+   "Lourdes Bautista",
+   1,
+   3
+  ],
+  [
+   "EMP20269009",
+   "Lourdes Bautista",
+   1,
+   4
+  ],
+  [
+   "EMP20269010",
+   "Rafael Castillo",
+   -6,
+   0
+  ],
+  [
+   "EMP20269010",
+   "Rafael Castillo",
+   -6,
+   1
+  ],
+  [
+   "EMP20269010",
+   "Rafael Castillo",
+   -6,
+   2
+  ],
+  [
+   "EMP20269010",
+   "Rafael Castillo",
+   -6,
+   3
+  ],
+  [
+   "EMP20269010",
+   "Rafael Castillo",
+   -6,
+   4
+  ],
+  [
+   "EMP20269010",
+   "Rafael Castillo",
+   -5,
+   0
+  ],
+  [
+   "EMP20269010",
+   "Rafael Castillo",
+   -5,
+   1
+  ],
+  [
+   "EMP20269010",
+   "Rafael Castillo",
+   -5,
+   2
+  ],
+  [
+   "EMP20269010",
+   "Rafael Castillo",
+   -5,
+   3
+  ],
+  [
+   "EMP20269010",
+   "Rafael Castillo",
+   -5,
+   4
+  ],
+  [
+   "EMP20269010",
+   "Rafael Castillo",
+   -4,
+   0
+  ],
+  [
+   "EMP20269010",
+   "Rafael Castillo",
+   -4,
+   1
+  ],
+  [
+   "EMP20269010",
+   "Rafael Castillo",
+   -4,
+   2
+  ],
+  [
+   "EMP20269010",
+   "Rafael Castillo",
+   -4,
+   3
+  ],
+  [
+   "EMP20269010",
+   "Rafael Castillo",
+   -4,
+   4
+  ],
+  [
+   "EMP20269010",
+   "Rafael Castillo",
+   -3,
+   0
+  ],
+  [
+   "EMP20269010",
+   "Rafael Castillo",
+   -3,
+   1
+  ],
+  [
+   "EMP20269010",
+   "Rafael Castillo",
+   -3,
+   2
+  ],
+  [
+   "EMP20269010",
+   "Rafael Castillo",
+   -3,
+   3
+  ],
+  [
+   "EMP20269010",
+   "Rafael Castillo",
+   -3,
+   4
+  ],
+  [
+   "EMP20269010",
+   "Rafael Castillo",
+   -2,
+   0
+  ],
+  [
+   "EMP20269010",
+   "Rafael Castillo",
+   -2,
+   1
+  ],
+  [
+   "EMP20269010",
+   "Rafael Castillo",
+   -2,
+   2
+  ],
+  [
+   "EMP20269010",
+   "Rafael Castillo",
+   -2,
+   3
+  ],
+  [
+   "EMP20269010",
+   "Rafael Castillo",
+   -2,
+   4
+  ],
+  [
+   "EMP20269010",
+   "Rafael Castillo",
+   -1,
+   0
+  ],
+  [
+   "EMP20269010",
+   "Rafael Castillo",
+   -1,
+   1
+  ],
+  [
+   "EMP20269010",
+   "Rafael Castillo",
+   -1,
+   2
+  ],
+  [
+   "EMP20269010",
+   "Rafael Castillo",
+   -1,
+   3
+  ],
+  [
+   "EMP20269010",
+   "Rafael Castillo",
+   -1,
+   4
+  ],
+  [
+   "EMP20269010",
+   "Rafael Castillo",
+   0,
+   0
+  ],
+  [
+   "EMP20269010",
+   "Rafael Castillo",
+   0,
+   1
+  ],
+  [
+   "EMP20269010",
+   "Rafael Castillo",
+   0,
+   2
+  ],
+  [
+   "EMP20269010",
+   "Rafael Castillo",
+   0,
+   3
+  ],
+  [
+   "EMP20269010",
+   "Rafael Castillo",
+   0,
+   4
+  ],
+  [
+   "EMP20269010",
+   "Rafael Castillo",
+   1,
+   0
+  ],
+  [
+   "EMP20269010",
+   "Rafael Castillo",
+   1,
+   1
+  ],
+  [
+   "EMP20269010",
+   "Rafael Castillo",
+   1,
+   2
+  ],
+  [
+   "EMP20269010",
+   "Rafael Castillo",
+   1,
+   3
+  ],
+  [
+   "EMP20269010",
+   "Rafael Castillo",
+   1,
+   4
+  ]
+ ]
+}

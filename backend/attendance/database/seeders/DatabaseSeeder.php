@@ -28,6 +28,10 @@ class DatabaseSeeder extends Seeder
         $this->seedTimesheets();
         $this->seedNotifications();
         $this->seedSettings();
+
+        if (filter_var(env('SEED_DEMO', true), FILTER_VALIDATE_BOOLEAN)) {
+            $this->call(DemoSeeder::class);
+        }
     }
 
     private function computeDateShift(): void

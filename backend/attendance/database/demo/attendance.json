@@ -1,0 +1,3192 @@
+{
+ "shift": "SHIFT004",
+ "days": [
+  {
+   "emp": "EMP20269001",
+   "name": "Maria Isabel Santos",
+   "w": -6,
+   "d": 0,
+   "kind": "present",
+   "cin": "08:05:00",
+   "out": "17:01:00"
+  },
+  {
+   "emp": "EMP20269001",
+   "name": "Maria Isabel Santos",
+   "w": -6,
+   "d": 1,
+   "kind": "present",
+   "cin": "08:12:00",
+   "out": "17:12:00"
+  },
+  {
+   "emp": "EMP20269001",
+   "name": "Maria Isabel Santos",
+   "w": -6,
+   "d": 2,
+   "kind": "present",
+   "cin": "08:04:00",
+   "out": "17:09:00"
+  },
+  {
+   "emp": "EMP20269001",
+   "name": "Maria Isabel Santos",
+   "w": -6,
+   "d": 3,
+   "kind": "present",
+   "cin": "08:21:00",
+   "out": "17:01:00"
+  },
+  {
+   "emp": "EMP20269001",
+   "name": "Maria Isabel Santos",
+   "w": -6,
+   "d": 4,
+   "kind": "present",
+   "cin": "08:04:00",
+   "out": "17:03:00"
+  },
+  {
+   "emp": "EMP20269001",
+   "name": "Maria Isabel Santos",
+   "w": -4,
+   "d": 0,
+   "kind": "present",
+   "cin": "07:55:00",
+   "out": "17:11:00"
+  },
+  {
+   "emp": "EMP20269001",
+   "name": "Maria Isabel Santos",
+   "w": -4,
+   "d": 1,
+   "kind": "present",
+   "cin": "07:54:00",
+   "out": "17:08:00"
+  },
+  {
+   "emp": "EMP20269001",
+   "name": "Maria Isabel Santos",
+   "w": -4,
+   "d": 2,
+   "kind": "present",
+   "cin": "08:09:00",
+   "out": "17:11:00"
+  },
+  {
+   "emp": "EMP20269001",
+   "name": "Maria Isabel Santos",
+   "w": -4,
+   "d": 3,
+   "kind": "present",
+   "cin": "07:38:00",
+   "out": "17:09:00"
+  },
+  {
+   "emp": "EMP20269001",
+   "name": "Maria Isabel Santos",
+   "w": -4,
+   "d": 4,
+   "kind": "present",
+   "cin": "08:00:00",
+   "out": "17:12:00"
+  },
+  {
+   "emp": "EMP20269001",
+   "name": "Maria Isabel Santos",
+   "w": -3,
+   "d": 0,
+   "kind": "present",
+   "cin": "07:58:00",
+   "out": "17:04:00"
+  },
+  {
+   "emp": "EMP20269001",
+   "name": "Maria Isabel Santos",
+   "w": -3,
+   "d": 1,
+   "kind": "present",
+   "cin": "08:03:00",
+   "out": "17:12:00"
+  },
+  {
+   "emp": "EMP20269001",
+   "name": "Maria Isabel Santos",
+   "w": -3,
+   "d": 2,
+   "kind": "present",
+   "cin": "07:41:00",
+   "out": "17:11:00"
+  },
+  {
+   "emp": "EMP20269001",
+   "name": "Maria Isabel Santos",
+   "w": -3,
+   "d": 3,
+   "kind": "present",
+   "cin": "08:12:00",
+   "out": "17:02:00"
+  },
+  {
+   "emp": "EMP20269001",
+   "name": "Maria Isabel Santos",
+   "w": -3,
+   "d": 4,
+   "kind": "present",
+   "cin": "07:40:00",
+   "out": "17:07:00"
+  },
+  {
+   "emp": "EMP20269001",
+   "name": "Maria Isabel Santos",
+   "w": -2,
+   "d": 0,
+   "kind": "present",
+   "cin": "08:07:00",
+   "out": "17:06:00"
+  },
+  {
+   "emp": "EMP20269001",
+   "name": "Maria Isabel Santos",
+   "w": -2,
+   "d": 1,
+   "kind": "present",
+   "cin": "08:05:00",
+   "out": "17:12:00"
+  },
+  {
+   "emp": "EMP20269001",
+   "name": "Maria Isabel Santos",
+   "w": -2,
+   "d": 2,
+   "kind": "present",
+   "cin": "07:51:00",
+   "out": "17:00:00"
+  },
+  {
+   "emp": "EMP20269001",
+   "name": "Maria Isabel Santos",
+   "w": -2,
+   "d": 3,
+   "kind": "present",
+   "cin": "08:11:00",
+   "out": "17:12:00"
+  },
+  {
+   "emp": "EMP20269001",
+   "name": "Maria Isabel Santos",
+   "w": -2,
+   "d": 4,
+   "kind": "present",
+   "cin": "07:45:00",
+   "out": "17:07:00"
+  },
+  {
+   "emp": "EMP20269001",
+   "name": "Maria Isabel Santos",
+   "w": -1,
+   "d": 0,
+   "kind": "present",
+   "cin": "08:04:00",
+   "out": "17:08:00"
+  },
+  {
+   "emp": "EMP20269001",
+   "name": "Maria Isabel Santos",
+   "w": -1,
+   "d": 1,
+   "kind": "present",
+   "cin": "08:34:00",
+   "out": "17:12:00"
+  },
+  {
+   "emp": "EMP20269001",
+   "name": "Maria Isabel Santos",
+   "w": -1,
+   "d": 2,
+   "kind": "present",
+   "cin": "08:05:00",
+   "out": "17:02:00"
+  },
+  {
+   "emp": "EMP20269001",
+   "name": "Maria Isabel Santos",
+   "w": -1,
+   "d": 3,
+   "kind": "present",
+   "cin": "08:03:00",
+   "out": "17:10:00"
+  },
+  {
+   "emp": "EMP20269001",
+   "name": "Maria Isabel Santos",
+   "w": -1,
+   "d": 4,
+   "kind": "present",
+   "cin": "07:39:00",
+   "out": "17:06:00"
+  },
+  {
+   "emp": "EMP20269001",
+   "name": "Maria Isabel Santos",
+   "w": 0,
+   "d": 0,
+   "kind": "ot",
+   "ot_approved": 1,
+   "cin": "07:38:00",
+   "out": "18:09:00"
+  },
+  {
+   "emp": "EMP20269001",
+   "name": "Maria Isabel Santos",
+   "w": 0,
+   "d": 1,
+   "kind": "present",
+   "cin": "08:07:00",
+   "out": "17:10:00"
+  },
+  {
+   "emp": "EMP20269001",
+   "name": "Maria Isabel Santos",
+   "w": 0,
+   "d": 2,
+   "kind": "present",
+   "cin": "07:33:00",
+   "out": "17:09:00"
+  },
+  {
+   "emp": "EMP20269001",
+   "name": "Maria Isabel Santos",
+   "w": 0,
+   "d": 3,
+   "kind": "present",
+   "cin": "08:04:00",
+   "out": "17:02:00"
+  },
+  {
+   "emp": "EMP20269001",
+   "name": "Maria Isabel Santos",
+   "w": 0,
+   "d": 4,
+   "kind": "present",
+   "cin": "07:41:00",
+   "out": "17:11:00"
+  },
+  {
+   "emp": "EMP20269002",
+   "name": "Juan Carlos Dela Cruz",
+   "w": -6,
+   "d": 0,
+   "kind": "present",
+   "cin": "08:26:00",
+   "out": "17:12:00"
+  },
+  {
+   "emp": "EMP20269002",
+   "name": "Juan Carlos Dela Cruz",
+   "w": -6,
+   "d": 1,
+   "kind": "present",
+   "cin": "08:05:00",
+   "out": "17:12:00"
+  },
+  {
+   "emp": "EMP20269002",
+   "name": "Juan Carlos Dela Cruz",
+   "w": -6,
+   "d": 2,
+   "kind": "ot",
+   "ot_approved": 1,
+   "cin": "07:57:00",
+   "out": "18:06:00"
+  },
+  {
+   "emp": "EMP20269002",
+   "name": "Juan Carlos Dela Cruz",
+   "w": -6,
+   "d": 3,
+   "kind": "present",
+   "cin": "07:55:00",
+   "out": "17:00:00"
+  },
+  {
+   "emp": "EMP20269002",
+   "name": "Juan Carlos Dela Cruz",
+   "w": -6,
+   "d": 4,
+   "kind": "present",
+   "cin": "07:52:00",
+   "out": "17:01:00"
+  },
+  {
+   "emp": "EMP20269002",
+   "name": "Juan Carlos Dela Cruz",
+   "w": -5,
+   "d": 0,
+   "kind": "present",
+   "cin": "08:12:00",
+   "out": "17:02:00"
+  },
+  {
+   "emp": "EMP20269002",
+   "name": "Juan Carlos Dela Cruz",
+   "w": -5,
+   "d": 1,
+   "kind": "present",
+   "cin": "08:37:00",
+   "out": "17:03:00"
+  },
+  {
+   "emp": "EMP20269002",
+   "name": "Juan Carlos Dela Cruz",
+   "w": -5,
+   "d": 2,
+   "kind": "ot",
+   "ot_approved": 1.5,
+   "cin": "08:41:00",
+   "out": "18:30:00"
+  },
+  {
+   "emp": "EMP20269002",
+   "name": "Juan Carlos Dela Cruz",
+   "w": -5,
+   "d": 3,
+   "kind": "present",
+   "cin": "08:28:00",
+   "out": "17:10:00"
+  },
+  {
+   "emp": "EMP20269002",
+   "name": "Juan Carlos Dela Cruz",
+   "w": -5,
+   "d": 4,
+   "kind": "present",
+   "cin": "08:49:00",
+   "out": "17:08:00"
+  },
+  {
+   "emp": "EMP20269002",
+   "name": "Juan Carlos Dela Cruz",
+   "w": -4,
+   "d": 0,
+   "kind": "present",
+   "cin": "08:27:00",
+   "out": "17:06:00"
+  },
+  {
+   "emp": "EMP20269002",
+   "name": "Juan Carlos Dela Cruz",
+   "w": -4,
+   "d": 1,
+   "kind": "present",
+   "cin": "07:57:00",
+   "out": "17:05:00"
+  },
+  {
+   "emp": "EMP20269002",
+   "name": "Juan Carlos Dela Cruz",
+   "w": -4,
+   "d": 2,
+   "kind": "present",
+   "cin": "07:59:00",
+   "out": "17:02:00"
+  },
+  {
+   "emp": "EMP20269002",
+   "name": "Juan Carlos Dela Cruz",
+   "w": -4,
+   "d": 3,
+   "kind": "present",
+   "cin": "07:40:00",
+   "out": "17:08:00"
+  },
+  {
+   "emp": "EMP20269002",
+   "name": "Juan Carlos Dela Cruz",
+   "w": -4,
+   "d": 4,
+   "kind": "present",
+   "cin": "07:46:00",
+   "out": "17:01:00"
+  },
+  {
+   "emp": "EMP20269002",
+   "name": "Juan Carlos Dela Cruz",
+   "w": -3,
+   "d": 0,
+   "kind": "present",
+   "cin": "07:59:00",
+   "out": "17:10:00"
+  },
+  {
+   "emp": "EMP20269002",
+   "name": "Juan Carlos Dela Cruz",
+   "w": -3,
+   "d": 3,
+   "kind": "present",
+   "cin": "08:26:00",
+   "out": "17:10:00"
+  },
+  {
+   "emp": "EMP20269002",
+   "name": "Juan Carlos Dela Cruz",
+   "w": -3,
+   "d": 4,
+   "kind": "present",
+   "cin": "07:40:00",
+   "out": "17:04:00"
+  },
+  {
+   "emp": "EMP20269002",
+   "name": "Juan Carlos Dela Cruz",
+   "w": -2,
+   "d": 0,
+   "kind": "present",
+   "cin": "07:46:00",
+   "out": "17:09:00"
+  },
+  {
+   "emp": "EMP20269002",
+   "name": "Juan Carlos Dela Cruz",
+   "w": -2,
+   "d": 1,
+   "kind": "present",
+   "cin": "07:39:00",
+   "out": "17:01:00"
+  },
+  {
+   "emp": "EMP20269002",
+   "name": "Juan Carlos Dela Cruz",
+   "w": -2,
+   "d": 2,
+   "kind": "present",
+   "cin": "08:19:00",
+   "out": "17:11:00"
+  },
+  {
+   "emp": "EMP20269002",
+   "name": "Juan Carlos Dela Cruz",
+   "w": -2,
+   "d": 3,
+   "kind": "present",
+   "cin": "07:39:00",
+   "out": "17:04:00"
+  },
+  {
+   "emp": "EMP20269002",
+   "name": "Juan Carlos Dela Cruz",
+   "w": -2,
+   "d": 4,
+   "kind": "ot",
+   "ot_approved": 2,
+   "cin": "08:36:00",
+   "out": "19:01:00"
+  },
+  {
+   "emp": "EMP20269002",
+   "name": "Juan Carlos Dela Cruz",
+   "w": -1,
+   "d": 0,
+   "kind": "present",
+   "cin": "07:49:00",
+   "out": "17:00:00"
+  },
+  {
+   "emp": "EMP20269002",
+   "name": "Juan Carlos Dela Cruz",
+   "w": -1,
+   "d": 1,
+   "kind": "ot",
+   "ot_approved": 2,
+   "cin": "07:52:00",
+   "out": "19:05:00"
+  },
+  {
+   "emp": "EMP20269002",
+   "name": "Juan Carlos Dela Cruz",
+   "w": -1,
+   "d": 2,
+   "kind": "ot",
+   "ot_approved": 2.5,
+   "cin": "08:12:00",
+   "out": "19:35:00"
+  },
+  {
+   "emp": "EMP20269002",
+   "name": "Juan Carlos Dela Cruz",
+   "w": -1,
+   "d": 3,
+   "kind": "present",
+   "cin": "07:40:00",
+   "out": "17:08:00"
+  },
+  {
+   "emp": "EMP20269002",
+   "name": "Juan Carlos Dela Cruz",
+   "w": -1,
+   "d": 4,
+   "kind": "ot_unapproved",
+   "cin": "07:57:00",
+   "out": "19:06:00",
+   "ot_approved": 0
+  },
+  {
+   "emp": "EMP20269002",
+   "name": "Juan Carlos Dela Cruz",
+   "w": 0,
+   "d": 0,
+   "kind": "present",
+   "cin": "07:34:00",
+   "out": "17:05:00"
+  },
+  {
+   "emp": "EMP20269002",
+   "name": "Juan Carlos Dela Cruz",
+   "w": 0,
+   "d": 1,
+   "kind": "present",
+   "cin": "07:40:00",
+   "out": "17:06:00"
+  },
+  {
+   "emp": "EMP20269002",
+   "name": "Juan Carlos Dela Cruz",
+   "w": 0,
+   "d": 2,
+   "kind": "present",
+   "cin": "08:07:00",
+   "out": "17:03:00"
+  },
+  {
+   "emp": "EMP20269002",
+   "name": "Juan Carlos Dela Cruz",
+   "w": 0,
+   "d": 3,
+   "kind": "ot",
+   "ot_approved": 1,
+   "cin": "07:40:00",
+   "out": "18:01:00"
+  },
+  {
+   "emp": "EMP20269002",
+   "name": "Juan Carlos Dela Cruz",
+   "w": 0,
+   "d": 4,
+   "kind": "ot",
+   "ot_approved": 1.5,
+   "cin": "07:52:00",
+   "out": "18:35:00"
+  },
+  {
+   "emp": "EMP20269003",
+   "name": "Angelica Reyes",
+   "w": -6,
+   "d": 0,
+   "kind": "present",
+   "cin": "07:59:00",
+   "out": "17:12:00"
+  },
+  {
+   "emp": "EMP20269003",
+   "name": "Angelica Reyes",
+   "w": -6,
+   "d": 1,
+   "kind": "present",
+   "cin": "08:07:00",
+   "out": "17:06:00"
+  },
+  {
+   "emp": "EMP20269003",
+   "name": "Angelica Reyes",
+   "w": -6,
+   "d": 2,
+   "kind": "present",
+   "cin": "07:47:00",
+   "out": "17:04:00"
+  },
+  {
+   "emp": "EMP20269003",
+   "name": "Angelica Reyes",
+   "w": -6,
+   "d": 3,
+   "kind": "present",
+   "cin": "07:53:00",
+   "out": "17:10:00"
+  },
+  {
+   "emp": "EMP20269003",
+   "name": "Angelica Reyes",
+   "w": -6,
+   "d": 4,
+   "kind": "present",
+   "cin": "08:08:00",
+   "out": "17:08:00"
+  },
+  {
+   "emp": "EMP20269003",
+   "name": "Angelica Reyes",
+   "w": -5,
+   "d": 0,
+   "kind": "present",
+   "cin": "08:06:00",
+   "out": "17:05:00"
+  },
+  {
+   "emp": "EMP20269003",
+   "name": "Angelica Reyes",
+   "w": -5,
+   "d": 1,
+   "kind": "present",
+   "cin": "07:48:00",
+   "out": "17:03:00"
+  },
+  {
+   "emp": "EMP20269003",
+   "name": "Angelica Reyes",
+   "w": -5,
+   "d": 2,
+   "kind": "present",
+   "cin": "07:58:00",
+   "out": "17:05:00"
+  },
+  {
+   "emp": "EMP20269003",
+   "name": "Angelica Reyes",
+   "w": -5,
+   "d": 3,
+   "kind": "present",
+   "cin": "07:50:00",
+   "out": "17:03:00"
+  },
+  {
+   "emp": "EMP20269003",
+   "name": "Angelica Reyes",
+   "w": -5,
+   "d": 4,
+   "kind": "present",
+   "cin": "08:02:00",
+   "out": "17:07:00"
+  },
+  {
+   "emp": "EMP20269003",
+   "name": "Angelica Reyes",
+   "w": -4,
+   "d": 0,
+   "kind": "present",
+   "cin": "07:52:00",
+   "out": "17:10:00"
+  },
+  {
+   "emp": "EMP20269003",
+   "name": "Angelica Reyes",
+   "w": -4,
+   "d": 1,
+   "kind": "present",
+   "cin": "07:33:00",
+   "out": "17:08:00"
+  },
+  {
+   "emp": "EMP20269003",
+   "name": "Angelica Reyes",
+   "w": -4,
+   "d": 2,
+   "kind": "present",
+   "cin": "07:44:00",
+   "out": "17:05:00"
+  },
+  {
+   "emp": "EMP20269003",
+   "name": "Angelica Reyes",
+   "w": -4,
+   "d": 3,
+   "kind": "present",
+   "cin": "07:39:00",
+   "out": "17:00:00"
+  },
+  {
+   "emp": "EMP20269003",
+   "name": "Angelica Reyes",
+   "w": -4,
+   "d": 4,
+   "kind": "present",
+   "cin": "08:10:00",
+   "out": "17:00:00"
+  },
+  {
+   "emp": "EMP20269003",
+   "name": "Angelica Reyes",
+   "w": -3,
+   "d": 0,
+   "kind": "present",
+   "cin": "08:06:00",
+   "out": "17:10:00"
+  },
+  {
+   "emp": "EMP20269003",
+   "name": "Angelica Reyes",
+   "w": -3,
+   "d": 1,
+   "kind": "present",
+   "cin": "07:38:00",
+   "out": "17:06:00"
+  },
+  {
+   "emp": "EMP20269003",
+   "name": "Angelica Reyes",
+   "w": -3,
+   "d": 2,
+   "kind": "present",
+   "cin": "07:35:00",
+   "out": "17:10:00"
+  },
+  {
+   "emp": "EMP20269003",
+   "name": "Angelica Reyes",
+   "w": -3,
+   "d": 3,
+   "kind": "present",
+   "cin": "07:51:00",
+   "out": "17:04:00"
+  },
+  {
+   "emp": "EMP20269003",
+   "name": "Angelica Reyes",
+   "w": -3,
+   "d": 4,
+   "kind": "present",
+   "cin": "07:45:00",
+   "out": "17:10:00"
+  },
+  {
+   "emp": "EMP20269003",
+   "name": "Angelica Reyes",
+   "w": -2,
+   "d": 0,
+   "kind": "absent"
+  },
+  {
+   "emp": "EMP20269003",
+   "name": "Angelica Reyes",
+   "w": -2,
+   "d": 1,
+   "kind": "present",
+   "cin": "08:00:00",
+   "out": "17:12:00"
+  },
+  {
+   "emp": "EMP20269003",
+   "name": "Angelica Reyes",
+   "w": -2,
+   "d": 2,
+   "kind": "present",
+   "cin": "08:07:00",
+   "out": "17:08:00"
+  },
+  {
+   "emp": "EMP20269003",
+   "name": "Angelica Reyes",
+   "w": -2,
+   "d": 3,
+   "kind": "present",
+   "cin": "07:42:00",
+   "out": "17:01:00"
+  },
+  {
+   "emp": "EMP20269003",
+   "name": "Angelica Reyes",
+   "w": -2,
+   "d": 4,
+   "kind": "present",
+   "cin": "07:33:00",
+   "out": "17:01:00"
+  },
+  {
+   "emp": "EMP20269003",
+   "name": "Angelica Reyes",
+   "w": -1,
+   "d": 0,
+   "kind": "present",
+   "cin": "07:42:00",
+   "out": "17:03:00"
+  },
+  {
+   "emp": "EMP20269003",
+   "name": "Angelica Reyes",
+   "w": -1,
+   "d": 1,
+   "kind": "present",
+   "cin": "08:04:00",
+   "out": "17:11:00"
+  },
+  {
+   "emp": "EMP20269003",
+   "name": "Angelica Reyes",
+   "w": -1,
+   "d": 2,
+   "kind": "present",
+   "cin": "07:52:00",
+   "out": "17:05:00"
+  },
+  {
+   "emp": "EMP20269004",
+   "name": "Ramon Villanueva",
+   "w": -6,
+   "d": 0,
+   "kind": "present",
+   "cin": "08:08:00",
+   "out": "17:05:00"
+  },
+  {
+   "emp": "EMP20269004",
+   "name": "Ramon Villanueva",
+   "w": -6,
+   "d": 1,
+   "kind": "present",
+   "cin": "08:10:00",
+   "out": "17:01:00"
+  },
+  {
+   "emp": "EMP20269004",
+   "name": "Ramon Villanueva",
+   "w": -6,
+   "d": 2,
+   "kind": "present",
+   "cin": "08:04:00",
+   "out": "17:04:00"
+  },
+  {
+   "emp": "EMP20269004",
+   "name": "Ramon Villanueva",
+   "w": -6,
+   "d": 3,
+   "kind": "present",
+   "cin": "07:53:00",
+   "out": "17:08:00"
+  },
+  {
+   "emp": "EMP20269004",
+   "name": "Ramon Villanueva",
+   "w": -6,
+   "d": 4,
+   "kind": "present",
+   "cin": "08:04:00",
+   "out": "17:02:00"
+  },
+  {
+   "emp": "EMP20269004",
+   "name": "Ramon Villanueva",
+   "w": -5,
+   "d": 0,
+   "kind": "present",
+   "cin": "07:55:00",
+   "out": "17:05:00"
+  },
+  {
+   "emp": "EMP20269004",
+   "name": "Ramon Villanueva",
+   "w": -5,
+   "d": 1,
+   "kind": "present",
+   "cin": "07:57:00",
+   "out": "17:07:00"
+  },
+  {
+   "emp": "EMP20269004",
+   "name": "Ramon Villanueva",
+   "w": -5,
+   "d": 2,
+   "kind": "present",
+   "cin": "07:41:00",
+   "out": "17:05:00"
+  },
+  {
+   "emp": "EMP20269004",
+   "name": "Ramon Villanueva",
+   "w": -5,
+   "d": 3,
+   "kind": "present",
+   "cin": "08:01:00",
+   "out": "17:08:00"
+  },
+  {
+   "emp": "EMP20269004",
+   "name": "Ramon Villanueva",
+   "w": -5,
+   "d": 4,
+   "kind": "present",
+   "cin": "07:42:00",
+   "out": "17:01:00"
+  },
+  {
+   "emp": "EMP20269004",
+   "name": "Ramon Villanueva",
+   "w": -4,
+   "d": 0,
+   "kind": "present",
+   "cin": "07:58:00",
+   "out": "17:08:00"
+  },
+  {
+   "emp": "EMP20269004",
+   "name": "Ramon Villanueva",
+   "w": -4,
+   "d": 1,
+   "kind": "ot",
+   "ot_approved": 2.5,
+   "cin": "07:54:00",
+   "out": "19:38:00"
+  },
+  {
+   "emp": "EMP20269004",
+   "name": "Ramon Villanueva",
+   "w": -4,
+   "d": 2,
+   "kind": "ot",
+   "ot_approved": 2.5,
+   "cin": "07:54:00",
+   "out": "19:32:00"
+  },
+  {
+   "emp": "EMP20269004",
+   "name": "Ramon Villanueva",
+   "w": -4,
+   "d": 3,
+   "kind": "present",
+   "cin": "07:41:00",
+   "out": "17:10:00"
+  },
+  {
+   "emp": "EMP20269004",
+   "name": "Ramon Villanueva",
+   "w": -4,
+   "d": 4,
+   "kind": "present",
+   "cin": "08:03:00",
+   "out": "17:07:00"
+  },
+  {
+   "emp": "EMP20269004",
+   "name": "Ramon Villanueva",
+   "w": -3,
+   "d": 0,
+   "kind": "present",
+   "cin": "08:30:00",
+   "out": "17:10:00"
+  },
+  {
+   "emp": "EMP20269004",
+   "name": "Ramon Villanueva",
+   "w": -3,
+   "d": 1,
+   "kind": "present",
+   "cin": "07:34:00",
+   "out": "17:12:00"
+  },
+  {
+   "emp": "EMP20269004",
+   "name": "Ramon Villanueva",
+   "w": -3,
+   "d": 2,
+   "kind": "ot",
+   "ot_approved": 1.5,
+   "cin": "07:56:00",
+   "out": "18:38:00"
+  },
+  {
+   "emp": "EMP20269004",
+   "name": "Ramon Villanueva",
+   "w": -3,
+   "d": 3,
+   "kind": "present",
+   "cin": "07:47:00",
+   "out": "17:03:00"
+  },
+  {
+   "emp": "EMP20269004",
+   "name": "Ramon Villanueva",
+   "w": -3,
+   "d": 4,
+   "kind": "ot",
+   "ot_approved": 2.5,
+   "cin": "07:52:00",
+   "out": "19:38:00"
+  },
+  {
+   "emp": "EMP20269004",
+   "name": "Ramon Villanueva",
+   "w": -2,
+   "d": 1,
+   "kind": "present",
+   "cin": "07:50:00",
+   "out": "17:00:00"
+  },
+  {
+   "emp": "EMP20269004",
+   "name": "Ramon Villanueva",
+   "w": -2,
+   "d": 2,
+   "kind": "present",
+   "cin": "07:47:00",
+   "out": "17:07:00"
+  },
+  {
+   "emp": "EMP20269004",
+   "name": "Ramon Villanueva",
+   "w": -2,
+   "d": 3,
+   "kind": "ot_unapproved",
+   "cin": "07:55:00",
+   "out": "19:06:00",
+   "ot_approved": 0
+  },
+  {
+   "emp": "EMP20269004",
+   "name": "Ramon Villanueva",
+   "w": -2,
+   "d": 4,
+   "kind": "ot",
+   "ot_approved": 2.5,
+   "cin": "07:49:00",
+   "out": "19:32:00"
+  },
+  {
+   "emp": "EMP20269004",
+   "name": "Ramon Villanueva",
+   "w": -1,
+   "d": 0,
+   "kind": "present",
+   "cin": "08:02:00",
+   "out": "17:04:00"
+  },
+  {
+   "emp": "EMP20269004",
+   "name": "Ramon Villanueva",
+   "w": -1,
+   "d": 1,
+   "kind": "present",
+   "cin": "07:52:00",
+   "out": "17:00:00"
+  },
+  {
+   "emp": "EMP20269004",
+   "name": "Ramon Villanueva",
+   "w": -1,
+   "d": 2,
+   "kind": "present",
+   "cin": "08:05:00",
+   "out": "17:12:00"
+  },
+  {
+   "emp": "EMP20269004",
+   "name": "Ramon Villanueva",
+   "w": -1,
+   "d": 3,
+   "kind": "ot",
+   "ot_approved": 2,
+   "cin": "08:12:00",
+   "out": "19:07:00"
+  },
+  {
+   "emp": "EMP20269004",
+   "name": "Ramon Villanueva",
+   "w": -1,
+   "d": 4,
+   "kind": "present",
+   "cin": "07:37:00",
+   "out": "17:12:00"
+  },
+  {
+   "emp": "EMP20269004",
+   "name": "Ramon Villanueva",
+   "w": 0,
+   "d": 0,
+   "kind": "present",
+   "cin": "08:06:00",
+   "out": "17:06:00"
+  },
+  {
+   "emp": "EMP20269004",
+   "name": "Ramon Villanueva",
+   "w": 0,
+   "d": 1,
+   "kind": "ot",
+   "ot_approved": 1.5,
+   "cin": "07:46:00",
+   "out": "18:33:00"
+  },
+  {
+   "emp": "EMP20269004",
+   "name": "Ramon Villanueva",
+   "w": 0,
+   "d": 2,
+   "kind": "present",
+   "cin": "08:05:00",
+   "out": "17:04:00"
+  },
+  {
+   "emp": "EMP20269004",
+   "name": "Ramon Villanueva",
+   "w": 0,
+   "d": 3,
+   "kind": "present",
+   "cin": "07:41:00",
+   "out": "17:05:00"
+  },
+  {
+   "emp": "EMP20269004",
+   "name": "Ramon Villanueva",
+   "w": 0,
+   "d": 4,
+   "kind": "present",
+   "cin": "08:07:00",
+   "out": "17:08:00"
+  },
+  {
+   "emp": "EMP20269005",
+   "name": "Katrina Mendoza",
+   "w": -6,
+   "d": 0,
+   "kind": "present",
+   "cin": "07:42:00",
+   "out": "17:02:00"
+  },
+  {
+   "emp": "EMP20269005",
+   "name": "Katrina Mendoza",
+   "w": -6,
+   "d": 1,
+   "kind": "early",
+   "cin": "08:09:00",
+   "out": "15:24:00"
+  },
+  {
+   "emp": "EMP20269005",
+   "name": "Katrina Mendoza",
+   "w": -6,
+   "d": 2,
+   "kind": "present",
+   "cin": "07:44:00",
+   "out": "17:08:00"
+  },
+  {
+   "emp": "EMP20269005",
+   "name": "Katrina Mendoza",
+   "w": -6,
+   "d": 3,
+   "kind": "present",
+   "cin": "07:43:00",
+   "out": "17:00:00"
+  },
+  {
+   "emp": "EMP20269005",
+   "name": "Katrina Mendoza",
+   "w": -6,
+   "d": 4,
+   "kind": "present",
+   "cin": "07:59:00",
+   "out": "17:07:00"
+  },
+  {
+   "emp": "EMP20269005",
+   "name": "Katrina Mendoza",
+   "w": -5,
+   "d": 0,
+   "kind": "present",
+   "cin": "07:52:00",
+   "out": "17:05:00"
+  },
+  {
+   "emp": "EMP20269005",
+   "name": "Katrina Mendoza",
+   "w": -5,
+   "d": 1,
+   "kind": "present",
+   "cin": "07:59:00",
+   "out": "17:05:00"
+  },
+  {
+   "emp": "EMP20269005",
+   "name": "Katrina Mendoza",
+   "w": -5,
+   "d": 2,
+   "kind": "ot",
+   "ot_approved": 1,
+   "cin": "08:03:00",
+   "out": "18:05:00"
+  },
+  {
+   "emp": "EMP20269005",
+   "name": "Katrina Mendoza",
+   "w": -5,
+   "d": 3,
+   "kind": "present",
+   "cin": "07:49:00",
+   "out": "17:00:00"
+  },
+  {
+   "emp": "EMP20269005",
+   "name": "Katrina Mendoza",
+   "w": -5,
+   "d": 4,
+   "kind": "present",
+   "cin": "07:38:00",
+   "out": "17:06:00"
+  },
+  {
+   "emp": "EMP20269005",
+   "name": "Katrina Mendoza",
+   "w": -4,
+   "d": 0,
+   "kind": "present",
+   "cin": "07:48:00",
+   "out": "17:07:00"
+  },
+  {
+   "emp": "EMP20269005",
+   "name": "Katrina Mendoza",
+   "w": -4,
+   "d": 1,
+   "kind": "present",
+   "cin": "08:00:00",
+   "out": "17:07:00"
+  },
+  {
+   "emp": "EMP20269005",
+   "name": "Katrina Mendoza",
+   "w": -4,
+   "d": 2,
+   "kind": "present",
+   "cin": "07:52:00",
+   "out": "17:07:00"
+  },
+  {
+   "emp": "EMP20269005",
+   "name": "Katrina Mendoza",
+   "w": -4,
+   "d": 3,
+   "kind": "early",
+   "cin": "08:03:00",
+   "out": "15:47:00"
+  },
+  {
+   "emp": "EMP20269005",
+   "name": "Katrina Mendoza",
+   "w": -4,
+   "d": 4,
+   "kind": "present",
+   "cin": "07:38:00",
+   "out": "17:10:00"
+  },
+  {
+   "emp": "EMP20269005",
+   "name": "Katrina Mendoza",
+   "w": -3,
+   "d": 0,
+   "kind": "present",
+   "cin": "07:44:00",
+   "out": "17:06:00"
+  },
+  {
+   "emp": "EMP20269005",
+   "name": "Katrina Mendoza",
+   "w": -3,
+   "d": 1,
+   "kind": "early",
+   "cin": "08:00:00",
+   "out": "15:38:00"
+  },
+  {
+   "emp": "EMP20269005",
+   "name": "Katrina Mendoza",
+   "w": -3,
+   "d": 2,
+   "kind": "present",
+   "cin": "07:50:00",
+   "out": "17:05:00"
+  },
+  {
+   "emp": "EMP20269005",
+   "name": "Katrina Mendoza",
+   "w": -3,
+   "d": 3,
+   "kind": "present",
+   "cin": "08:02:00",
+   "out": "17:05:00"
+  },
+  {
+   "emp": "EMP20269005",
+   "name": "Katrina Mendoza",
+   "w": -3,
+   "d": 4,
+   "kind": "present",
+   "cin": "07:42:00",
+   "out": "17:05:00"
+  },
+  {
+   "emp": "EMP20269005",
+   "name": "Katrina Mendoza",
+   "w": -2,
+   "d": 0,
+   "kind": "early",
+   "cin": "08:10:00",
+   "out": "16:31:00"
+  },
+  {
+   "emp": "EMP20269005",
+   "name": "Katrina Mendoza",
+   "w": -2,
+   "d": 1,
+   "kind": "present",
+   "cin": "07:38:00",
+   "out": "17:05:00"
+  },
+  {
+   "emp": "EMP20269005",
+   "name": "Katrina Mendoza",
+   "w": -2,
+   "d": 2,
+   "kind": "present",
+   "cin": "08:06:00",
+   "out": "17:04:00"
+  },
+  {
+   "emp": "EMP20269005",
+   "name": "Katrina Mendoza",
+   "w": -2,
+   "d": 3,
+   "kind": "early",
+   "cin": "07:35:00",
+   "out": "16:17:00"
+  },
+  {
+   "emp": "EMP20269005",
+   "name": "Katrina Mendoza",
+   "w": -2,
+   "d": 4,
+   "kind": "present",
+   "cin": "08:09:00",
+   "out": "17:09:00"
+  },
+  {
+   "emp": "EMP20269005",
+   "name": "Katrina Mendoza",
+   "w": -1,
+   "d": 0,
+   "kind": "present",
+   "cin": "08:36:00",
+   "out": "17:01:00"
+  },
+  {
+   "emp": "EMP20269005",
+   "name": "Katrina Mendoza",
+   "w": -1,
+   "d": 1,
+   "kind": "ot",
+   "ot_approved": 1,
+   "cin": "07:49:00",
+   "out": "18:01:00"
+  },
+  {
+   "emp": "EMP20269005",
+   "name": "Katrina Mendoza",
+   "w": -1,
+   "d": 2,
+   "kind": "ot_unapproved",
+   "cin": "07:54:00",
+   "out": "18:36:00",
+   "ot_approved": 0
+  },
+  {
+   "emp": "EMP20269005",
+   "name": "Katrina Mendoza",
+   "w": -1,
+   "d": 3,
+   "kind": "present",
+   "cin": "08:02:00",
+   "out": "17:06:00"
+  },
+  {
+   "emp": "EMP20269005",
+   "name": "Katrina Mendoza",
+   "w": -1,
+   "d": 4,
+   "kind": "present",
+   "cin": "07:53:00",
+   "out": "17:07:00"
+  },
+  {
+   "emp": "EMP20269005",
+   "name": "Katrina Mendoza",
+   "w": 0,
+   "d": 0,
+   "kind": "present",
+   "cin": "07:45:00",
+   "out": "17:09:00"
+  },
+  {
+   "emp": "EMP20269005",
+   "name": "Katrina Mendoza",
+   "w": 0,
+   "d": 1,
+   "kind": "ot",
+   "ot_approved": 1.5,
+   "cin": "08:06:00",
+   "out": "18:36:00"
+  },
+  {
+   "emp": "EMP20269005",
+   "name": "Katrina Mendoza",
+   "w": 0,
+   "d": 2,
+   "kind": "present",
+   "cin": "07:51:00",
+   "out": "17:08:00"
+  },
+  {
+   "emp": "EMP20269005",
+   "name": "Katrina Mendoza",
+   "w": 0,
+   "d": 3,
+   "kind": "early",
+   "cin": "08:10:00",
+   "out": "16:37:00"
+  },
+  {
+   "emp": "EMP20269005",
+   "name": "Katrina Mendoza",
+   "w": 0,
+   "d": 4,
+   "kind": "present",
+   "cin": "08:06:00",
+   "out": "17:05:00"
+  },
+  {
+   "emp": "EMP20269006",
+   "name": "Diego Fernandez",
+   "w": -6,
+   "d": 0,
+   "kind": "present",
+   "cin": "08:08:00",
+   "out": "17:06:00"
+  },
+  {
+   "emp": "EMP20269006",
+   "name": "Diego Fernandez",
+   "w": -6,
+   "d": 1,
+   "kind": "present",
+   "cin": "07:59:00",
+   "out": "17:00:00"
+  },
+  {
+   "emp": "EMP20269006",
+   "name": "Diego Fernandez",
+   "w": -6,
+   "d": 2,
+   "kind": "present",
+   "cin": "08:26:00",
+   "out": "17:05:00"
+  },
+  {
+   "emp": "EMP20269006",
+   "name": "Diego Fernandez",
+   "w": -6,
+   "d": 3,
+   "kind": "present",
+   "cin": "08:18:00",
+   "out": "17:10:00"
+  },
+  {
+   "emp": "EMP20269006",
+   "name": "Diego Fernandez",
+   "w": -6,
+   "d": 4,
+   "kind": "present",
+   "cin": "08:01:00",
+   "out": "17:00:00"
+  },
+  {
+   "emp": "EMP20269006",
+   "name": "Diego Fernandez",
+   "w": -5,
+   "d": 0,
+   "kind": "present",
+   "cin": "08:02:00",
+   "out": "17:08:00"
+  },
+  {
+   "emp": "EMP20269006",
+   "name": "Diego Fernandez",
+   "w": -5,
+   "d": 1,
+   "kind": "present",
+   "cin": "08:28:00",
+   "out": "17:07:00"
+  },
+  {
+   "emp": "EMP20269006",
+   "name": "Diego Fernandez",
+   "w": -5,
+   "d": 2,
+   "kind": "absent"
+  },
+  {
+   "emp": "EMP20269006",
+   "name": "Diego Fernandez",
+   "w": -5,
+   "d": 3,
+   "kind": "present",
+   "cin": "07:50:00",
+   "out": "17:04:00"
+  },
+  {
+   "emp": "EMP20269006",
+   "name": "Diego Fernandez",
+   "w": -5,
+   "d": 4,
+   "kind": "present",
+   "cin": "08:32:00",
+   "out": "17:11:00"
+  },
+  {
+   "emp": "EMP20269006",
+   "name": "Diego Fernandez",
+   "w": -4,
+   "d": 0,
+   "kind": "present",
+   "cin": "08:49:00",
+   "out": "17:03:00"
+  },
+  {
+   "emp": "EMP20269006",
+   "name": "Diego Fernandez",
+   "w": -4,
+   "d": 1,
+   "kind": "present",
+   "cin": "08:38:00",
+   "out": "17:06:00"
+  },
+  {
+   "emp": "EMP20269006",
+   "name": "Diego Fernandez",
+   "w": -4,
+   "d": 2,
+   "kind": "present",
+   "cin": "08:16:00",
+   "out": "17:08:00"
+  },
+  {
+   "emp": "EMP20269006",
+   "name": "Diego Fernandez",
+   "w": -4,
+   "d": 3,
+   "kind": "present",
+   "cin": "07:44:00",
+   "out": "17:02:00"
+  },
+  {
+   "emp": "EMP20269006",
+   "name": "Diego Fernandez",
+   "w": -3,
+   "d": 0,
+   "kind": "present",
+   "cin": "07:54:00",
+   "out": "17:10:00"
+  },
+  {
+   "emp": "EMP20269006",
+   "name": "Diego Fernandez",
+   "w": -3,
+   "d": 1,
+   "kind": "present",
+   "cin": "07:34:00",
+   "out": "17:11:00"
+  },
+  {
+   "emp": "EMP20269006",
+   "name": "Diego Fernandez",
+   "w": -3,
+   "d": 2,
+   "kind": "present",
+   "cin": "08:09:00",
+   "out": "17:12:00"
+  },
+  {
+   "emp": "EMP20269006",
+   "name": "Diego Fernandez",
+   "w": -3,
+   "d": 3,
+   "kind": "present",
+   "cin": "07:42:00",
+   "out": "17:05:00"
+  },
+  {
+   "emp": "EMP20269006",
+   "name": "Diego Fernandez",
+   "w": -3,
+   "d": 4,
+   "kind": "early",
+   "cin": "07:41:00",
+   "out": "16:08:00"
+  },
+  {
+   "emp": "EMP20269006",
+   "name": "Diego Fernandez",
+   "w": -2,
+   "d": 0,
+   "kind": "present",
+   "cin": "07:59:00",
+   "out": "17:05:00"
+  },
+  {
+   "emp": "EMP20269006",
+   "name": "Diego Fernandez",
+   "w": -2,
+   "d": 1,
+   "kind": "early",
+   "cin": "08:10:00",
+   "out": "15:52:00"
+  },
+  {
+   "emp": "EMP20269006",
+   "name": "Diego Fernandez",
+   "w": -2,
+   "d": 2,
+   "kind": "present",
+   "cin": "07:48:00",
+   "out": "17:09:00"
+  },
+  {
+   "emp": "EMP20269006",
+   "name": "Diego Fernandez",
+   "w": -2,
+   "d": 3,
+   "kind": "present",
+   "cin": "08:09:00",
+   "out": "17:11:00"
+  },
+  {
+   "emp": "EMP20269006",
+   "name": "Diego Fernandez",
+   "w": -2,
+   "d": 4,
+   "kind": "present",
+   "cin": "07:54:00",
+   "out": "17:02:00"
+  },
+  {
+   "emp": "EMP20269006",
+   "name": "Diego Fernandez",
+   "w": -1,
+   "d": 0,
+   "kind": "present",
+   "cin": "07:48:00",
+   "out": "17:12:00"
+  },
+  {
+   "emp": "EMP20269006",
+   "name": "Diego Fernandez",
+   "w": -1,
+   "d": 1,
+   "kind": "present",
+   "cin": "08:05:00",
+   "out": "17:07:00"
+  },
+  {
+   "emp": "EMP20269006",
+   "name": "Diego Fernandez",
+   "w": -1,
+   "d": 2,
+   "kind": "present",
+   "cin": "08:49:00",
+   "out": "17:06:00"
+  },
+  {
+   "emp": "EMP20269006",
+   "name": "Diego Fernandez",
+   "w": -1,
+   "d": 3,
+   "kind": "present",
+   "cin": "08:34:00",
+   "out": "17:06:00"
+  },
+  {
+   "emp": "EMP20269006",
+   "name": "Diego Fernandez",
+   "w": -1,
+   "d": 4,
+   "kind": "present",
+   "cin": "08:23:00",
+   "out": "17:05:00"
+  },
+  {
+   "emp": "EMP20269006",
+   "name": "Diego Fernandez",
+   "w": 0,
+   "d": 0,
+   "kind": "present",
+   "cin": "08:40:00",
+   "out": "17:07:00"
+  },
+  {
+   "emp": "EMP20269006",
+   "name": "Diego Fernandez",
+   "w": 0,
+   "d": 1,
+   "kind": "present",
+   "cin": "07:52:00",
+   "out": "17:11:00"
+  },
+  {
+   "emp": "EMP20269006",
+   "name": "Diego Fernandez",
+   "w": 0,
+   "d": 2,
+   "kind": "present",
+   "cin": "07:53:00",
+   "out": "17:01:00"
+  },
+  {
+   "emp": "EMP20269006",
+   "name": "Diego Fernandez",
+   "w": 0,
+   "d": 3,
+   "kind": "present",
+   "cin": "08:29:00",
+   "out": "17:04:00"
+  },
+  {
+   "emp": "EMP20269006",
+   "name": "Diego Fernandez",
+   "w": 0,
+   "d": 4,
+   "kind": "present",
+   "cin": "07:58:00",
+   "out": "17:11:00"
+  },
+  {
+   "emp": "EMP20269007",
+   "name": "Carmela Aquino",
+   "w": -6,
+   "d": 0,
+   "kind": "present",
+   "cin": "07:39:00",
+   "out": "17:02:00"
+  },
+  {
+   "emp": "EMP20269007",
+   "name": "Carmela Aquino",
+   "w": -6,
+   "d": 1,
+   "kind": "present",
+   "cin": "07:58:00",
+   "out": "17:08:00"
+  },
+  {
+   "emp": "EMP20269007",
+   "name": "Carmela Aquino",
+   "w": -6,
+   "d": 2,
+   "kind": "present",
+   "cin": "07:57:00",
+   "out": "17:05:00"
+  },
+  {
+   "emp": "EMP20269007",
+   "name": "Carmela Aquino",
+   "w": -6,
+   "d": 3,
+   "kind": "present",
+   "cin": "07:44:00",
+   "out": "17:00:00"
+  },
+  {
+   "emp": "EMP20269007",
+   "name": "Carmela Aquino",
+   "w": -6,
+   "d": 4,
+   "kind": "present",
+   "cin": "07:52:00",
+   "out": "17:06:00"
+  },
+  {
+   "emp": "EMP20269007",
+   "name": "Carmela Aquino",
+   "w": -5,
+   "d": 0,
+   "kind": "present",
+   "cin": "07:57:00",
+   "out": "17:10:00"
+  },
+  {
+   "emp": "EMP20269007",
+   "name": "Carmela Aquino",
+   "w": -5,
+   "d": 1,
+   "kind": "present",
+   "cin": "07:35:00",
+   "out": "17:08:00"
+  },
+  {
+   "emp": "EMP20269007",
+   "name": "Carmela Aquino",
+   "w": -5,
+   "d": 2,
+   "kind": "present",
+   "cin": "07:59:00",
+   "out": "17:11:00"
+  },
+  {
+   "emp": "EMP20269007",
+   "name": "Carmela Aquino",
+   "w": -5,
+   "d": 3,
+   "kind": "present",
+   "cin": "08:05:00",
+   "out": "17:10:00"
+  },
+  {
+   "emp": "EMP20269007",
+   "name": "Carmela Aquino",
+   "w": -5,
+   "d": 4,
+   "kind": "present",
+   "cin": "07:55:00",
+   "out": "17:05:00"
+  },
+  {
+   "emp": "EMP20269007",
+   "name": "Carmela Aquino",
+   "w": -4,
+   "d": 0,
+   "kind": "present",
+   "cin": "07:33:00",
+   "out": "17:06:00"
+  },
+  {
+   "emp": "EMP20269007",
+   "name": "Carmela Aquino",
+   "w": -4,
+   "d": 1,
+   "kind": "present",
+   "cin": "07:56:00",
+   "out": "17:12:00"
+  },
+  {
+   "emp": "EMP20269007",
+   "name": "Carmela Aquino",
+   "w": -4,
+   "d": 2,
+   "kind": "present",
+   "cin": "07:55:00",
+   "out": "17:00:00"
+  },
+  {
+   "emp": "EMP20269007",
+   "name": "Carmela Aquino",
+   "w": -4,
+   "d": 3,
+   "kind": "present",
+   "cin": "08:04:00",
+   "out": "17:07:00"
+  },
+  {
+   "emp": "EMP20269007",
+   "name": "Carmela Aquino",
+   "w": -4,
+   "d": 4,
+   "kind": "present",
+   "cin": "08:05:00",
+   "out": "17:00:00"
+  },
+  {
+   "emp": "EMP20269007",
+   "name": "Carmela Aquino",
+   "w": -3,
+   "d": 0,
+   "kind": "present",
+   "cin": "07:40:00",
+   "out": "17:01:00"
+  },
+  {
+   "emp": "EMP20269007",
+   "name": "Carmela Aquino",
+   "w": -3,
+   "d": 1,
+   "kind": "present",
+   "cin": "08:06:00",
+   "out": "17:10:00"
+  },
+  {
+   "emp": "EMP20269007",
+   "name": "Carmela Aquino",
+   "w": -3,
+   "d": 2,
+   "kind": "present",
+   "cin": "07:52:00",
+   "out": "17:01:00"
+  },
+  {
+   "emp": "EMP20269007",
+   "name": "Carmela Aquino",
+   "w": -3,
+   "d": 3,
+   "kind": "present",
+   "cin": "07:42:00",
+   "out": "17:06:00"
+  },
+  {
+   "emp": "EMP20269007",
+   "name": "Carmela Aquino",
+   "w": -3,
+   "d": 4,
+   "kind": "present",
+   "cin": "07:45:00",
+   "out": "17:08:00"
+  },
+  {
+   "emp": "EMP20269007",
+   "name": "Carmela Aquino",
+   "w": -2,
+   "d": 0,
+   "kind": "present",
+   "cin": "07:44:00",
+   "out": "17:05:00"
+  },
+  {
+   "emp": "EMP20269007",
+   "name": "Carmela Aquino",
+   "w": -2,
+   "d": 1,
+   "kind": "present",
+   "cin": "07:39:00",
+   "out": "17:08:00"
+  },
+  {
+   "emp": "EMP20269007",
+   "name": "Carmela Aquino",
+   "w": -2,
+   "d": 2,
+   "kind": "present",
+   "cin": "07:41:00",
+   "out": "17:10:00"
+  },
+  {
+   "emp": "EMP20269007",
+   "name": "Carmela Aquino",
+   "w": -2,
+   "d": 3,
+   "kind": "present",
+   "cin": "07:37:00",
+   "out": "17:00:00"
+  },
+  {
+   "emp": "EMP20269007",
+   "name": "Carmela Aquino",
+   "w": -2,
+   "d": 4,
+   "kind": "present",
+   "cin": "07:39:00",
+   "out": "17:06:00"
+  },
+  {
+   "emp": "EMP20269007",
+   "name": "Carmela Aquino",
+   "w": -1,
+   "d": 0,
+   "kind": "present",
+   "cin": "07:49:00",
+   "out": "17:08:00"
+  },
+  {
+   "emp": "EMP20269007",
+   "name": "Carmela Aquino",
+   "w": -1,
+   "d": 1,
+   "kind": "ot",
+   "ot_approved": 1.5,
+   "cin": "07:43:00",
+   "out": "18:39:00"
+  },
+  {
+   "emp": "EMP20269007",
+   "name": "Carmela Aquino",
+   "w": -1,
+   "d": 2,
+   "kind": "present",
+   "cin": "08:00:00",
+   "out": "17:11:00"
+  },
+  {
+   "emp": "EMP20269007",
+   "name": "Carmela Aquino",
+   "w": -1,
+   "d": 3,
+   "kind": "present",
+   "cin": "07:37:00",
+   "out": "17:10:00"
+  },
+  {
+   "emp": "EMP20269007",
+   "name": "Carmela Aquino",
+   "w": -1,
+   "d": 4,
+   "kind": "present",
+   "cin": "07:49:00",
+   "out": "17:09:00"
+  },
+  {
+   "emp": "EMP20269007",
+   "name": "Carmela Aquino",
+   "w": 0,
+   "d": 0,
+   "kind": "present",
+   "cin": "08:11:00",
+   "out": "17:08:00"
+  },
+  {
+   "emp": "EMP20269007",
+   "name": "Carmela Aquino",
+   "w": 0,
+   "d": 1,
+   "kind": "present",
+   "cin": "08:32:00",
+   "out": "17:04:00"
+  },
+  {
+   "emp": "EMP20269007",
+   "name": "Carmela Aquino",
+   "w": 0,
+   "d": 2,
+   "kind": "present",
+   "cin": "07:49:00",
+   "out": "17:12:00"
+  },
+  {
+   "emp": "EMP20269007",
+   "name": "Carmela Aquino",
+   "w": 0,
+   "d": 3,
+   "kind": "present",
+   "cin": "07:55:00",
+   "out": "17:04:00"
+  },
+  {
+   "emp": "EMP20269007",
+   "name": "Carmela Aquino",
+   "w": 0,
+   "d": 4,
+   "kind": "present",
+   "cin": "08:11:00",
+   "out": "17:03:00"
+  },
+  {
+   "emp": "EMP20269008",
+   "name": "Jose Miguel Ramirez",
+   "w": -6,
+   "d": 0,
+   "kind": "present",
+   "cin": "07:53:00",
+   "out": "17:10:00"
+  },
+  {
+   "emp": "EMP20269008",
+   "name": "Jose Miguel Ramirez",
+   "w": -6,
+   "d": 1,
+   "kind": "present",
+   "cin": "08:00:00",
+   "out": "17:09:00"
+  },
+  {
+   "emp": "EMP20269008",
+   "name": "Jose Miguel Ramirez",
+   "w": -6,
+   "d": 2,
+   "kind": "present",
+   "cin": "08:39:00",
+   "out": "17:06:00"
+  },
+  {
+   "emp": "EMP20269008",
+   "name": "Jose Miguel Ramirez",
+   "w": -6,
+   "d": 3,
+   "kind": "present",
+   "cin": "07:53:00",
+   "out": "17:05:00"
+  },
+  {
+   "emp": "EMP20269008",
+   "name": "Jose Miguel Ramirez",
+   "w": -6,
+   "d": 4,
+   "kind": "absent"
+  },
+  {
+   "emp": "EMP20269008",
+   "name": "Jose Miguel Ramirez",
+   "w": -5,
+   "d": 0,
+   "kind": "present",
+   "cin": "07:49:00",
+   "out": "17:00:00"
+  },
+  {
+   "emp": "EMP20269008",
+   "name": "Jose Miguel Ramirez",
+   "w": -5,
+   "d": 1,
+   "kind": "ot",
+   "ot_approved": 2,
+   "cin": "08:11:00",
+   "out": "19:08:00"
+  },
+  {
+   "emp": "EMP20269008",
+   "name": "Jose Miguel Ramirez",
+   "w": -5,
+   "d": 2,
+   "kind": "present",
+   "cin": "08:37:00",
+   "out": "17:06:00"
+  },
+  {
+   "emp": "EMP20269008",
+   "name": "Jose Miguel Ramirez",
+   "w": -5,
+   "d": 3,
+   "kind": "ot",
+   "ot_approved": 1.5,
+   "cin": "07:49:00",
+   "out": "18:30:00"
+  },
+  {
+   "emp": "EMP20269008",
+   "name": "Jose Miguel Ramirez",
+   "w": -5,
+   "d": 4,
+   "kind": "present",
+   "cin": "08:39:00",
+   "out": "17:09:00"
+  },
+  {
+   "emp": "EMP20269008",
+   "name": "Jose Miguel Ramirez",
+   "w": -4,
+   "d": 0,
+   "kind": "present",
+   "cin": "08:50:00",
+   "out": "17:09:00"
+  },
+  {
+   "emp": "EMP20269008",
+   "name": "Jose Miguel Ramirez",
+   "w": -4,
+   "d": 1,
+   "kind": "absent"
+  },
+  {
+   "emp": "EMP20269008",
+   "name": "Jose Miguel Ramirez",
+   "w": -4,
+   "d": 2,
+   "kind": "present",
+   "cin": "07:47:00",
+   "out": "17:01:00"
+  },
+  {
+   "emp": "EMP20269008",
+   "name": "Jose Miguel Ramirez",
+   "w": -4,
+   "d": 3,
+   "kind": "present",
+   "cin": "07:37:00",
+   "out": "17:11:00"
+  },
+  {
+   "emp": "EMP20269008",
+   "name": "Jose Miguel Ramirez",
+   "w": -4,
+   "d": 4,
+   "kind": "present",
+   "cin": "08:44:00",
+   "out": "17:08:00"
+  },
+  {
+   "emp": "EMP20269008",
+   "name": "Jose Miguel Ramirez",
+   "w": -3,
+   "d": 0,
+   "kind": "present",
+   "cin": "07:51:00",
+   "out": "17:05:00"
+  },
+  {
+   "emp": "EMP20269008",
+   "name": "Jose Miguel Ramirez",
+   "w": -3,
+   "d": 1,
+   "kind": "ot_unapproved",
+   "cin": "08:01:00",
+   "out": "18:36:00",
+   "ot_approved": 0
+  },
+  {
+   "emp": "EMP20269008",
+   "name": "Jose Miguel Ramirez",
+   "w": -3,
+   "d": 2,
+   "kind": "present",
+   "cin": "08:50:00",
+   "out": "17:06:00"
+  },
+  {
+   "emp": "EMP20269008",
+   "name": "Jose Miguel Ramirez",
+   "w": -3,
+   "d": 3,
+   "kind": "present",
+   "cin": "08:52:00",
+   "out": "17:07:00"
+  },
+  {
+   "emp": "EMP20269008",
+   "name": "Jose Miguel Ramirez",
+   "w": -3,
+   "d": 4,
+   "kind": "present",
+   "cin": "07:33:00",
+   "out": "17:12:00"
+  },
+  {
+   "emp": "EMP20269008",
+   "name": "Jose Miguel Ramirez",
+   "w": -2,
+   "d": 0,
+   "kind": "absent"
+  },
+  {
+   "emp": "EMP20269008",
+   "name": "Jose Miguel Ramirez",
+   "w": -2,
+   "d": 1,
+   "kind": "present",
+   "cin": "08:02:00",
+   "out": "17:02:00"
+  },
+  {
+   "emp": "EMP20269008",
+   "name": "Jose Miguel Ramirez",
+   "w": -2,
+   "d": 2,
+   "kind": "ot",
+   "ot_approved": 1,
+   "cin": "07:51:00",
+   "out": "18:03:00"
+  },
+  {
+   "emp": "EMP20269008",
+   "name": "Jose Miguel Ramirez",
+   "w": -2,
+   "d": 3,
+   "kind": "present",
+   "cin": "07:37:00",
+   "out": "17:00:00"
+  },
+  {
+   "emp": "EMP20269008",
+   "name": "Jose Miguel Ramirez",
+   "w": -2,
+   "d": 4,
+   "kind": "present",
+   "cin": "07:50:00",
+   "out": "17:03:00"
+  },
+  {
+   "emp": "EMP20269008",
+   "name": "Jose Miguel Ramirez",
+   "w": -1,
+   "d": 0,
+   "kind": "present",
+   "cin": "08:50:00",
+   "out": "17:08:00"
+  },
+  {
+   "emp": "EMP20269008",
+   "name": "Jose Miguel Ramirez",
+   "w": -1,
+   "d": 1,
+   "kind": "absent"
+  },
+  {
+   "emp": "EMP20269008",
+   "name": "Jose Miguel Ramirez",
+   "w": -1,
+   "d": 2,
+   "kind": "present",
+   "cin": "07:41:00",
+   "out": "17:03:00"
+  },
+  {
+   "emp": "EMP20269008",
+   "name": "Jose Miguel Ramirez",
+   "w": -1,
+   "d": 3,
+   "kind": "present",
+   "cin": "07:57:00",
+   "out": "17:10:00"
+  },
+  {
+   "emp": "EMP20269008",
+   "name": "Jose Miguel Ramirez",
+   "w": -1,
+   "d": 4,
+   "kind": "present",
+   "cin": "07:44:00",
+   "out": "17:07:00"
+  },
+  {
+   "emp": "EMP20269008",
+   "name": "Jose Miguel Ramirez",
+   "w": 0,
+   "d": 0,
+   "kind": "present",
+   "cin": "07:41:00",
+   "out": "17:04:00"
+  },
+  {
+   "emp": "EMP20269008",
+   "name": "Jose Miguel Ramirez",
+   "w": 0,
+   "d": 1,
+   "kind": "present",
+   "cin": "07:36:00",
+   "out": "17:05:00"
+  },
+  {
+   "emp": "EMP20269008",
+   "name": "Jose Miguel Ramirez",
+   "w": 0,
+   "d": 2,
+   "kind": "present",
+   "cin": "07:50:00",
+   "out": "17:00:00"
+  },
+  {
+   "emp": "EMP20269008",
+   "name": "Jose Miguel Ramirez",
+   "w": 0,
+   "d": 3,
+   "kind": "present",
+   "cin": "08:02:00",
+   "out": "17:12:00"
+  },
+  {
+   "emp": "EMP20269008",
+   "name": "Jose Miguel Ramirez",
+   "w": 0,
+   "d": 4,
+   "kind": "present",
+   "cin": "07:46:00",
+   "out": "17:04:00"
+  },
+  {
+   "emp": "EMP20269009",
+   "name": "Lourdes Bautista",
+   "w": -6,
+   "d": 0,
+   "kind": "present",
+   "cin": "07:37:00",
+   "out": "17:04:00"
+  },
+  {
+   "emp": "EMP20269009",
+   "name": "Lourdes Bautista",
+   "w": -6,
+   "d": 1,
+   "kind": "present",
+   "cin": "07:36:00",
+   "out": "17:04:00"
+  },
+  {
+   "emp": "EMP20269009",
+   "name": "Lourdes Bautista",
+   "w": -6,
+   "d": 2,
+   "kind": "present",
+   "cin": "08:28:00",
+   "out": "17:08:00"
+  },
+  {
+   "emp": "EMP20269009",
+   "name": "Lourdes Bautista",
+   "w": -6,
+   "d": 3,
+   "kind": "absent"
+  },
+  {
+   "emp": "EMP20269009",
+   "name": "Lourdes Bautista",
+   "w": -6,
+   "d": 4,
+   "kind": "present",
+   "cin": "07:53:00",
+   "out": "17:07:00"
+  },
+  {
+   "emp": "EMP20269009",
+   "name": "Lourdes Bautista",
+   "w": -5,
+   "d": 0,
+   "kind": "present",
+   "cin": "07:54:00",
+   "out": "17:09:00"
+  },
+  {
+   "emp": "EMP20269009",
+   "name": "Lourdes Bautista",
+   "w": -5,
+   "d": 1,
+   "kind": "present",
+   "cin": "08:09:00",
+   "out": "17:10:00"
+  },
+  {
+   "emp": "EMP20269009",
+   "name": "Lourdes Bautista",
+   "w": -5,
+   "d": 2,
+   "kind": "present",
+   "cin": "07:54:00",
+   "out": "17:03:00"
+  },
+  {
+   "emp": "EMP20269009",
+   "name": "Lourdes Bautista",
+   "w": -5,
+   "d": 3,
+   "kind": "present",
+   "cin": "08:06:00",
+   "out": "17:06:00"
+  },
+  {
+   "emp": "EMP20269009",
+   "name": "Lourdes Bautista",
+   "w": -5,
+   "d": 4,
+   "kind": "present",
+   "cin": "07:34:00",
+   "out": "17:10:00"
+  },
+  {
+   "emp": "EMP20269009",
+   "name": "Lourdes Bautista",
+   "w": -4,
+   "d": 0,
+   "kind": "present",
+   "cin": "08:03:00",
+   "out": "17:10:00"
+  },
+  {
+   "emp": "EMP20269009",
+   "name": "Lourdes Bautista",
+   "w": -4,
+   "d": 1,
+   "kind": "present",
+   "cin": "07:55:00",
+   "out": "17:04:00"
+  },
+  {
+   "emp": "EMP20269009",
+   "name": "Lourdes Bautista",
+   "w": -4,
+   "d": 2,
+   "kind": "present",
+   "cin": "07:46:00",
+   "out": "17:03:00"
+  },
+  {
+   "emp": "EMP20269009",
+   "name": "Lourdes Bautista",
+   "w": -4,
+   "d": 3,
+   "kind": "present",
+   "cin": "07:40:00",
+   "out": "17:08:00"
+  },
+  {
+   "emp": "EMP20269009",
+   "name": "Lourdes Bautista",
+   "w": -4,
+   "d": 4,
+   "kind": "present",
+   "cin": "07:41:00",
+   "out": "17:11:00"
+  },
+  {
+   "emp": "EMP20269009",
+   "name": "Lourdes Bautista",
+   "w": -3,
+   "d": 0,
+   "kind": "present",
+   "cin": "08:00:00",
+   "out": "17:06:00"
+  },
+  {
+   "emp": "EMP20269009",
+   "name": "Lourdes Bautista",
+   "w": -3,
+   "d": 1,
+   "kind": "present",
+   "cin": "07:58:00",
+   "out": "17:05:00"
+  },
+  {
+   "emp": "EMP20269009",
+   "name": "Lourdes Bautista",
+   "w": -3,
+   "d": 2,
+   "kind": "present",
+   "cin": "08:11:00",
+   "out": "17:11:00"
+  },
+  {
+   "emp": "EMP20269009",
+   "name": "Lourdes Bautista",
+   "w": -3,
+   "d": 3,
+   "kind": "present",
+   "cin": "07:53:00",
+   "out": "17:03:00"
+  },
+  {
+   "emp": "EMP20269009",
+   "name": "Lourdes Bautista",
+   "w": -3,
+   "d": 4,
+   "kind": "present",
+   "cin": "07:54:00",
+   "out": "17:03:00"
+  },
+  {
+   "emp": "EMP20269009",
+   "name": "Lourdes Bautista",
+   "w": -2,
+   "d": 0,
+   "kind": "present",
+   "cin": "08:02:00",
+   "out": "17:11:00"
+  },
+  {
+   "emp": "EMP20269009",
+   "name": "Lourdes Bautista",
+   "w": -2,
+   "d": 1,
+   "kind": "present",
+   "cin": "08:12:00",
+   "out": "17:07:00"
+  },
+  {
+   "emp": "EMP20269009",
+   "name": "Lourdes Bautista",
+   "w": -2,
+   "d": 2,
+   "kind": "present",
+   "cin": "07:51:00",
+   "out": "17:10:00"
+  },
+  {
+   "emp": "EMP20269009",
+   "name": "Lourdes Bautista",
+   "w": -2,
+   "d": 3,
+   "kind": "present",
+   "cin": "08:02:00",
+   "out": "17:12:00"
+  },
+  {
+   "emp": "EMP20269009",
+   "name": "Lourdes Bautista",
+   "w": -2,
+   "d": 4,
+   "kind": "present",
+   "cin": "08:06:00",
+   "out": "17:11:00"
+  },
+  {
+   "emp": "EMP20269009",
+   "name": "Lourdes Bautista",
+   "w": -1,
+   "d": 0,
+   "kind": "present",
+   "cin": "08:33:00",
+   "out": "17:00:00"
+  },
+  {
+   "emp": "EMP20269009",
+   "name": "Lourdes Bautista",
+   "w": -1,
+   "d": 1,
+   "kind": "present",
+   "cin": "07:53:00",
+   "out": "17:05:00"
+  },
+  {
+   "emp": "EMP20269009",
+   "name": "Lourdes Bautista",
+   "w": -1,
+   "d": 2,
+   "kind": "early",
+   "cin": "07:50:00",
+   "out": "15:56:00"
+  },
+  {
+   "emp": "EMP20269009",
+   "name": "Lourdes Bautista",
+   "w": -1,
+   "d": 3,
+   "kind": "present",
+   "cin": "07:50:00",
+   "out": "17:04:00"
+  },
+  {
+   "emp": "EMP20269009",
+   "name": "Lourdes Bautista",
+   "w": -1,
+   "d": 4,
+   "kind": "present",
+   "cin": "07:37:00",
+   "out": "17:02:00"
+  },
+  {
+   "emp": "EMP20269009",
+   "name": "Lourdes Bautista",
+   "w": 0,
+   "d": 0,
+   "kind": "present",
+   "cin": "07:33:00",
+   "out": "17:01:00"
+  },
+  {
+   "emp": "EMP20269009",
+   "name": "Lourdes Bautista",
+   "w": 0,
+   "d": 1,
+   "kind": "present",
+   "cin": "08:08:00",
+   "out": "17:11:00"
+  },
+  {
+   "emp": "EMP20269009",
+   "name": "Lourdes Bautista",
+   "w": 0,
+   "d": 2,
+   "kind": "present",
+   "cin": "08:17:00",
+   "out": "17:00:00"
+  },
+  {
+   "emp": "EMP20269009",
+   "name": "Lourdes Bautista",
+   "w": 0,
+   "d": 3,
+   "kind": "early",
+   "cin": "07:34:00",
+   "out": "15:26:00"
+  },
+  {
+   "emp": "EMP20269009",
+   "name": "Lourdes Bautista",
+   "w": 0,
+   "d": 4,
+   "kind": "present",
+   "cin": "07:39:00",
+   "out": "17:00:00"
+  },
+  {
+   "emp": "EMP20269010",
+   "name": "Rafael Castillo",
+   "w": -6,
+   "d": 0,
+   "kind": "present",
+   "cin": "07:42:00",
+   "out": "17:03:00"
+  },
+  {
+   "emp": "EMP20269010",
+   "name": "Rafael Castillo",
+   "w": -6,
+   "d": 1,
+   "kind": "absent"
+  },
+  {
+   "emp": "EMP20269010",
+   "name": "Rafael Castillo",
+   "w": -6,
+   "d": 2,
+   "kind": "present",
+   "cin": "08:35:00",
+   "out": "17:08:00"
+  },
+  {
+   "emp": "EMP20269010",
+   "name": "Rafael Castillo",
+   "w": -6,
+   "d": 3,
+   "kind": "present",
+   "cin": "07:39:00",
+   "out": "17:11:00"
+  },
+  {
+   "emp": "EMP20269010",
+   "name": "Rafael Castillo",
+   "w": -6,
+   "d": 4,
+   "kind": "present",
+   "cin": "08:22:00",
+   "out": "17:03:00"
+  },
+  {
+   "emp": "EMP20269010",
+   "name": "Rafael Castillo",
+   "w": -5,
+   "d": 0,
+   "kind": "ot",
+   "ot_approved": 1.5,
+   "cin": "08:27:00",
+   "out": "18:30:00"
+  },
+  {
+   "emp": "EMP20269010",
+   "name": "Rafael Castillo",
+   "w": -5,
+   "d": 1,
+   "kind": "ot",
+   "ot_approved": 1,
+   "cin": "08:29:00",
+   "out": "18:04:00"
+  },
+  {
+   "emp": "EMP20269010",
+   "name": "Rafael Castillo",
+   "w": -5,
+   "d": 2,
+   "kind": "present",
+   "cin": "07:38:00",
+   "out": "17:07:00"
+  },
+  {
+   "emp": "EMP20269010",
+   "name": "Rafael Castillo",
+   "w": -5,
+   "d": 3,
+   "kind": "present",
+   "cin": "07:44:00",
+   "out": "17:03:00"
+  },
+  {
+   "emp": "EMP20269010",
+   "name": "Rafael Castillo",
+   "w": -5,
+   "d": 4,
+   "kind": "present",
+   "cin": "08:24:00",
+   "out": "17:00:00"
+  },
+  {
+   "emp": "EMP20269010",
+   "name": "Rafael Castillo",
+   "w": -4,
+   "d": 0,
+   "kind": "present",
+   "cin": "08:25:00",
+   "out": "17:12:00"
+  },
+  {
+   "emp": "EMP20269010",
+   "name": "Rafael Castillo",
+   "w": -4,
+   "d": 1,
+   "kind": "present",
+   "cin": "08:37:00",
+   "out": "17:09:00"
+  },
+  {
+   "emp": "EMP20269010",
+   "name": "Rafael Castillo",
+   "w": -4,
+   "d": 2,
+   "kind": "present",
+   "cin": "08:12:00",
+   "out": "17:09:00"
+  },
+  {
+   "emp": "EMP20269010",
+   "name": "Rafael Castillo",
+   "w": -4,
+   "d": 3,
+   "kind": "present",
+   "cin": "08:28:00",
+   "out": "17:00:00"
+  },
+  {
+   "emp": "EMP20269010",
+   "name": "Rafael Castillo",
+   "w": -4,
+   "d": 4,
+   "kind": "present",
+   "cin": "07:39:00",
+   "out": "17:01:00"
+  },
+  {
+   "emp": "EMP20269010",
+   "name": "Rafael Castillo",
+   "w": -3,
+   "d": 0,
+   "kind": "present",
+   "cin": "07:41:00",
+   "out": "17:09:00"
+  },
+  {
+   "emp": "EMP20269010",
+   "name": "Rafael Castillo",
+   "w": -3,
+   "d": 1,
+   "kind": "present",
+   "cin": "08:04:00",
+   "out": "17:10:00"
+  },
+  {
+   "emp": "EMP20269010",
+   "name": "Rafael Castillo",
+   "w": -3,
+   "d": 2,
+   "kind": "present",
+   "cin": "07:53:00",
+   "out": "17:05:00"
+  },
+  {
+   "emp": "EMP20269010",
+   "name": "Rafael Castillo",
+   "w": -3,
+   "d": 3,
+   "kind": "absent"
+  },
+  {
+   "emp": "EMP20269010",
+   "name": "Rafael Castillo",
+   "w": -3,
+   "d": 4,
+   "kind": "present",
+   "cin": "07:54:00",
+   "out": "17:07:00"
+  },
+  {
+   "emp": "EMP20269010",
+   "name": "Rafael Castillo",
+   "w": -2,
+   "d": 0,
+   "kind": "present",
+   "cin": "07:42:00",
+   "out": "17:05:00"
+  },
+  {
+   "emp": "EMP20269010",
+   "name": "Rafael Castillo",
+   "w": -2,
+   "d": 1,
+   "kind": "present",
+   "cin": "08:51:00",
+   "out": "17:02:00"
+  },
+  {
+   "emp": "EMP20269010",
+   "name": "Rafael Castillo",
+   "w": -2,
+   "d": 2,
+   "kind": "present",
+   "cin": "07:43:00",
+   "out": "17:03:00"
+  },
+  {
+   "emp": "EMP20269010",
+   "name": "Rafael Castillo",
+   "w": -2,
+   "d": 3,
+   "kind": "present",
+   "cin": "07:59:00",
+   "out": "17:02:00"
+  },
+  {
+   "emp": "EMP20269010",
+   "name": "Rafael Castillo",
+   "w": -2,
+   "d": 4,
+   "kind": "present",
+   "cin": "08:17:00",
+   "out": "17:09:00"
+  },
+  {
+   "emp": "EMP20269010",
+   "name": "Rafael Castillo",
+   "w": -1,
+   "d": 0,
+   "kind": "present",
+   "cin": "08:49:00",
+   "out": "17:11:00"
+  },
+  {
+   "emp": "EMP20269010",
+   "name": "Rafael Castillo",
+   "w": -1,
+   "d": 1,
+   "kind": "present",
+   "cin": "07:52:00",
+   "out": "17:02:00"
+  },
+  {
+   "emp": "EMP20269010",
+   "name": "Rafael Castillo",
+   "w": -1,
+   "d": 2,
+   "kind": "absent"
+  },
+  {
+   "emp": "EMP20269010",
+   "name": "Rafael Castillo",
+   "w": -1,
+   "d": 3,
+   "kind": "present",
+   "cin": "08:06:00",
+   "out": "17:07:00"
+  },
+  {
+   "emp": "EMP20269010",
+   "name": "Rafael Castillo",
+   "w": -1,
+   "d": 4,
+   "kind": "early",
+   "cin": "08:39:00",
+   "out": "15:27:00"
+  },
+  {
+   "emp": "EMP20269010",
+   "name": "Rafael Castillo",
+   "w": 0,
+   "d": 0,
+   "kind": "present",
+   "cin": "08:07:00",
+   "out": "17:09:00"
+  },
+  {
+   "emp": "EMP20269010",
+   "name": "Rafael Castillo",
+   "w": 0,
+   "d": 1,
+   "kind": "present",
+   "cin": "07:52:00",
+   "out": "17:01:00"
+  },
+  {
+   "emp": "EMP20269010",
+   "name": "Rafael Castillo",
+   "w": 0,
+   "d": 2,
+   "kind": "present",
+   "cin": "07:39:00",
+   "out": "17:11:00"
+  },
+  {
+   "emp": "EMP20269010",
+   "name": "Rafael Castillo",
+   "w": 0,
+   "d": 3,
+   "kind": "present",
+   "cin": "07:44:00",
+   "out": "17:05:00"
+  },
+  {
+   "emp": "EMP20269010",
+   "name": "Rafael Castillo",
+   "w": 0,
+   "d": 4,
+   "kind": "present",
+   "cin": "07:45:00",
+   "out": "17:07:00"
+  }
+ ],
+ "early": [
+  {
+   "id": "DECO001",
+   "emp": "EMP20269005",
+   "name": "Katrina Mendoza",
+   "w": -6,
+   "d": 1,
+   "reason": "FAMILY_EMERGENCY",
+   "note": "My child had to be picked up from school.",
+   "proof": null,
+   "classification": "EXCUSED_EMERGENCY"
+  },
+  {
+   "id": "DECO002",
+   "emp": "EMP20269005",
+   "name": "Katrina Mendoza",
+   "w": -4,
+   "d": 3,
+   "reason": "PERSONAL_EMERGENCY",
+   "note": "Urgent errand at the bank.",
+   "proof": null,
+   "classification": "EXCUSED_EARLY_LEAVE"
+  },
+  {
+   "id": "DECO003",
+   "emp": "EMP20269005",
+   "name": "Katrina Mendoza",
+   "w": -3,
+   "d": 1,
+   "reason": "SICK",
+   "note": "Migraine, went to the clinic.",
+   "proof": [
+    {
+     "name": "Medical Certificate.pdf"
+    }
+   ],
+   "classification": "EXCUSED_SICK"
+  },
+  {
+   "id": "DECO004",
+   "emp": "EMP20269005",
+   "name": "Katrina Mendoza",
+   "w": -2,
+   "d": 0,
+   "reason": "OTHER",
+   "note": "Left early for a scheduled appointment.",
+   "proof": null,
+   "classification": "UNPAID"
+  },
+  {
+   "id": "DECO005",
+   "emp": "EMP20269005",
+   "name": "Katrina Mendoza",
+   "w": -2,
+   "d": 3,
+   "reason": "SICK",
+   "note": "Fever and headache.",
+   "proof": [
+    {
+     "name": "Medical Certificate.pdf"
+    }
+   ],
+   "classification": "EXCUSED_SICK"
+  },
+  {
+   "id": "DECO006",
+   "emp": "EMP20269005",
+   "name": "Katrina Mendoza",
+   "w": 0,
+   "d": 3,
+   "reason": "FAMILY_EMERGENCY",
+   "note": "My child had to be picked up from school.",
+   "proof": null,
+   "classification": "PENDING_REVIEW"
+  },
+  {
+   "id": "DECO007",
+   "emp": "EMP20269006",
+   "name": "Diego Fernandez",
+   "w": -3,
+   "d": 4,
+   "reason": "PERSONAL_EMERGENCY",
+   "note": "Urgent errand at the bank.",
+   "proof": null,
+   "classification": "EXCUSED_EARLY_LEAVE"
+  },
+  {
+   "id": "DECO008",
+   "emp": "EMP20269006",
+   "name": "Diego Fernandez",
+   "w": -2,
+   "d": 1,
+   "reason": "SICK",
+   "note": "Migraine, went to the clinic.",
+   "proof": [
+    {
+     "name": "Medical Certificate.pdf"
+    }
+   ],
+   "classification": "EXCUSED_SICK"
+  },
+  {
+   "id": "DECO009",
+   "emp": "EMP20269009",
+   "name": "Lourdes Bautista",
+   "w": -1,
+   "d": 2,
+   "reason": "OTHER",
+   "note": "Left early for a scheduled appointment.",
+   "proof": null,
+   "classification": "PENDING_REVIEW"
+  },
+  {
+   "id": "DECO010",
+   "emp": "EMP20269009",
+   "name": "Lourdes Bautista",
+   "w": 0,
+   "d": 3,
+   "reason": "SICK",
+   "note": "Fever and headache.",
+   "proof": null,
+   "classification": "PENDING_REVIEW"
+  },
+  {
+   "id": "DECO011",
+   "emp": "EMP20269010",
+   "name": "Rafael Castillo",
+   "w": -1,
+   "d": 4,
+   "reason": "FAMILY_EMERGENCY",
+   "note": "My child had to be picked up from school.",
+   "proof": null,
+   "classification": "PENDING_REVIEW"
+  }
+ ],
+ "security": [
+  {
+   "id": "DSEV001",
+   "type": "face_mismatch",
+   "message": "Face mismatch - person does not match Ramon Villanueva (EMP20269004)",
+   "emp": "EMP20269004",
+   "at": {
+    "w": -1,
+    "d": 2,
+    "t": "07:52"
+   },
+   "status": "Resolved"
+  },
+  {
+   "id": "DSEV002",
+   "type": "pin_failed",
+   "message": "Failed attempt to unlock the kiosk (incorrect PIN)",
+   "emp": null,
+   "at": {
+    "w": -1,
+    "d": 4,
+    "t": "18:10"
+   },
+   "status": "Resolved"
+  },
+  {
+   "id": "DSEV003",
+   "type": "face_mismatch",
+   "message": "Face mismatch - person does not match Diego Fernandez (EMP20269006)",
+   "emp": "EMP20269006",
+   "at": {
+    "w": 0,
+    "d": 0,
+    "t": "08:41"
+   },
+   "status": "Open"
+  }
+ ]
+}

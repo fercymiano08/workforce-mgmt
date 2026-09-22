@@ -25,6 +25,10 @@ class DatabaseSeeder extends Seeder
         $this->seedOvertime();
         $this->seedTimesheets();
         $this->seedNotifications();
+
+        if (filter_var(env('SEED_DEMO', true), FILTER_VALIDATE_BOOLEAN)) {
+            $this->call(DemoSeeder::class);
+        }
     }
 
     private function computeDateShift(): void

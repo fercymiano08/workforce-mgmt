@@ -4,7 +4,7 @@ import {
   Brain, AlertTriangle, AlertCircle, Info, CheckCircle2, XCircle,
   CalendarCheck, Clock, Timer, Palmtree, CalendarDays, Users,
   Sparkles, RefreshCw, Inbox, ShieldAlert, Lock, WifiOff,
-  Zap,
+  Zap, LayoutDashboard, ListFilter,
 } from 'lucide-react';
 import Card from '../../components/ui/Card';
 import Button from '../../components/ui/Button';
@@ -74,6 +74,9 @@ export default function AIDecisionSupport() {
   const isOnline = useNetworkStatus();
   const insightsCtx = useInsights();
   const [filter, setFilter] = useState('all');
+  const [catFilter, setCatFilter] = useState('all');
+  const [tab, setTab] = useState('overview');
+  const [queueFilter, setQueueFilter] = useState('all');
   const [pending, setPending] = useState(null);
   const [running, setRunning] = useState(false);
   const [showHandled, setShowHandled] = useState(false);
@@ -91,7 +94,31 @@ export default function AIDecisionSupport() {
   insights.forEach((i) => { if (!i.resolved) counts[i.severity] = (counts[i.severity] ?? 0) + 1; });
   const handledCount = insights.filter((i) => i.resolved).length;
   const shown = filter === 'all' ? insights : insights.filter((i) => i.severity === filter);
-  const visible = shown.filter((i) => !i.resolved || showHandled);
+  const catShown = catFilter === 'all' ? shown : shown.filter((i) => i.category === catFilter);
+  const visible = catShown.filter((i) => !i.resolved || showHandled);
+
+  const categoryCounts = {};
+  insights.forEach((i) => { if (!i.resolved) categoryCounts[i.category] = (categoryCounts[i.category] ?? 0) + 1; });
+
+  const queueGroups = {
+    security: securityItems,
+    leave: leaveItems,
+    overtime: overtimeItems,
+  };
+  const queueVisible = queueFilter === 'all' ? queueGroups : { [queueFilter]: queueGroups[queueFilter] };
+
+  const tabs = [
+    { key: 'overview', label: 'Overview', icon: LayoutDashboard },
+    { key: 'queue', label: 'Decision Queue', icon: Inbox, count: totalPending },
+    { key: 'insights', label: 'AI Insights', icon: Sparkles, count: insights.filter((i) => !i.resolved).length },
+  ];
+  const queueFilters = [
+    { key: 'all', label: 'All', count: totalPending },
+    { key: 'security', label: 'Security', count: securityItems.length },
+    { key: 'leave', label: 'Leave', count: leaveItems.length },
+    { key: 'overtime', label: 'Overtime', count: overtimeItems.length },
+  ];
+  const categoryFilters = ['all', ...Object.keys(categoryIcons)];
 
   // "Do this first": the few things that matter most right now, most urgent first
   const severityRank = { critical: 0, warning: 1, info: 2 };
@@ -292,7 +319,7 @@ export default function AIDecisionSupport() {
 
     if (action === 'scroll_to_queue') {
       setApplyPending(null);
-      document.getElementById('decision-queue')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      setTab('queue');
       return;
     }
 
@@ -523,253 +550,430 @@ export default function AIDecisionSupport() {
         </Card>
       ) : (
         <>
-          <Card className="p-6">
-            <div className="flex flex-col md:flex-row md:items-center gap-6">
-              <div className="relative shrink-0 mx-auto md:mx-0">
-                <svg width="140" height="140" viewBox="0 0 140 140" className="-rotate-90">
-                  <circle cx="70" cy="70" r={RADIUS} fill="none" stroke="#E2E8F0" strokeWidth="12" />
-                  <circle
-                    cx="70" cy="70" r={RADIUS} fill="none" stroke={meta.color} strokeWidth="12"
-                    strokeLinecap="round" strokeDasharray={CIRCUMFERENCE} strokeDashoffset={ringOffset}
-                    className="transition-all duration-700"
-                  />
-                </svg>
-                <div className="absolute inset-0 flex flex-col items-center justify-center">
-                  <span className="text-3xl font-bold text-gray-900">{score}</span>
-                  <span className="text-[11px] font-medium text-gray-400 uppercase tracking-wide">/ 100</span>
-                </div>
-              </div>
-              <div className="flex-1 text-center md:text-left">
-                <div className="flex items-center justify-center md:justify-start gap-2">
-                  <span className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[12px] font-semibold ${meta.bg} ${meta.text}`}>
-                    <Brain className="w-3.5 h-3.5" />
-                    Workforce Health Score
-                  </span>
-                  <span className={`text-[12px] font-semibold ${meta.text}`}>{meta.label}</span>
-                </div>
-                <p className="text-[14px] text-gray-600 mt-3 leading-relaxed max-w-xl">
-                  {data?.summary}
-                </p>
-                <div className="flex flex-wrap items-center justify-center md:justify-start gap-3 mt-3">
-                  {data?.source === 'ai' ? (
-                    <span className="inline-flex items-center gap-1.5 text-[12px] font-semibold px-2.5 py-1 rounded-full bg-purple-50 text-purple-700">
-                      <Sparkles className="w-3.5 h-3.5" />
-                      Powered by Gemini AI
-                    </span>
-                  ) : !isOnline ? (
-                    <span className="inline-flex items-center gap-1.5 text-[12px] font-semibold px-2.5 py-1 rounded-full bg-red-50 text-red-700">
-                      <WifiOff className="w-3.5 h-3.5" />
-                      Offline — Rule-based insights only
-                    </span>
-                  ) : (
-                    <span className="inline-flex items-center gap-1.5 text-[12px] font-semibold px-2.5 py-1 rounded-full bg-amber-50 text-amber-700">
-                      <AlertTriangle className="w-3.5 h-3.5" />
-                      Rule-based insights (Gemini unavailable)
-                    </span>
-                  )}
-                  {totalPending > 0 ? (
-                    <span className="inline-flex items-center gap-1.5 text-[12px] font-semibold px-2.5 py-1 rounded-full bg-amber-50 text-amber-700">
-                      <Inbox className="w-3.5 h-3.5" />
-                      {totalPending} item{totalPending === 1 ? '' : 's'} awaiting decision
-                    </span>
-                  ) : (
-                    <span className="inline-flex items-center gap-1.5 text-[12px] font-semibold px-2.5 py-1 rounded-full bg-emerald-50 text-emerald-700">
-                      <CheckCircle2 className="w-3.5 h-3.5" />
-                      Decision queue is clear
-                    </span>
-                  )}
-                </div>
-                <p className="text-[12px] text-gray-400 mt-3">
-                  Generated {data?.generatedAt ? new Date(data.generatedAt).toLocaleString() : 'just now'}
-                  {' · '}{insights.length} insight{insights.length === 1 ? '' : 's'}
-                </p>
-              </div>
-            </div>
-          </Card>
-
-          {(doFirst.length > 0 || totalPending > 0) && (
-            <Card className="border-l-4 border-l-blue-500">
-              <div className="flex items-center gap-2 mb-3">
-                <Zap className="w-4.5 h-4.5 text-blue-500" />
-                <h2 className="text-[15px] font-semibold text-gray-900">Do this first</h2>
-                <span className="text-[12px] text-gray-400">The most important things right now</span>
-              </div>
-              <ol className="space-y-2.5">
-                {totalPending > 0 && (
-                  <li className="flex items-start gap-3 text-[13px]">
-                    <span className="mt-0.5 w-5 h-5 shrink-0 rounded-full bg-amber-100 text-amber-700 text-[11px] font-bold flex items-center justify-center">1</span>
-                    <span className="text-gray-700">
-                      <strong>Decide the {totalPending} waiting request{totalPending === 1 ? '' : 's'}</strong>
-                      {' '}({[securityItems.length && `${securityItems.length} security`, leaveItems.length && `${leaveItems.length} leave`, overtimeItems.length && `${overtimeItems.length} overtime`].filter(Boolean).join(', ')}).{' '}
-                      <a href="#decision-queue" className="text-blue-600 font-medium hover:underline">Go to the queue</a>
-                    </span>
-                  </li>
-                )}
-                {doFirst.map((i, idx) => {
-                  const step = idx + (totalPending > 0 ? 2 : 1);
-                  return (
-                    <li key={i.id} className="flex items-start gap-3 text-[13px]">
-                      <span className={`mt-0.5 w-5 h-5 shrink-0 rounded-full text-[11px] font-bold flex items-center justify-center ${i.severity === 'critical' ? 'bg-red-100 text-red-700' : 'bg-gray-100 text-gray-600'}`}>{step}</span>
-                      <span className="text-gray-700"><strong>{i.title}.</strong> {i.recommendation || i.message}</span>
-                    </li>
-                  );
-                })}
-              </ol>
-            </Card>
-          )}
-
-          <div id="decision-queue" className="flex flex-wrap items-center justify-between gap-2">
-            <div className="flex items-center gap-2">
-              <Inbox className="w-4.5 h-4.5 text-gray-400" />
-              <h2 className="text-[15px] font-semibold text-gray-900">Decision Queue</h2>
-              {totalPending > 0 ? (
-                <span className="text-[11px] font-semibold text-amber-700 bg-amber-50 rounded-full px-2 py-0.5">
-                  {totalPending} pending
-                </span>
-              ) : null}
-            </div>
-            <span className="text-[12px] text-gray-400">
-              {totalPending > 0 ? 'Problems waiting for your decision' : 'All caught up'}
-            </span>
-          </div>
-
-          {totalPending === 0 ? (
-            <Card className="flex items-center justify-between px-5 py-4">
-              <div className="flex items-center gap-3">
-                <CheckCircle2 className="w-5 h-5 text-emerald-500 shrink-0" />
-                <div>
-                  <p className="text-[14px] font-semibold text-gray-900">All caught up</p>
-                  <p className="text-[12px] text-gray-500">No leave, overtime, or security events require your decision.</p>
-                </div>
-              </div>
-            </Card>
-          ) : (
-            <div className="space-y-5">
-              {renderQueueGroup('Security events', securityItems, 'security')}
-              {renderQueueGroup('Leave requests', leaveItems, 'leave')}
-              {renderQueueGroup('Overtime requests', overtimeItems, 'overtime')}
-            </div>
-          )}
-
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-2">
-              <Sparkles className="w-4.5 h-4.5 text-purple-500" />
-              <h2 className="text-[15px] font-semibold text-gray-900">AI Insights & Recommendations</h2>
-            </div>
-            <div className="flex items-center gap-3">
-              {handledCount > 0 ? (
-                <button
-                  type="button"
-                  onClick={() => setShowHandled((s) => !s)}
-                  className="text-[12px] font-semibold text-gray-500 hover:text-gray-900 transition-colors"
-                >
-                  {showHandled ? 'Hide handled' : `Show handled (${handledCount})`}
-                </button>
-              ) : null}
-              <span className="text-[12px] text-gray-400 hidden sm:block">
-                Analysis of the last 30 days of workforce data
-              </span>
-            </div>
-          </div>
-
-          <div className="flex flex-wrap items-center gap-2">
-            {filters.map((f) => (
-              <button
-                key={f.key}
-                type="button"
-                onClick={() => setFilter(f.key)}
-                className={`px-3 py-1.5 pointer-coarse:py-2.5 rounded-full text-[12px] font-semibold border transition-colors ${
-                  filter === f.key
-                    ? 'bg-gray-900 text-white border-gray-900'
-                    : 'bg-white text-gray-600 border-gray-200 hover:border-gray-300'
-                }`}
-              >
-                {f.label}
-                {counts[f.key] ? <span className="ml-1 opacity-70">{counts[f.key]}</span> : null}
-              </button>
-            ))}
-          </div>
-
-          {visible.length === 0 ? (
-            <Card className="flex flex-col items-center justify-center text-center py-16">
-              <CheckCircle2 className="w-10 h-10 text-emerald-500 mb-3" />
-              <h3 className="text-[15px] font-semibold text-gray-900">Nothing here</h3>
-              <p className="text-[13px] text-gray-400 mt-1">No insights match this filter.</p>
-            </Card>
-          ) : (
-            <div className="grid gap-4">
-              {visible.map((insight, idx) => {
-                const sev = severityStyles[insight.severity] ?? severityStyles.info;
-                const Icon = sev.icon;
-                const CategoryIcon = categoryIcons[insight.category] ?? Users;
+          <div className="sticky -top-4 -mx-4 sm:-mx-6 lg:-mx-8 px-4 sm:px-6 lg:px-8 pt-4 pb-0 z-20 bg-[#F8FAFC]">
+            <div className="flex items-center gap-1 overflow-x-auto pb-3 -mb-1 border-b border-gray-200">
+              {tabs.map((tb) => {
+                const Icon = tb.icon;
+                const active = tab === tb.key;
                 return (
-                  <div
-                    key={insight.id}
-                    className={`bg-white rounded-2xl border border-gray-100 border-l-4 ${sev.border} p-5 shadow-sm animate-fadeIn ${insight.resolved ? 'opacity-70' : ''}`}
-                    style={{ animationDelay: `${Math.min(idx * 40, 400)}ms` }}
+                  <button
+                    key={tb.key}
+                    type="button"
+                    onClick={() => setTab(tb.key)}
+                    className={`flex items-center gap-2 px-3.5 py-2 rounded-xl text-[13px] font-semibold whitespace-nowrap transition-colors ${
+                      active ? 'bg-gray-900 text-white' : 'text-gray-600 hover:bg-gray-100'
+                    }`}
                   >
-                    <div className="flex items-start gap-4">
-                      <div className={`w-10 h-10 rounded-xl ${sev.chip} flex items-center justify-center shrink-0`}>
-                        <CategoryIcon className="w-5 h-5" />
-                      </div>
-                      <div className="flex-1 min-w-0">
-                        <div className="flex flex-wrap items-center gap-2">
-                          <span className={`inline-flex items-center gap-1 text-[11px] font-semibold px-2 py-0.5 rounded-full ${sev.badge}`}>
-                            <Icon className="w-3 h-3" />
-                            {sev.label}
-                          </span>
-                          {insight.resolved ? (
-                            <span className="inline-flex items-center gap-1 text-[11px] font-semibold px-2 py-0.5 rounded-full bg-emerald-50 text-emerald-700">
-                              <CheckCircle2 className="w-3 h-3" />
-                              Handled
-                            </span>
-                          ) : null}
-                          <span className="text-[11px] font-semibold text-gray-400">{insight.category}</span>
-                          {insight.metric ? (
-                            <span className="text-[11px] font-medium text-gray-500 bg-gray-50 border border-gray-100 rounded-full px-2 py-0.5">
-                              {insight.metric}
-                            </span>
-                          ) : null}
-                        </div>
-                        <h3 className="text-[15px] font-semibold text-gray-900 mt-2">{insight.title}</h3>
-                        <p className="text-[13px] text-gray-500 mt-1 leading-relaxed">{insight.message}</p>
-                        <div className="mt-3 flex items-start gap-2 rounded-xl bg-blue-50/70 px-3 py-2.5 border border-blue-100">
-                          <Sparkles className="w-4 h-4 text-blue-500 mt-0.5 shrink-0" />
-                          <div>
-                            <p className="text-[11px] font-semibold text-blue-700 uppercase tracking-wide">Recommended action</p>
-                            <p className="text-[13px] text-blue-800 mt-0.5">{insight.recommendation}</p>
-                          </div>
-                        </div>
-                        <div className="mt-2 flex items-center justify-end gap-2">
-                          {insight.applyAction && !insight.resolved ? (
-                            <Button
-                              variant="primary"
-                              size="xs"
-                              icon={Zap}
-                              onClick={() => {
-                                const decision = applyDecision(insight);
-                                if (decision) setApplyPending(decision);
-                              }}
-                              disabled={running}
-                            >
-                              {insight.applyLabel || 'Apply'}
-                            </Button>
-                          ) : null}
-                          <Button
-                            variant={insight.resolved ? 'outline' : 'ghost'}
-                            size="xs"
-                            icon={insight.resolved ? RefreshCw : CheckCircle2}
-                            onClick={() => setPending(insightDecision(insight, !insight.resolved))}
-                            disabled={running}
-                          >
-                            {insight.resolved ? 'Restore' : 'Mark as handled'}
-                          </Button>
-                        </div>
-                      </div>
-                    </div>
-                  </div>
+                    <Icon className="w-4 h-4" />
+                    {tb.label}
+                    {tb.count > 0 ? (
+                      <span className={`rounded-full px-1.5 text-[11px] font-bold ${active ? 'bg-white/20 text-white' : 'bg-amber-100 text-amber-700'}`}>
+                        {tb.count}
+                      </span>
+                    ) : null}
+                  </button>
                 );
               })}
+            </div>
+          </div>
+
+          {tab === 'overview' && (
+            <>
+              <div className="grid lg:grid-cols-3 gap-4 items-stretch">
+                <Card className="p-6 flex flex-col items-center justify-center text-center">
+                  <div className="relative shrink-0">
+                    <svg width="150" height="150" viewBox="0 0 140 140" className="-rotate-90">
+                      <circle cx="70" cy="70" r={RADIUS} fill="none" stroke="#E2E8F0" strokeWidth="12" />
+                      <circle
+                        cx="70" cy="70" r={RADIUS} fill="none" stroke={meta.color} strokeWidth="12"
+                        strokeLinecap="round" strokeDasharray={CIRCUMFERENCE} strokeDashoffset={ringOffset}
+                        className="transition-all duration-700"
+                      />
+                    </svg>
+                    <div className="absolute inset-0 flex flex-col items-center justify-center">
+                      <span className="text-3xl font-bold text-gray-900">{score}</span>
+                      <span className="text-[11px] font-medium text-gray-400 uppercase tracking-wide">/ 100</span>
+                    </div>
+                  </div>
+                  <h2 className="text-[14px] font-semibold text-gray-900 mt-4">Workforce Health Score</h2>
+                  <span className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[12px] font-semibold mt-1.5 ${meta.bg} ${meta.text}`}>
+                    <Brain className="w-3.5 h-3.5" />
+                    {meta.label}
+                  </span>
+                  <div className="flex items-center gap-2 mt-4">
+                    {data?.source === 'ai' ? (
+                      <span className="inline-flex items-center gap-1.5 text-[11px] font-semibold px-2.5 py-1 rounded-full bg-purple-50 text-purple-700">
+                        <Sparkles className="w-3.5 h-3.5" />
+                        Powered by Gemini AI
+                      </span>
+                    ) : !isOnline ? (
+                      <span className="inline-flex items-center gap-1.5 text-[11px] font-semibold px-2.5 py-1 rounded-full bg-red-50 text-red-700">
+                        <WifiOff className="w-3.5 h-3.5" />
+                        Offline
+                      </span>
+                    ) : (
+                      <span className="inline-flex items-center gap-1.5 text-[11px] font-semibold px-2.5 py-1 rounded-full bg-amber-50 text-amber-700">
+                        <AlertTriangle className="w-3.5 h-3.5" />
+                        Rule-based
+                      </span>
+                    )}
+                    <span className="text-[11px] text-gray-400">
+                      Generated{' '}
+                      {data?.generatedAt ? new Date(data.generatedAt).toLocaleString() : 'just now'}
+                    </span>
+                  </div>
+                </Card>
+
+                <Card className="p-6 lg:col-span-2 flex flex-col justify-center">
+                  <div className="flex items-center gap-2 mb-3">
+                    <LayoutDashboard className="w-4.5 h-4.5 text-blue-500" />
+                    <h2 className="text-[15px] font-semibold text-gray-900">At a glance</h2>
+                  </div>
+                  <p className="text-[14px] text-gray-600 leading-relaxed max-w-2xl">{data?.summary}</p>
+
+                  <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mt-5">
+                    <div className="rounded-xl bg-gray-50 border border-gray-100 px-4 py-3">
+                      <p className="text-[11px] font-semibold text-gray-400 uppercase tracking-wide">Insights</p>
+                      <p className="text-2xl font-bold text-gray-900 mt-1">{insights.length}</p>
+                    </div>
+                    <div className="rounded-xl bg-amber-50 border border-amber-100 px-4 py-3">
+                      <p className="text-[11px] font-semibold text-amber-600 uppercase tracking-wide">Need attention</p>
+                      <p className="text-2xl font-bold text-amber-700 mt-1">{insights.length - handledCount}</p>
+                    </div>
+                    <div className="rounded-xl bg-blue-50 border border-blue-100 px-4 py-3">
+                      <p className="text-[11px] font-semibold text-blue-600 uppercase tracking-wide">Awaiting decision</p>
+                      <p className="text-2xl font-bold text-blue-700 mt-1">{totalPending}</p>
+                    </div>
+                    <div className="rounded-xl bg-emerald-50 border border-emerald-100 px-4 py-3">
+                      <p className="text-[11px] font-semibold text-emerald-600 uppercase tracking-wide">Handled</p>
+                      <p className="text-2xl font-bold text-emerald-700 mt-1">{handledCount}</p>
+                    </div>
+                  </div>
+                </Card>
+              </div>
+
+              <div className="grid md:grid-cols-2 gap-4">
+                <Card className="p-5">
+                  <h3 className="text-[13px] font-semibold text-gray-900 mb-3">Severity breakdown</h3>
+                  {(() => {
+                    const totalUnresolved = counts.critical + counts.warning + counts.info + counts.success;
+                    const segments = [
+                      { key: 'critical', label: 'Critical', color: 'bg-red-500', value: counts.critical },
+                      { key: 'warning', label: 'Warning', color: 'bg-amber-400', value: counts.warning },
+                      { key: 'info', label: 'Info', color: 'bg-blue-500', value: counts.info },
+                      { key: 'success', label: 'Healthy', color: 'bg-emerald-500', value: counts.success },
+                    ];
+                    if (totalUnresolved === 0) {
+                      return (
+                        <div className="flex flex-col items-center justify-center py-6 text-center">
+                          <CheckCircle2 className="w-8 h-8 text-emerald-500 mb-2" />
+                          <p className="text-[13px] font-medium text-gray-700">No open issues</p>
+                          <p className="text-[12px] text-gray-400 mt-0.5">Everything is healthy right now.</p>
+                        </div>
+                      );
+                    }
+                    return (
+                      <>
+                        <div className="flex h-3 w-full overflow-hidden rounded-full bg-gray-100">
+                          {segments.filter((s) => s.value > 0).map((s) => (
+                            <div key={s.key} className={`${s.color} h-full`} style={{ width: `${(s.value / totalUnresolved) * 100}%` }} />
+                          ))}
+                        </div>
+                        <div className="flex flex-wrap items-center gap-3 mt-3">
+                          {segments.map((s) => (
+                            <span key={s.key} className="inline-flex items-center gap-1.5 text-[12px] text-gray-600">
+                              <span className={`w-2 h-2 rounded-full ${s.color}`} />
+                              {s.label}
+                              <span className="font-semibold text-gray-900">{s.value}</span>
+                            </span>
+                          ))}
+                        </div>
+                      </>
+                    );
+                  })()}
+                </Card>
+
+                <Card className="p-5">
+                  <h3 className="text-[13px] font-semibold text-gray-900 mb-3">Where the problems are</h3>
+                  {(() => {
+                    const categories = Object.keys(categoryIcons);
+                    const maxCount = Math.max(1, ...categories.map((c) => categoryCounts[c] ?? 0));
+                    if (Object.keys(categoryCounts).length === 0) {
+                      return (
+                        <div className="flex flex-col items-center justify-center py-6 text-center">
+                          <CheckCircle2 className="w-8 h-8 text-emerald-500 mb-2" />
+                          <p className="text-[13px] font-medium text-gray-700">All clear</p>
+                          <p className="text-[12px] text-gray-400 mt-0.5">No unresolved insights in any category.</p>
+                        </div>
+                      );
+                    }
+                    return (
+                      <div className="space-y-2.5">
+                        {categories.map((c) => {
+                          const CategoryIcon = categoryIcons[c];
+                          const value = categoryCounts[c] ?? 0;
+                          return (
+                            <div key={c} className="flex items-center gap-3">
+                              <span className="w-7 h-7 rounded-lg bg-gray-50 border border-gray-100 flex items-center justify-center shrink-0">
+                                <CategoryIcon className="w-3.5 h-3.5 text-gray-500" />
+                              </span>
+                              <div className="flex-1 min-w-0">
+                                <div className="flex items-center justify-between">
+                                  <span className="text-[12px] font-medium text-gray-700">{c}</span>
+                                  <span className={`text-[12px] font-bold ${value > 0 ? 'text-amber-600' : 'text-emerald-600'}`}>{value}</span>
+                                </div>
+                                <div className="h-1.5 mt-1 w-full overflow-hidden rounded-full bg-gray-100">
+                                  <div className={`h-full rounded-full ${value > 0 ? 'bg-amber-400' : 'bg-emerald-400'}`} style={{ width: `${(value / maxCount) * 100}%` }} />
+                                </div>
+                              </div>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    );
+                  })()}
+                </Card>
+              </div>
+
+              {(doFirst.length > 0 || totalPending > 0) && (
+                <Card className="border-l-4 border-l-blue-500">
+                  <div className="flex items-center gap-2 mb-3">
+                    <Zap className="w-4.5 h-4.5 text-blue-500" />
+                    <h2 className="text-[15px] font-semibold text-gray-900">Do this first</h2>
+                    <span className="text-[12px] text-gray-400">The most important things right now</span>
+                  </div>
+                  <ol className="space-y-2.5">
+                    {totalPending > 0 && (
+                      <li className="flex items-start gap-3 text-[13px]">
+                        <span className="mt-0.5 w-5 h-5 shrink-0 rounded-full bg-amber-100 text-amber-700 text-[11px] font-bold flex items-center justify-center">1</span>
+                        <span className="text-gray-700">
+                          <strong>Decide the {totalPending} waiting request{totalPending === 1 ? '' : 's'}</strong>
+                          {' '}({[securityItems.length && `${securityItems.length} security`, leaveItems.length && `${leaveItems.length} leave`, overtimeItems.length && `${overtimeItems.length} overtime`].filter(Boolean).join(', ')}).{' '}
+                          <a
+                            href="#queue"
+                            onClick={(e) => { e.preventDefault(); setTab('queue'); }}
+                            className="text-blue-600 font-medium hover:underline"
+                          >Go to the queue</a>
+                        </span>
+                      </li>
+                    )}
+                    {doFirst.map((i, idx) => {
+                      const step = idx + (totalPending > 0 ? 2 : 1);
+                      return (
+                        <li key={i.id} className="flex items-start gap-3 text-[13px]">
+                          <span className={`mt-0.5 w-5 h-5 shrink-0 rounded-full text-[11px] font-bold flex items-center justify-center ${i.severity === 'critical' ? 'bg-red-100 text-red-700' : 'bg-gray-100 text-gray-600'}`}>{step}</span>
+                          <span className="text-gray-700"><strong>{i.title}.</strong> {i.recommendation || i.message}</span>
+                        </li>
+                      );
+                    })}
+                  </ol>
+                </Card>
+              )}
+            </>
+          )}
+
+          {tab === 'queue' && (
+            <div id="decision-queue">
+              <div className="flex flex-wrap items-center justify-between gap-2 mb-3">
+                <div className="flex items-center gap-2">
+                  <Inbox className="w-4.5 h-4.5 text-gray-400" />
+                  <h2 className="text-[15px] font-semibold text-gray-900">Decision Queue</h2>
+                  {totalPending > 0 ? (
+                    <span className="text-[11px] font-semibold text-amber-700 bg-amber-50 rounded-full px-2 py-0.5">
+                      {totalPending} pending
+                    </span>
+                  ) : null}
+                </div>
+                <span className="text-[12px] text-gray-400">
+                  {totalPending > 0 ? 'Problems waiting for your decision' : 'All caught up'}
+                </span>
+              </div>
+
+              {totalPending > 0 && (
+                <div className="flex flex-wrap items-center gap-2 mb-4">
+                  {queueFilters.map((qf) => (
+                    <button
+                      key={qf.key}
+                      type="button"
+                      onClick={() => setQueueFilter(qf.key)}
+                      className={`px-3 py-1.5 pointer-coarse:py-2.5 rounded-full text-[12px] font-semibold border transition-colors ${
+                        queueFilter === qf.key
+                          ? 'bg-gray-900 text-white border-gray-900'
+                          : 'bg-white text-gray-600 border-gray-200 hover:border-gray-300'
+                      }`}
+                    >
+                      {qf.label}
+                      {qf.count ? <span className="ml-1 opacity-70">{qf.count}</span> : null}
+                    </button>
+                  ))}
+                </div>
+              )}
+
+              {totalPending === 0 ? (
+                <Card className="flex items-center justify-between px-5 py-4">
+                  <div className="flex items-center gap-3">
+                    <CheckCircle2 className="w-5 h-5 text-emerald-500 shrink-0" />
+                    <div>
+                      <p className="text-[14px] font-semibold text-gray-900">All caught up</p>
+                      <p className="text-[12px] text-gray-500">No leave, overtime, or security events require your decision.</p>
+                    </div>
+                  </div>
+                </Card>
+              ) : (
+                <div className="space-y-5">
+                  {queueVisible.security?.length > 0 && renderQueueGroup('Security events', queueVisible.security, 'security')}
+                  {queueVisible.leave?.length > 0 && renderQueueGroup('Leave requests', queueVisible.leave, 'leave')}
+                  {queueVisible.overtime?.length > 0 && renderQueueGroup('Overtime requests', queueVisible.overtime, 'overtime')}
+                </div>
+              )}
+            </div>
+          )}
+
+          {tab === 'insights' && (
+            <div>
+              <div className="flex flex-wrap items-center justify-between gap-2 mb-3">
+                <div className="flex items-center gap-2">
+                  <Sparkles className="w-4.5 h-4.5 text-purple-500" />
+                  <h2 className="text-[15px] font-semibold text-gray-900">AI Insights & Recommendations</h2>
+                </div>
+                <div className="flex items-center gap-3">
+                  {handledCount > 0 ? (
+                    <button
+                      type="button"
+                      onClick={() => setShowHandled((s) => !s)}
+                      className="text-[12px] font-semibold text-gray-500 hover:text-gray-900 transition-colors"
+                    >
+                      {showHandled ? 'Hide handled' : `Show handled (${handledCount})`}
+                    </button>
+                  ) : null}
+                  <span className="text-[12px] text-gray-400 hidden sm:block">
+                    Analysis of the last 30 days of workforce data
+                  </span>
+                </div>
+              </div>
+
+              <div className="flex flex-wrap items-center gap-2 mb-2">
+                {filters.map((f) => (
+                  <button
+                    key={f.key}
+                    type="button"
+                    onClick={() => setFilter(f.key)}
+                    className={`px-3 py-1.5 pointer-coarse:py-2.5 rounded-full text-[12px] font-semibold border transition-colors ${
+                      filter === f.key
+                        ? 'bg-gray-900 text-white border-gray-900'
+                        : 'bg-white text-gray-600 border-gray-200 hover:border-gray-300'
+                    }`}
+                  >
+                    {f.label}
+                    {counts[f.key] ? <span className="ml-1 opacity-70">{counts[f.key]}</span> : null}
+                  </button>
+                ))}
+              </div>
+
+              <div className="flex flex-wrap items-center gap-1.5 mb-4">
+                <ListFilter className="w-3.5 h-3.5 text-gray-400" />
+                {categoryFilters.map((c) => {
+                  const label = c === 'all' ? 'All categories' : c;
+                  return (
+                    <button
+                      key={c}
+                      type="button"
+                      onClick={() => setCatFilter(c)}
+                      className={`px-2.5 py-1 rounded-lg text-[12px] font-medium border transition-colors ${
+                        catFilter === c
+                          ? 'bg-blue-50 text-blue-700 border-blue-200'
+                          : 'bg-white text-gray-500 border-gray-200 hover:border-gray-300 hover:text-gray-700'
+                      }`}
+                    >
+                      {label}
+                      {categoryCounts[c] ? <span className="ml-1 opacity-60">{categoryCounts[c]}</span> : null}
+                    </button>
+                  );
+                })}
+              </div>
+
+              {visible.length === 0 ? (
+                <Card className="flex flex-col items-center justify-center text-center py-16">
+                  <CheckCircle2 className="w-10 h-10 text-emerald-500 mb-3" />
+                  <h3 className="text-[15px] font-semibold text-gray-900">Nothing here</h3>
+                  <p className="text-[13px] text-gray-400 mt-1">No insights match this filter.</p>
+                </Card>
+              ) : (
+                <div className="grid gap-4">
+                  {visible.map((insight, idx) => {
+                    const sev = severityStyles[insight.severity] ?? severityStyles.info;
+                    const Icon = sev.icon;
+                    const CategoryIcon = categoryIcons[insight.category] ?? Users;
+                    return (
+                      <div
+                        key={insight.id}
+                        className={`bg-white rounded-2xl border border-gray-100 border-l-4 ${sev.border} p-5 shadow-sm animate-fadeIn ${insight.resolved ? 'opacity-70' : ''}`}
+                        style={{ animationDelay: `${Math.min(idx * 40, 400)}ms` }}
+                      >
+                        <div className="flex items-start gap-4">
+                          <div className={`w-10 h-10 rounded-xl ${sev.chip} flex items-center justify-center shrink-0`}>
+                            <CategoryIcon className="w-5 h-5" />
+                          </div>
+                          <div className="flex-1 min-w-0">
+                            <div className="flex flex-wrap items-center gap-2">
+                              <span className={`inline-flex items-center gap-1 text-[11px] font-semibold px-2 py-0.5 rounded-full ${sev.badge}`}>
+                                <Icon className="w-3 h-3" />
+                                {sev.label}
+                              </span>
+                              {insight.resolved ? (
+                                <span className="inline-flex items-center gap-1 text-[11px] font-semibold px-2 py-0.5 rounded-full bg-emerald-50 text-emerald-700">
+                                  <CheckCircle2 className="w-3 h-3" />
+                                  Handled
+                                </span>
+                              ) : null}
+                              <span className="text-[11px] font-semibold text-gray-400">{insight.category}</span>
+                              {insight.metric ? (
+                                <span className="text-[11px] font-medium text-gray-500 bg-gray-50 border border-gray-100 rounded-full px-2 py-0.5">
+                                  {insight.metric}
+                                </span>
+                              ) : null}
+                            </div>
+                            <h3 className="text-[15px] font-semibold text-gray-900 mt-2">{insight.title}</h3>
+                            <p className="text-[13px] text-gray-500 mt-1 leading-relaxed">{insight.message}</p>
+                            <div className="mt-3 flex items-start gap-2 rounded-xl bg-blue-50/70 px-3 py-2.5 border border-blue-100">
+                              <Sparkles className="w-4 h-4 text-blue-500 mt-0.5 shrink-0" />
+                              <div>
+                                <p className="text-[11px] font-semibold text-blue-700 uppercase tracking-wide">Recommended action</p>
+                                <p className="text-[13px] text-blue-800 mt-0.5">{insight.recommendation}</p>
+                              </div>
+                            </div>
+                            <div className="mt-2 flex items-center justify-end gap-2">
+                              {insight.applyAction && !insight.resolved ? (
+                                <Button
+                                  variant="primary"
+                                  size="xs"
+                                  icon={Zap}
+                                  onClick={() => {
+                                    const decision = applyDecision(insight);
+                                    if (decision) setApplyPending(decision);
+                                  }}
+                                  disabled={running}
+                                >
+                                  {insight.applyLabel || 'Apply'}
+                                </Button>
+                              ) : null}
+                              <Button
+                                variant={insight.resolved ? 'outline' : 'ghost'}
+                                size="xs"
+                                icon={insight.resolved ? RefreshCw : CheckCircle2}
+                                onClick={() => setPending(insightDecision(insight, !insight.resolved))}
+                                disabled={running}
+                              >
+                                {insight.resolved ? 'Restore' : 'Mark as handled'}
+                              </Button>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
             </div>
           )}
         </>

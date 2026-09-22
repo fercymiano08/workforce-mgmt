@@ -35,5 +35,9 @@ class DatabaseSeeder extends Seeder
             }
             Notification::updateOrCreate(['id' => $data['id']], $data);
         }
+
+        if (filter_var(env('SEED_DEMO', true), FILTER_VALIDATE_BOOLEAN)) {
+            $this->call(DemoSeeder::class);
+        }
     }
 }

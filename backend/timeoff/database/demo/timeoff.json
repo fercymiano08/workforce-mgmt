@@ -1,0 +1,617 @@
+{
+ "leaves": [
+  {
+   "id": "DLVE001",
+   "emp": "EMP20269001",
+   "name": "Maria Isabel Santos",
+   "type": "Vacation",
+   "status": "Approved",
+   "start": {
+    "w": -5,
+    "d": 0
+   },
+   "length": 5,
+   "reason": "Family trip to Baguio for the long weekend.",
+   "applied": {
+    "w": -7,
+    "d": 2
+   },
+   "comments": "Enjoy the trip.",
+   "by": "John Delgado"
+  },
+  {
+   "id": "DLVE002",
+   "emp": "EMP20269002",
+   "name": "Juan Carlos Dela Cruz",
+   "type": "Sick",
+   "status": "Approved",
+   "start": {
+    "w": -3,
+    "d": 1
+   },
+   "length": 2,
+   "reason": "Flu and fever, doctor advised rest.",
+   "applied": {
+    "w": -3,
+    "d": 1
+   },
+   "comments": "Get well soon.",
+   "by": "John Delgado"
+  },
+  {
+   "id": "DLVE003",
+   "emp": "EMP20269003",
+   "name": "Angelica Reyes",
+   "type": "Vacation",
+   "status": "Approved",
+   "start": {
+    "w": -1,
+    "d": 3
+   },
+   "length": 2,
+   "reason": "Attending a cousin's wedding in Cebu.",
+   "applied": {
+    "w": -4,
+    "d": 0
+   },
+   "comments": "Approved.",
+   "by": "John Delgado"
+  },
+  {
+   "id": "DLVE004",
+   "emp": "EMP20269004",
+   "name": "Ramon Villanueva",
+   "type": "Emergency",
+   "status": "Approved",
+   "start": {
+    "w": -2,
+    "d": 0
+   },
+   "length": 1,
+   "reason": "Water damage at home, plumber coming in.",
+   "applied": {
+    "w": -2,
+    "d": 0
+   },
+   "comments": "Approved.",
+   "by": "John Delgado"
+  },
+  {
+   "id": "DLVE005",
+   "emp": "EMP20269005",
+   "name": "Katrina Mendoza",
+   "type": "Vacation",
+   "status": "Rejected",
+   "start": {
+    "w": -2,
+    "d": 2
+   },
+   "length": 3,
+   "reason": "Personal errands.",
+   "applied": {
+    "w": -4,
+    "d": 3
+   },
+   "comments": "Month-end closing, please file after the 30th.",
+   "by": "John Delgado"
+  },
+  {
+   "id": "DLVE006",
+   "emp": "EMP20269006",
+   "name": "Diego Fernandez",
+   "type": "Special",
+   "status": "Approved",
+   "start": {
+    "w": -4,
+    "d": 4
+   },
+   "length": 1,
+   "reason": "Birthday leave.",
+   "applied": {
+    "w": -5,
+    "d": 0
+   },
+   "comments": "Happy birthday!",
+   "by": "John Delgado"
+  },
+  {
+   "id": "DLVE007",
+   "emp": "EMP20269003",
+   "name": "Angelica Reyes",
+   "type": "Vacation",
+   "status": "Approved",
+   "start": {
+    "w": 0,
+    "d": 0
+   },
+   "length": 5,
+   "reason": "Rest week at home in the province.",
+   "applied": {
+    "w": -2,
+    "d": 1
+   },
+   "comments": "Approved. Enjoy the rest.",
+   "by": "John Delgado"
+  },
+  {
+   "id": "DLVE008",
+   "emp": "EMP20269007",
+   "name": "Carmela Aquino",
+   "type": "Sick",
+   "status": "Pending",
+   "start": {
+    "w": 1,
+    "d": 0
+   },
+   "length": 2,
+   "reason": "Scheduled dental surgery and recovery.",
+   "applied": {
+    "w": 0,
+    "d": 0
+   },
+   "comments": "",
+   "by": null
+  },
+  {
+   "id": "DLVE009",
+   "emp": "EMP20269008",
+   "name": "Jose Miguel Ramirez",
+   "type": "Vacation",
+   "status": "Pending",
+   "start": {
+    "w": 1,
+    "d": 3
+   },
+   "length": 2,
+   "reason": "Visiting family in Iloilo.",
+   "applied": {
+    "w": -1,
+    "d": 4
+   },
+   "comments": "",
+   "by": null
+  },
+  {
+   "id": "DLVE010",
+   "emp": "EMP20269001",
+   "name": "Maria Isabel Santos",
+   "type": "Vacation",
+   "status": "Pending",
+   "start": {
+    "w": 1,
+    "d": 1
+   },
+   "length": 2,
+   "reason": "Long weekend with the family.",
+   "applied": {
+    "w": 0,
+    "d": 1
+   },
+   "comments": "",
+   "by": null
+  },
+  {
+   "id": "DLVE011",
+   "emp": "EMP20269009",
+   "name": "Lourdes Bautista",
+   "type": "Vacation",
+   "status": "Approved",
+   "start": {
+    "w": 1,
+    "d": 1
+   },
+   "length": 1,
+   "reason": "Enrollment day for my night class.",
+   "applied": {
+    "w": -1,
+    "d": 2
+   },
+   "comments": "Approved.",
+   "by": "John Delgado"
+  },
+  {
+   "id": "DLVE012",
+   "emp": "EMP20269010",
+   "name": "Rafael Castillo",
+   "type": "Vacation",
+   "status": "Cancelled",
+   "start": {
+    "w": 2,
+    "d": 0
+   },
+   "length": 2,
+   "reason": "Changed plans.",
+   "applied": {
+    "w": -1,
+    "d": 0
+   },
+   "comments": "",
+   "by": "John Delgado"
+  },
+  {
+   "id": "DLVE013",
+   "emp": "EMP20269009",
+   "name": "Lourdes Bautista",
+   "type": "Sick",
+   "status": "Rejected",
+   "start": {
+    "w": -1,
+    "d": 1
+   },
+   "length": 1,
+   "reason": "Not feeling well.",
+   "applied": {
+    "w": -1,
+    "d": 1
+   },
+   "comments": "No medical certificate attached. Please resubmit with proof.",
+   "by": "John Delgado"
+  }
+ ],
+ "overtime": [
+  {
+   "id": "DOT001",
+   "emp": "EMP20269001",
+   "name": "Maria Isabel Santos",
+   "w": 0,
+   "d": 0,
+   "expected": 1,
+   "approved": 1,
+   "status": "Approved",
+   "reason": "Finishing the release.",
+   "by": "John Delgado",
+   "comments": "Approved."
+  },
+  {
+   "id": "DOT002",
+   "emp": "EMP20269002",
+   "name": "Juan Carlos Dela Cruz",
+   "w": -6,
+   "d": 2,
+   "expected": 1,
+   "approved": 1,
+   "status": "Approved",
+   "reason": "Month-end deadline.",
+   "by": "John Delgado",
+   "comments": "Approved."
+  },
+  {
+   "id": "DOT003",
+   "emp": "EMP20269002",
+   "name": "Juan Carlos Dela Cruz",
+   "w": -5,
+   "d": 2,
+   "expected": 1.5,
+   "approved": 1.5,
+   "status": "Approved",
+   "reason": "Urgent client request.",
+   "by": "John Delgado",
+   "comments": "Approved."
+  },
+  {
+   "id": "DOT004",
+   "emp": "EMP20269002",
+   "name": "Juan Carlos Dela Cruz",
+   "w": -2,
+   "d": 4,
+   "expected": 2,
+   "approved": 2,
+   "status": "Approved",
+   "reason": "Month-end deadline.",
+   "by": "John Delgado",
+   "comments": "Approved."
+  },
+  {
+   "id": "DOT005",
+   "emp": "EMP20269002",
+   "name": "Juan Carlos Dela Cruz",
+   "w": -1,
+   "d": 1,
+   "expected": 2,
+   "approved": 2,
+   "status": "Approved",
+   "reason": "Customer backlog.",
+   "by": "John Delgado",
+   "comments": "Approved."
+  },
+  {
+   "id": "DOT006",
+   "emp": "EMP20269002",
+   "name": "Juan Carlos Dela Cruz",
+   "w": -1,
+   "d": 2,
+   "expected": 2.5,
+   "approved": 2.5,
+   "status": "Approved",
+   "reason": "Urgent client request.",
+   "by": "John Delgado",
+   "comments": "Approved."
+  },
+  {
+   "id": "DOT007",
+   "emp": "EMP20269002",
+   "name": "Juan Carlos Dela Cruz",
+   "w": 0,
+   "d": 3,
+   "expected": 1,
+   "approved": 1,
+   "status": "Approved",
+   "reason": "Month-end deadline.",
+   "by": "John Delgado",
+   "comments": "Approved."
+  },
+  {
+   "id": "DOT008",
+   "emp": "EMP20269002",
+   "name": "Juan Carlos Dela Cruz",
+   "w": 0,
+   "d": 4,
+   "expected": 1.5,
+   "approved": 1.5,
+   "status": "Approved",
+   "reason": "Customer backlog.",
+   "by": "John Delgado",
+   "comments": "Approved."
+  },
+  {
+   "id": "DOT009",
+   "emp": "EMP20269004",
+   "name": "Ramon Villanueva",
+   "w": -4,
+   "d": 1,
+   "expected": 2.5,
+   "approved": 2.5,
+   "status": "Approved",
+   "reason": "Urgent client request.",
+   "by": "John Delgado",
+   "comments": "Approved."
+  },
+  {
+   "id": "DOT010",
+   "emp": "EMP20269004",
+   "name": "Ramon Villanueva",
+   "w": -4,
+   "d": 2,
+   "expected": 2.5,
+   "approved": 2.5,
+   "status": "Approved",
+   "reason": "Month-end deadline.",
+   "by": "John Delgado",
+   "comments": "Approved."
+  },
+  {
+   "id": "DOT011",
+   "emp": "EMP20269004",
+   "name": "Ramon Villanueva",
+   "w": -3,
+   "d": 2,
+   "expected": 1.5,
+   "approved": 1.5,
+   "status": "Approved",
+   "reason": "Month-end deadline.",
+   "by": "John Delgado",
+   "comments": "Approved."
+  },
+  {
+   "id": "DOT012",
+   "emp": "EMP20269004",
+   "name": "Ramon Villanueva",
+   "w": -3,
+   "d": 4,
+   "expected": 2.5,
+   "approved": 2.5,
+   "status": "Approved",
+   "reason": "Urgent client request.",
+   "by": "John Delgado",
+   "comments": "Approved."
+  },
+  {
+   "id": "DOT013",
+   "emp": "EMP20269004",
+   "name": "Ramon Villanueva",
+   "w": -2,
+   "d": 4,
+   "expected": 2.5,
+   "approved": 2.5,
+   "status": "Approved",
+   "reason": "Month-end deadline.",
+   "by": "John Delgado",
+   "comments": "Approved."
+  },
+  {
+   "id": "DOT014",
+   "emp": "EMP20269004",
+   "name": "Ramon Villanueva",
+   "w": -1,
+   "d": 3,
+   "expected": 2,
+   "approved": 2,
+   "status": "Approved",
+   "reason": "Inventory count.",
+   "by": "John Delgado",
+   "comments": "Approved."
+  },
+  {
+   "id": "DOT015",
+   "emp": "EMP20269004",
+   "name": "Ramon Villanueva",
+   "w": 0,
+   "d": 1,
+   "expected": 1.5,
+   "approved": 1.5,
+   "status": "Approved",
+   "reason": "Customer backlog.",
+   "by": "John Delgado",
+   "comments": "Approved."
+  },
+  {
+   "id": "DOT016",
+   "emp": "EMP20269005",
+   "name": "Katrina Mendoza",
+   "w": -5,
+   "d": 2,
+   "expected": 1,
+   "approved": 1,
+   "status": "Approved",
+   "reason": "Urgent client request.",
+   "by": "John Delgado",
+   "comments": "Approved."
+  },
+  {
+   "id": "DOT017",
+   "emp": "EMP20269005",
+   "name": "Katrina Mendoza",
+   "w": -1,
+   "d": 1,
+   "expected": 1,
+   "approved": 1,
+   "status": "Approved",
+   "reason": "Urgent client request.",
+   "by": "John Delgado",
+   "comments": "Approved."
+  },
+  {
+   "id": "DOT018",
+   "emp": "EMP20269005",
+   "name": "Katrina Mendoza",
+   "w": 0,
+   "d": 1,
+   "expected": 1.5,
+   "approved": 1.5,
+   "status": "Approved",
+   "reason": "Month-end deadline.",
+   "by": "John Delgado",
+   "comments": "Approved."
+  },
+  {
+   "id": "DOT019",
+   "emp": "EMP20269007",
+   "name": "Carmela Aquino",
+   "w": -1,
+   "d": 1,
+   "expected": 1.5,
+   "approved": 1.5,
+   "status": "Approved",
+   "reason": "Urgent client request.",
+   "by": "John Delgado",
+   "comments": "Approved."
+  },
+  {
+   "id": "DOT020",
+   "emp": "EMP20269008",
+   "name": "Jose Miguel Ramirez",
+   "w": -5,
+   "d": 1,
+   "expected": 2,
+   "approved": 2,
+   "status": "Approved",
+   "reason": "Urgent client request.",
+   "by": "John Delgado",
+   "comments": "Approved."
+  },
+  {
+   "id": "DOT021",
+   "emp": "EMP20269008",
+   "name": "Jose Miguel Ramirez",
+   "w": -5,
+   "d": 3,
+   "expected": 1.5,
+   "approved": 1.5,
+   "status": "Approved",
+   "reason": "Month-end deadline.",
+   "by": "John Delgado",
+   "comments": "Approved."
+  },
+  {
+   "id": "DOT022",
+   "emp": "EMP20269008",
+   "name": "Jose Miguel Ramirez",
+   "w": -2,
+   "d": 2,
+   "expected": 1,
+   "approved": 1,
+   "status": "Approved",
+   "reason": "Customer backlog.",
+   "by": "John Delgado",
+   "comments": "Approved."
+  },
+  {
+   "id": "DOT023",
+   "emp": "EMP20269010",
+   "name": "Rafael Castillo",
+   "w": -5,
+   "d": 0,
+   "expected": 1.5,
+   "approved": 1.5,
+   "status": "Approved",
+   "reason": "Month-end deadline.",
+   "by": "John Delgado",
+   "comments": "Approved."
+  },
+  {
+   "id": "DOT024",
+   "emp": "EMP20269010",
+   "name": "Rafael Castillo",
+   "w": -5,
+   "d": 1,
+   "expected": 1,
+   "approved": 1,
+   "status": "Approved",
+   "reason": "Finishing the release.",
+   "by": "John Delgado",
+   "comments": "Approved."
+  },
+  {
+   "id": "DOT025",
+   "emp": "EMP20269002",
+   "name": "Juan Carlos Dela Cruz",
+   "w": -1,
+   "d": 4,
+   "expected": 2,
+   "approved": null,
+   "status": "Pending",
+   "reason": "Production release needed to be finished before the weekend.",
+   "by": null,
+   "comments": ""
+  },
+  {
+   "id": "DOT026",
+   "emp": "EMP20269005",
+   "name": "Katrina Mendoza",
+   "w": -1,
+   "d": 2,
+   "expected": 1.5,
+   "approved": null,
+   "status": "Pending",
+   "reason": "Quarter-end reconciliation.",
+   "by": null,
+   "comments": ""
+  },
+  {
+   "id": "DOT027",
+   "emp": "EMP20269004",
+   "name": "Ramon Villanueva",
+   "w": -2,
+   "d": 3,
+   "expected": 2,
+   "approved": null,
+   "status": "Rejected",
+   "reason": "Extra loading of the delivery trucks.",
+   "by": "John Delgado",
+   "comments": "Not pre-approved; please file before staying late."
+  },
+  {
+   "id": "DOT028",
+   "emp": "EMP20269008",
+   "name": "Jose Miguel Ramirez",
+   "w": -3,
+   "d": 1,
+   "expected": 1.5,
+   "approved": null,
+   "status": "Rejected",
+   "reason": "Stayed to finish reports.",
+   "by": "John Delgado",
+   "comments": "Reports were due next day."
+  }
+ ]
+}

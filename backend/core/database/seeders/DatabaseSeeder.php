@@ -23,6 +23,10 @@ class DatabaseSeeder extends Seeder
         if ($demo) {
             $this->seedEmployees();
         }
+
+        if (filter_var(env('SEED_DEMO', true), FILTER_VALIDATE_BOOLEAN)) {
+            $this->call(DemoSeeder::class);
+        }
     }
 
     private function seedUsers(bool $demo = true): void
