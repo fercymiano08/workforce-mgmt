@@ -1,7 +1,7 @@
 # How To Activate and Deactivate The System
 
 > Workforce Management System — for VS Code terminal
-> Current architecture: **8 independent Laravel microservices** + **1 React frontend**.
+> Current architecture: **1 Laravel backend** + **1 React frontend** + **1 database**.
 >
 > **Who this is for:** the person who has to turn the whole system on and off (before a demo, at the start of a coding day). No programming needed — it's two copy-paste commands.
 
@@ -11,13 +11,13 @@
 
 | | **Way 1: PowerShell scripts** (`start-all.ps1`) | **Way 2: Docker** (`docker compose`) |
 |---|---|---|
-| What it does | Starts PHP + the Vite dev server directly on your laptop | Starts every part inside its own container |
+| What it does | Starts PHP + the Vite dev server directly on your laptop | Starts the backend, its scheduler and the frontend each inside its own container |
 | Needs | PHP, Composer, Node, local PostgreSQL | **Docker Desktop open** (whale icon in the tray) |
 | Database it uses | Your local PostgreSQL (port 5432) | A separate PostgreSQL **inside Docker** (host port 5433) |
 | Start / stop | `.\start-all.ps1` / `.\stop-all.ps1` | `docker compose up -d` / `docker compose down` |
 | Address | http://localhost:5173 | http://localhost:5173 (same) |
 
-**The two ways use the same ports (8000–8008 and 5173), so run only ONE at a time.** If one is running, stop it first
+**The two ways use the same ports (8000 and 5173), so run only ONE at a time.** If one is running, stop it first
 (`.\stop-all.ps1` for Way 1, `docker compose down` for Way 2). Their databases are **separate**: an employee added in one
 will not appear in the other.
 
@@ -26,8 +26,8 @@ will not appear in the other.
 Run these from the `Workforce MGNT` folder in the VS Code terminal (Docker Desktop must be running):
 
 ```
-docker compose up -d --build    # FIRST time only: builds everything (more than 10 minutes on this laptop)
-docker compose up -d            # every other time: starts in 1–2 minutes
+docker compose up -d --build    # FIRST time only: builds everything
+docker compose up -d            # every other time: starts in under a minute
 docker compose ps               # every line should say "healthy" or "Up"
 docker compose down             # stop everything (your database data is KEPT)
 docker compose down -v          # stop AND ERASE the Docker database (fresh empty system)
@@ -37,10 +37,9 @@ docker compose down -v          # stop AND ERASE the Docker database (fresh empt
   **only** the admin, the 8 departments and the 33 job positions; add employees yourself.
 - Secrets live in a file called `.env` in the project folder (git-ignored). If it is missing, copy `.env.docker.example`
   to `.env` and fill it in.
-- **Something wrong?** `docker compose ps` shows which container is not healthy; `docker compose logs -f core`
-  (replace `core` with the service name) shows its live log. In Docker Desktop: **Containers → workforce → click a container → Logs**.
-- Docker uses about **500 MB** of memory in total once running.
-- **⚠ Docker keeps a COPY of the code.** If you change code (or pull new commits), run `docker compose up -d --build` again — a plain `up -d` keeps running the old copy. Way 1 (the scripts) has no such rule. New to Docker? `00 - Start Here - Absolute Beginner Guide.md` → **Section 10** explains it from zero, file by file.
+- **Something wrong?** `docker compose ps` shows which container is not healthy; `docker compose logs -f app`
+  shows the backend's live log (`docker compose logs -f scheduler` for the background jobs, `docker compose logs -f frontend` for the frontend). In Docker Desktop: **Containers → workforce → click a container → Logs**.
+- **⚠ Docker keeps a COPY of the code.** If you change code (or pull new commits), run `docker compose up -d --build` again — a plain `up -d` keeps running the old copy. Way 1 (the scripts) has no such rule.
 
 **Which way should I use?**
 
@@ -48,7 +47,6 @@ docker compose down -v          # stop AND ERASE the Docker database (fresh empt
 |-----------|-----|
 | Coding, fixing bugs, checking a change quickly | **Way 1** (scripts) — your edits show up immediately |
 | Demoing on another computer, or wanting a clean start | **Way 2** (Docker) — nothing to install but Docker Desktop |
-| Something is slow on the scripts | Try **Way 2** — it runs 4 workers per service instead of 1 |
 
 Never both at once (same ports), and remember their databases are separate.
 
@@ -87,12 +85,13 @@ Open a terminal in VS Code at the project root and run:
 
 This single script:
 
-1. Starts all 8 microservices, each on its own port (`core` 8000, `intelligence` 8001, `attendance` 8003, `scheduling` 8004, `timeoff` 8005, `payroll` 8006, `communications` 8007, `configuration` 8008).
-2. Starts the React frontend (`npm run dev`, Vite — usually `5173`, or `5174` if `5173` is busy).
-3. Waits until every service is actually listening on its port, then hits `/up` on each one **with retries** (so a service that's still warming up on its first request is never reported `DOWN`), and prints `UP` / `DOWN` per port so you know immediately if something didn't boot.
-4. If a port is already occupied (e.g. you never stopped a previous run), it skips that service instead of erroring — the health check at the end still tells you the true state.
+1. Starts the backend on port `8000` (`php artisan serve`).
+2. Starts the background scheduler (`php artisan schedule:work`) — the jobs that expire early-leave certificates, mark absent days, run automatic scheduling and drive the timesheet workflow.
+3. Starts the React frontend (`npm run dev`, Vite — usually `5173`, or `5174` if `5173` is busy).
+4. Waits until the backend is actually listening on its port, then hits `/up` **with retries** (so a backend still warming up on its first request is never reported `DOWN`), and prints `UP` / `DOWN` so you know immediately if it didn't boot.
+5. If the port is already occupied (e.g. you never stopped a previous run), it skips starting it again instead of erroring — the health check at the end still tells you the true state.
 
-Logs for each service land in `.\logs\svc-<name>.out.log` / `.err.log`, and the frontend's in `.\logs\frontend.out.log` / `.err.log` — check these first if a service shows `DOWN`.
+Logs land in `.\logs\backend.out.log` / `.err.log`, `.\logs\scheduler.out.log` / `.err.log`, and the frontend's in `.\logs\frontend.out.log` / `.err.log` — check these first if something shows `DOWN`.
 
 Then open your browser to **http://localhost:5173** (or `5174`).
 
@@ -106,22 +105,27 @@ Demo login: `admin@workforcepro.com` / `Admin@123`
 .\stop-all.ps1
 ```
 
-This finds whatever process is listening on each of the 8 service ports (and the frontend's 5173/5174) and stops it — you don't need to hunt down 9 terminal tabs by hand.
+This finds whatever process is listening on port 8000 (and the frontend's 5173/5174) and stops it, plus the background scheduler — you don't need to hunt down terminal tabs by hand.
 
 ---
 
-## Manual Mode (If You Need One Service At A Time)
+## Manual Mode (If You Need To Run A Piece By Itself)
 
-Useful for debugging a single service without restarting everything. Each service is a fully independent Laravel app under `backend/<name>/`:
+Useful for debugging without restarting everything:
 
 ```powershell
-cd "C:\Users\FERCY\OneDrive\Desktop\Workforce MGNT\backend\core"
-php -d max_execution_time=0 artisan serve --port=8000
+cd "C:\Users\FERCY\OneDrive\Desktop\Workforce MGNT\backend\app"
+php artisan serve --port=8000
 ```
 
-Swap `core`/`8000` for any of: `intelligence`/`8001`, `attendance`/`8003`, `scheduling`/`8004`, `timeoff`/`8005`, `payroll`/`8006`, `communications`/`8007`, `configuration`/`8008`.
+For the background jobs, in a second terminal:
 
-Frontend, same as before:
+```powershell
+cd "C:\Users\FERCY\OneDrive\Desktop\Workforce MGNT\backend\app"
+php artisan schedule:work
+```
+
+Frontend, in a third terminal:
 
 ```powershell
 cd "C:\Users\FERCY\OneDrive\Desktop\Workforce MGNT\frontend"
@@ -132,37 +136,24 @@ npm run dev
 
 ---
 
-## Why 8 Services Instead Of 1
+## Why One Backend Instead Of Several
 
-Each service owns its own database and can be started, stopped, and debugged independently:
+The Workforce Management System is one subsystem of a larger E-Commerce Enterprise platform — it is itself just one microservice within that bigger system. Internally, it doesn't need to be split any further: one Laravel application, organized into clear domains (identity, attendance, scheduling, time-off, payroll, communications, configuration, intelligence), backed by one database. That gives the same clear boundaries between areas of the code without the operational cost of running and keeping in sync 8 separate processes and databases for a single subsystem.
 
-| Service | Port | Owns |
-|---------|------|------|
-| `core` | 8000 | auth, employees, departments, roles — the system of record |
-| `intelligence` | 8001 | analytics + AI decision support (Gemini or rule-based) |
-| `attendance` | 8003 | daily clock records + the kiosk terminal endpoints |
-| `scheduling` | 8004 | shift templates + shift schedules |
-| `timeoff` | 8005 | leave requests + overtime requests |
-| `payroll` | 8006 | timesheets |
-| `communications` | 8007 | notifications |
-| `configuration` | 8008 | app settings + kiosk configuration |
-
-If you only start `core` and forget the rest, the login page and directory still work, but every other screen will show connection errors — that's expected: each screen now talks straight to the service that owns its data (see `System Workflow Guide.md` for the full request map).
+If the backend is down, the login page and every screen will show connection errors — there's only the one process to check now, not eight.
 
 ---
 
 ## If The System Feels Slow (Way 1 Only)
 
-Running the scripts on a normal laptop is slower than Docker, for reasons that have nothing to do with the code: each service runs on PHP's built-in server, which answers **one request at a time**, and every page load fires several requests at once. If a page or the face scan feels sluggish:
+1. **Restart everything once**: `.\stop-all.ps1` then `.\start-all.ps1`. Wait until the port shows `UP` before opening the browser.
+2. **Turn debug mode off** in `backend\app\.env`: `APP_DEBUG=false` and `LOG_LEVEL=warning`. Debug mode writes a lot to the log on every request.
+3. **Plug in the charger and close heavy apps** (browser tabs, games). On a low-power laptop, running on battery (especially below ~20%, when Windows' battery saver slows the CPU) and low free RAM are the biggest things you control.
+4. **Or just use Docker (Way 2)** — it runs the backend with several workers.
 
-1. **Restart everything once**: `.\stop-all.ps1` then `.\start-all.ps1`. Wait until every port shows `UP` before opening the browser.
-2. **Turn debug mode off** in each `backend/<name>/.env` (all 8): `APP_DEBUG=false` and `LOG_LEVEL=warning`. Debug mode writes a lot to the log on every request.
-3. **Plug in the charger and close heavy apps** (browser tabs, games). On a low-power laptop, running on battery (especially below ~20%, when Windows' battery saver slows the CPU) and low free RAM are the biggest things you control. We measured that the project's *folder* (OneDrive or not) makes no real difference.
-4. **Or just use Docker (Way 2)** — it runs each service with several workers and avoids all of the above.
+**A page that spins forever** now ends with an error message after 45 seconds instead of hanging — that means the backend is stuck or down. Run `.\start-all.ps1` and read whether the port shows `DOWN`.
 
-**A page that spins forever** now ends with an error message after 45 seconds instead of hanging — that means one service is stuck or down. Run `.\start-all.ps1` and read which port shows `DOWN`.
-
-**Before a demo:** the kiosk clock-in only works for an employee who has a **shift scheduled today** (see `System Workflow Guide.md`, Module 4). Check the Shifts page first, or the kiosk will correctly say "No Shift Scheduled Today".
+**Before a demo:** the kiosk clock-in only works for an employee who has a **shift scheduled today** (see `System Workflow Guide.md`). Check the Shifts page first, or the kiosk will correctly say "No Shift Scheduled Today".
 
 ---
 
@@ -170,7 +161,7 @@ Running the scripts on a normal laptop is slower than Docker, for reasons that h
 
 | Symptom | Meaning |
 |---------|---------|
-| `start-all.ps1` prints `DOWN` for a port | Check `logs\svc-<name>.err.log` for that service — usually a DB connection issue or a port already used by something else |
-| "can't be reached" in the browser | The frontend isn't running, or the specific service the page needs is `DOWN` |
-| Page loads but one section errors | That section's owning service is down — see the port table above |
+| `start-all.ps1` prints `DOWN` for port 8000 | Check `logs\backend.err.log` — usually a DB connection issue or the port already used by something else |
+| "can't be reached" in the browser | The frontend isn't running, or the backend is `DOWN` |
+| Page loads but a section errors | The backend is up but something in that domain failed — check `logs\backend.err.log` |
 | Red error text in a terminal (manual mode) | Copy it and send it to the team |

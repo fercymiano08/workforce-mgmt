@@ -24,7 +24,7 @@
 1. **WorkForce Pro** is a web-based **workforce management system** built for a retail/BPO company called **Archon Nell Incorporated**.
 2. It helps the company handle **attendance, schedules, leave, overtime, and timesheets** for all employees in one place.
 3. There are **three users**: the **Workforce Admin** (who controls everything), the **Employee** (who checks and manages their own records), and the **Kiosk** (a touchscreen device at the entrance used for clocking in and out).
-4. The system has a **frontend** (what you see in the browser) and a **backend built as 8 independent microservices**, each owning one domain (auth, attendance, scheduling, leave/overtime, payroll, notifications, settings, and analytics/AI) and its own database.
+4. The system has a **frontend** (what you see in the browser) and a **backend built as one Laravel application with one database** — organized inside into 8 clear domains (identity, attendance, scheduling, leave/overtime, payroll, communications, configuration, and analytics/AI), because WorkForce Pro is itself just ONE microservice inside the bigger E-Commerce Enterprise platform the team is building.
 5. It also includes **smart features**: facial-recognition attendance, automatic schedule generation, analytics dashboards, and an **AI assistant** that helps HR make decisions.
 
 > Say this in your own words. The panel just wants to hear that YOU understand the big picture.
@@ -58,15 +58,15 @@ Think of the system like a **restaurant**:
 
 - **Frontend** *(React + Vite)* - draws every screen you see in the browser and knows nothing about databases.
   → Like the *waiters and the menu* shown to customers.
-- **Backend** *(Laravel, ×8)* - the "brain", split into 8 independent services by domain. Each one checks who you are, follows its own rules, reads and writes only its own data.
-  → Like *eight small kitchens*, each cooking one kind of dish, instead of one giant kitchen doing everything.
-- **Database** *(PostgreSQL, ×8)* - stores every record, but split one database per service (employees in `core`'s DB, attendance in `attendance`'s DB, leave in `timeoff`'s DB, etc.) instead of one shared database.
-  → Like *eight separate filing cabinets*, each locked to its own department.
+- **Backend** *(Laravel, one application)* - the "brain". Internally it's organized into 8 clear domains/folders (identity, attendance, scheduling, leave/overtime, payroll, communications, configuration, analytics/AI), but it's ONE app, checking who you are and following the rules for every request.
+  → Like *one kitchen with 8 stations* - grill, salads, desserts, and so on - each station has its own job and its own recipes, but they all share the same pantry and the same head chef, instead of eight separate restaurants passing plates back and forth.
+- **Database** *(PostgreSQL, one database - `workforce_mgnt`)* - stores every record in one shared database, with tables grouped by domain (employees, attendance, leave, timesheets, etc.).
+  → Like *one filing room* with a clearly labeled cabinet per department, not eight separate locked rooms down the hall from each other.
 
 **The flow (always):**
-Browser (frontend) → sends a request to `/api/...` → the frontend's router (Vite proxy) sends it to whichever of the 8 services owns that URL (e.g. `/api/attendance/*` → the attendance service on port 8003) → that service checks the request, reads/writes its own PostgreSQL database → sends back an answer (JSON) → frontend shows it on screen.
+Browser (frontend) → sends a request to `/api/...` → the frontend's proxy (Vite in dev / nginx in Docker) forwards it to the one Laravel backend on port 8000 → a controller in the matching domain folder handles it, following that domain's rules → Eloquent models read/write the one PostgreSQL database → sends back an answer (JSON) → frontend shows it on screen.
 
-> If a panelist asks "how does data move?", this one sentence answers it. If they follow up with "doesn't that mean you have one big backend?" — no: there is no single backend anymore, there are 8, and the frontend's proxy config is the only thing that knows how to find all of them.
+> If a panelist asks "how does data move?", this one sentence answers it. If they follow up with "so it's all one backend?" — yes, and that's intentional: Workforce Management is one team's domain with one consistent data model, so it's built as one cohesive, independently-deployable unit - a single microservice inside the larger E-Commerce Enterprise platform - organized internally by domain so the code stays easy to navigate, test, and hand off.
 
 ---
 
@@ -137,7 +137,7 @@ Browser (frontend) → sends a request to `/api/...` → the frontend's router (
 2. The **AI Decision Support** page looks at that data and gives HR **suggestions** (e.g. "too many absences for this department", "overtime trending up").
 3. When online, the app calls **Google Gemini** for the smart suggestions.
 4. When **offline/no API key**, it **falls back to built-in rules** so it still works.
-5. HR can also act directly ("approve this leave", "resolve this security event") in one click - the Intelligence service performs the real action by calling the service that owns that data (e.g. the Time-Off service for leave, the Attendance service for security events) over its internal API, then reports back.
+5. HR can also act directly ("approve this leave", "resolve this security event") in one click - the intelligence domain performs the real action with the same in-process service classes the manual path uses (approving a leave checks the real `Leave` is still Pending, then updates it, in one database), then reports back.
 
 ---
 
@@ -185,7 +185,7 @@ These are the exact things the panel may probe. Say them confidently.
 | **Kiosk device token** | The device has no login, but entering the kiosk PIN gives it a signed token that lasts until midnight (one PIN entry per day); without the token the kiosk endpoints answer 401. Even with it, it only sees minimal info (never salary, email, phone, address). |
 | **Server-enforced attendance rules** | No shift / finished shift = refused, Present vs Late is computed from the *server's* clock, and an early clock-out must carry a reason - all checked on the backend, so the kiosk screen can't be bypassed. |
 | **Face-mismatch alert** | A face that doesn't match the ID entered is logged as a security event AND every Workforce Admin gets a high-priority notification right away. |
-| **Short-lived identity cache** | Services reuse `core`'s "who is this token?" answer for 15 seconds so pages load fast. Trade-off: a revoked token can work up to 15 s longer in the other services. |
+| **Session token expiry** | An employee login token auto-expires in 3 minutes and is extended only by real activity (mouse/keys/touch), so walking away signs you out. Every request is checked against it in-process by the single backend — no separate identity hop to cache. |
 
 **One killer closing line:**
 > "Security is enforced on the **backend**, not the frontend - the frontend only *shows* what the backend allows. So even if someone edits the browser, they can't access anything they're not authorized to."
@@ -217,7 +217,7 @@ These are the exact things the panel may probe. Say them confidently.
 - Balderama (Employee): `randycapalar@gmail.com`
 
 **30-second version (opening line):**
-"This is WorkForce Pro, a workforce management system for Archon Nell Inc. It handles HR's daily work - registering employees, attendance by facial recognition, schedules, leave, overtime, and timesheets. There are three types of users: the Workforce Admin, employees, and the kiosk device at the entrance. The system is a React frontend talking to 8 independent Laravel microservices, each with its own PostgreSQL database."
+"This is WorkForce Pro, a workforce management system for Archon Nell Inc. It handles HR's daily work - registering employees, attendance by facial recognition, schedules, leave, overtime, and timesheets. There are three types of users: the Workforce Admin, employees, and the kiosk device at the entrance. The system is a React frontend talking to one Laravel backend and one PostgreSQL database - internally organized into 8 clear domains, and built as one of the microservices inside our larger E-Commerce Enterprise platform."
 
 **2-minute tour (pick the extras that fit your demo):**
 1. Log in as **Workforce Admin** → show the dashboard.
@@ -273,10 +273,10 @@ A: Up to and including 15 minutes after the shift start is Present. After that t
 A: The face doesn't match, so the kiosk shows an "Identity Verification Failed" warning, logs a security event and alerts the Workforce Admins immediately. Three failed attempts lock the terminal for 60 seconds.
 
 **Q: Why is the system slow on your laptop but fast in Docker?**
-A: Every action makes several requests and each one boots the Laravel framework (about half a second on a low-power laptop CPU), locally run on PHP's built-in single-request server. We measured it. We reduced the load in code (a 15-second identity cache, no face photos in replicas, concurrent replica pushes, bounded lists) and the Docker setup uses 4 workers per service. The remaining slowness is mostly the laptop (a low-power CPU, limited free RAM, running on battery) and the one-request-at-a-time local server, not a bug; Docker's 4 workers help.
+A: Every action makes several requests and each one boots the Laravel framework (about half a second on a low-power laptop CPU), locally run on PHP's built-in single-request server. We measured it. We cut the load in code (light employee lists, bounded notification batches, concurrent alert pushes, short timeouts on external calls) — and the pre-consolidation performance burden (identity hops to `core`, replica sync) is simply gone, since it's one in-process backend now. The remaining slowness is mostly the laptop (a low-power CPU, limited free RAM, running on battery) and the one-request-at-a-time local server, not a bug; Docker's multiple workers help.
 
 **Q: Where is data stored?**
-A: In 8 separate PostgreSQL databases, one per microservice — `core` holds users/employees/departments/roles, `attendance` holds attendance + security events, `scheduling` holds shifts, `timeoff` holds leave + overtime, `payroll` holds timesheets, `communications` holds notifications, `configuration` holds settings, and `intelligence` holds analytics + AI results. Services that need another service's data keep a small, periodically-synced read-only copy rather than sharing a database.
+A: In **one** PostgreSQL database, `workforce_mgnt` — 31 tables: 22 business tables (users, employees, attendance, shifts, leaves, timesheets, notifications, security events, settings, AI insights...) plus 9 Laravel framework tables. The database used to be split into 8 separate databases, one per service, with synced read-only copies so services could see each other's data; after consolidation every table has exactly one copy, and any domain that needs another domain's data just queries the real table in the same database.
 
 ---
 
@@ -293,70 +293,75 @@ A: In 8 separate PostgreSQL databases, one per microservice — `core` holds use
 
 ---
 
-# PART 11 - Monolith vs Microservices (you WILL be asked this)
+# PART 11 - Why This Is a Monolith Inside One Microservice (you WILL be asked this)
 
-The "scariest" architecture question. Your answer is strong and true, and it has a before/after:
-**this system started as one Laravel monolith. We migrated it to 8 independent microservices using the Strangler Fig pattern — pulling one domain out at a time, verifying it with tests, then moving to the next. That migration is now COMPLETE: all 8 domains (auth/identity, analytics+AI, attendance, scheduling, time-off, payroll, communications, configuration) run as separate Laravel apps, each on its own port, each with its own PostgreSQL database, each independently testable and independently startable.**
+The "scariest" architecture question — and your answer is actually a strength, not a weakness, once you say it in the right order. Here's the honest before/after:
 
-> This matches the requirement from the higher department: microservices format. We didn't rewrite the system from scratch — we proved the domain boundaries first inside the monolith (each module already owned its own tables and routes), then physically lifted each one out into its own app + database, one at a time, the safest possible order. Every extraction was verified by that service's own automated test suite before moving to the next. All 229 tests across the 8 services are green.
+**The bigger picture first: the team is building an E-Commerce Enterprise platform, and THAT platform is what's organized as microservices** — separate subsystems like Orders, Inventory, Customers, and **Workforce Management**, each one its own independently-deployable service with its own database. **WorkForce Pro IS one of those microservices.** During development, we originally misread that requirement and split Workforce Management's own internals into 8 further "microservices" (auth, attendance, scheduling, leave, payroll, notifications, settings, analytics) — 8 separate Laravel apps, 8 databases, talking to each other over HTTP. On review, we caught that this was over-engineering: we were slicing up ONE bounded domain into pieces that all shared the same data model, for no real benefit. **We corrected it**: Workforce Management is now ONE Laravel application with ONE PostgreSQL database (`workforce_mgnt`), organized internally into 8 clear domains (identity, attendance, scheduling, time-off, payroll, communications, configuration, analytics/AI) as folders/namespaces — not separate deployments.
 
-## What our system looks like TODAY (Strangler Fig, complete)
+> Say it plainly if asked "so is this a monolith or microservices?": **"Both, correctly. At the platform level, we use microservices — Workforce Management is one of them. Inside Workforce Management, it's a single, cohesive application, because internally it's one domain, one team, one data model."**
+
+## What our system looks like TODAY (one microservice, one app, one database)
 
 ```
                 ┌──────────────────────────────────────────────────────────┐
                 │                        BROWSER                           │
                 │             React SPA  (localhost:5173)                  │
                 │        HR pages · Employee pages · Kiosk pages           │
-                └──┬────────┬────────┬────────┬────────┬────────┬────────┬─┘
-                   │        │        │        │        │        │        │
-                   ▼        ▼        ▼        ▼        ▼        ▼        ▼
-              ┌───────┐┌───────┐┌───────┐┌───────┐┌───────┐┌───────┐┌───────┐
-              │ core  ││intel- ││attend-││sched- ││time-  ││payroll││comms +│
-              │ :8000 ││ligence││ance   ││uling  ││off    ││:8006  ││config │
-              │       ││:8001  ││:8003  ││:8004  ││:8005  ││       ││:8007/8│
-              └───┬───┘└───┬───┘└───┬───┘└───┬───┘└───┬───┘└───┬───┘└───┬───┘
-                  ▼        ▼        ▼        ▼        ▼        ▼        ▼
-              8 separate PostgreSQL databases, one per service, no sharing
+                └───────────────────────────┬────────────────────────────-─┘
+                                             │  one proxy target
+                                             ▼
+                ┌──────────────────────────────────────────────────────────┐
+                │        WORKFORCE MANAGEMENT — one Laravel app :8000      │
+                │  ┌──────────┐┌──────────┐┌──────────┐┌──────────┐        │
+                │  │ Identity ││Attendance││Scheduling││ Time-off │  ...   │
+                │  └──────────┘└──────────┘└──────────┘└──────────┘        │
+                │   (8 domain folders: routes + controllers + models -    │
+                │    grouped by topic, not separately deployed)           │
+                └───────────────────────────┬──────────────────────────────┘
+                                             ▼
+                          ONE PostgreSQL database: workforce_mgnt
 
-   ★ No service connects to another service's database. Cross-service data
-     arrives only over HTTP: either a periodic snapshot sync (for reference
-     data like employee names) or a direct internal API call (for anything
-     that must happen right now, like posting a notification).
-   ★ Every service checks "who is this token?" by asking core's Auth
-     service over HTTP — core is the one remaining source of identity truth,
-     but it is no longer a gateway for anyone else's data or business logic.
-   ★ If ANY one service goes down, the others keep working. Kill Intelligence
-     and time & attendance, leave, payroll still run fine. Kill Communications
-     and nobody gets a notification, but clock-ins/leave/payroll are unaffected.
-     That's independent failure, proven across the whole system, not just one service.
+   ★ One process, one codebase, one deploy. No inter-service HTTP calls,
+     no SERVICE_TOKEN, no cron job copying "replica" tables between
+     services, no /api/internal/* endpoints. That entire layer of
+     plumbing is gone because it was never solving a real problem here.
+   ★ Docker Compose now starts 4 containers: postgres, app, scheduler,
+     frontend. (It used to be 15: 8 services + 5 schedulers + postgres +
+     frontend.) The "9 running processes" become 3: backend, scheduler,
+     frontend - plus the one database.
+   ★ At the PLATFORM level (the E-Commerce Enterprise system), Workforce
+     Management is still exactly the kind of thing that should be its own
+     microservice - it will talk to Orders/Inventory/Customers and whatever
+     else the platform needs, as one unit, over the platform's own API
+     boundary. That boundary is real. Splitting Workforce Management's
+     OWN internals into 8 more pieces was not.
 ```
 
 **The one-line truth (memorize this):**
-> "We migrated this system from a single Laravel monolith to 8 independent microservices using the Strangler Fig pattern — one domain extracted and verified at a time. That migration is complete: every domain (identity, analytics/AI, attendance, scheduling, time-off, payroll, communications, configuration) is now its own Laravel app, its own port, its own database, with 324 automated tests passing across all 8, and the frontend's proxy config is the only thing that routes requests to the right one."
+> "Our E-Commerce Enterprise platform is organized as microservices, and Workforce Management is one of them - a single, independently-deployable Laravel application with its own database. Internally, it's organized into 8 clear domains as folders, not 8 separate deployments, because there's no reason to split a single team's domain with one consistent data model into pieces that just have to call each other over the network."
 
-## Why we did it in this order (your honest engineering answer)
+## Why we corrected the 8-way split (your honest engineering answer)
 
-- **Strangler Fig = safe migration:** pull one service out, verify it, move to the next. We never rewrote the whole system in one leap.
-- **We extracted Intelligence (analytics + AI) first** because nothing else depends on it at runtime — HR can still clock people in, take leave, and run payroll even if that service is down. It was the safest domain to prove the pattern on before touching anything load-bearing.
-- **Then we worked through the remaining seven** the same way: attendance, scheduling, time-off, payroll, communications, and configuration, with identity staying behind in `core`. Each got its own app, own database, own tests, before we moved on.
-- **The department's microservices requirement is now fully and physically demonstrated:** 8 processes, 8 databases, real inter-service HTTP (auth checks, snapshot syncs, internal API calls) — not a diagram, a running system.
+- **We caught it ourselves, during review** — that's iterative engineering working the way it's supposed to, not a failure. Good teams re-examine architecture decisions before they calcify, and we did that with days to spare instead of finding out the hard way after the defense.
+- **Splitting Workforce Management into 8 services added cost with no benefit.** Nothing in this system needs independent scaling (attendance doesn't get 10x the traffic of payroll), a different release schedule (we ship them all together anyway), or a different team owning each piece (it's one team). Splitting it gave us 8 databases to keep in sync, a background job copying "replica" tables so services could see each other's data, and network calls between pieces of the SAME domain — pure overhead.
+- **The real microservice boundary is one level up.** Workforce Management as a WHOLE is the right unit to separate from Orders, Inventory, Customers, and the other subsystems of the e-commerce platform — those genuinely are different domains, likely different teams, and could genuinely need independent scaling or release schedules. That's where the microservices pattern earns its keep.
+- **The fix was mechanical, not a rewrite:** the 8 domains' routes, controllers, and models moved into one Laravel app's folders, the 8 databases merged into one (`workforce_mgnt`), and the inter-service HTTP glue (SERVICE_TOKEN, snapshot sync, `/internal/*` routes) was deleted because nothing needed it anymore.
+- **Every business-rule test survived.** We went from 324 tests (across 8 services) to 307 - the only tests removed were ones that existed purely to check the removed inter-service HTTP transport (e.g. "does service A correctly call service B's internal API"). Every test that checks an actual business rule (attendance rules, leave balances, payroll math, security lockouts, etc.) was kept, and all 307 pass today.
 
-## How services stay in sync without sharing a database
+## How the 8 domains stay organized without 8 databases
 
-Two mechanisms, chosen per need:
-
-1. **Snapshot replication** — for reference data a service mostly *reads* (e.g. `attendance` needs employee names and leave records to compute Late/Absent/On-Leave), that service keeps a small local read-only copy, refreshed from the owning service over HTTP (`SnapshotSyncService` + `php artisan snapshot:sync`).
-2. **Internal API calls** — for anything that must be correct *right now* (e.g. `intelligence` approving a leave request from the AI decision queue, or any service raising a notification), the service calls the owning service's `/internal/*` API directly, authenticated with a shared service token, instead of writing to data it doesn't own.
+Inside the one Laravel app, each domain is just a folder grouping: its own routes file, its own controllers, its own Eloquent models - all pointed at the same `workforce_mgnt` database. Need attendance data while approving a leave request? It's a normal Eloquent relationship or a query in the same database - no HTTP call, no token, no waiting for a sync job. That's the entire "how do the pieces talk to each other" question now: they don't need to talk, because they're already in the same process reading the same tables.
 
 ## The one-line difference (memorize this)
 
 > A monolith is **one app, one database, everything in one place**.
-> Microservices are **many small apps, each with its own database, talking over the network**.
-> We migrated from the first to the second: **8 apps, 8 databases**, coordinated by snapshot sync + internal APIs instead of shared tables.
+> Microservices are **many independently-deployable services, each owning its own data**.
+> **Workforce Management is a monolith** - and that's correct, because it's ONE microservice inside the E-Commerce Enterprise platform, which IS built as many services. We don't need microservices inside our microservice.
 
-## If anyone says "you'll have to use microservices" or "why aren't you microservices?"
+## If anyone says "you have to use microservices" or "why aren't you microservices?"
 
-> "We already are — fully. Every one of our 8 domains runs as its own Laravel app on its own port with its own database, and each talks to the others only over HTTP: a snapshot sync for reference data, or a direct internal API call when something has to happen immediately. We can stop any one service and the rest keep running — that's independent failure, and we can demonstrate it live. We migrated there using the Strangler Fig pattern: extract one domain, verify it with its own test suite, move to the next — so the system stayed working through the whole migration instead of one risky big-bang rewrite."
+> "We are - at the level where it matters. Our E-Commerce Enterprise platform is organized as microservices: Orders, Inventory, Customers, and Workforce Management are each their own independently-deployable service with its own database. Workforce Management is that service. Early in development we tried splitting Workforce Management's own internals into 8 more microservices, and during review we recognized that was over-engineering - it's one team's domain with one data model, and splitting it just added network calls, a sync job, and 8 databases without giving us anything we needed, like independent scaling. So we consolidated it back into one Laravel application with one database, organized internally into 8 clear domains. That's the correct shape: microservices between subsystems that are genuinely different domains, a cohesive application inside each one."
 
 ---
 
@@ -376,7 +381,7 @@ Use this as a rapid-fire review. One line = one idea. Cover the right column, th
 |--------|-------------|--------------|----------------|
 | **Login/Auth** | Proves who you are | Email+password checked against a bcrypt hash → issues a token | Nobody else can act as you; every action is traceable |
 | **Employees** | The company's people database | CRUD on the `employees` table; generates `EMP2026xxxx` IDs | THE central entity - every other module hangs off the employee ID |
-| **Face Registration** | Turns a face into a 128-number print | Stores `face_image` (only in `core`) + `face_descriptor` JSON per employee; other services get just the descriptor | Lets the kiosk verify identity without passwords or staff |
+| **Face Registration** | Turns a face into a 128-number print | Stores `face_image` + `face_descriptor` JSON per employee in `employees`, in the one database; list responses omit both and the Edit modal fetches them on demand | Lets the kiosk verify identity without passwords or staff |
 | **Attendance (kiosk)** | The clock-in/out terminal | Face match (< 0.6 distance) + server-enforced rules (shift required, Present ≤ 15 min / Late after, reason for early leave) → one row in `attendance` | Accurate, tamper-resistant attendance with zero manual work |
 | **HR Attendance** | Fix/correct daily records | Approve, edit, delete rows; computed Late/Present/Absent | Keeps records honest; the audit trail source of truth |
 | **Leave** | Time-off requests | Apply (Pending) → HR Approve/Reject → deducts balance → notify | Balances stay consistent; approved leave stops "Absent" flags |
@@ -419,17 +424,17 @@ Use this as a rapid-fire review. One line = one idea. Cover the right column, th
 5. What was the client problem? → Paper/Excel HR work: attendance, schedules, leave, timesheets was slow and error-prone.
 
 ## Architecture (6-12)
-6. How does data move? → Page → api.js → Vite proxy routes by URL prefix → the owning microservice's Laravel route → Controller → its own SQL database → JSON → screen.
-7a. Is Docker used? → Yes, as an alternative way to run the whole system. Docker Compose starts 15 containers: PostgreSQL, the 8 Laravel services, 5 small scheduler containers and an nginx frontend. No features changed (only a few small bug fixes found while testing); Docker only changes how it is built and started. It targets development/demonstration on one machine — no cloud, no HTTPS, no CI/CD yet.
-7. Why nine running programs? → Frontend (5173) + 8 microservices, each on its own port: core (8000), intelligence (8001), attendance (8003), scheduling (8004), timeoff (8005), payroll (8006), communications (8007), configuration (8008) — all against PostgreSQL (5432), one database per service. `start-all.ps1` boots all 9 and health-checks them.
-8. What is a token? → ID badge issued at login by `core`, shown on every request, validated by whichever service receives it by asking `core` over HTTP, destroyed at logout.
-9. What is middleware? → Bouncer that checks token + role before the controller runs, in every service.
-10. What is a migration? → Table-building recipe. What is a seeder? → Data-filling script. Each service has its own set of both, for its own database.
-11. Monolith vs microservices? → We migrated from one Laravel monolith to 8 independent microservices using the Strangler Fig pattern — one domain extracted and test-verified at a time. That migration is now complete: identity/auth, analytics+AI, attendance, scheduling, time-off, payroll, communications, and configuration each run as their own Laravel app, own port, own database. Cross-service data moves via snapshot sync (read-mostly reference data) or internal API calls (anything that must happen immediately) — never a shared database.
-12. Why did we pick each tech? → React=fast UI, Laravel=secure backend (×8, one per domain), PostgreSQL=reliable relational DB (×8), Gemini=smart insights.
+6. How does data move? → Page → api.js → the frontend's proxy forwards it to the one Laravel backend on port 8000 → Controller in the matching domain folder → Eloquent → the one PostgreSQL database → JSON → screen.
+7a. Is Docker used? → Yes, as an alternative way to run the whole system. Docker Compose starts 4 containers: PostgreSQL, the app (Laravel), a scheduler, and the frontend (nginx). No features changed (only a few small bug fixes found while testing); Docker only changes how it is built and started. It targets development/demonstration on one machine — no cloud, no HTTPS, no CI/CD yet.
+7. Why so few running programs? → Frontend (5173) + one Laravel backend on port 8000 + one scheduler, all against one PostgreSQL database (5432). That's 3 processes plus the database — down from an earlier design with 8 separate services, because Workforce Management is one cohesive domain, not eight.
+8. What is a token? → ID badge issued at login by the backend, shown on every request, validated by the same backend, destroyed at logout.
+9. What is middleware? → Bouncer that checks token + role before the controller runs.
+10. What is a migration? → Table-building recipe. What is a seeder? → Data-filling script. One Laravel app, one set of migrations and seeders, for the one database.
+11. Monolith vs microservices? → Our E-Commerce Enterprise platform is organized as microservices, and Workforce Management is one of them — one Laravel application, one PostgreSQL database, independently deployable. Internally it's organized into 8 clear domains (identity, attendance, scheduling, time-off, payroll, communications, configuration, analytics/AI) as folders, not separate services, because it's one team's domain with one data model. We briefly split it into 8 separate services early on, caught that it was over-engineering during review, and consolidated it back — no inter-service HTTP, no shared-tables workaround needed anymore.
+12. Why did we pick each tech? → React=fast UI, Laravel=secure backend, PostgreSQL=reliable relational database, Gemini=smart insights.
 
 ## Database (13-19)
-13. How many tables? → 25 (16 business + 9 Laravel plumbing). The 16 include the two newest: `early_clock_outs` (early-leave reasons) and `audit_events` (the audit trail).
+13. How many tables? → 31 (22 business + 9 Laravel plumbing). The 22 business tables include the newest: `early_clock_outs` (early-leave reasons) and `audit_events` (the audit trail).
 14. Which table is most important? → `employees` - everything links by `employee_id`.
 15. What is a primary key? → Unique row ID (e.g. `EMP20260001`).
 16. What is a foreign key? → A column pointing to another table's key (attendance.employee_id → employees.id).
@@ -469,12 +474,12 @@ Use this as a rapid-fire review. One line = one idea. Cover the right column, th
 41. Frontend vs backend security? → Hiding buttons is convenience; the backend enforces real security.
 
 ## AI & analytics (42-47)
-42. What does the AI read? → A snapshot of the last 30 days (attendance, pending leaves/OT, shift coverage, open security events) that its own service pulls over HTTP from the core and keeps in its own database.
+42. What does the AI read? → The last 30 days of real data (attendance, pending leaves/OT, shift coverage, open security events) via the same Eloquent models every other domain uses — one database, no HTTP hop, always live.
 43. What are the two "brains"? → Google Gemini (online) or built-in PHP rule engine (offline).
 44. What 4 things does AI return? → healthScore, insights, decisionQueue, source.
 45. What actions can HR take in one click? → Approve/reject leave & OT, resolve security events.
 46. Why cached analytics? → Heavy math runs once via AnalyticsService; charts stay instant.
-47. What are the 6 analytics sections? → attendance_trend, department_productivity, leave_trend, overtime_summary, punctuality_score, payroll_discrepancy — all computed by the separate Intelligence service on its own database.
+47. What are the 6 analytics sections? → attendance_trend, department_productivity, leave_trend, overtime_summary, punctuality_score, payroll_discrepancy — computed by the AnalyticsService in the analytics domain, reading the same single database.
 
 ## People & registry (48-50)
 48. Who are the demo logins? → admin@workforcepro.com/Admin@123 and employee@workforcepro.com/Employee@123.
@@ -493,12 +498,12 @@ Use this as a rapid-fire review. One line = one idea. Cover the right column, th
 
 **The 5 things to remember:**
 1. **Image** = the packed recipe; **container** = that recipe running. (`Dockerfile` builds an image.)
-2. **`docker-compose.yml`** = the conductor's sheet that starts all **15 containers** in order: 1 PostgreSQL (8 databases), 8 microservices, 5 background schedulers, 1 frontend (React + nginx).
-3. **One command** starts everything: `docker compose up -d --build`. It builds the images, creates the 8 databases the first time, and each service runs its own migrations.
+2. **`docker-compose.yml`** = the conductor's sheet that starts all **4 containers** in order: 1 PostgreSQL, 1 Laravel backend (all 8 domains), 1 scheduler (same backend image, running the scheduled jobs), 1 frontend (React + nginx).
+3. **One command** starts everything: `docker compose up -d --build`. It builds the images, creates the one `workforce_mgnt` database the first time, and runs the migrations.
 4. **Data survives** in a volume (`down` keeps it, `down -v` erases it). Docker's database is **separate** from the local one the scripts use.
 5. **Docker keeps a copy of the code** — after any change, rebuild with `--build`.
 
-**Say this if asked:** *"Docker lets us start the whole system, all 15 parts, with one command on any laptop without installing PHP, Node or PostgreSQL. It doesn't change any feature. It's a demo/dev setup, not production hosting."*
+**Say this if asked:** *"Docker lets us start the whole system, all 4 parts, with one command on any laptop without installing PHP, Node or PostgreSQL. It doesn't change any feature. It's a demo/dev setup, not production hosting."*
 
 **Full explanation, file by file:** `00 - Start Here - Absolute Beginner Guide.md` → Section 10. **How to run it:** `activator-deactivator.md` → Way 2.
 
@@ -506,7 +511,7 @@ Use this as a rapid-fire review. One line = one idea. Cover the right column, th
 
 ## Newest Additions In One Breath (Say These Confidently)
 
-- **Leave costs working days:** weekends, holidays and days off are not charged. Time-off asks the scheduling service to count them when the request is filed.
+- **Leave costs working days:** weekends, holidays and days off are not charged. The time-off domain counts the working days itself, in-process, from the same database the schedule uses, when the request is filed.
 - **Absences are recorded automatically:** a nightly job marks a finished, scheduled day with no clock-in and no approved leave as Absent, so the numbers are honest.
 - **Everything sensitive is audited:** sign-ins, failed sign-ins, password changes, overtime decisions, and any change to settings. Exporting a report or the audit log asks the administrator to type their password again.
 - **Administrator's daily workflow:** the dashboard's "Needs your attention" panel, bulk leave approval with a team-impact view, reopenable overtime decisions, and a Notifications page.

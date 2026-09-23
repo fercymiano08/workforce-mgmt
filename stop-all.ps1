@@ -1,19 +1,12 @@
-# stop-all.ps1 - Stops all 8 microservices + the React frontend started by start-all.ps1.
+# stop-all.ps1 - Stops the backend + the React frontend started by start-all.ps1.
 # Run from PowerShell:  .\stop-all.ps1
 
 $ErrorActionPreference = 'SilentlyContinue'
 
 $ports = @(
-  @{ name = 'core';           port = 8000 },
-  @{ name = 'intelligence';   port = 8001 },
-  @{ name = 'attendance';     port = 8003 },
-  @{ name = 'scheduling';     port = 8004 },
-  @{ name = 'timeoff';        port = 8005 },
-  @{ name = 'payroll';        port = 8006 },
-  @{ name = 'communications'; port = 8007 },
-  @{ name = 'configuration';  port = 8008 },
-  @{ name = 'frontend (5173)'; port = 5173 },
-  @{ name = 'frontend (5174)'; port = 5174 }
+  @{ name = 'backend';          port = 8000 },
+  @{ name = 'frontend (5173)';  port = 5173 },
+  @{ name = 'frontend (5174)';  port = 5174 }
 )
 
 Write-Host "Stopping the Workforce Management stack..." -ForegroundColor Cyan
@@ -39,9 +32,9 @@ if ($schedulers) {
   foreach ($proc in $schedulers) {
     Stop-Process -Id $proc.ProcessId -Force -Confirm:$false -ErrorAction SilentlyContinue
   }
-  Write-Host "  [ok]   background replica sync scheduler stopped ($($schedulers.Count) process(es))." -ForegroundColor Green
+  Write-Host "  [ok]   background scheduler stopped ($($schedulers.Count) process(es))." -ForegroundColor Green
 } else {
-  Write-Host "  [skip] background replica sync scheduler - nothing running." -ForegroundColor DarkGray
+  Write-Host "  [skip] background scheduler - nothing running." -ForegroundColor DarkGray
 }
 
 Write-Host ""

@@ -56,4 +56,7 @@ Client's Company Information:
 - Quality control, Quality assurance supervisor (Position of our client in thier workplace)
 
 PostgreSQL Password:
-Each service reads its own database credentials from `backend/<service>/.env` under `DB_PASSWORD`. The real password is never committed to GitHub — the committed `.env.example` files carry placeholders instead.
+The backend reads its database credentials from `backend/app/.env` under `DB_PASSWORD`. The real password is never committed to GitHub — the committed `.env.example` file carries a placeholder instead.
+
+Architecture note:
+This Workforce Management System is one subsystem of a larger E-Commerce Enterprise platform the team is building — it is itself one microservice within that larger system's architecture. Internally, it is a single Laravel backend application (one codebase, one database), not split into further microservices.

@@ -1,4 +1,4 @@
-# Docker Compose stack: PostgreSQL + the 8 Laravel microservices + 5 replica-sync schedulers + the frontend.
+# Docker Compose stack: PostgreSQL + the one Laravel backend + its scheduler + the frontend.
 # Start:  docker compose up -d --build        Stop:  docker compose down        (data survives; add -v to erase it)
 # Secrets come from the git-ignored ".env" next to this file (template: .env.docker.example).
 name: workforce
@@ -6,23 +6,36 @@ name: workforce
 x-backend: &backend
   restart: unless-stopped
   environment: &backend-env
+    APP_NAME: 'WorkForce Pro'
     APP_ENV: production
     APP_DEBUG: "false"
+    APP_URL: 'http://localhost:8000'
     APP_KEY: ${APP_KEY}
     LOG_CHANNEL: stderr
     LOG_LEVEL: warning
     DB_CONNECTION: pgsql
     DB_HOST: postgres
     DB_PORT: "5432"
+    DB_DATABASE: 'workforce_mgnt'
     DB_USERNAME: postgres
     DB_PASSWORD: ${POSTGRES_PASSWORD}
     SESSION_DRIVER: database
     CACHE_STORE: database
     QUEUE_CONNECTION: database
     BCRYPT_ROUNDS: "12"
-    SERVICE_TOKEN: ${SERVICE_TOKEN}
+    PORT: '8000'
     FRONTEND_URL: http://localhost:5173
-    MAIL_MAILER: array
+    SEED_DEMO_DATA: 'false'
+    GEMINI_API_KEY: "${GEMINI_API_KEY:-}"
+    GEMINI_MODEL: 'gemini-3.1-flash-lite'
+    GEMINI_TIMEOUT: '15'
+    MAIL_MAILER: "${MAIL_MAILER:-log}"
+    MAIL_HOST: "${MAIL_HOST:-}"
+    MAIL_PORT: "${MAIL_PORT:-587}"
+    MAIL_USERNAME: "${MAIL_USERNAME:-}"
+    MAIL_PASSWORD: "${MAIL_PASSWORD:-}"
+    MAIL_FROM_ADDRESS: 'no-reply@workforcepro.com'
+    MAIL_FROM_NAME: 'WorkForce Pro'
 
 services:
   postgres:
@@ -31,27 +44,25 @@ services:
     environment:
       POSTGRES_USER: postgres
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_DB: workforce_mgnt
     volumes:
       - pgdata:/var/lib/postgresql
-      - ./docker/postgres-init:/docker-entrypoint-initdb.d:ro
     ports:
       - "5433:5432"   # optional: inspect from the host (5433 so it never clashes with a local PostgreSQL)
     healthcheck:
-      # -h 127.0.0.1 = TCP: the temporary server used for the one-time init only listens on a socket,
-      # so this passes only once the final server is up and all 8 databases exist.
-      test: ["CMD-SHELL", "pg_isready -h 127.0.0.1 -U postgres -d workforce_configuration"]
+      test: ["CMD-SHELL", "pg_isready -U postgres -d workforce_mgnt"]
       interval: 5s
       timeout: 5s
       retries: 20
 
-  core:
+  app:
     <<: *backend
-    image: workforce/core
+    image: workforce/app
     build:
       context: .
       dockerfile: docker/backend.Dockerfile
       args:
-        SERVICE: core
+        SERVICE: app
     depends_on:
       postgres:
         condition: service_healthy
@@ -59,24 +70,8 @@ services:
       - "8000:8000"
     environment:
       <<: *backend-env
-      APP_NAME: 'WorkForce Pro'
-      APP_URL: 'http://localhost:8000'
-      PORT: '8000'
-      DB_DATABASE: 'workforce_mgnt'
       RUN_MIGRATIONS: 'true'
       RUN_SEED: 'true'
-      EMPLOYEE_REPLICA_TARGETS: '["http://intelligence:8001","http://attendance:8003","http://scheduling:8004","http://timeoff:8005","http://payroll:8006"]'
-      SEED_DEMO_DATA: 'false'
-      GEMINI_API_KEY: "${GEMINI_API_KEY:-}"
-      GEMINI_MODEL: 'gemini-3.1-flash-lite'
-      GEMINI_TIMEOUT: '15'
-      MAIL_MAILER: "${MAIL_MAILER:-log}"
-      MAIL_HOST: "${MAIL_HOST:-}"
-      MAIL_PORT: "${MAIL_PORT:-587}"
-      MAIL_USERNAME: "${MAIL_USERNAME:-}"
-      MAIL_PASSWORD: "${MAIL_PASSWORD:-}"
-      MAIL_FROM_ADDRESS: 'no-reply@workforcepro.com'
-      MAIL_FROM_NAME: 'WorkForce Pro'
     healthcheck:
       test: ["CMD", "php", "-r", "$$r = @file_get_contents('http://127.0.0.1:8000/up'); exit($$r !== false && strpos($$r, 'Fatal error') === false ? 0 : 1);"]
       interval: 10s
@@ -84,383 +79,15 @@ services:
       retries: 12
       start_period: 20s
 
-  intelligence:
+  scheduler:
     <<: *backend
-    image: workforce/intelligence
-    build:
-      context: .
-      dockerfile: docker/backend.Dockerfile
-      args:
-        SERVICE: intelligence
-    depends_on:
-      postgres:
-        condition: service_healthy
-      core:
-        condition: service_healthy
-    ports:
-      - "8001:8001"
-    environment:
-      <<: *backend-env
-      APP_NAME: 'WorkForce Pro intelligence'
-      APP_URL: 'http://intelligence:8001'
-      PORT: '8001'
-      DB_DATABASE: 'workforce_intel'
-      RUN_MIGRATIONS: 'true'
-      AUTH_SERVICE_URL: 'http://core:8000'
-      COMMS_SERVICE_URL: 'http://communications:8007'
-      SVC_AUTH_MODE: 'remote'
-      SVC_NOTIFICATIONS_MODE: 'remote'
-      SVC_TIMEOFF_MODE: 'remote'
-      SVC_ATTENDANCE_MODE: 'remote'
-      SVC_CONFIGURATION_MODE: 'remote'
-      SVC_DEPENDENCIES: '[{"url":"http://core:8000","tables":["employees"]},{"url":"http://attendance:8003","tables":["attendance","security_events"]},{"url":"http://timeoff:8005","tables":["leaves","overtime_requests"]},{"url":"http://scheduling:8004","tables":["shift_definitions","shift_schedules"]},{"url":"http://payroll:8006","tables":["timesheets"]},{"url":"http://configuration:8008","tables":["settings"]}]'
-      GEMINI_API_KEY: "${GEMINI_API_KEY:-}"
-      GEMINI_MODEL: 'gemini-3.1-flash-lite'
-      GEMINI_TIMEOUT: '15'
-      CORE_SERVICE_URL: 'http://core:8000'
-      ATTENDANCE_SERVICE_URL: 'http://attendance:8003'
-      SCHEDULING_SERVICE_URL: 'http://scheduling:8004'
-      TIMEOFF_SERVICE_URL: 'http://timeoff:8005'
-      PAYROLL_SERVICE_URL: 'http://payroll:8006'
-      CONFIG_SERVICE_URL: 'http://configuration:8008'
-    healthcheck:
-      test: ["CMD", "php", "-r", "$$r = @file_get_contents('http://127.0.0.1:8001/up'); exit($$r !== false && strpos($$r, 'Fatal error') === false ? 0 : 1);"]
-      interval: 10s
-      timeout: 5s
-      retries: 12
-      start_period: 20s
-
-  attendance:
-    <<: *backend
-    image: workforce/attendance
-    build:
-      context: .
-      dockerfile: docker/backend.Dockerfile
-      args:
-        SERVICE: attendance
-    depends_on:
-      postgres:
-        condition: service_healthy
-      core:
-        condition: service_healthy
-    ports:
-      - "8003:8003"
-    environment:
-      <<: *backend-env
-      APP_NAME: 'WorkForce Pro attendance'
-      APP_URL: 'http://attendance:8003'
-      PORT: '8003'
-      DB_DATABASE: 'workforce_attendance'
-      RUN_MIGRATIONS: 'true'
-      AUTH_SERVICE_URL: 'http://core:8000'
-      COMMS_SERVICE_URL: 'http://communications:8007'
-      SVC_AUTH_MODE: 'remote'
-      SVC_NOTIFICATIONS_MODE: 'remote'
-      SVC_PAYROLL_MODE: 'remote'
-      SVC_CONFIGURATION_MODE: 'remote'
-      SVC_DEPENDENCIES: '[{"url":"http://core:8000","tables":["employees"]},{"url":"http://scheduling:8004","tables":["shift_definitions","shift_schedules"]},{"url":"http://timeoff:8005","tables":["leaves","overtime_requests"]},{"url":"http://communications:8007","tables":["notifications"]},{"url":"http://configuration:8008","tables":["settings"]}]'
-      PAYROLL_SERVICE_URL: 'http://payroll:8006'
-      CONFIG_SERVICE_URL: 'http://configuration:8008'
-    healthcheck:
-      test: ["CMD", "php", "-r", "$$r = @file_get_contents('http://127.0.0.1:8003/up'); exit($$r !== false && strpos($$r, 'Fatal error') === false ? 0 : 1);"]
-      interval: 10s
-      timeout: 5s
-      retries: 12
-      start_period: 20s
-
-  scheduling:
-    <<: *backend
-    image: workforce/scheduling
-    build:
-      context: .
-      dockerfile: docker/backend.Dockerfile
-      args:
-        SERVICE: scheduling
-    depends_on:
-      postgres:
-        condition: service_healthy
-      core:
-        condition: service_healthy
-    ports:
-      - "8004:8004"
-    environment:
-      <<: *backend-env
-      APP_NAME: 'WorkForce Pro scheduling'
-      APP_URL: 'http://scheduling:8004'
-      PORT: '8004'
-      DB_DATABASE: 'workforce_scheduling'
-      RUN_MIGRATIONS: 'true'
-      AUTH_SERVICE_URL: 'http://core:8000'
-      COMMS_SERVICE_URL: 'http://communications:8007'
-      SVC_AUTH_MODE: 'remote'
-      SVC_NOTIFICATIONS_MODE: 'remote'
-      SVC_PAYROLL_MODE: 'remote'
-      SVC_CONFIGURATION_MODE: 'remote'
-      SVC_DEPENDENCIES: '[{"url":"http://core:8000","tables":["employees"]},{"url":"http://timeoff:8005","tables":["leaves"]},{"url":"http://communications:8007","tables":["notifications"]}]'
-      SHIFT_REPLICA_TARGETS: '["http://intelligence:8001","http://attendance:8003"]'
-    healthcheck:
-      test: ["CMD", "php", "-r", "$$r = @file_get_contents('http://127.0.0.1:8004/up'); exit($$r !== false && strpos($$r, 'Fatal error') === false ? 0 : 1);"]
-      interval: 10s
-      timeout: 5s
-      retries: 12
-      start_period: 20s
-
-  timeoff:
-    <<: *backend
-    image: workforce/timeoff
-    build:
-      context: .
-      dockerfile: docker/backend.Dockerfile
-      args:
-        SERVICE: timeoff
-    depends_on:
-      postgres:
-        condition: service_healthy
-      core:
-        condition: service_healthy
-    ports:
-      - "8005:8005"
-    environment:
-      <<: *backend-env
-      APP_NAME: 'WorkForce Pro timeoff'
-      APP_URL: 'http://timeoff:8005'
-      PORT: '8005'
-      DB_DATABASE: 'workforce_timeoff'
-      RUN_MIGRATIONS: 'true'
-      AUTH_SERVICE_URL: 'http://core:8000'
-      COMMS_SERVICE_URL: 'http://communications:8007'
-      SVC_AUTH_MODE: 'remote'
-      SVC_NOTIFICATIONS_MODE: 'remote'
-      SVC_PAYROLL_MODE: 'remote'
-      SVC_CONFIGURATION_MODE: 'remote'
-      SVC_DEPENDENCIES: '[{"url":"http://core:8000","tables":["employees"]},{"url":"http://communications:8007","tables":["notifications"]}]'
-      SCHEDULING_SERVICE_URL: 'http://scheduling:8004'
-      SVC_SCHEDULING_MODE: 'remote'
-    healthcheck:
-      test: ["CMD", "php", "-r", "$$r = @file_get_contents('http://127.0.0.1:8005/up'); exit($$r !== false && strpos($$r, 'Fatal error') === false ? 0 : 1);"]
-      interval: 10s
-      timeout: 5s
-      retries: 12
-      start_period: 20s
-
-  payroll:
-    <<: *backend
-    image: workforce/payroll
-    build:
-      context: .
-      dockerfile: docker/backend.Dockerfile
-      args:
-        SERVICE: payroll
-    depends_on:
-      postgres:
-        condition: service_healthy
-      core:
-        condition: service_healthy
-    ports:
-      - "8006:8006"
-    environment:
-      <<: *backend-env
-      APP_NAME: 'WorkForce Pro payroll'
-      APP_URL: 'http://payroll:8006'
-      PORT: '8006'
-      DB_DATABASE: 'workforce_payroll'
-      RUN_MIGRATIONS: 'true'
-      AUTH_SERVICE_URL: 'http://core:8000'
-      COMMS_SERVICE_URL: 'http://communications:8007'
-      SVC_AUTH_MODE: 'remote'
-      SVC_NOTIFICATIONS_MODE: 'remote'
-      SVC_PAYROLL_MODE: 'remote'
-      SVC_CONFIGURATION_MODE: 'remote'
-      SVC_DEPENDENCIES: '[{"url":"http://core:8000","tables":["employees"]},{"url":"http://attendance:8003","tables":["attendance"]},{"url":"http://timeoff:8005","tables":["leaves","overtime_requests"]},{"url":"http://communications:8007","tables":["notifications"]}]'
-    healthcheck:
-      test: ["CMD", "php", "-r", "$$r = @file_get_contents('http://127.0.0.1:8006/up'); exit($$r !== false && strpos($$r, 'Fatal error') === false ? 0 : 1);"]
-      interval: 10s
-      timeout: 5s
-      retries: 12
-      start_period: 20s
-
-  communications:
-    <<: *backend
-    image: workforce/communications
-    build:
-      context: .
-      dockerfile: docker/backend.Dockerfile
-      args:
-        SERVICE: communications
-    depends_on:
-      postgres:
-        condition: service_healthy
-      core:
-        condition: service_healthy
-    ports:
-      - "8007:8007"
-    environment:
-      <<: *backend-env
-      APP_NAME: 'WorkForce Pro communications'
-      APP_URL: 'http://communications:8007'
-      PORT: '8007'
-      DB_DATABASE: 'workforce_communications'
-      RUN_MIGRATIONS: 'true'
-      AUTH_SERVICE_URL: 'http://core:8000'
-      COMMS_SERVICE_URL: 'http://communications:8007'
-      SVC_AUTH_MODE: 'remote'
-      SVC_NOTIFICATIONS_MODE: 'remote'
-      SVC_DEPENDENCIES: '[]'
-    healthcheck:
-      test: ["CMD", "php", "-r", "$$r = @file_get_contents('http://127.0.0.1:8007/up'); exit($$r !== false && strpos($$r, 'Fatal error') === false ? 0 : 1);"]
-      interval: 10s
-      timeout: 5s
-      retries: 12
-      start_period: 20s
-
-  configuration:
-    <<: *backend
-    image: workforce/configuration
-    build:
-      context: .
-      dockerfile: docker/backend.Dockerfile
-      args:
-        SERVICE: configuration
-    depends_on:
-      postgres:
-        condition: service_healthy
-      core:
-        condition: service_healthy
-    ports:
-      - "8008:8008"
-    environment:
-      <<: *backend-env
-      APP_NAME: 'WorkForce Pro configuration'
-      APP_URL: 'http://configuration:8008'
-      PORT: '8008'
-      DB_DATABASE: 'workforce_configuration'
-      RUN_MIGRATIONS: 'true'
-      AUTH_SERVICE_URL: 'http://core:8000'
-      COMMS_SERVICE_URL: 'http://communications:8007'
-      SVC_AUTH_MODE: 'remote'
-      SVC_NOTIFICATIONS_MODE: 'remote'
-      SVC_DEPENDENCIES: '[]'
-    healthcheck:
-      test: ["CMD", "php", "-r", "$$r = @file_get_contents('http://127.0.0.1:8008/up'); exit($$r !== false && strpos($$r, 'Fatal error') === false ? 0 : 1);"]
-      interval: 10s
-      timeout: 5s
-      retries: 12
-      start_period: 20s
-
-  scheduler-attendance:
-    <<: *backend
-    image: workforce/attendance
+    image: workforce/app
     command: ["php", "artisan", "schedule:work"]
     depends_on:
-      attendance:
+      app:
         condition: service_healthy
     environment:
       <<: *backend-env
-      DB_DATABASE: 'workforce_attendance'
-      APP_URL: 'http://attendance:8003'
-      PORT: '8003'
-      AUTH_SERVICE_URL: 'http://core:8000'
-      COMMS_SERVICE_URL: 'http://communications:8007'
-      SVC_DEPENDENCIES: '[{"url":"http://core:8000","tables":["employees"]},{"url":"http://scheduling:8004","tables":["shift_definitions","shift_schedules"]},{"url":"http://timeoff:8005","tables":["leaves","overtime_requests"]},{"url":"http://communications:8007","tables":["notifications"]},{"url":"http://configuration:8008","tables":["settings"]}]'
-      SVC_AUTH_MODE: 'remote'
-      SVC_NOTIFICATIONS_MODE: 'remote'
-      SVC_PAYROLL_MODE: 'remote'
-      SVC_CONFIGURATION_MODE: 'remote'
-      PAYROLL_SERVICE_URL: 'http://payroll:8006'
-      CONFIG_SERVICE_URL: 'http://configuration:8008'
-
-  scheduler-intelligence:
-    <<: *backend
-    image: workforce/intelligence
-    command: ["php", "artisan", "schedule:work"]
-    depends_on:
-      intelligence:
-        condition: service_healthy
-    environment:
-      <<: *backend-env
-      DB_DATABASE: 'workforce_intel'
-      APP_URL: 'http://intelligence:8001'
-      PORT: '8001'
-      AUTH_SERVICE_URL: 'http://core:8000'
-      COMMS_SERVICE_URL: 'http://communications:8007'
-      SVC_DEPENDENCIES: '[{"url":"http://core:8000","tables":["employees"]},{"url":"http://attendance:8003","tables":["attendance","security_events"]},{"url":"http://timeoff:8005","tables":["leaves","overtime_requests"]},{"url":"http://scheduling:8004","tables":["shift_definitions","shift_schedules"]},{"url":"http://payroll:8006","tables":["timesheets"]},{"url":"http://configuration:8008","tables":["settings"]}]'
-      SVC_AUTH_MODE: 'remote'
-      SVC_NOTIFICATIONS_MODE: 'remote'
-      SVC_TIMEOFF_MODE: 'remote'
-      SVC_ATTENDANCE_MODE: 'remote'
-      SVC_CONFIGURATION_MODE: 'remote'
-      GEMINI_API_KEY: "${GEMINI_API_KEY:-}"
-      GEMINI_MODEL: 'gemini-3.1-flash-lite'
-      GEMINI_TIMEOUT: '15'
-      CORE_SERVICE_URL: 'http://core:8000'
-      ATTENDANCE_SERVICE_URL: 'http://attendance:8003'
-      SCHEDULING_SERVICE_URL: 'http://scheduling:8004'
-      TIMEOFF_SERVICE_URL: 'http://timeoff:8005'
-      PAYROLL_SERVICE_URL: 'http://payroll:8006'
-      CONFIG_SERVICE_URL: 'http://configuration:8008'
-
-  scheduler-scheduling:
-    <<: *backend
-    image: workforce/scheduling
-    command: ["php", "artisan", "schedule:work"]
-    depends_on:
-      scheduling:
-        condition: service_healthy
-    environment:
-      <<: *backend-env
-      DB_DATABASE: 'workforce_scheduling'
-      APP_URL: 'http://scheduling:8004'
-      PORT: '8004'
-      AUTH_SERVICE_URL: 'http://core:8000'
-      COMMS_SERVICE_URL: 'http://communications:8007'
-      SVC_DEPENDENCIES: '[{"url":"http://core:8000","tables":["employees"]},{"url":"http://timeoff:8005","tables":["leaves"]},{"url":"http://communications:8007","tables":["notifications"]}]'
-      SVC_AUTH_MODE: 'remote'
-      SVC_NOTIFICATIONS_MODE: 'remote'
-      SVC_PAYROLL_MODE: 'remote'
-      SVC_CONFIGURATION_MODE: 'remote'
-      SHIFT_REPLICA_TARGETS: '["http://intelligence:8001","http://attendance:8003"]'
-
-  scheduler-timeoff:
-    <<: *backend
-    image: workforce/timeoff
-    command: ["php", "artisan", "schedule:work"]
-    depends_on:
-      timeoff:
-        condition: service_healthy
-    environment:
-      <<: *backend-env
-      DB_DATABASE: 'workforce_timeoff'
-      APP_URL: 'http://timeoff:8005'
-      PORT: '8005'
-      AUTH_SERVICE_URL: 'http://core:8000'
-      COMMS_SERVICE_URL: 'http://communications:8007'
-      SVC_DEPENDENCIES: '[{"url":"http://core:8000","tables":["employees"]},{"url":"http://communications:8007","tables":["notifications"]}]'
-      SCHEDULING_SERVICE_URL: 'http://scheduling:8004'
-      SVC_SCHEDULING_MODE: 'remote'
-      SVC_AUTH_MODE: 'remote'
-      SVC_NOTIFICATIONS_MODE: 'remote'
-      SVC_PAYROLL_MODE: 'remote'
-      SVC_CONFIGURATION_MODE: 'remote'
-
-  scheduler-payroll:
-    <<: *backend
-    image: workforce/payroll
-    command: ["php", "artisan", "schedule:work"]
-    depends_on:
-      payroll:
-        condition: service_healthy
-    environment:
-      <<: *backend-env
-      DB_DATABASE: 'workforce_payroll'
-      APP_URL: 'http://payroll:8006'
-      PORT: '8006'
-      AUTH_SERVICE_URL: 'http://core:8000'
-      COMMS_SERVICE_URL: 'http://communications:8007'
-      SVC_DEPENDENCIES: '[{"url":"http://core:8000","tables":["employees"]},{"url":"http://attendance:8003","tables":["attendance"]},{"url":"http://timeoff:8005","tables":["leaves","overtime_requests"]},{"url":"http://communications:8007","tables":["notifications"]}]'
-      SVC_AUTH_MODE: 'remote'
-      SVC_NOTIFICATIONS_MODE: 'remote'
-      SVC_PAYROLL_MODE: 'remote'
-      SVC_CONFIGURATION_MODE: 'remote'
 
   frontend:
     image: workforce/frontend
@@ -469,21 +96,7 @@ services:
       dockerfile: docker/frontend.Dockerfile
     restart: unless-stopped
     depends_on:
-      core:
-        condition: service_healthy
-      intelligence:
-        condition: service_healthy
-      attendance:
-        condition: service_healthy
-      scheduling:
-        condition: service_healthy
-      timeoff:
-        condition: service_healthy
-      payroll:
-        condition: service_healthy
-      communications:
-        condition: service_healthy
-      configuration:
+      app:
         condition: service_healthy
     ports:
       - "5173:80"

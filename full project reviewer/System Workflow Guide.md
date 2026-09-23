@@ -9,7 +9,7 @@
 
 > **TL;DR — read this file in 60 seconds:**
 > 1. **The system, in one sentence:** face-verified clock-in/out at the door → attendance records → which feed schedules, leave, overtime, weekly timesheets, analytics, and an AI assistant that helps HR run things.
-> 2. **The one rule that explains every screen:** the frontend never touches the database. It sends an API request straight to whichever of the **8 services** *owns* that data; that service checks *who you are* (via `core`), applies the rules, and reads/writes only its own database.
+> 2. **The one rule that explains every screen:** the frontend never touches the database. It sends an API request to the **one Laravel backend**, which checks *who you are* (Sanctum, once, on the way in), applies the rules for whichever domain owns that data, and reads/writes the one PostgreSQL database.
 > 3. **If you only read two things:** the diagram in §1 and the clock-in journey in **Module 4**. Those two explain ~80% of the whole system.
 
 ---
@@ -39,32 +39,26 @@ Every module section follows the same pattern:
 
 ## 0.1 What actually runs on your laptop
 
-**Nine programs** must be running at the same time — 8 independent Laravel services plus the frontend. One script starts them all (see **activator-deactivator.md**): `.\start-all.ps1` / `.\stop-all.ps1` at the project root.
+**Three programs** must be running at the same time — one Laravel backend, its background scheduler, and the frontend. One script starts them all (see **activator-deactivator.md**): `.\start-all.ps1` / `.\stop-all.ps1` at the project root.
 
 | Program | Address | Owns |
 |---------|---------|------|
-| PostgreSQL database | `127.0.0.1:5432` | 8 separate databases, one per service (see table below) |
-| `core` service | `127.0.0.1:8000` | auth, employees, departments, roles |
-| `intelligence` service | `127.0.0.1:8001` | analytics + AI decision support |
-| `attendance` service | `127.0.0.1:8003` | daily clock records + kiosk terminal |
-| `scheduling` service | `127.0.0.1:8004` | shift templates + shift schedules |
-| `timeoff` service | `127.0.0.1:8005` | leave + overtime requests |
-| `payroll` service | `127.0.0.1:8006` | timesheets |
-| `communications` service | `127.0.0.1:8007` | notifications |
-| `configuration` service | `127.0.0.1:8008` | app settings + kiosk configuration |
+| PostgreSQL database | `127.0.0.1:5432` | one database, `workforce_mgnt` — every table the system uses |
+| Backend (`backend/app/`) | `127.0.0.1:8000` | everything: auth, employees, attendance, scheduling, leave/overtime, timesheets, notifications, settings, analytics/AI |
+| Scheduler (`php artisan schedule:work`) | no address — a background process | runs the recurring jobs (Module notes below) against the same app and database |
 | React frontend | `localhost:5173` | draws every screen |
 
-You open `http://localhost:5173` in the browser. Vite's dev proxy (`frontend/vite.config.js`) looks at the `/api/...` prefix of every request and forwards it straight to the service that owns it — `/api/attendance*` → 8003, `/api/leaves*`/`/api/overtime*` → 8005, `/api/analytics*` → 8001, and so on. There is no single backend anymore; each service is its own process with its own database, and the frontend is the only piece that knows how to find all of them.
+You open `http://localhost:5173` in the browser. Vite's dev proxy (`frontend/vite.config.js`) forwards every `/api/...` request to the one backend at `http://127.0.0.1:8000` — there is no per-prefix routing table anymore, because there is only one place any `/api/*` request can go.
 
-Each service is a full, independent Laravel app living at `backend/<name>/` (e.g. `backend/attendance/`), each with its own `vendor/`, `.env`, and `artisan`.
+The backend is a single Laravel app living at `backend/app/`, with one `vendor/`, one `.env`, and one `artisan`. Internally it is still organized by the same 8 business domains the system was split into (identity, attendance, scheduling, time-off, payroll, communications, configuration, intelligence) — they are just folders/route groups inside one app now, not separate deployable services.
 
 ## 0.2 "What/How/Why" for the three big technologies
 
 | Tech | What it is | How we use it | Why we picked it |
 |------|-----------|---------------|------------------|
 | **React** | A JavaScript library for building web screens | 24 page files under `frontend/src/pages/` | Fast, component-based, huge ecosystem; runs in any browser |
-| **Laravel** | A PHP web framework | 8 independent Laravel apps under `backend/<name>/app/` — one per business domain | Secure by default (hashing, validation), clean structure, easy to run as separate services |
-| **PostgreSQL** | A relational database (tables with rows/columns) | 8 databases (one per service), ~25 tables total, plus small "replica" copies of shared reference data (e.g. `employees`) inside services that need to read it without calling another service for every request | Reliable, handles relational + JSON data well, free |
+| **Laravel** | A PHP web framework | One Laravel app under `backend/app/app/`, organized into 8 domain folders (routes/controllers/services/models) | Secure by default (hashing, validation), clean layered structure (routes → controllers → services → models) |
+| **PostgreSQL** | A relational database (tables with rows/columns) | One database (`workforce_mgnt`), 31 tables total (22 business + 9 framework). Any domain that needs another domain's data just queries the real table directly — no copies, no sync | Reliable, handles relational + JSON data well, free |
 
 > If a panelist asks "why PostgreSQL instead of MySQL?" — add: "PostgreSQL handles JSON columns and complex reporting cleanly, and it's what our team is consistent with. MySQL would also work; ours was a deliberate choice for reliability."
 
@@ -79,58 +73,53 @@ Each service is a full, independent Laravel app living at `backend/<name>/` (e.g
 │                              YOUR BROWSER                                │
 │           React 19 + Vite + Tailwind CSS   http://localhost:5173         │
 │           Draws every screen. Knows NOTHING about SQL.                   │
-└───┬─────────┬─────────┬─────────┬─────────┬─────────┬─────────┬─────────┘
-    │ /api/    │ /api/    │ /api/    │ /api/    │ /api/    │ /api/    │ /api/
-    │ auth,    │ analytics│ attend-  │ shifts   │ leaves,  │ time-    │ notifi-
-    │ employees│          │ ance,    │          │ overtime │ sheets   │ cations,
-    │ ...      │          │ kiosk    │          │          │          │ settings
-    ▼          ▼          ▼          ▼          ▼          ▼          ▼
-┌────────┐┌──────────┐┌──────────┐┌──────────┐┌──────────┐┌──────────┐┌──────────────┐
-│ core   ││intelligen││attendance││scheduling││ timeoff  ││ payroll  ││communications │
-│ :8000  ││ce  :8001 ││  :8003   ││  :8004   ││  :8005   ││  :8006   ││+configuration │
-│        ││          ││          ││          ││          ││          ││ :8007 / :8008 │
-└───┬────┘└────┬─────┘└────┬─────┘└────┬─────┘└────┬─────┘└────┬─────┘└──────┬────────┘
-    │SQL       │SQL        │SQL        │SQL        │SQL        │SQL          │SQL
-    ▼          ▼           ▼           ▼           ▼           ▼             ▼
- workforce_ workforce_  workforce_  workforce_  workforce_  workforce_   workforce_comms
-   mgnt      intel      attendance  scheduling   timeoff     payroll    /configuration
+└──────────────────────────────────┬───────────────────────────────────────┘
+                                    │ every /api/... request
+                                    ▼
+                    ┌───────────────────────────────┐
+                    │   THE BACKEND — one Laravel    │
+                    │   app, one process, :8000      │
+                    │  ┌───────────┬───────────────┐ │
+                    │  │ identity  │  attendance   │ │
+                    │  │ scheduling│  time-off     │ │
+                    │  │ payroll   │ communications│ │
+                    │  │configurat.│ intelligence  │ │
+                    │  └───────────┴───────────────┘ │
+                    │  routes → controllers → services│
+                    │           → Eloquent models     │
+                    └────────────────┬────────────────┘
+                                     │ SQL
+                                     ▼
+                          PostgreSQL — workforce_mgnt
+                          (one database, every table)
 ```
-Each box is its **own Laravel app, own process, own PostgreSQL database** — 8 independent services, no shared database, no single "backend" anymore. Every service also exposes a small **internal API** under `/internal/*` (guarded by a shared service token, not a user token — see `EnsureServiceAuthenticated` middleware) so services can reach across for things that must happen immediately — e.g. when HR approves a leave request from the AI Decision Support queue, `intelligence` calls `timeoff`'s internal API directly (`TimeoffClient`) to flip the request's status, instead of writing to a database it doesn't own.
+The eight labels inside the box are **not services** — they are folders/route groups (`routes/services/*.php`, matching controllers, services and models) inside the one app. Any controller that needs another domain's data just queries the real Eloquent model directly, in the same process, against the same database — e.g. `TimesheetController` (payroll domain) reads the real `Attendance` model directly, no HTTP call involved. There is one process to start, one `.env`, one database to back up.
 
-> **One sentence:** the browser sends every request straight to the service whose URL prefix matches it (the frontend's Vite proxy is the router, not a backend gateway); each service checks *who you are* by validating the token against `core`, applies its own business rules, and reads/writes only its own database.
+> **One sentence:** the browser sends every request to the one backend; Laravel's `auth:sanctum` middleware checks *who you are* once, on the way in; the matching controller applies that domain's business rules and reads/writes the one database.
 
-> **Microservices note (important for the defense):** this used to be a **Strangler Fig migration** — one Laravel monolith with an API Gateway, with `intelligence` extracted first as a standalone proof of concept. That extraction is now **complete for all 8 domains**: every remaining module (attendance, scheduling, timeoff, payroll, communications, configuration, plus identity/auth in `core`) has been pulled out into its own Laravel app with its own database, exactly the way `intelligence` was. There is no more API Gateway and no more monolith — `core` is now just the auth + employee-directory service, not a router for the other seven.
+> **Why this looks the way it does (important for the defense):** the Workforce Management System is one subsystem of a larger E-Commerce Enterprise platform, and *that* platform is the thing organized as microservices — Workforce Management is meant to be **one** of those microservices. For a while, this subsystem's own internals were further split into 8 separate Laravel services (core/intelligence/attendance/scheduling/timeoff/payroll/communications/configuration), each with its own port and database. That was applying the microservices pattern one level too deep — real inter-service HTTP calls, replica tables and a shared service token existed purely to let one part of *this one subsystem* talk to another part of itself. It was consolidated back into a single Laravel monolith before the defense: same 8 domains, same business rules, now one process and one database, with the actual service boundary sitting one level up (Workforce Management as a whole, inside the larger platform).
 
-### How services that need each other's data stay in sync
+### How domains that need each other's data get it now
 
-Two mechanisms, used for different needs:
-
-1. **Snapshot replication (`SnapshotSyncService` + `php artisan snapshot:sync`, in each service's `app/Services/`)** — services that mostly *read* another service's reference data (e.g. `attendance` needs employees and leave records to compute Late/Absent/On-Leave) keep a local, read-only **replica table**, refreshed from the owning service over HTTP. Fast local reads, slightly stale by design (a sync interval, not real-time) — this is why `attendance` has its own local `Leave` model even though `timeoff` owns leave requests.
-2. **Internal API clients (e.g. `NotificationClient`, `ConfigurationClient`, `PayrollClient`, `TimeoffClient`, `AttendanceClient` — each service only has the clients it actually needs, living in that service's own `app/Services/`)** — for anything that must be current and correct *right now*, a service calls the owning service's `/internal/*` API directly over HTTP, authenticated with a shared service token, instead of writing through a replica. Example: any service that needs to raise a notification calls `communications`' internal API through its own `NotificationClient` rather than writing to a `notifications` table it doesn't own.
+There is nothing to keep in sync anymore. A controller in one domain that needs data owned by another domain queries that domain's real Eloquent model directly, in-process — no HTTP call, no replica table, no waiting on another service to be up. For example, the payroll domain's `TimesheetController` reads the real `Attendance` model directly; anything that needs to raise a notification just creates a `Notification` row directly instead of calling a notifications service. The only "client" classes left, if any, are thin in-process wrappers around a service class in another domain — not HTTP clients.
 
 ### Keeping It Fast And Safe (Performance & Reliability Rules)
 
-Splitting one app into eight means every request can turn into several network calls. These rules keep that from making the system slow or fragile. They were added after profiling the running system, so each one answers a real symptom.
+Even in one app, a few rules keep things fast and safe. Most were added after profiling the system when it still ran as 8 separate services and every request could turn into several network calls; now that it's one process and one database most of that network cost is simply gone, but the rules that guard against real races, heavy payloads or slow external calls are still worth keeping.
 
 | Rule | What it does | Why it exists / honest trade-off |
 |------|--------------|-----------------------------------|
-| **Identity is cached for 15 seconds** | `EnsureServiceAuthenticated` (in every service except `core`) remembers the answer of `core`'s `/api/auth/me` for 15 s, keyed by a hash of the token | Before, *every* request to *every* service waited on a round-trip to `core`, which is the biggest multiplier on page-load time. Trade-off: a revoked token or changed role is honoured by the other services up to 15 s late. If `core` is down, requests still fail once the cache expires |
-| **Replicas carry the face *descriptor*, never the photo** | `core` strips `face_image` from its snapshot and from employee pushes; only the 128-number `face_descriptor` is copied to other services | A registered face photo is ~40 KB. Copied to 5 services every minute it would grow with headcount (100 employees ≈ 4 MB per sync). Only `core` ever displays the photo |
-| **The employee list is light** | `GET /api/employees` leaves out `faceImage` / `faceDescriptor`; `GET /api/employees/{id}` returns them. The Edit modal fetches them on demand for the one employee being edited | Same reason — a page load should not download every employee's photo |
-| **Replica pushes run concurrently** | Employee pushes (`core`) and shift-schedule pushes (`scheduling`) use Laravel's `Http::pool`, so all target services are called at once | Sequential pushes added every slow target's timeout to the request of the admin who clicked Save |
-| **Notification batches are bounded** | The attendance alert scan looks up "already flagged today" with **one** query, and sends new alerts as one concurrent batch capped at **15 per scan**; the rest follow on the next scan (the "already flagged" check prevents duplicates) | Before, each absent employee cost an unindexed query plus a blocking HTTP call — a busy morning could exceed PHP's 30 s request limit |
-| **Short timeouts on non-critical calls** | Notification and audit calls: 1 s to connect, 3 s total. The early-leave policy reads the *local* settings replica first instead of calling `configuration` | A notification is never worth making someone wait at the kiosk |
-| **Mail can't hang a request** | SMTP has an 8 s timeout (`MAIL_TIMEOUT`); the AI (Gemini) call defaults to 15 s (`GEMINI_TIMEOUT`) | PHP kills any request after 30 s. A dead mail host or slow AI must fail fast, not turn into a 500 |
+| **The employee list is light** | `GET /api/employees` leaves out `faceImage` / `faceDescriptor`; `GET /api/employees/{id}` returns them. The Edit modal fetches them on demand for the one employee being edited | A registered face photo is tens of KB — a page load should not download every employee's photo just to show a directory list |
+| **Notification batches are bounded** | The attendance alert scan looks up "already flagged today" with **one** query, and sends new alerts as one batch capped at **15 per scan**; the rest follow on the next scan (the "already flagged" check prevents duplicates) | Before, each absent employee cost an unindexed query — a busy morning could exceed PHP's 30 s request limit |
+| **Mail and the AI call can't hang a request** | SMTP has an 8 s timeout (`MAIL_TIMEOUT`); the AI (Gemini) call defaults to 15 s (`GEMINI_TIMEOUT`) | These are the two calls that still genuinely leave the process, to a real external server. PHP kills any request after 30 s. A dead mail host or slow AI must fail fast, not turn into a 500 |
 | **The database enforces one-per-day** | A unique index on ttendance (employee_id, date) and shift_schedules (employee_id, date) means two simultaneous requests can never create a duplicate, even under Docker's multiple workers (an application check alone can be beaten by a race). The app turns the database's refusal into a friendly message | The admin's manual *Add attendance* had no duplicate check at all before this |
-| **Working-day logic uses Manila time** | Services run in UTC, but shifts and attendance are Manila wall-clock. The no-show alert scan now uses the company's clock (LocalTime), so a missing 8 AM person is flagged at 9 AM, not ~5 PM | Comparing a Manila shift start with a UTC 
-ow() made the alert fire 8 hours late |
-| **Tests never touch the live system** | The test suites force every replica-push address to empty and every cross-service client into local mode (with guard tests) | Running the tests used to push test employees/schedules into the running services |
+| **Working-day logic uses Manila time** | The app runs in UTC, but shifts and attendance are Manila wall-clock. The no-show alert scan uses the company's clock (LocalTime), so a missing 8 AM person is flagged at 9 AM, not ~5 PM | Comparing a Manila shift start with a UTC now() made the alert fire 8 hours late |
 | **Lists are bounded** | Notification lists return the newest 200; `GET /api/attendance` accepts optional `?from=&to=` and the HR Dashboard asks for only the last 35 days | The bell is polled every 30 s by every open tab |
 | **Duplicate requests are collapsed in the browser** | The shared HTTP client (`services/http.js`) will not send a second identical create/update/delete (same method, URL and body) while the first is still in flight — the caller just receives the first response. On top of that the shared `Button` locks itself while its action is running, and the server refuses duplicates for leave (overlapping dates), overtime (same day) and shift assignment (same day) | A slow response can never turn a double click, an Enter repeat or a spammed button into two records. Proven by an automated script (5 identical POSTs → the server receives 1) |
 | **Face scanning is warmed up and lean** | The three face-api networks are all warmed with a throw-away pass while the page/modal opens (registration and the kiosk preload the ~7 MB of models early); detection tries a 160 px input first and 320 px as the fallback (was 224/416); redundant re-detection was removed; the result flash and retry pause were shortened | The first scan used to pay a multi-second shader-compile cost and two heavier detection passes. Honest note: these are targeted fixes to the known slow spots; the actual speed still depends on the kiosk's GPU/CPU |
-| **The frontend never waits forever** | Every API call has a 45 s timeout; notification polling pauses while the browser tab is hidden and catches up when it becomes visible | A hung service now ends in an error message instead of an endless spinner |
+| **The frontend never waits forever** | Every API call has a 45 s timeout; notification polling pauses while the browser tab is hidden and catches up when it becomes visible | A hung backend now ends in an error message instead of an endless spinner |
 
-> **Why can the demo laptop still feel slower than Docker?** In "Way 1" (`start-all.ps1`) each service runs on PHP's built-in `php artisan serve`, which handles **one request at a time**, and **every request boots the whole Laravel framework again** (measured on the demo laptop: ~0.5 s per cold request — about 0.1 s to load the code, 0.55 s to boot Laravel, 0.15 s to connect to PostgreSQL). One button click can involve several requests across several services, and the first request after starting is the slowest (nothing is cached yet). The laptop matters too: a low-power CPU, low free RAM and running on battery all slow PHP a lot. We tested moving the project folder out of OneDrive and it made **no difference**. Docker mode uses 4 workers per service. For the smoothest demo: plug in the charger, close heavy apps, set `APP_DEBUG=false` and `LOG_LEVEL=warning` in each `backend/<name>/.env` — or run the Docker version (see `activator-deactivator.md`).
+> **Why can the demo laptop still feel slower than Docker?** In "Way 1" (`start-all.ps1`) the backend runs on PHP's built-in `php artisan serve`, which handles **one request at a time**, and **every request boots the whole Laravel framework again** (measured on the demo laptop: ~0.5 s per cold request — about 0.1 s to load the code, 0.55 s to boot Laravel, 0.15 s to connect to PostgreSQL). One button click can still involve several requests to the backend, and the first request after starting is the slowest (nothing is cached yet). The laptop matters too: a low-power CPU, low free RAM and running on battery all slow PHP a lot. We tested moving the project folder out of OneDrive and it made **no difference**. Docker mode runs the backend with multiple workers. For the smoothest demo: plug in the charger, close heavy apps, set `APP_DEBUG=false` and `LOG_LEVEL=warning` in `backend/app/.env` — or run the Docker version (see `activator-deactivator.md`).
 
 ### The Golden Rule Of This Architecture
 
@@ -190,22 +179,22 @@ What happens, in order, whenever any page loads data. Example: the Employee Dash
 |------|-------|--------------|
 | 1 | `EmployeeDashboard.jsx` | Page mounts (opens) and calls `attendanceService.getByEmployeeId("EMP20260001")` |
 | 2 | `services/api.js` | The service turns that into a real HTTP request: `GET /api/attendance/employee/EMP20260001`, attaching the logged-in user's **token** |
-| 3 | Vite dev proxy (`vite.config.js`) | Sees the `/api/attendance*` prefix and forwards the request to **the `attendance` service directly**, `http://127.0.0.1:8003` — no gateway, no hop through `core` |
-| 4 | `attendance` service's own `routes/api.php` → `routes/services/attendance.php` | Laravel matches the URL to `AttendanceController@byEmployee`. **Middleware runs first**: is the token valid (`attendance` asks `core`'s `/api/auth/me` to check)? Is this role allowed? |
-| 5 | `AttendanceController.php` (inside `backend/attendance/`) | Reads the employee ID, asks the model for the data |
-| 6 | PostgreSQL — `workforce_attendance` | Runs roughly: `SELECT * FROM attendance WHERE employee_id = 'EMP20260001' ORDER BY date DESC` |
+| 3 | Vite dev proxy (`vite.config.js`) | Sees the `/api/attendance*` prefix and forwards the request to the **one backend**, `http://127.0.0.1:8000` — no gateway, no hop through another service |
+| 4 | Backend `routes/api.php` → `routes/services/attendance.php` | Laravel matches the URL to `AttendanceController@byEmployee`. **Middleware runs first**: is the token valid (handled in-process by the auth middleware — the single app validates its own token, no external call)? Is this role allowed? |
+| 5 | `AttendanceController.php` (inside `backend/app/app/Http/Controllers/Api/`) | Reads the employee ID, asks the model for the data |
+| 6 | PostgreSQL — `workforce_mgnt` | Runs roughly: `SELECT * FROM attendance WHERE employee_id = 'EMP20260001' ORDER BY date DESC` |
 | 7 | Back up the chain | Rows become JSON → travel back → `api.js` receives them → React state updates → the UI renders |
 
-> **Docker mode:** when the system runs with `docker compose`, the same routing is done by **nginx inside the `frontend` container** (`docker/nginx.conf`, identical prefix table, container names such as `http://core:8000` instead of `127.0.0.1`). It is a reverse proxy only — no authentication, rate limiting or filtering — so it is still **not** an API gateway.
+> **Docker mode:** when the system runs with `docker compose`, the same routing is done by **nginx inside the `frontend` container** (`docker/nginx.conf`, identical prefix table, targeting `http://app:8000` instead of `127.0.0.1`). It is a reverse proxy only — no authentication, rate limiting or filtering — so it is still **not** an API gateway.
 
-Every API call is routed straight to its owning service by the **Vite dev proxy** (not a backend gateway — there is no gateway anymore):
-`/api/auth*`, `/api/employees*`, `/api/departments*`, `/api/roles*`, `/api/profile*` → **`core`** (:8000) · `/api/attendance*` + `/api/kiosk*` → **`attendance`** (:8003) · `/api/shifts*` → **`scheduling`** (:8004) · `/api/leaves*` + `/api/overtime*` → **`timeoff`** (:8005) · `/api/timesheets*` → **`payroll`** (:8006) · `/api/analytics*` (including `/ai/insights` and `/ai/actions`) → **`intelligence`** (:8001) · `/api/notifications*` → **`communications`** (:8007) · `/api/settings*` → **`configuration`** (:8008). Anything unmatched falls back to `core`.
+Every API call goes to the **single backend** through the **Vite dev proxy** (not a backend gateway — there is no gateway):
+`/api/*` (auth, employees, departments, roles, profile, attendance, kiosk, shifts, leaves, overtime, timesheets, notifications, analytics incl. `/ai/insights` and `/ai/actions`, settings) → the one app at **:8000**. The URL prefix is no longer a routing decision — every prefix lives in `routes/api.php`, which includes one file per domain: `routes/services/{auth,identity,audit,attendance,scheduling,timeoff,payroll,communications,configuration,intelligence}.php`.
 
-> **How each service checks "who are you":** every service except `core` has no `users` table of its own to check passwords against. Instead, its auth middleware takes the bearer token off the request and calls **`core`'s** `GET /api/auth/me` over HTTP to resolve it into a user + role. `core` is still the single source of truth for identity — it's just no longer a gateway for anyone else's data.
+> **How the backend checks "who are you":** the single Laravel app owns the `users` table and validates every bearer token **in-process** (Sanctum against `personal_access_tokens`) — there is no separate identity service to ask over HTTP. This is the biggest simplification the consolidation bought: what used to be a network round-trip per request to `core` is now a local database lookup.
 
-> **`intelligence`'s AI actions used to write through `core` — they don't anymore:** approving a leave, approving overtime, or resolving a security event from the AI Decision Support queue used to require a special-cased hop back to `core` because those write to tables `intelligence` doesn't own. Now `intelligence` calls the owning service's **internal API** directly through a dedicated client (`TimeoffClient` for leave/overtime, `AttendanceClient` for security events, `ConfigClient` for settings) — see the sync/clients note in Part 1. `/api/analytics/ai/actions` goes to `intelligence` (:8001) like every other analytics route, full stop.
+> **`intelligence`'s AI actions write straight into the same app:** approving a leave, approving overtime, or resolving a security event from the AI Decision Support queue used to require a hop through `core` or an internal API to another service. Now the domain boundaries are folders in one codebase, so the AI path calls the same service classes the manual path uses — with the same "must still be Pending" status checks. `/api/analytics/ai/actions` is just another route in `routes/services/intelligence.php`, full stop.
 
-> **Debugging rule of thumb:** find the service from the URL prefix above → `cd backend/<name>` → find the route in `routes/services/<name>.php` (or `routes/internal.php` if it's a service-to-service call) → read that controller, usually delegating to a `Services/` class. That chain explains 95% of any behavior you see. If the data looks stale rather than wrong, check whether that field comes from a **replica** (synced periodically) instead of the owning service's live table.
+> **Debugging rule of thumb:** find the URL prefix in `backend/app/routes/api.php` → read the matching `routes/services/<domain>.php` → read that controller, usually delegating to a `Services/` class. That chain explains 95% of any behavior you see. There are no replicas anymore — every table you see is the live one.
 
 ---
 
@@ -307,16 +296,16 @@ countdown ("Stay signed in" keeps the session)
         ▼
 3 minutes with no activity → the token expires: the browser signs out and the
 login page says "You were signed out after 3 minutes of inactivity"
-Every service refuses the expired token (they all verify it with core)
+Every request is refused off the expired token (validated in-process by the single backend).
 ```
 
 Because the expiry lives in the token, closing the laptop lid or leaving a tab open cannot leave a session alive. (Logins made before this rule keep working until the person signs in again.)
 
-**Internal endpoints are not public.** Everything under `/api/internal` (service-to-service) is answered with 404 by the public entrance (Vite proxy / nginx); the services reach each other directly with the shared token.
+**There are no internal endpoints.** The old design had a set of `/api/internal` service-to-service routes guarded by a shared token; the consolidation deleted them, because domain-to-domain work now happens in-process, inside the single app. As defense-in-depth, the public entrance (Vite proxy / nginx) still answers 404 for anything under `/api/internal` anyway.
 
 ### Flow B3 — Sensitive Actions Leave A Trail
 
-* **Sign-ins and password events are audited** (core writes them): `auth.login`, `auth.login_failed`, `auth.login_locked` (5 failed tries), `auth.logout`, `auth.password_changed`, `auth.password_reset_requested`, `auth.password_reset`.
+* **Sign-ins and password events are audited** (the audit domain writes them): `auth.login`, `auth.login_failed`, `auth.login_locked` (5 failed tries), `auth.logout`, `auth.password_changed`, `auth.password_reset_requested`, `auth.password_reset`.
 * **Exports ask for the password again.** Exporting a report (CSV / Excel / PDF) or the audit log opens "Confirm it's you"; the server checks the password (`POST /api/auth/confirm-password`, 5 wrong tries per minute) and records `auth.export_confirmed` (or `auth.confirm_failed`) with what it was for. We use the password rather than an emailed code because the administrator account is a fixed login, not a real mailbox.
 * **Other changes now audited too:** overtime requested / decided / reopened / withdrawn / deleted (`overtime.*`), and any change to the company / system / kiosk settings (`settings.updated`, with the before and after of what changed).
 
@@ -377,7 +366,7 @@ Same endpoints, different verbs: `GET /api/employees/{id}` loads one record into
 
 > Why store a *descriptor* instead of just a photo? Comparing two descriptors (just numbers) is fast and happens right in the kiosk browser — no face image ever needs to leave the device during verification.
 >
-> **Where the photo lives:** only in `core`. The other services receive the descriptor (they need it to check faces) but **not** the photo, and the employee list omits both; the Edit modal fetches them for one employee on demand (see *Keeping It Fast And Safe* in Part 1).
+> **Where the photo lives:** in the single backend database (`employees.face_image`). The API omits both the photo and descriptor from list responses; the Edit modal fetches them for one employee on demand (see *Keeping It Fast And Safe* in Part 1).
 
 ### Tech Trail
 
@@ -773,7 +762,7 @@ An employee with **approved leave** on a date cannot be given a shift that day: 
 
 ### Leave Costs Working Days, Not Calendar Days
 
-A leave request is charged in **working days**: the days the person's work pattern says they work (their own pattern, else their department's, else the usual days), **minus company holidays**. A Friday-to-Monday leave costs **2** days of balance, not 4. While the employee picks dates the form shows the live cost ("This will use 2 working days of your balance (4 calendar days; weekends, holidays and days off are not counted)"). The server does the counting: time-off asks the scheduling service (`POST /api/internal/working-days`) when the request is filed, stores the result in `leaves.days`, refuses a range with no working day at all, and checks the balance against it. If scheduling cannot be reached, Monday-Friday is used so an outage never blocks a request. Old requests keep their calendar-day cost (backfilled).
+A leave request is charged in **working days**: the days the person's work pattern says they work (their own pattern, else their department's, else the usual days), **minus company holidays**. A Friday-to-Monday leave costs **2** days of balance, not 4. While the employee picks dates the form shows the live cost ("This will use 2 working days of your balance (4 calendar days; weekends, holidays and days off are not counted)"). The server does the counting: the time-off domain calls the scheduling domain's `WorkingDays` calculator in-process (`SchedulingClient::workingDays` → a plain query against `holidays` and the employee's work pattern in the same database), stores the result in `leaves.days`, refuses a range with no working day at all, and checks the balance against it. There is no HTTP hop and no fallback needed — both domains share one database. Old requests keep their calendar-day cost (backfilled).
 
 ### The Administrator's Queue (Leave Management)
 
@@ -1227,7 +1216,7 @@ It's honest UX: the app tells you what it can and cannot reach right now.
 
 ## 19. Module ↔ Database Map
 
-Which tables each module touches (R = read, W = write). This map is logical — it hasn't changed since the microservices split, because every table still conceptually belongs to exactly one module. What changed is *where* the row physically lives: `employees`, for example, is the real table inside `core`'s `workforce_mgnt` database, but `attendance`, `scheduling`, `timeoff`, `payroll`, and `intelligence` each keep their own **read-only replica** of it (synced via `SnapshotSyncService`) so they don't have to call `core` on every request. An `R` in a service that doesn't own the table almost always means "reads its local replica," not "reaches across the network."
+Which tables each module touches (R = read, W = write). This map is logical — and in the consolidated system it is also physical: **one database, one app**, so an `R` means a real read of the live table, not a replica. The replica layer (`SnapshotSyncService` + read-only copies per service) was the price the microservices split paid for keeping services' databases independent; after consolidation it was deleted, because every table now lives in the same `workforce_mgnt` database with real foreign keys where it matters.
 
 | Module | users | employees | departments | roles | shift_def | shift_sched | attendance | leaves | ot_req | timesheets | notifications | sec_events | settings | analytics |
 |--------|:----:|:---------:|:-----------:|:-----:|:---------:|:-----------:|:----------:|:------:|:------:|:----------:|:-------------:|:----------:|:--------:|:---------:|
@@ -1275,7 +1264,7 @@ Which tables each module touches (R = read, W = write). This map is logical — 
 | 1/day | Rate limit on self "remind me to clock out" nudges |
 | 3 strikes | Face mismatches before the terminal locks |
 | 0.6 | Face-match distance threshold (below = same person) |
-| 15 s | How long a service reuses `core`'s "who is this token?" answer |
+| 15 s | (legacy) How long a pre-consolidation service reused `core`'s "who is this token?" answer — no longer exists |
 | 15 alerts | Most no-show/overtime alerts one dashboard scan sends |
 | 2 per 30 days | Free early clock-outs per rolling window — the 3rd is unexcused automatically (editable in Settings) |
 | 48 hours | Deadline to upload a medical certificate for a SICK early clock-out (editable in Settings) |
@@ -1312,59 +1301,39 @@ Workforce MGNT/
 │   │   ├── constants/                notificationTypes, colors...
 │   │   ├── utils/                    reportHelpers, helpers (timezone-safe math)
 │   │   └── App.jsx                   URL → page routing map
-│   ├── vite.config.js                ★ THE ROUTER — proxies each /api/* prefix
-│   │                                     to the service port that owns it
+│   ├── vite.config.js                proxies every /api/* prefix to ONE backend at :8000
 │   └── package.json
-├── backend/                           ★ 8 INDEPENDENT LARAVEL APPS — one per domain,
-│   │                                     each with its own vendor/, .env, artisan
-│   ├── core/                  :8000  auth, employees, departments, roles
-│   │   ├── app/Http/Controllers/Api/ AuthController, EmployeeController,
-│   │   │                             DepartmentController, RoleController,
-│   │   │                             InternalApiController
-│   │   ├── routes/api.php            entry point → routes/services/{auth,identity}.php
-│   │   ├── routes/internal.php       /internal/* — SERVICE_TOKEN-guarded, called by peers
-│   │   ├── app/Support/ServiceRegistry.php   service catalog (php artisan services:list)
-│   │   └── database/migrations/      users, employees, departments, roles, ...
-│   ├── intelligence/           :8001  analytics + AI decision support
-│   │   ├── app/Http/Controllers/Api/ AnalyticsController, AIDecisionSupportController
-│   │   ├── app/Services/             AnalyticsService, AIDecisionSupportService,
-│   │   │                             SnapshotSyncService, AttendanceClient,
-│   │   │                             TimeoffClient, ConfigClient, NotificationClient
-│   │   ├── app/Http/Middleware/      SyncSnapshot (refreshes the local replica),
-│   │   │                             EnsureServiceAuthenticated (asks core who this token is)
-│   │   └── database/migrations/      its own schema + replica tables
-│   ├── attendance/              :8003  attendance records + the kiosk terminal
-│   ├── scheduling/               :8004  shift templates + shift schedules
-│   ├── timeoff/                   :8005  leave requests + overtime requests
-│   ├── payroll/                   :8006  timesheets
-│   ├── communications/       :8007  notifications
-│   ├── configuration/          :8008  settings + kiosk configuration
-│   └── _templates/                    scaffolding used to stamp out a new service
-│          scaffold.ps1, SnapshotSyncService.php, *Client.php, replicas/*.php
-│          (copied into a new service and customized — not run directly)
-│
-│   Every service above follows the same internal shape:
-│      app/Http/Controllers/Api/     its own controllers
-│      app/Services/                 business logic + any *Client.php it needs to
-│                                     call other services, + SnapshotSyncService
-│                                     if it keeps replica tables
-│      app/Models/                   its own tables + read-only replica models
-│      routes/api.php                entry point for this service
-│      routes/services/<name>.php    the actual user-facing routes (svc.auth + admin
-│                                     middleware)
-│      routes/internal.php           /internal/* machine-to-machine routes
-│      database/migrations/          this service's own schema
-│      tests/                        this service's own offline test suite
-│      .env                          DB credentials for ITS OWN database, plus
-│                                     AUTH_SERVICE_URL, SERVICE_TOKEN, SVC_AUTH_MODE
-├── docker-compose.yml               Docker: the conductor's sheet for all 15 containers (see Start Here §10)
-├── docker/                          Docker recipes: backend.Dockerfile (all 8 services), frontend.Dockerfile,
-│                                     nginx.conf (the /api routing table), backend-entrypoint.sh (runs migrations),
-│                                     postgres-init/ (creates the 8 databases)
+├── backend/
+│   └── app/                          ★ ONE LARAVEL APP — all 8 domains inside it
+│       ├── app/
+│       │   ├── Http/Controllers/Api/ per-domain controllers (AuthController,
+│       │   │                         AttendanceController, LeaveController,
+│       │   │                         TimesheetController, AnalyticsController,
+│       │   │                         AIDecisionSupportController, SettingsController...)
+│       │   ├── Services/             domain logic (AIDecisionSupportService,
+│       │   │                         AnalyticsService, attendance/timeoff/payroll
+│       │   │                         domain classes — no *Client classes, no sync)
+│       │   ├── Models/               one Eloquent model per table, real foreign keys
+│       │   └── Http/Middleware/      admin (role guard), kiosk.device (kiosk token)
+│       ├── routes/
+│       │   ├── api.php               entry point → includes routes/services/*.php
+│       │   └── services/             {auth,identity,audit,attendance,scheduling,
+│       │                             timeoff,payroll,communications,configuration,
+│       │                             intelligence}.php   ← one per domain
+│       ├── database/migrations/      ALL tables (31 total: 22 business + 9 framework)
+│       ├── database/seeders/         demo workforce data
+│       ├── tests/                    ONE offline test suite — 307 tests (1264 assertions)
+│       └── .env                      ONE database: workforce_mgnt (PostgreSQL)
+├── docker-compose.yml               Docker: 4 containers (see Start Here §10)
+├── docker/                          backend.Dockerfile (app + scheduler, same image),
+│                                   frontend.Dockerfile, nginx.conf (proxies /api → app:8000),
+│                                   backend-entrypoint.sh (migrations + serve)
 ├── .env.docker.example              template for the git-ignored .env that holds Docker's secrets
-├── start-all.ps1                     boots all 8 services + the frontend, health-checks /up
+├── start-all.ps1                     boots the backend + scheduler + frontend, health-checks /up
 └── stop-all.ps1                      stops everything start-all.ps1 started
 ```
+
+> **Why one app?** This was a deliberate consolidation. The system is one bounded domain (Workforce Management) within the larger E-Commerce Enterprise platform — and the microservices boundary belongs *one level up*, between that subsystem and its siblings (storefront, orders, payments...). Running 8 apps with 8 databases and snapshot replication here only added cost; the right shape is one Laravel app with clean domain folders. The migration is fully preserved in git history for anyone who wants to see the original split.
 
 ## 23. The Universal Debugging Recipe
 
@@ -1374,35 +1343,30 @@ When something looks wrong on any screen:
 1. WHICH PAGE?    Find the .jsx file (Section 22 map).
 2. WHICH CALL?    Search that file's service call in frontend/src/services/api.js
                   → note the exact HTTP method + URL.
-3. WHICH SERVICE? Match the URL prefix to a service using vite.config.js's proxy
-                  map (Part 1, Section 3) — that tells you the port AND the
-                  backend/<name>/ folder to open. There is no gateway anymore:
-                  the prefix maps straight to one Laravel app.
-4. READ LOGIC.    cd backend/<name> → open routes/services/<name>.php to find the
+3. WHICH DOMAIN?  Match the URL prefix to a domain via backend/app/routes/api.php
+                  (Part 1, Section 3) — every prefix maps to the ONE backend at
+                  :8000, and the file names tell you which folder to open.
+4. READ LOGIC.    cd backend/app → open routes/services/<domain>.php to find the
                   controller → read the controller, usually delegating to a
-                  Services/ class.
-5. STALE, NOT WRONG? If the data looks outdated rather than incorrect, check
-                  whether that field comes from a replica table (synced
-                  periodically via SnapshotSyncService) instead of the owning
-                  service's live table.
-6. CHECK DATA.    Verify the actual rows in pgAdmin, in THAT service's database
-                  (see Database System Tutorial And Guideline.md) — remember each
-                  service has its own database now, not one shared one.
+                  app/Services/ class.
+5. CHECK DATA.    Verify the actual rows in pgAdmin, in the single
+                  workforce_mgnt database (see Database System Tutorial And
+                  Guideline.md) — there are no replica tables anymore, so any
+                  value you see is live.
 ```
 
-Nine times out of ten the bug is one of: stale frontend state (refresh), wrong role permissions (403), validation rejecting input (check the toast/network tab), a service that's simply not running (check `start-all.ps1`'s health check), or unexpected data shapes in the table.
+Nine times out of ten the bug is one of: stale frontend state (refresh), wrong role permissions (403), validation rejecting input (check the toast/network tab), the backend simply not running (check `start-all.ps1`'s health check), or unexpected data shapes in the table.
 
 ---
 
 ## Summary Card
 
-> **Frontend** draws screens, validates for convenience, never touches SQL — and its Vite dev proxy is the only thing that knows where all 8 services live.
-> **`core` (:8000)** is the identity service: auth, employees, departments, roles. Every other service asks `core` "who owns this token?" over HTTP instead of keeping its own password table.
-> **The other 7 services** (`intelligence`, `attendance`, `scheduling`, `timeoff`, `payroll`, `communications`, `configuration`) are equally real microservices — own process, own port, own PostgreSQL database, own tests. None of them share a database with each other or with `core`.
-> **Cross-service data** moves one of two ways: periodic **snapshot replication** for read-mostly reference data (e.g. `attendance`'s local copy of `Leave`), or a direct **internal API call** through a dedicated `*Client` class when the write has to happen right now (e.g. `intelligence` approving a leave through `TimeoffClient`, any service raising a notification through `NotificationClient`).
+> **Frontend** draws screens, validates for convenience, never touches SQL — and its Vite dev proxy is the only thing that knows where the backend lives (`127.0.0.1:8000` locally, `http://app:8000` in Docker).
+> **The one backend (:8000)** is a single Laravel app containing **8 cleanly-separated domains** — auth/identity, attendance, scheduling, time-off, payroll, communications, configuration, intelligence. One process, one port, one PostgreSQL database, one test suite (307 tests). There is no gateway, no service-to-service HTTP, no shared secret token, no internal API.
+> **Cross-domain data** moves with plain Eloquent relationships and real foreign keys inside the same database — no snapshot replication, no `*Client` classes. The consolidation deleted all of it: nothing was left needing a replica.
 >
-> **Kiosk** verifies faces in-browser, and its rules are enforced by the `attendance` **server** (no shift or finished shift = refused; up to 15 min after start = Present, later = Late with a warning; leaving early needs a reason). A face mismatch is logged and alerts the Workforce Admins.
-> **Performance rules** keep the split system fast: a 15-second identity cache, replicas that carry the face *descriptor* but not the photo, concurrent replica pushes, bounded lists, short timeouts on non-critical calls (Part 1, *Keeping It Fast And Safe*).
-> **Requests** (leave/OT) follow one pattern: apply → Pending → decide → notify (+ balance/reconciliation side effects) — now spanning `timeoff`, `attendance`, and `communications` instead of one app.
-> **Timesheets** are born automatically from attendance and end locked after HR approval — `payroll` pulls attendance data via replica, not a live cross-database join.
-> **AI** (`intelligence`) reads a replicated snapshot of workforce data, answers with whichever brain is available (Gemini or the rule-based fallback), acts on other services through their internal APIs, and remembers what you've resolved.
+> **Kiosk** verifies faces in-browser, and its rules are enforced by the attendance domain **server-side** (no shift or finished shift = refused; up to 15 min after start = Present, later = Late with a warning; leaving early needs a reason). A face mismatch is logged and alerts the Workforce Admins.
+> **Performance rules** keep it fast with none of the split-system machinery: no identity hop to cache, no replica pushes, no concurrent sync — the remaining levers are bounded lists, short timeouts on non-critical calls, and polling-free background tabs (Part 1, *Keeping It Fast And Safe*).
+> **Requests** (leave/OT) follow one pattern: apply → Pending → decide → notify (+ balance/reconciliation side effects) — now entirely in-process, where the AI path and the HR path share the same "must still be Pending" guard.
+> **Timesheets** are born automatically from attendance and end locked after HR approval — one join away in the same database, no replica involved.
+> **AI** (intelligence domain) reads real tables directly, answers with whichever brain is available (Gemini or the rule-based fallback), acts on requests through the same service classes the manual path uses, and remembers what you've resolved.

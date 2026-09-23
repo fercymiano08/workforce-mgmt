@@ -17,14 +17,14 @@ Frontend (React — what you see), Backend (Laravel — the brain), Database (Po
 **Q3. Who are the users?**
 Workforce Admin/Administrator (full access), Employee (self-service only), and the Kiosk (a device, not a person — no login; it is unlocked with the kiosk PIN and then holds a signed, expiring device token).
 
-**Q4. How many backend services does the system have now?**
-8: `core`, `intelligence`, `attendance`, `scheduling`, `timeoff`, `payroll`, `communications`, `configuration`.
+**Q4. How many backend applications does the system have now?**
+1 — a single Laravel application. Inside it, the code is organized into 8 clear domains (identity, attendance, scheduling, time-off, payroll, communications, configuration, intelligence), but they all run in the same app and share one database.
 
-**Q5. What port does each service run on?**
-core 8000, intelligence 8001, attendance 8003, scheduling 8004, timeoff 8005, payroll 8006, communications 8007, configuration 8008. Frontend runs on 5173.
+**Q5. What port does it run on?**
+Backend: `8000`. Frontend: `5173`. That's it — the whole API lives at one address. (The old design had a different port per service — 8001, 8003–8008 — those are gone.)
 
 **Q6. What database does the system use?**
-PostgreSQL — 8 separate databases now, one per service.
+One PostgreSQL database, `workforce_mgnt`. There used to be 8 separate databases, one per microservice, kept in sync with replica tables; we consolidated them into one before the defense.
 
 **Q7. What is an API?**
 A defined set of URLs the frontend is allowed to call to ask a backend for data or tell it to do something.
@@ -33,10 +33,10 @@ A defined set of URLs the frontend is allowed to call to ask a backend for data 
 A digital ID badge issued at login. The browser sends it on every request after that so the backend knows who's asking.
 
 **Q9. In one sentence: monolith vs microservices?**
-A monolith is one app with one database doing everything; microservices are many small independent apps, each with its own database, talking to each other over the network. We migrated from the first to the second.
+A monolith is one app with one database doing everything; microservices are many small independent apps, each with its own database, talking to each other over the network. This subsystem is a monolith at its own level, and that's deliberate — the real microservices boundary sits one level up, in the E-Commerce Enterprise platform this system is part of.
 
 **Q10. How do you start the whole system?**
-Run `.\start-all.ps1` from the project root — it boots all 8 services and the frontend, and checks that each one answers on `/up`.
+Run `.\start-all.ps1` from the project root — it boots the backend (port 8000), its background scheduler and the frontend, then health-checks the backend's `/up`.
 
 **Q11. What's the demo login?**
 `admin@workforcepro.com` / `Admin@123` for Workforce Admin.
@@ -48,7 +48,7 @@ A face is turned into a 128-number "descriptor." At the kiosk, a new photo's des
 Face recognition still works (it runs in the browser, not online). The AI falls back to a built-in rule-based engine instead of Google Gemini. Nearly everything else is unaffected.
 
 **Q14. What technology renders the charts and AI insights?**
-The `intelligence` microservice — its own Laravel app, own database, own port (8001).
+The **Intelligence domain** inside the one backend — its own folder, routes (`/api/analytics/*`), controller and service in the same Laravel app, sharing the same database as every other domain. Charts come from Recharts in the frontend; the insights come from Google Gemini (or the built-in rule fallback).
 
 **Q15. How are passwords stored?**
 Hashed (scrambled one-way, via bcrypt) — never stored as plain readable text, not even the admin's.
@@ -57,29 +57,29 @@ Hashed (scrambled one-way, via bcrypt) — never stored as plain readable text, 
 
 ## TIER 2 — MEDIUM (how & why, one short paragraph)
 
-**Q16. Why did you migrate from monolith to microservices?**
-It was a requirement from our adviser/department — the capstone had to demonstrate a microservices architecture, not just a single app. We built the monolith first to get every feature correct, then split it into 8 independent services one at a time (the "Strangler Fig" pattern), verifying each one with its own tests before moving to the next, instead of a risky one-shot rewrite.
+**Q16. Why did the backend architecture change during development?**
+It's an honest story we're proud of. We started by splitting this subsystem's internals into **8 separate Laravel apps, each with its own database** — copying the microservices pattern from the larger E-Commerce platform, but one level too deep. Reviewing it, we saw we had sliced **one bounded domain** (workforce management) into pieces that all shared the same data model; the split only added replica tables, sync jobs, network calls and a shared token, without buying independent scaling, teams or release schedules. So we **consolidated back** into one Laravel application and one database before the defense. The 8 domains kept their names and every business rule — only the deployment shape changed.
 
-**Q17. How does the frontend know which of the 8 services to call?**
-The frontend never talks to a single "gateway." Its Vite dev server has a proxy configuration that looks at the URL prefix of every request — `/api/attendance/*` goes to port 8003, `/api/leaves/*` goes to port 8005, and so on — and forwards it straight to the owning service.
+**Q17. How does the frontend know which backend to call?**
+It doesn't juggle anything — there's one backend at `http://127.0.0.1:8000`. The Vite dev server's proxy forwards every `/api/*` request there; in Docker, nginx does the same. (In the old design each service had its own port and the proxy routed by URL prefix — `/api/attendance/*` to 8003, `/api/leaves/*` to 8005, and so on.)
 
-**Q18. Most services don't have a `users` table with passwords. How do they check who's logged in?**
-Every service except `core` doesn't store passwords at all. When a request arrives with a token, that service calls `core`'s `GET /api/auth/me` over HTTP with that token, and `core` — the one source of truth for identity — replies with who the user is and their role. `core` is still central for identity; it's just no longer a gateway for anyone else's business data.
+**Q18. How does the backend know who's logged in?**
+Laravel Sanctum validates the bearer token **once**, when the request enters the single backend; the user and role then flow through the app, and every route checks them as needed. There's one identity store in one database. (In the old design the other services had to call `core`'s `/api/auth/me` over HTTP on every request — that whole mechanism is gone.)
 
 **Q19. Walk me through what happens when HR approves a leave request from the AI Decision Support page.**
-The click sends a request to the `intelligence` service (`/api/analytics/ai/actions`). `intelligence` doesn't own leave data, so it calls the `timeoff` service's internal API directly (through a small internal client class) to actually update that leave request's status. `timeoff` makes the real change in its own database, and `intelligence` reports success back to the screen.
+The click posts to `/api/analytics/ai/actions` with action `approve_leave`. There's no separate service to call, so the app: (1) verifies the request still exists **and is still Pending**, (2) updates the leave row's status to Approved with the approver's name via the same in-process logic the manual approval uses, and (3) returns success to the screen. One process, one database, no network hop in the middle.
 
-**Q20. What's the difference between "snapshot sync" and an "internal API call"?**
-Snapshot sync is for data a service just needs to READ and display — a periodic job copies a read-only snapshot from the owning service into the local database (e.g. `attendance` keeps a synced copy of `employees` so it can show names). An internal API call is for anything that must happen immediately and correctly — e.g. actually approving a leave request — so instead of writing to a stale local copy, the service calls the real owner directly over HTTP.
+**Q20. What was "snapshot sync" and an "internal API call"?**
+Both belong to the old design and are gone now. Snapshot sync was a periodic job that copied a read-only copy of another service's table into your own so you could display it without a network call. An internal API call was an HTTP request to another service for something that had to happen immediately (e.g. the AI approving a leave). In the current monolith there is nothing to copy and nothing to call: one domain reads or writes the real model directly, in-process. If asked, present them as the problems the consolidation removed.
 
-**Q21. Why does the `attendance` service have its own copy of the `employees` table if `core` already owns it?**
-Because `attendance` needs employee names/departments on almost every screen, and calling `core` over the network on every single page load would be slow and would mean attendance completely stops working the moment `core` is briefly unreachable. A locally synced, read-only copy solves both problems, at the cost of that copy being slightly out of date between syncs — an accepted trade-off.
+**Q21. Why does the Attendance domain need the `employees` table at all — isn't that identity's job?**
+Identity **owns** it; Attendance just *reads* it. In the old design attendance kept a synced local copy so it could show names without calling `core` — that copy and its sync job are deleted. Now the Attendance controller queries the real `Employee` model, same process, same database: always live, never stale.
 
 **Q22. Why PostgreSQL instead of MySQL?**
 Both would work. PostgreSQL handles JSON columns and complex reporting cleanly and is fully free — a deliberate choice for reliability, not a requirement.
 
 **Q23. What is a JOIN, and do you still use them?**
-Combining two tables on a shared key so you can pull related data together in one query — e.g. joining `attendance` to `employees` to show a name next to a clock-in. Still used freely WITHIN one service's own database. You cannot JOIN across two different services' databases — that's not physically possible once the data is split, which is exactly why snapshot sync exists.
+Combining two tables on a shared key so you can pull related data together in one query — e.g. joining `attendance` to `employees` to show a name next to a clock-in. Yes, freely: with one database, a single query can join across any of the 8 domains' tables (attendance + shifts + departments + timesheets in one statement). In the old separate-database design you couldn't join across services at all — that's exactly why replica tables existed. Removing that limit was a big reason we consolidated.
 
 **Q24. Why does the kiosk not require a login?**
 The kiosk is a shared device at the entrance, not a personal account. It has no user login, but it isn't open either: entering the kiosk PIN makes the server issue a signed, expiring device token that every kiosk call must send (see Q57). Even with it, the endpoints return only minimal fields (name, photo, department, today's schedule) — never salary, email, phone, or address.
@@ -94,66 +94,66 @@ Two layers: the frontend simply doesn't show admin-only pages to an Employee rol
 
 ## TIER 3 — HARD (trade-offs, failure scenarios, defend a design decision)
 
-**Q27. What happens to the rest of the system if ONE service goes down — say, `communications`?**
-Everything that doesn't depend on notifications keeps working completely normally — clocking in, approving leave, running payroll. The only symptom is that nobody gets a bell notification until `communications` comes back up, and any service trying to raise one over its internal API would get a failed call (which should be handled gracefully, not crash the caller). This is the actual point of microservices: a non-critical service failing doesn't take down the whole system, unlike a monolith where one crash can kill everything.
+**Q27. What happens if a part of the backend crashes during a request?**
+The backend is one process, so a fatal error in one domain can take down the whole app — that's the honest trade-off of a monolith. In practice each API request is independent: one failing endpoint returns an error for that request while other requests keep being served, and the startup script / Docker restarts the backend if it ever dies. We accepted this when we consolidated: one process is simpler to operate, and at this scale a full crash is far less likely to cost us than keeping 8 services and 8 databases in sync.
 
-**Q28. If `core` goes down, what happens to the other 7 services?**
-This is the honest weak point: every other service authenticates users by calling `core`'s `/api/auth/me` over HTTP. If `core` is down, NO service can verify who's logged in, so effectively the whole system becomes unusable for authenticated actions, even though the other 7 databases are perfectly fine. `core` is a **single point of failure for identity**. That's a real, known trade-off of this design — the honest answer if pushed is: "in a production system, you'd want `core`'s auth to be highly available (multiple instances behind a load balancer) precisely because everything else depends on it."
+**Q28. What happens if the backend goes down?**
+Everything stops — login and every screen show connection errors. We say that plainly: it's one thing to monitor and restart (both `start-all.ps1` and Docker health-check `/up` and auto-start it), and a workforce subsystem at this scale doesn't need process-level failure isolation. The microservices boundary we actually rely on is one level up, inside the larger E-Commerce Enterprise platform this system is one service of.
 
-**Q29. You dropped foreign key constraints between tables that used to be linked. Isn't that a data integrity risk?**
-Yes, and it was a deliberate trade-off, not an oversight. A replica table (like `attendance`'s local copy of `employees`) gets wiped and refilled by the sync job — a hard foreign key constraint would break that refresh the moment sync order didn't perfectly match. So referential integrity moved from the database layer to the application layer: the backend code validates IDs before writing, instead of PostgreSQL enforcing it automatically. It's a real cost of splitting one database into eight, and we'd flag it as a place we'd add more validation tests if we had more time.
+**Q29. You don't enforce all foreign keys in PostgreSQL. Isn't that a data integrity risk?**
+Most relationships are enforced by application code rather than hard SQL `FOREIGN KEY` constraints (PostgreSQL currently declares only a few, e.g. `roles.department_id → departments.id`) — an ordinary application-level design choice, not a workaround. Since the consolidation there are no replica tables being wiped and refilled, so we *could* add every constraint now, and adding the most important ones is on our improvement list. Values are still validated by the same server code before every write.
 
-**Q30. What if the snapshot sync fails or runs late — what does the user see?**
-They'd see slightly stale reference data — e.g. an employee's department shown as their old one for a few minutes after HR changes it in `core`, until the next sync runs on the dependent service. The core, live-owned data (attendance records themselves, leave request statuses, etc.) is never stale, because those are only ever read/written directly by the service that owns them — only the supporting reference data (names, departments) can lag.
+**Q30. Is there any data that can be slightly out of date?**
+No. Every table has exactly one copy, read and written directly by the domain that uses it, in one database. In the old design, sync jobs could leave reference data (names, departments) a few minutes stale; that entire class of bug no longer exists.
 
-**Q31. Why not just use ONE shared PostgreSQL server with 8 separate schemas instead of 8 fully separate databases?**
-We could have — schemas would give some separation with less operational overhead. We chose full separate databases because it's a stronger, clearer boundary: it makes it structurally impossible for one service's code to accidentally query another service's tables (different connection credentials entirely, not just a different schema search path), which better proves true service independence for the microservices requirement — and it's closer to how this would be deployed in the real world, where each service would likely have its own database server entirely.
+**Q31. Why does the system use ONE database instead of several schemas or databases?**
+We briefly ran 8 separate databases, one per domain, as mini-microservices. Reviewing it, we saw the split was the microservices pattern applied one level too deep — the workforce system is ONE bounded domain (itself just one service inside the larger E-Commerce platform). One database is the correct shape here: normal foreign keys, joins and transactions work across every domain with no replication lag and nothing to keep in sync.
 
-**Q32. How do the internal, service-to-service endpoints stay secure? What stops an outsider from calling them?**
-Every internal endpoint (under `/internal/*` on each service) requires a shared secret header (`SERVICE_TOKEN`) that only the 8 services know — it's not a user token, it's a machine-to-machine password. A request without the correct token is rejected before it reaches any real logic.
+**Q32. How do the domains stay secure from each other?**
+There are no internal endpoints and no service-to-service secrets anymore — nothing domain-internal is exposed over the network, so there is nothing for an outsider to call. A request is authenticated once by Laravel Sanctum when it enters the app, and each domain's routes then check the caller's role. As defense-in-depth, the public entrance still answers 404 for anything under `/api/internal`.
 
-**Q33. What if that shared `SERVICE_TOKEN` leaked?**
-Anyone with it could call internal endpoints directly and, e.g., force-approve leave requests or pull data snapshots. In production you'd want per-service tokens (not one shared secret for all 8) and network-level restrictions (internal endpoints not reachable from the public internet at all, only from other services' internal network) — we'd name this as a next hardening step, not pretend it's already solved.
+**Q33. What happened to the shared `SERVICE_TOKEN`?**
+It's gone — deliberately. It only existed to authenticate machine-to-machine calls between the 8 old services. Since the consolidation there are no service-to-service HTTP calls, so there is no shared secret to leak, rotate or manage. If a panelist asks about inter-service secrets, the honest answer is: there are none, because there are no inter-service calls.
 
-**Q34. Why did you extract `intelligence` (analytics/AI) FIRST, instead of some other service?**
-Because nothing else in the system depends on it at runtime — HR can clock people in, approve leave, and run payroll even with the AI service completely down. It was the lowest-risk domain to prove the extraction pattern on before touching anything the whole demo depends on.
+**Q34. Why does Intelligence still look like its own "service"?**
+Because it's a cleanly separated **domain** inside the monolith: its own folder, routes (`/api/analytics/*`), controller, service and models, plus the Gemini API key in config. It only *reads* other domains' data and depends on nothing at runtime — which is exactly why it was the natural first thing to isolate, and why it keeps that boundary today. If we ever needed independent scaling or deployment, Intelligence would be the easiest module to lift out.
 
-**Q35. Your services all run on one laptop right now. Is that really "distributed"?**
-Physically, no — they're all on one machine for the demo, connected over `127.0.0.1` (localhost) instead of a real network. But architecturally, yes: each is a separate OS process, separate database, with no shared memory or shared database connection — the SAME code would work unchanged if each service ran on a different machine or cloud server, because they only ever talk over HTTP. That's the real test of "is this actually microservices" — not where it's deployed, but whether the services are coupled by code/database or only by network calls. Ours are only coupled by network calls.
+**Q35. Is it fair to say the system itself isn't "distributed" at all?**
+Correct — and we say it without hedging. The subsystem being demoed is one application on one machine (or one backend container in Docker). The distribution lives at the parent-platform level: the E-Commerce Enterprise system is several independently-deployed subsystems (storefront, orders, payments, workforce management...), and Workforce Management is ONE of them — its own service, its own database. We deliberately did not split this one subsystem further; at this scale it would only add cost.
 
 ---
 
 ## TIER 4 — EXTREMELY HARD (curveballs, architecture critique, honest weaknesses)
 
-**Q36. Is this really microservices, or is it a "distributed monolith"?**
-Fair challenge. A distributed monolith is when you split an app into separate processes but they still have to be deployed together and can't survive each other failing — which would defeat the purpose. Ours mostly avoids that: each service has its own database, its own tests, and can genuinely keep running if a sibling service goes down (proven in Q27). The one place it leans toward "distributed monolith" is identity (Q28) — every service hard-depends on `core` being reachable. That's a fair, honest limitation to name if asked directly, not something to hide.
+**Q36. Is this really "microservices", or is it a monolith?**
+Both answers are true at different zoom levels, and honesty here wins. At the level of the subsystem itself, it's a **monolith** — one Laravel app, one database, organized into 8 clear domains. At the level of the larger E-Commerce Enterprise platform, it's **one microservice among several**. We originally misread that requirement and split the subsystem's own internals into 8 further services; review showed that was over-engineering (one bounded domain, one team, one data model), so we consolidated back before the defense. The correct shape: microservices between genuinely different subsystems, one cohesive application inside each one.
 
-**Q37. If you had to add a 9th service tomorrow — say, a "Payslip PDF Export" service — walk me through it.**
-Scaffold a new Laravel app under `backend/` (there's already a `_templates/` folder with the boilerplate: `SnapshotSyncService`, client classes, replica migration patterns). Give it its own `.env`, its own database, its own port. Decide what data it needs to READ from others (probably employees + timesheets, via snapshot sync) and whether anything needs to call it back (probably not). Add its routes, wire the frontend's Vite proxy to send `/api/payslips/*` to its port. Write its tests. That's the exact recipe already proven 8 times over.
+**Q37. If you had to add a 9th domain tomorrow — say, a "Payslip PDF Export" — walk me through it.**
+It's a proven, low-risk recipe: create the domain's folder (`app/Http/Controllers/Api`, `app/Services`), add its routes in `routes/services/payslips.php` and `require` it from `routes/api.php`, add its Eloquent model(s) and a migration, write feature tests — and it appears under the same `/api` with no new port, no new container, no new database. In the old design that meant a whole new Laravel app, its own `.env`, its own database and a new Vite-proxy entry.
 
-**Q38. Could a race condition happen in your snapshot sync?**
-Potentially — if two sync runs overlapped (e.g. a slow sync still running when the next scheduled one starts), you could get a partially-refreshed replica table momentarily showing inconsistent data. We didn't specifically build overlap-prevention (like a lock file or "already running" check) into the sync command — that's a legitimate improvement we'd point to if asked "what would you add with more time."
+**Q38. Could the old snapshot-sync race condition happen now?**
+No — snapshot sync was deleted during the consolidation. There are no replica tables left to refresh, so the "two sync runs overlap and produce a half-refreshed copy" failure mode is gone entirely. (Companies running read replicas in production do still need overlap-prevention; it just isn't relevant to a single database.)
 
-**Q39. Why does a service ask `core` over HTTP on every request instead of caching the identity check?**
-It used to — and we measured the cost: every authenticated request to every service waited on a round-trip to `core`, which was the biggest multiplier on page-load time. We fixed it: each service now keeps the result of `core`'s `/api/auth/me` in a short-lived cache (15 seconds, keyed by a hash of the token, successful lookups only), so a page that fires six API calls asks `core` once instead of six times. The honest trade-off: a revoked token or a changed role is honoured by the other services up to 15 seconds late, and if `core` is down the system still stops once the cache expires (Q28). For a real deployment we'd tune the lifetime and add explicit cache invalidation on logout.
+**Q39. Why does a page that fires many API calls feel fast if each one rebuilds the app?**
+In the old design every request to every service re-checked identity with `core` over HTTP, which was the biggest multiplier on response time; we shipped a 15-second cache to stop pages hammering it. After the consolidation that class of hop is gone: the one backend validates the token once per request, in-process, with data it already has — there is no cross-process round trip to cache. Session security is handled by short-lived, auto-extending tokens (see the session-timeout note at the end).
 
 **Q40. If you rebuilt this from scratch knowing what you know now, what would you do differently?**
-Honest answers that show maturity: (1) design the internal API contracts and replica strategy BEFORE splitting, rather than discovering what each service needs mid-migration; (2) add the cross-service auth cache from day one (we added a 15-second one later, after measuring the slowdown, Q39); (3) use per-service tokens instead of one shared `SERVICE_TOKEN`; (4) add automated tests that specifically check cross-service flows (e.g. "does an approved leave in `timeoff` correctly show as not-absent in `attendance`"), not just each service's own isolated tests.
+Honest answers that show maturity: (1) start with the single-domain monolith and **not** pre-split the subsystem into 8 services — the consolidation cost us real development time; (2) define the 8 domain boundaries up front so the folders stay clean without enforcement; (3) declare the most important foreign keys from day one, which only became fully feasible once there was one database; (4) write end-to-end integration tests for the kiosk clock-in flow against a seeded database, not just per-domain feature tests.
 
 **Q41. What's missing for this to run safely in production with real users, not a demo?**
-Good checklist to have ready: **containerization is now partly done** — the whole system runs under Docker Compose (one container per service), but only as a single-machine development/demo setup, so the remaining gap is production-grade hosting (PHP-FPM + nginx, images in a registry, a CI/CD pipeline); each service running multiple instances behind a load balancer (especially `core`, per Q28); centralized logging/monitoring across all 8 services instead of 8 separate log files; a real secrets manager instead of `.env` files; HTTPS everywhere; rate limiting on the internal APIs, not just the public login endpoints; and probably a message queue (like RabbitMQ or Redis queues) for things like notifications instead of a synchronous HTTP call, so a slow `communications` service can't slow down the service that's trying to notify someone.
+Containerization is done as a **demo** setup (Docker Compose: database, backend, scheduler, frontend), but production hosting is the real gap: PHP-FPM behind nginx instead of PHP's built-in server, HTTPS and a domain, an image registry and a CI/CD pipeline, a real secrets manager instead of `.env` files, centralized logging, backups, and probably a queue so notification pushes never slow a request. With one backend, scaling means more workers or more instances behind the same database rather than "add a container per service."
 
-**Q42. What testing strategy do you have — do you test that the services work TOGETHER, or only individually?**
-Each of the 8 services has its own offline automated test suite (324 tests total, all passing) that verifies that service in isolation. What we do NOT have is automated "contract" or integration tests that boot multiple real services together and verify a full cross-service flow end-to-end automatically — right now that's verified manually (which we did before this defense). That's a fair gap to admit if asked directly: "our unit/feature test coverage per service is solid; true end-to-end integration testing across services is currently manual."
+**Q42. What testing strategy do you have — do you test that the pieces work TOGETHER?**
+The backend has a single automated suite of **307 PHPUnit tests** (1264 assertions) covering every domain's business rules — attendance rules, leave balances, overtime pay math, kiosk guardrails, role boundaries — all passing. There are no cross-service integration tests to write, because there are no separate services: "integration" is an ordinary in-process join of models, which the feature tests already exercise end-to-end at the API level. The kiosk flow is verified manually against the running system before demos.
 
 **Q43. Why is the demo's admin password printed in plain text by your startup script?**
 It's a known, deliberate shortcut for local development convenience only — printing the demo credential so teammates don't have to dig for it. In any real deployment this would be removed entirely; demo/seed credentials should never be printed or committed, and production would use properly generated, unique credentials per environment, never a shared example password.
 
-**Q44. What would happen if two services tried to update the SAME underlying real-world fact at the same time — e.g. `intelligence` approving overtime while HR is also approving the same request manually in `timeoff` directly?**
-Honestly: whichever write lands last in `timeoff`'s database wins, silently. We checked this while preparing for the defense — `timeoff`'s user-facing endpoint DOES guard against double-processing (it checks the request is still "Pending" before letting an employee cancel it), but the **internal** endpoint that `intelligence` calls to apply an AI-queue approval does not currently re-check that the request is still "Pending" before overwriting its status. That's a real, honest gap — a textbook double-processing race condition — and the right fix is adding the same "must still be Pending" guard to the internal endpoint that already exists on the user-facing one. If a panelist finds this themselves, the strong answer is: *"Good catch — that's a real gap in our internal API validation, and the fix is a one-line status check, same pattern we already use elsewhere in the same controller."* Owning a real bug you found yourself lands better than pretending everything is airtight.
+**Q44. What prevents two paths from approving the SAME request at the same time — e.g. the AI approving overtime while HR is also approving it?**
+Both paths now go through the same in-process logic, so the same guard applies: an approval (manual or via `/api/analytics/ai/actions`) only succeeds if the request **is still Pending** — the AI controller re-checks the status right before it resolves (the `Leave`/`OvertimeRequest` must be `Pending`), so the second approver gets "not found or already resolved." In the old design the AI wrote through a separate internal endpoint that did not re-check Pending — a genuine race we had identified — so closing that single weak spot (status check first, then update, in-process) was deliberate.
 
-**Q45. Last one — sell me on why this architecture was worth the extra complexity for a school project.**
-"It's not just extra complexity for its own sake — it's a physical, running demonstration of a pattern every large tech company actually uses in production, and we can prove properties a monolith can't: kill any one non-critical service and the rest keeps working, each domain has its own isolated, independently-testable codebase, and a team of 8 developers could work on 8 services in parallel without stepping on each other's code. We didn't just draw this on a diagram — we migrated a real, working system into it, verified every step with automated tests, and can demonstrate the failure-isolation live."
+**Q45. Last one — sell me on why the architecture ended up shaped this way.**
+"Two things. First, boundary hygiene still matters: the backend is organized into 8 clear domains — own routes, own controllers, own services, own tests — so a team can't turn one app into code spaghetti. Second, we can prove this was a decision, not an accident: we DID run this subsystem as 8 separately-deployed services with 8 databases, measured what the split cost (replica sync jobs, network hops, a shared service token, per-service cache hacks) and what it bought us (nothing we needed), and consolidated back before the defense — because the real microservices boundary sits one level up, where Workforce Management is itself one of several genuine services in the E-Commerce Enterprise platform. 'We tried it, we measured it, we reversed it' is a stronger answer than a diagram on a slide."
 
 ---
 
@@ -176,22 +176,22 @@ The kiosk used to block any clock-out before the shift end ("please return to yo
 Because punches are the audit foundation of everything downstream — hours, overtime, timesheets, payroll. Rewriting the punch to "look normal" would silently falsify attendance history. An Early Leave record preserves the true punch *and* attaches an explanation. Classification (Excused/Unpaid) is a separate, reversible judgment, so pay decisions never require touching the punch itself.
 
 **Q50. Is Docker part of your system? What exactly did it change?**
-Yes — as an alternative way to run it. `docker compose up -d` starts 15 containers: one PostgreSQL server (8 databases), the 8 Laravel services, 5 scheduler containers (they run `snapshot:sync` every minute, plus the timesheet jobs in the payroll one and the hours re-count in the attendance one) and an nginx container that serves the built React app and routes `/api/*` to the right service. **No features or business rules changed** (only a few small bug fixes found along the way, see Q54) — Docker only changes how the system is built, started and isolated, so it now starts with one command and behaves the same on any machine.
+Yes — as an alternative way to run it. `docker compose up -d --build` starts **4 containers**: one PostgreSQL server (a single `workforce_mgnt` database), the backend Laravel app (all 8 domains in one app), a scheduler container running the same image with `php artisan schedule:work` (the auto-scheduling and nightly jobs), and an nginx container that serves the built React app and proxies `/api/*` to the backend. **No features or business rules changed** (only a few small bug fixes found along the way, see Q54) — Docker only changes how the system is built, started and isolated, so it now starts with one command and behaves the same on any machine.
 
 **Q51. Is that "production deployment"? Do you have CI/CD, a domain or HTTPS?**
 No, and we say so honestly. It is a development/demonstration setup on one machine. The API containers use PHP's built-in server (4 workers), there is no HTTPS or domain, no image registry and no CI/CD pipeline. For public hosting we would add a domain + HTTPS, PHP-FPM behind nginx, managed secrets, automated backups and a pipeline (the team is considering a VPS-based host such as Hostinger).
 
 **Q52. Is the nginx container your API gateway?**
-No. It routes by URL prefix (a reverse proxy, the same table as the Vite dev proxy) but does no authentication, rate limiting or request filtering. Every service still validates the token itself by asking `core`.
+No. It routes by URL prefix (a reverse proxy — the same table as the Vite dev proxy) but does no authentication, rate limiting or request filtering. The backend itself still validates the token on every request.
 
 **Q53. Where are the passwords and secrets in the Docker setup? What happens to the data when you stop it?**
 Secrets are in a git-ignored `.env` file, supplied to the containers as environment variables — not baked into images and not in the repository (only `.env.docker.example` is tracked). Data lives in a Docker volume, so `docker compose down` keeps it and `docker compose down -v` erases it.
 
 **Q54. Did putting it in Docker find any problems?**
-Yes, which is a good sign the test was worth doing: a missing import that would have crashed the Audit Logs page, invisible BOM characters in 7 services' bootstrap files, read-only cache folders copied from Windows, and a PostgreSQL start-up timing issue. All were fixed and re-tested (the full PHPUnit suite passed — it now has 324 tests; a from-scratch `down -v` + `up -d` produces a working system in about 80 seconds).
+Yes. Going from the local-scripts mode to containers exposed real gaps: a missing import that would have crashed the Audit Logs page, invisible BOM characters in some bootstrap files, read-only cache folders copied from a Windows checkout, and a PostgreSQL start-up timing issue (the app container started before the database was ready). All were fixed and re-tested (the full PHPUnit suite passed — 307 tests; a from-scratch `down -v` + `up -d --build` produces a working system in about 80 seconds).
 
 **Q55. How do you make sure an Employee can never do what a Workforce Admin can — and the reverse?**
-On the **server**, not just in the menus. Every administrator route is behind the `admin` middleware, so an Employee token gets **403** (verified live against the running system for AI Decision Support, employees, audit logs, analytics, shift schedules and settings changes). Routes both roles can reach check ownership: an Employee can only read or file things under their own employee ID (`assertSelfOrAdmin`), and can only withdraw their own *pending* leave/overtime or submit their own *draft* timesheet. On the frontend, every admin page is wrapped admin-only and every "My …" page employee-only, but that is convenience — a role-boundary test in each service proves the server side (229 tests in total).
+On the **server**, not just in the menus. Every administrator route is behind the `admin` middleware, so an Employee token gets **403** (verified live against the running system for AI Decision Support, employees, audit logs, analytics, shift schedules and settings changes). Routes both roles can reach check ownership: an Employee can only read or file things under their own employee ID (`assertSelfOrAdmin`), and can only withdraw their own *pending* leave/overtime or submit their own *draft* timesheet. On the frontend, every admin page is wrapped admin-only and every "My …" page employee-only, but that is convenience — a role-boundary test in each domain proves the server side (part of the 307-test suite).
 
 **Q56. Can an Employee approve their own leave by editing the request?**
 Not any more, and we can say exactly why. While auditing role boundaries we found that the *create* endpoints saved whatever `status` the request contained, so a hand-made request with `status: "Approved"` would have been accepted. We wrote a failing test first, then fixed it: for an Employee the server now always saves **Pending** with no approver, and only an Administrator can decide it. This is a good example of testing finding a real defect.
@@ -212,13 +212,13 @@ A real regression that we found, fixed and locked in with tests — a good story
 The browser's face check fails, so the kiosk shows a red **"Identity Verification Failed"** warning explaining it's a security violation. The server logs a `face_mismatch` security event **and immediately sends every Workforce Admin a high-priority notification** ("Face Mismatch at Kiosk", linking to AI Decision Support). Three failed attempts lock the terminal for 60 seconds. Honest limit: there is no liveness detection, so a photo held up to the camera is not specifically detected.
 
 **Q62. The system felt slow. What did you find and what did you change?**
-We profiled it rather than guessing. Findings: every service call re-checked identity with `core`; face photos (~40 KB each) were being copied to five services every minute; replica pushes and alert notifications were sent one after another; some lists had no limit; and the local setup itself is slow (PHP's built-in single-request server; every request re-boots Laravel, about half a second on this low-power laptop; debug mode on). We measured the phases of a request to find this - moving the project out of OneDrive made no difference. Changes: a 15-second identity cache, replicas carry only the face descriptor, concurrent pushes, one-query alert scan with a capped concurrent batch, newest-200 notification lists, an optional date window for attendance, short timeouts on non-critical calls, a 45-second frontend timeout, and background tabs stop polling. We also warm up the face model and dropped a redundant detection pass. Honest note: we cut the load in code, but the local single-threaded server is an environment limit — Docker (4 workers per service) avoids it.
+We profiled it rather than guessing, and the single biggest cost was that every request re-checked identity with `core` over HTTP (we had to cache it). Also: face photos (~40 KB each) were being copied to five replica tables every minute; notification pushes and data sync went one after another; some lists had no limit; and the local setup itself is slow (PHP's built-in single-request server — every request re-boots Laravel, about half a second on this low-power laptop; debug mode on). Moving the project out of OneDrive made no difference. Fixes: a 15-second identity cache (later deleted as unnecessary), replicas carried only the face descriptor, concurrent pushes, a one-query alert scan with a capped concurrent batch, newest-200 notification lists, an optional date window for attendance, short timeouts on non-critical calls, a 45-second frontend timeout, and background tabs stop polling. The consolidation itself removed the biggest cost — cross-service identity hops are now in-process. Honest note: we cut the load in code, but the local single-threaded server is an environment limit — Docker avoids it (the backend runs with 8+ workers in the container).
 
 **Q63. How does the face-scan animation work, and why is it smooth even while the browser is busy?**
 The camera view shows a face-shaped oval with a light band sweeping over it and landmark dots pulsing. The face model (face-api.js) runs on the browser's main thread, which normally freezes animations while it computes. We built the animation only from CSS `transform` and `opacity`, which the browser hands to the graphics thread, so it keeps moving. We also let the screen paint one frame before the heavy calculation starts.
 
 **Q64. What are the honest limitations of the new attendance rules?**
-(1) Shifts that run past midnight aren't fully supported: the terminal and server look at *today's* schedule, so a clock-out after midnight can't find its clock-in — this was already true before. (2) An approved overtime request on a day with **no shift** doesn't count as a shift, so it can't be used to clock in. (3) The 15-second identity cache means a revoked login can work briefly in other services. (4) There is still no liveness check on the face scan. Each is named here on purpose — owning known limits lands better than pretending the system is airtight.
+(1) Shifts that run past midnight aren't fully supported: the backend and kiosk look at *today's* schedule, so a clock-out after midnight can't find its clock-in — this was already true before. (2) An approved overtime request on a day with **no shift** doesn't count as a shift, so it can't be used to clock in. (3) There is still no liveness check on the face scan. (4) The system has no health check on the kiosk device itself — if the screen hangs, that's only caught when someone reports it. Each is named here on purpose — owning known limits lands better than pretending the system is airtight.
 
 **Q65. There is only one shift (8–5). What is "overtime" then, and can you schedule someone for it?**
 Overtime is not a shift. The client has exactly one shift, the 8-to-5 Standard Shift, so it is the only shift template in the system (the old 5–9 PM "Overtime Shift" template was removed and can never be assigned). Overtime is time added to the end of the day: when an overtime request is approved, that day's effective end becomes 5:00 PM plus the approved hours, and the kiosk, the "shift over" check and the early-leave check all use that extended end.
@@ -236,16 +236,16 @@ A kiosk cannot verify "I'm sick", so we don't trust the reason — we verify wha
 Because someone who is genuinely ill or has an emergency must never be trapped at the terminal. So the punch is always accepted, and the consequence (excused vs unexcused) is decided by rules and by HR afterwards. That is safer and fairer than gatekeeping at the door.
 
 **Q70. In simple words, what is Docker and why does your system use it?**
-Docker packs each part of the system — the database, each microservice, the background schedulers and the frontend — together with everything it needs into a sealed "container", so it behaves the same on any computer. Our system is nine-plus programs that must be installed, configured and started in order; Docker turns that into one command (`docker compose up -d --build`). It does not change any feature — it changes how the system is built, started and isolated.
+Docker packs each part of the system — the database, the backend application and the frontend — together with everything it needs into a sealed "container", so it behaves the same on any computer. Normally our system needs several programs installed, configured and started in the right order; Docker turns that into one command (`docker compose up -d --build`). It does not change any feature — it changes how the system is built, started and isolated.
 
 **Q71. What's the difference between an image and a container?**
 An image is the frozen, ready-to-run package built from a recipe (a Dockerfile); a container is an image that is running. Like a recipe versus the dish being cooked: one image can be started as many containers.
 
-**Q72. You have 8 services — do you have 8 Dockerfiles?**
-No, one. `backend.Dockerfile` is the recipe for all eight Laravel services; we pass `SERVICE=<name>` when building and it copies the right folder from `backend/`. The frontend has its own Dockerfile (a two-stage build: Node builds the React files, nginx serves them). That is 2 Dockerfiles for 15 containers.
+**Q72. You have 8 domains — do you have 8 Dockerfiles?**
+No, two. `backend.Dockerfile` is the recipe for the backend application (and the scheduler reuses the same image, just with a different command — `php artisan schedule:work` instead of the built-in server). The frontend has its own Dockerfile (a two-stage build: Node builds the React files, nginx serves them). That's 2 Dockerfiles for 4 containers.
 
-**Q73. What are the 15 containers?**
-1 PostgreSQL (holding all 8 databases), 8 microservices, 5 schedulers (the same images running `php artisan schedule:work` for the background sync and hourly jobs) and 1 frontend (React + nginx).
+**Q73. What are the 4 containers?**
+1 PostgreSQL (holding the single `workforce_mgnt` database), 1 backend (the Laravel app, all 8 domains, running PHP's built-in server inside the container, `php -S`), 1 scheduler (the same image running `php artisan schedule:work` for the auto-scheduling and nightly jobs) and 1 frontend (React + nginx, which also proxies `/api/*` to the backend).
 
 **Q74. Where does the data live when you stop Docker? What does `down -v` do?**
 In a Docker *volume* (`pgdata`), stored outside the containers, so `docker compose down` keeps everything. `docker compose down -v` also deletes the volume — a completely empty fresh system. The Docker database is also separate from the local PostgreSQL the scripts use, so data added in one mode does not appear in the other.
@@ -253,14 +253,14 @@ In a Docker *volume* (`pgdata`), stored outside the containers, so `docker compo
 **Q75. I changed the code but the Docker version didn't change. Why?**
 Because Docker copied the code into the image when it was built. A running container uses that copy, so after code changes you rebuild with `docker compose up -d --build`. The scripts mode reads your files live, so it doesn't have this rule.
 
-**Q76. Inside Docker the services call each other at `http://core:8000`, not `127.0.0.1`. Why?**
-Each container has its own private network address, so `127.0.0.1` would mean "myself". Docker gives every container a name that other containers can use, like an internal phone book, so `core` always finds the auth service wherever it is running. The nginx container uses the same names in its routing table.
+**Q76. Inside Docker, the frontend calls the backend at `http://app:8000`, not `127.0.0.1`. Why?**
+Each container has its own private network address, so `127.0.0.1` would mean "myself". Docker gives every container a name that other containers can use, like an internal phone book, so `app` always finds the backend wherever it is running. The nginx container uses the same name in its routing table.
 
 **Q77. Is nginx in your Docker setup an API gateway?**
-No. It is a reverse proxy: it serves the React files and forwards each `/api/...` prefix to the service that owns it, exactly like the Vite dev proxy. It does no authentication, rate limiting or filtering — every service still validates the token by asking `core`.
+No. It is a reverse proxy: it serves the React files and forwards each `/api/...` request to the backend at `http://app:8000`, exactly like the Vite dev proxy. It does no authentication, rate limiting or filtering — the backend validates the token itself.
 
 **Q78. Is this production-ready?**
-No, and we say so. It is a development/demonstration setup on one machine: PHP's built-in server (4 workers) rather than PHP-FPM, no HTTPS or domain, no image registry, no CI/CD, database port exposed on the laptop, secrets in a local `.env`. For real hosting we would add a domain with HTTPS, PHP-FPM behind nginx, managed secrets, backups and a deployment pipeline.
+No, and we say so. It is a development/demonstration setup on one machine: PHP's built-in server rather than PHP-FPM, no HTTPS or domain, no image registry, no CI/CD, database port exposed on the laptop, secrets in a local `.env`. For real hosting we would add a domain with HTTPS, PHP-FPM behind nginx, managed secrets, backups and a deployment pipeline.
 ---
 
 ## How to use this the night before
@@ -280,11 +280,11 @@ Two things. First, an **automatic weekly job**: when the admin switches it on, t
 
 ### How is an employee's session protected if they walk away from the computer?
 
-Two layers. In the browser, an employee who does nothing for **3 minutes** sees a "still there?" warning for the last 30 seconds and is then signed out. The real protection is on the **server**: an employee's login token is created with a 3-minute expiry, and the browser extends it only while the person is actually using the system (mouse, keys, touch). Background requests such as notification polling do not extend it, so a session left open — or a laptop lid closed — dies by itself, and every microservice refuses the expired token. Administrators are not timed out. The same care applies to password recovery: the emailed reset code is valid for **one minute** and is stored hashed, so a stale code is useless.
+Two layers. In the browser, an employee who does nothing for **3 minutes** sees a "still there?" warning for the last 30 seconds and is then signed out. The real protection is on the **server**: an employee's login token is created with a 3-minute expiry, and the browser extends it only while the person is actually using the system (mouse, keys, touch). Background requests such as notification polling do not extend it, so a session left open — or a laptop lid closed — dies by itself, and the backend refuses the expired token. Administrators are not timed out. The same care applies to password recovery: the emailed reset code is valid for **one minute** and is stored hashed, so a stale code is useless.
 
 ### Why does a leave request cost fewer days than the dates on the calendar?
 
-Because leave is charged in **working days**. When the request is filed, the time-off service asks the scheduling service how many days in that range the person actually works (their own work pattern, else their department's, else the usual days) and which are company holidays. A Friday-to-Monday leave is 2 days, not 4, and a range with no working day at all is refused. The count is stored on the request (`leaves.days`) and used for the balance check, so the number the employee saw while picking dates is the number that is deducted. If scheduling is unreachable the system falls back to Monday-Friday so an outage never blocks a request.
+Because leave is charged in **working days**. When a request is filed, the time-off domain counts the days in that range the person actually works — their own work pattern, else their department's, else the usual Monday–Friday — and which company holidays fall in it. This runs **in-process** against the same data the schedule uses, so there is no network call and no "scheduling is unreachable" fallback anymore. A Friday-to-Monday leave is 2 days, not 4, and a range with no working day at all is refused. The count is stored on the request (`leaves.days`) and used for the balance check, so the number the employee saw while picking dates is the number that is deducted.
 
 ### How do absences get recorded if the person never touched the kiosk?
 
@@ -302,9 +302,9 @@ It used to include the kiosk activity log, which names employees and shows clock
 
 A live overview, refreshed every 15 seconds: whether the kiosk is on and a countdown to the end of today's unlock, how many people have clocked in against how many were scheduled, who is scheduled and late but has not clocked in, how many real security alerts (wrong PIN or face mismatch) happened today, and a readiness check (PIN set, employees without a registered face, camera and face models on the device). The numbers are computed on the server in the kiosk's own time zone, so they match what the attendance rules enforce.
 
-### Can someone outside call the services' internal endpoints through the website?
+### Can someone outside call the backend's internal endpoints through the website?
 
-No. The services call each other directly (with a shared secret token) on their own addresses. The public entrance (the Vite dev proxy and the Docker nginx) answers **404** for anything under `/api/internal`, so those endpoints cannot be reached from a browser even by someone who knew the token. Each internal endpoint also refuses a request without the token (checked one by one).
+No. There is no separate internal API. In the earlier split design the services talked to each other with a shared secret token on private routes and the public entrance answered **404** for anything under `/api/internal`; after consolidation, all that machinery was deleted. There is one `/api` surface, everything in it is subject to the same authentication and authorization as any other route, and there is no `/api/internal` path at all.
 
 ### If an administrator corrects a punch, who calculates the hours?
 
