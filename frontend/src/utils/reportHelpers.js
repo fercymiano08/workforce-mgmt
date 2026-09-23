@@ -549,49 +549,6 @@ export async function buildReport(reportName, dateRange, nameOf) {
       };
     }
 
-    case 'Payroll Discrepancy Report': {
-      const records = await timesheetService.getAll();
-      const filtered = records.filter((r) => inRange(r.weekStart || r.periodStart));
-      const discrepancies = filtered.map((r) => {
-        const regular = Number(r.regularHours || 0), ot = Number(r.overtimeHours || 0), total = Number(r.totalHours || 0);
-        const expected = regular + ot;
-        const disc = total - expected;
-        return { name: r.employeeName || nameOf(r.employeeId), regular, ot, total, expected, disc: Math.abs(disc) > 0.01 ? disc : 0 };
-      });
-      const withDisc = discrepancies.filter((d) => d.disc !== 0);
-      const totalVariance = discrepancies.reduce((s, d) => s + d.disc, 0);
-
-      const chartData = withDisc.slice(0, 10).map((d) => ({
-        name: d.name.split(' ')[0],
-        Variance: Number(d.disc.toFixed(1)),
-      }));
-
-      return {
-        title: 'Payroll Discrepancy Report',
-        subtitle: 'Detects mismatches between logged and expected hours',
-        summary: [
-          { label: 'Total Entries', value: String(filtered.length), color: 'blue' },
-          { label: 'Discrepancies Found', value: String(withDisc.length), color: withDisc.length > 0 ? 'red' : 'green' },
-          { label: 'Total Variance', value: fmtH(Math.abs(totalVariance)), color: withDisc.length > 0 ? 'amber' : 'green' },
-          { label: 'Clean Entries', value: String(filtered.length - withDisc.length), color: 'green' },
-        ],
-        charts: [
-          { type: 'bar', title: 'Hours Variance by Employee', data: chartData, dataKeys: ['Variance'], colors: ['#ef4444'] },
-        ],
-        insights: [
-          withDisc.length === 0 ? 'No discrepancies found. All entries are consistent.' : `${withDisc.length} of ${filtered.length} entries have hour discrepancies.`,
-          withDisc.length > 0 ? `Total payroll variance: ${fmtH(Math.abs(totalVariance))}.` : null,
-        ].filter(Boolean),
-        recommendations: [
-          withDisc.length > 0 ? 'Review flagged entries before payroll processing to prevent overpayment or underpayment.' : null,
-          withDisc.length > filtered.length * 0.2 ? 'More than 20% of entries have discrepancies. Investigate timesheet submission process.' : null,
-        ].filter(Boolean),
-        cols: ['Employee', 'Regular Hrs', 'OT Hrs', 'Total', 'Discrepancy'],
-        rows: discrepancies.map((d) => [d.name, fmtH(d.regular), fmtH(d.ot), fmtH(d.total), d.disc !== 0 ? fmtH(d.disc) : '—']),
-        period,
-      };
-    }
-
     default:
       return {
         title: reportName,

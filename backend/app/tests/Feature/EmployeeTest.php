@@ -30,7 +30,6 @@ class EmployeeTest extends TestCase
             'employmentType' => 'Full-time',
             'status' => 'Active',
             'hireDate' => '2026-07-01',
-            'salary' => 0,
             'manager' => '',
             'avatar' => '',
             'address' => '123 P. Burgos St, Makati City',

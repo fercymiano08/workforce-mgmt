@@ -4,7 +4,7 @@ import {
   Clock, CalendarDays, CalendarCheck, Hourglass,
   Briefcase, Plus,
   Fingerprint, FileText, CalendarClock, Calendar, ArrowRight,
-  Shield, Building2, BadgeCheck, DoorOpen, User, Settings,
+  Shield, Building2, BadgeCheck, DoorOpen, User, Settings, Inbox,
 } from 'lucide-react';
 import {
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend,
@@ -38,6 +38,16 @@ const dayLabel = (dateStr) => {
   const d = new Date(dateStr);
   return d.toLocaleDateString('en-US', { weekday: 'short' });
 };
+
+const EmptyChart = ({ message }) => (
+  <div className="h-full flex flex-col items-center justify-center text-center px-4">
+    <div className="w-14 h-14 rounded-2xl bg-gray-100 flex items-center justify-center mb-3">
+      <Inbox className="w-7 h-7 text-gray-300" />
+    </div>
+    <p className="text-sm font-semibold text-gray-900">No data yet</p>
+    <p className="text-xs text-gray-500 mt-1 max-w-xs leading-relaxed">{message}</p>
+  </div>
+);
 
 // App-style shortcuts: a big icon tile with a short name underneath (nothing gets cut off).
 const quickActions = [
@@ -136,6 +146,8 @@ export default function EmployeeDashboard() {
       return { day: dayLabel(a.date), hours: Math.round(hours * 10) / 10, status: a.status };
     });
   }, [myAttendance]);
+
+  const hasChartData = chartData.some((d) => d.hours > 0);
 
   const hoursThisWeek = useMemo(() => {
     const last7 = myAttendance.slice(-5);
@@ -261,16 +273,20 @@ export default function EmployeeDashboard() {
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         <ChartCard title="My Attendance" badge="Last 10 days" badgeVariant="primary" className="lg:col-span-2">
           <div className="h-[320px]">
-            <ResponsiveContainer width="100%" height="100%">
-              <BarChart data={chartData} barGap={3} barCategoryGap="22%" margin={{ top: 8, right: 8, left: -12, bottom: 0 }}>
-                <CartesianGrid strokeDasharray="3 3" stroke="#F1F5F9" vertical={false} />
-                <XAxis dataKey="day" axisLine={false} tickLine={false} tick={{ fontSize: 12, fill: '#64748B' }} />
-                <YAxis axisLine={false} tickLine={false} tick={{ fontSize: 12, fill: '#64748B' }} />
-                <Tooltip content={<CustomTooltip />} />
-                <Legend iconType="circle" iconSize={8} wrapperStyle={{ paddingTop: 16, fontSize: 12 }} />
-                <Bar dataKey="hours" name="Hours Worked" fill={COLORS.blue} radius={[6, 6, 0, 0]} />
-              </BarChart>
-            </ResponsiveContainer>
+            {!hasChartData ? (
+              <EmptyChart message="Your hours chart fills in as you clock in and out from the attendance terminal." />
+            ) : (
+              <ResponsiveContainer width="100%" height="100%">
+                <BarChart data={chartData} barGap={3} barCategoryGap="22%" margin={{ top: 8, right: 8, left: -12, bottom: 0 }}>
+                  <CartesianGrid strokeDasharray="3 3" stroke="#F1F5F9" vertical={false} />
+                  <XAxis dataKey="day" axisLine={false} tickLine={false} tick={{ fontSize: 12, fill: '#64748B' }} />
+                  <YAxis axisLine={false} tickLine={false} tick={{ fontSize: 12, fill: '#64748B' }} />
+                  <Tooltip content={<CustomTooltip />} />
+                  <Legend iconType="square" iconSize={8} wrapperStyle={{ paddingTop: 16, fontSize: 12 }} />
+                  <Bar dataKey="hours" name="Hours Worked" fill={COLORS.blue} radius={[6, 6, 0, 0]} />
+                </BarChart>
+              </ResponsiveContainer>
+            )}
           </div>
         </ChartCard>
 

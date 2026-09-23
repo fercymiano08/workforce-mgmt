@@ -316,7 +316,6 @@ class DatabaseSeeder extends Seeder
             'leave_trend' => $data['leaveTrend'] ?? [],
             'overtime_summary' => $data['overtimeSummary'] ?? [],
             'punctuality_score' => $data['punctualityScore'] ?? [],
-            'payroll_discrepancy' => $data['payrollDiscrepancy'] ?? [],
         ]);
     }
 

@@ -16,6 +16,9 @@ Thumbs.db
 # Docker Compose secrets (copy .env.docker.example to .env)
 /.env
 
+# Raw database dumps - real employee data (names, emails, addresses, face data), never commit
+/db-backups/
+
 # Word/OneDrive temp and lock files
 ~WRL*.tmp
 ~$*

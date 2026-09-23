@@ -525,7 +525,7 @@ When clocking out, the **server** (not the kiosk screen) works out four numbers 
 | `regular_hours` | total − overtime |
 | `break_hours` | the deducted lunch, in hours |
 
-**How the lunch break works.** It is deducted **by duration, not by clock time**, the way most enterprise time systems do it: once the person has worked at least the **minimum hours (default 5)**, the **lunch length (default 60 minutes)** is taken off the day — whenever lunch was really taken. A shorter day (a sick early leave at 12:30, a half day) loses nothing. Nobody has to clock out for lunch. HR can change both numbers (or set the length to 0 to switch it off) on **Settings → Early Leave → Unpaid Lunch Break**; a change applies to days worked from then on, and days already counted keep the lunch they were counted with. This matches the Philippine Labor Code idea that a meal break of at least 60 minutes is unpaid.
+**How the lunch break works.** It is deducted **by duration, not by clock time**, the way most enterprise time systems do it: once the person has worked at least the **minimum hours (default 5)**, the **lunch length (default 60 minutes)** is taken off the day — whenever lunch was really taken. A shorter day (a sick early leave at 12:30, a half day) loses nothing. Nobody has to clock out for lunch. HR can change both numbers (or set the length to 0 to switch it off) on **Settings → Time Manager → Unpaid Lunch Break**; a change applies to days worked from then on, and days already counted keep the lunch they were counted with. This matches the Philippine Labor Code idea that a meal break of at least 60 minutes is unpaid.
 
 The same helper (`ShiftHours`) computes these when a day is re-counted after an overtime approval — one source of truth, so attendance history and weekly timesheets always agree.
 
@@ -550,7 +550,7 @@ A kiosk cannot tell whether "I'm sick" is true — and every employee sees the s
 | Control | What it does |
 |---------|--------------|
 | **Free allowance** | Each employee gets **2 free early clock-outs per rolling 30 days** (both editable in Settings). The **3rd is marked UNEXCUSED (Unpaid) automatically, at the punch** — no waiting for HR. Only *earlier* early-outs count against you, so "2 free" means two |
-| **Proof for SICK** | A *Feeling Unwell* claim becomes `CERTIFICATE_REQUIRED` with a deadline of **48 hours** (Settings → *Certificate Deadline*). The employee uploads a photo/PDF in My Attendance → Early Clock Outs. If the deadline passes with nothing attached, an hourly job (`early-outs:expire-certificates`) marks it **unexcused automatically** and tells both sides. HR **cannot** excuse a sick early-out without a certificate on file, unless they use *Override* (audited) |
+| **Proof for SICK** | A *Feeling Unwell* claim becomes `CERTIFICATE_REQUIRED` with a deadline of **48 hours** (Settings → Time Manager → *Certificate Deadline*). The employee uploads a photo/PDF in My Attendance → Early Clock Outs. If the deadline passes with nothing attached, an hourly job (`early-outs:expire-certificates`) marks it **unexcused automatically** and tells both sides. HR **cannot** excuse a sick early-out without a certificate on file, unless they use *Override* (audited) |
 | **Alert on every early clock-out** | All Workforce Admins are notified for **every** early clock-out — including *Other* — with the running count ("early clock-out #2 in 30 days, within the free allowance of 2"). High priority once the allowance is exceeded, so a person can follow up the same day |
 | **Copycat detection** | If **3 employees** leave early on the same day citing the same reason, the admins get a "Possible Early-Leave Pattern" alert |
 | **Only verifiable reasons** | *Approved Leave* is no longer offered (a day with approved leave has no clock-in at all, so it can never be true at the kiosk); the server also refuses it |
@@ -663,15 +663,19 @@ The **Early Clock Outs tab** (badge = count of `Pending Review`) lists every ear
 ```
 Shift scheduled to start 08:00 (from shift_definitions / shift_schedules)
         │
-        ├── clock-in ≤ 08:00 + 15 min grace      → status "Present"
-        ├── clock-in > grace                     → status "Late"
+        ├── clock-in ≤ 08:00 + late grace (default 15 min)     → status "Present"
+        ├── clock-in > grace                                   → status "Late"
         └── no clock-in and no approved leave,
-            past the 60-minute absence grace     → status "Absent"
+            past the no-show grace (default 60 min)            → status "Absent"
 ```
 
 An employee with an **Approved leave** covering today is marked on-leave rather than absent.
 
-**Who decides Present vs Late?** The `attendance` **server**, at the moment of the kiosk punch, using its own clock and the employee's scheduled shift start: on time up to and **including** 15 minutes after the start (08:15:00 is still Present), Late from 08:15:01. There is no fallback start time — an employee with no scheduled shift cannot clock in at all, so they can never be marked Late by a guess.
+**Who decides Present vs Late?** The `attendance` **server**, at the moment of the kiosk punch, using its own clock and the employee's scheduled shift start: on time up to and **including** the late-grace minutes after the start (08:15:00 is still Present at the 15-minute default), Late from one second past that. There is no fallback start time — an employee with no scheduled shift cannot clock in at all, so they can never be marked Late by a guess.
+
+**Both numbers are admin-configurable, not hardcoded.** What used to be fixed constants (`LATE_GRACE_MINUTES`, `ABSENT_GRACE_MINUTES`) are now stored as system settings and edited on **Settings → Time Manager → Attendance Grace Periods** (`late_grace_minutes`, default 15; `absent_grace_minutes`, default 60) — the same card also explains that the no-show scan uses the late-grace number as its starting point. The numbers above are just the shipped defaults.
+
+**A late clock-in retracts its own no-show alert.** The dashboard's alert scan can flag a "possible no-show" for someone who hasn't clocked in yet. The moment that employee actually clocks in — even late — `NotificationService::retractNoShowAlert()` deletes any pending no-show alert already sent for them that day, so HR's inbox never shows a "clocked in late" notice sitting next to a stale "possible no-show" for the same person.
 
 ### Tech Trail
 
@@ -706,7 +710,7 @@ One engine (`ScheduleGenerator`) serves both the admin's **Automated Shift Assig
 | Step | What happens |
 |------|--------------|
 | **Plan** | The engine works out what *would* be created and everything skipped, and why. The wizard's step 3 (**Review**) shows it: shifts to create, skipped for *already scheduled / approved leave / holidays / day off*, days below minimum coverage, and shifts per day. **Nothing is written.** |
-| **Publish** | `POST /api/shifts/schedules/generate` creates the shifts and records the run as a **batch** (`BAT001`...), notifies each employee, warns the admins about shortages, writes an **audit** entry, and copies the new shifts to the other services. |
+| **Publish** | `POST /api/shifts/schedules/generate` creates the shifts and records the run as a **batch** (`BAT001`...), notifies each employee, warns the admins if any department falls below its minimum coverage, and writes an **audit** entry. |
 | **Undo** | *Automation & rules → History → Undo* removes the shifts that batch created **that have not happened yet** (shifts on days already passed stay, because attendance may rely on them) and tells the employees. |
 
 **Who gets scheduled on which day** — the rules, in this order: an employee's **own work pattern**, else their **department's pattern**, else the **usual days** (Monday–Friday unless changed). Nobody is scheduled on a **holiday**, on **approved leave**, or twice on the same day. **Coverage rules** (a minimum number of scheduled people per department per day) never block anything: they produce warnings.
@@ -784,8 +788,8 @@ Pending ────┤
 
 | Step | What happens |
 |------|--------------|
-| 1 | Fill form: **leave type** (vacation, sick, emergency, maternity/paternity, etc.), **start date**, **end date**, **reason** |
-| 2 | Frontend validates: end ≥ start, reason required; the page also shows current **balances** fetched from `/api/leaves/balances/{employeeId}` |
+| 1 | Fill form: **leave type** — exactly six: **Vacation, Sick, Emergency, Special, Funeral, Unpaid** — plus **start date**, **end date**, **reason** |
+| 2 | Frontend validates: end ≥ start, reason required; the page also shows current **balances** fetched from `/api/leaves/balances/{employeeId}` — the default annual allowance per type (`Employee.php`) is **Vacation 20, Sick 10, Emergency 5, Special 5, Funeral 5, Unpaid 30** days, stored per employee in `employees.leave_balances` (JSON) and editable per employee by the admin |
 | 3 | `POST /api/leaves` — the payload says whose request it is; the backend verifies the caller may only file as themselves |
 | 4 | Backend re-validates and inserts into `leaves`: `status = 'Pending'`, `applied_date = today`, `employee_name` snapshotted |
 | 5 | Notification created for HR: "new leave request" |
@@ -954,13 +958,12 @@ SENT TO PAYROLL   (admin: "Send to payroll")
 AnalyticsService queries raw tables (attendance, leaves, overtime_requests...)
    │
    ▼
-Computes six prepared sections, stored in the `analytics` table as JSON:
+Computes five prepared sections, stored in the `analytics` table as JSON:
    attendance_trend          headcounts present/late/early-leave/absent over time + attendance rate
    department_productivity   per-department comparison
    leave_trend               leave usage over time
    overtime_summary          OT volume and distribution
    punctuality_score         on-time percentage per employee/dept
-   payroll_discrepancy       mismatches worth investigating
    │
    ▼
 Dashboard/Analytics pages just fetch these prepared JSON blobs
@@ -968,6 +971,20 @@ Dashboard/Analytics pages just fetch these prepared JSON blobs
 ```
 
 Why cached? Chart pages stay instant — heavy aggregation runs once through the service instead of on every page load.
+
+### The Analytics Screen (`HR_Manager/Analytics.jsx`) — What's Actually On It
+
+The page is deliberately not "everything as a bar chart" — each section uses whichever chart type reads best for that data:
+
+| Section | Chart type | Shows |
+|---------|-----------|-------|
+| Three KPI meters (top row) | Stat/meter tiles | Overall Attendance Rate, Overall Punctuality, Total Overtime Hours |
+| Attendance Trend | Bar chart | Monthly attendance rate over the year |
+| Department Productivity | Full pie chart | Productivity score share by department |
+| Leave Trends | Horizontal (sideways) stacked bar chart | Leave usage over time, broken down |
+| Overtime by Department | Line chart | OT volume/distribution over time |
+| Punctuality Leaderboard | Ranked list | Top performers and who needs attention, by on-time percentage |
+| Leave Type Composition | Donut chart | Share of leave taken by type (Vacation/Sick/Emergency/Special/Funeral/Unpaid) |
 
 ### Tech Trail
 
@@ -1144,6 +1161,8 @@ Open events raise the system's concern level; resolving them restores the score.
 | **Face mismatch at the kiosk** (someone clocking in as another person) | HR — all admins, **high priority** (`security_face_mismatch`, deep-links to AI Decision Support) |
 | No-show / un-closed clock-in / unauthorized overtime / staffing shortage (dashboard alert scan) | HR — all admins (`attendance_absent`, `attendance_incomplete`, `attendance_unauthorized_ot`, `staff_shortage`) |
 
+> **A late clock-in cancels its own no-show alert.** The moment an employee clocks in — even late — `NotificationService::retractNoShowAlert()` deletes any "possible no-show" (`attendance_absent`) alert already sent for that employee for today. HR's inbox never ends up showing a "clocked in late" notice sitting next to a now-false "possible no-show" for the same person on the same day.
+
 ### Anatomy Of One Notification Row
 
 `type` (icon/color mapping lives in `notificationTypes.js`), `title`, `message`, `timestamp`, `read` (true/false), `priority` (low default), `action_url` (deep-link), optional `employee_id`.
@@ -1242,7 +1261,7 @@ Which tables each module touches (R = read, W = write). This map is logical — 
 
 | Area | Possible values | Who can move them |
 |------|-----------------|-------------------|
-| Attendance daily status | `Present` · `Late` · `Absent` · `Early Leave` | Computed by the **server** at the kiosk punch (15-min grace, inclusive; 60-min absent grace); admin can correct manually |
+| Attendance daily status | `Present` · `Late` · `Absent` · `Early Leave` | Computed by the **server** at the kiosk punch (default 15-min late grace, inclusive; default 60-min absent grace — both admin-configurable via Settings → Time Manager); admin can correct manually |
 | Early clock-out record | Reason `provided` by employee at kiosk; classification `Pending Review` → `Excused (Sick)` / `Excused (Emergency)` / `Excused (Early Leave)` / `Unpaid` | Employee edits own reason; Admin classifies — punch snapshot is immutable |
 | Leave request | `Pending` → `Approved` / `Rejected`; employee may `Cancel` while Pending | Employee: apply/cancel own. Admin: approve/reject |
 | Overtime request | `Pending` → `Approved` / `Rejected`; `Cancel` while Pending | Same split as leave |
@@ -1255,8 +1274,8 @@ Which tables each module touches (R = read, W = write). This map is logical — 
 
 | Number | Meaning |
 |--------|---------|
-| 15 min | Grace period after shift start before a clock-in counts as Late |
-| 60 min | Absence grace before "no show" becomes Absent |
+| 15 min | Grace period after shift start before a clock-in counts as Late — **default**, admin-configurable on Settings → Time Manager (`late_grace_minutes`) |
+| 60 min | Absence grace before "no show" becomes Absent — **default**, admin-configurable on Settings → Time Manager (`absent_grace_minutes`) |
 | 30 min | How early before the shift the kiosk lets someone clock in (earlier is refused; paid time still starts at the shift start) |
 | 60 sec | Kiosk lockout duration after repeat face-mismatch strikes |
 | 30 days | Lookback window the AI analyzes |
@@ -1322,7 +1341,7 @@ Workforce MGNT/
 │       │                             intelligence}.php   ← one per domain
 │       ├── database/migrations/      ALL tables (31 total: 22 business + 9 framework)
 │       ├── database/seeders/         demo workforce data
-│       ├── tests/                    ONE offline test suite — 307 tests (1264 assertions)
+│       ├── tests/                    ONE offline test suite — 310 tests (1272 assertions)
 │       └── .env                      ONE database: workforce_mgnt (PostgreSQL)
 ├── docker-compose.yml               Docker: 4 containers (see Start Here §10)
 ├── docker/                          backend.Dockerfile (app + scheduler, same image),
@@ -1362,7 +1381,7 @@ Nine times out of ten the bug is one of: stale frontend state (refresh), wrong r
 ## Summary Card
 
 > **Frontend** draws screens, validates for convenience, never touches SQL — and its Vite dev proxy is the only thing that knows where the backend lives (`127.0.0.1:8000` locally, `http://app:8000` in Docker).
-> **The one backend (:8000)** is a single Laravel app containing **8 cleanly-separated domains** — auth/identity, attendance, scheduling, time-off, payroll, communications, configuration, intelligence. One process, one port, one PostgreSQL database, one test suite (307 tests). There is no gateway, no service-to-service HTTP, no shared secret token, no internal API.
+> **The one backend (:8000)** is a single Laravel app containing **8 cleanly-separated domains** — auth/identity, attendance, scheduling, time-off, payroll, communications, configuration, intelligence. One process, one port, one PostgreSQL database, one test suite (310 tests, 1272 assertions). There is no gateway, no service-to-service HTTP, no shared secret token, no internal API.
 > **Cross-domain data** moves with plain Eloquent relationships and real foreign keys inside the same database — no snapshot replication, no `*Client` classes. The consolidation deleted all of it: nothing was left needing a replica.
 >
 > **Kiosk** verifies faces in-browser, and its rules are enforced by the attendance domain **server-side** (no shift or finished shift = refused; up to 15 min after start = Present, later = Late with a warning; leaving early needs a reason). A face mismatch is logged and alerts the Workforce Admins.

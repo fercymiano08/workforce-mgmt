@@ -6,6 +6,7 @@ import Card from '../../components/ui/Card';
 import Button from '../../components/ui/Button';
 import Badge from '../../components/ui/Badge';
 import Input, { Select, Textarea } from '../../components/ui/Input';
+import PhoneInput from '../../components/ui/PhoneInput';
 import FaceCaptureModal from '../../components/employees/FaceCaptureModal';
 import { departmentService, employeeService, roleService } from '../../services/api';
 import { EMPLOYMENT_TYPES } from '../../utils/constants';
@@ -15,7 +16,7 @@ const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 const PHONE_REGEX = /^[+\d][\d\s\-()]{6,}$/;
 const PASSWORD_REGEX = /^(?=.*[A-Z])(?=.*[a-z])(?=.*\d)[A-Za-z\d@$!%*#?&._-]{8,}$/;
 const genders = ['Male', 'Female'];
-const statuses = ['Active', 'On Leave', 'Inactive'];
+const statuses = ['Active', 'Inactive'];
 
 const TODAY = new Date().toISOString().split('T')[0];
 
@@ -51,7 +52,6 @@ const createEmptyForm = (suggestedId = '') => ({
   address: '',
   emergencyContact: '',
   emergencyPhone: '',
-  salary: '',
   status: 'Active',
   password: '',
   confirmPassword: '',
@@ -226,7 +226,6 @@ export default function EmployeeRegistration() {
         employmentType: formData.employmentType,
         status: formData.status || 'Active',
         hireDate: formData.dateHired,
-        salary: formData.salary ? Number(formData.salary) : 0,
         manager: '',
         avatar: '',
         address: formData.address,
@@ -246,8 +245,11 @@ export default function EmployeeRegistration() {
       setCreatedEmployee(created);
 
       toast.success('Employee Account Created', 'Employee account created successfully.');
-    } catch {
-      toast.error('Error', 'Failed to create employee account. Please try again.');
+    } catch (error) {
+      const detail = error?.response?.data?.errors
+        ? Object.values(error.response.data.errors)[0]?.[0]
+        : error?.response?.data?.message;
+      toast.error('Error', detail || 'Failed to create employee account. Please try again.');
     } finally {
       setSubmitting(false);
     }
@@ -362,13 +364,13 @@ export default function EmployeeRegistration() {
                 <option value="">Select gender</option>
                 {genders.map((g) => <option key={g} value={g}>{g}</option>)}
               </Select>
-              <Input
+              <PhoneInput
                 label="Phone Number"
                 required
                 value={formData.phone}
-                onChange={(e) => setField('phone', e.target.value)}
+                onChange={(v) => setField('phone', v)}
                 error={formErrors.phone}
-                placeholder="+63 9XX XXX XXXX"
+                placeholder="9XX XXX XXXX"
               />
               <Input
                 label="Email"
@@ -409,12 +411,12 @@ export default function EmployeeRegistration() {
                 error={formErrors.emergencyContact}
                 placeholder="Name of the person to contact"
               />
-              <Input
+              <PhoneInput
                 label="Emergency Contact Number"
                 value={formData.emergencyPhone}
-                onChange={(e) => setField('emergencyPhone', e.target.value)}
+                onChange={(v) => setField('emergencyPhone', v)}
                 error={formErrors.emergencyPhone}
-                placeholder="+63 9XX XXX XXXX"
+                placeholder="9XX XXX XXXX"
               />
             </div>
           </section>
@@ -477,13 +479,6 @@ export default function EmployeeRegistration() {
                 value={formData.dateHired}
                 onChange={(e) => setField('dateHired', e.target.value)}
                 error={formErrors.dateHired}
-              />
-              <Input
-                label="Monthly Salary"
-                type="number"
-                value={formData.salary}
-                onChange={(e) => setField('salary', e.target.value)}
-                placeholder="Monthly salary (₱)"
               />
               <Select
                 label="Status"

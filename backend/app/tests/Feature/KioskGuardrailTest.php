@@ -6,6 +6,7 @@ use App\Models\Attendance;
 use App\Models\Employee;
 use App\Models\Notification;
 use App\Models\SecurityEvent;
+use App\Models\Setting;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
 
@@ -140,6 +141,23 @@ class KioskGuardrailTest extends TestCase
             ->assertJsonPath('data.status', 'Late');
 
         $this->assertSame(1, Notification::where('type', 'attendance_late')->count());
+    }
+
+    public function test_hr_can_widen_the_grace_period_from_the_settings_page(): void
+    {
+        Setting::updateOrCreate(['id' => 1], ['system' => ['late_grace_minutes' => 30]]);
+
+        $this->employee();
+        $this->scheduleShift('EMP20260001', '08:00:00', '17:00:00');
+        // 20 minutes late - Late under the default 15-minute grace, but this company set 30.
+        $this->freezeKioskClock('08:20:00');
+        $this->withHeaders($this->kioskDeviceHeaders());
+
+        $this->clockIn('EMP20260001', 'Present')
+            ->assertCreated()
+            ->assertJsonPath('data.status', 'Present');
+
+        $this->assertSame(0, Notification::where('type', 'attendance_late')->count());
     }
 
     public function test_the_server_clock_not_the_terminal_sets_the_recorded_time(): void

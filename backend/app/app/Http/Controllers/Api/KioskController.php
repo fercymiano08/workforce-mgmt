@@ -17,6 +17,7 @@ use App\Services\EarlyLeaveEnforcer;
 use App\Services\NotificationService;
 use App\Services\PayrollClient;
 use App\Services\ShiftHours;
+use App\Services\SystemSettings;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use App\Services\KioskDeviceToken;
@@ -44,7 +45,13 @@ class KioskController extends Controller
     private const MAX_LOGS = 200;
 
     // Minutes after a shift's start that a clock-in still counts as on time.
-    private const LATE_GRACE_MINUTES = 15;
+    // HR-configurable (Settings > Time Manager); this is only the fallback.
+    private const DEFAULT_LATE_GRACE_MINUTES = 15;
+
+    private function lateGraceMinutes(): int
+    {
+        return max(0, (int) app(SystemSettings::class)->get('late_grace_minutes', self::DEFAULT_LATE_GRACE_MINUTES));
+    }
 
     // face-api.js's own convention for its 128-value descriptors: distances
     // at or below this are considered the same person.
@@ -565,7 +572,7 @@ class KioskController extends Controller
         }
 
         // Present up to and including 15 minutes after the shift starts; Late after that.
-        $data['status'] = $now->gt($shiftStart->copy()->addMinutes(self::LATE_GRACE_MINUTES)) ? 'Late' : 'Present';
+        $data['status'] = $now->gt($shiftStart->copy()->addMinutes($this->lateGraceMinutes())) ? 'Late' : 'Present';
 
         try {
             $record = Attendance::create([
@@ -578,6 +585,7 @@ class KioskController extends Controller
         }
 
         PayrollClient::syncForEmployee($record->employee_id);
+        NotificationService::retractNoShowAlert($record->employee_id);
 
         if ($record->status === 'Late') {
             $employee = Employee::find($record->employee_id);
@@ -720,7 +728,7 @@ class KioskController extends Controller
         $record->update($data);
 
         // A few minutes over is normal; staying well past the end with no approval is worth HR's attention.
-        if ($uncountedMinutes > self::LATE_GRACE_MINUTES) {
+        if ($uncountedMinutes > $this->lateGraceMinutes()) {
             $employee = Employee::find($record->employee_id);
             $name = $employee ? trim($employee->first_name.' '.$employee->last_name) : $record->employee_id;
             NotificationService::notifyAdmins(

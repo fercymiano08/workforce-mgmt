@@ -113,6 +113,8 @@ Browser (frontend) → sends a request to `/api/...` → the frontend's proxy (V
 
 > **Key defense point:** these rules are enforced by the **server**, not just the screen. The server uses its own clock and looks up the shift itself, so a wrong tablet clock or a hand-made request can't fake an on-time punch. The popups just explain the rule to the employee first.
 
+> **Also worth knowing:** the 15-minute number above is not hardcoded. Workforce Admin Settings has a **Time Manager** section where the admin configures, in one place, the late grace period, the no-show alert threshold, break-time rules, and the early-leave policy — these used to be fixed constants in the code and are now stored as system settings the admin can change.
+
 **While scanning**, the camera shows a **face-shaped oval** with a sweeping scan band and dots that pulse over the face, and the oval turns green when identity is confirmed.
 
 **Extra defense points:**
@@ -164,7 +166,7 @@ Use these as quick talking points. Say each in ONE breath.
 **HR + Employee:**
 - **Shifts & Schedules** - "When each employee works. HR can auto-generate a whole week of schedules."
 - **Notifications** - "Announcements and alerts, with read/unread tracking for each employee."
-- **Settings** - "Company info and system preferences. HR can edit; employees see the formatting settings."
+- **Settings** - "Company info and system preferences, including a Time Manager tab for grace period, no-show threshold, break rules and early-leave policy. HR can edit; employees see the formatting settings."
 
 ---
 
@@ -347,7 +349,7 @@ The "scariest" architecture question — and your answer is actually a strength,
 - **Splitting Workforce Management into 8 services added cost with no benefit.** Nothing in this system needs independent scaling (attendance doesn't get 10x the traffic of payroll), a different release schedule (we ship them all together anyway), or a different team owning each piece (it's one team). Splitting it gave us 8 databases to keep in sync, a background job copying "replica" tables so services could see each other's data, and network calls between pieces of the SAME domain — pure overhead.
 - **The real microservice boundary is one level up.** Workforce Management as a WHOLE is the right unit to separate from Orders, Inventory, Customers, and the other subsystems of the e-commerce platform — those genuinely are different domains, likely different teams, and could genuinely need independent scaling or release schedules. That's where the microservices pattern earns its keep.
 - **The fix was mechanical, not a rewrite:** the 8 domains' routes, controllers, and models moved into one Laravel app's folders, the 8 databases merged into one (`workforce_mgnt`), and the inter-service HTTP glue (SERVICE_TOKEN, snapshot sync, `/internal/*` routes) was deleted because nothing needed it anymore.
-- **Every business-rule test survived.** We went from 324 tests (across 8 services) to 307 - the only tests removed were ones that existed purely to check the removed inter-service HTTP transport (e.g. "does service A correctly call service B's internal API"). Every test that checks an actual business rule (attendance rules, leave balances, payroll math, security lockouts, etc.) was kept, and all 307 pass today.
+- **Every business-rule test survived.** Consolidation only removed tests that existed purely to check the removed inter-service HTTP transport (e.g. "does service A correctly call service B's internal API"). Every test that checks an actual business rule (attendance rules, leave balances, payroll math, security lockouts, etc.) was kept, and the suite has grown since with new features (early-leave reasons, audit logging, timesheet history) to **310 tests, 1272 assertions, all passing today**.
 
 ## How the 8 domains stay organized without 8 databases
 
@@ -395,7 +397,7 @@ Use this as a rapid-fire review. One line = one idea. Cover the right column, th
 | **Security Events** | Log of suspicious kiosk activity | `face_mismatch`/`pin_failed` stored Open → HR resolves/escalates | Buddy-punching is caught and reviewable |
 | **Notifications** | In-app bell messages | Backend INSERTs a row; bell refreshes every 30 s while the tab is visible (newest 200) | People learn of approvals/leaves/SO immediately |
 | **Kiosk Setup** | Configures the door device | PIN hash, location, verification method stored in `settings.kiosk` | The entrance behaves exactly how HR wants |
-| **Settings/Profile** | App config (admin) + a separate My Profile page for employees | One settings row (JSON groups); Employee Settings = password + appearance only; My Profile edits contact info + photo with validation, salary and face template never sent | Flexible config; employees can't touch salary/department; Profile (who I am) is split from Settings (how the app behaves) |
+| **Settings/Profile** | App config (admin) + a separate My Profile page for employees | One settings row (JSON groups) incl. a **Time Manager** tab (late grace period, no-show alert threshold, break-time rules, early-leave policy — now admin-configurable, not hardcoded); Employee Settings = password + appearance only; My Profile edits contact info + photo with validation, salary and face template never sent | Flexible config; employees can't touch salary/department; Profile (who I am) is split from Settings (how the app behaves) |
 
 ---
 
@@ -440,7 +442,7 @@ Use this as a rapid-fire review. One line = one idea. Cover the right column, th
 16. What is a foreign key? → A column pointing to another table's key (attendance.employee_id → employees.id).
 17. What is a JOIN? → Combining two tables on their key to show related data together.
 18. Why JSON columns? → Flexible config (leave_balances, kiosk, ai_resolved_insights).
-19. How many employees/attendance rows are in the demo? → 12 employees, 190 attendance rows.
+19. How many employees/attendance rows are in the demo? → 10 seeded demo employees (plus the admin/employee demo accounts), with attendance rows generated from their schedules.
 
 ## Attendance rules (20-26)
 20. When is someone Late? → Clock-in more than 15 min after shift start (08:15:01 or later for an 08:00 shift). The server decides, from its own clock.
@@ -479,7 +481,7 @@ Use this as a rapid-fire review. One line = one idea. Cover the right column, th
 44. What 4 things does AI return? → healthScore, insights, decisionQueue, source.
 45. What actions can HR take in one click? → Approve/reject leave & OT, resolve security events.
 46. Why cached analytics? → Heavy math runs once via AnalyticsService; charts stay instant.
-47. What are the 6 analytics sections? → attendance_trend, department_productivity, leave_trend, overtime_summary, punctuality_score, payroll_discrepancy — computed by the AnalyticsService in the analytics domain, reading the same single database.
+47. What are the 5 analytics sections? → attendance_trend, department_productivity, leave_trend, overtime_summary, punctuality_score — computed by the AnalyticsService in the analytics domain, reading the same single database.
 
 ## People & registry (48-50)
 48. Who are the demo logins? → admin@workforcepro.com/Admin@123 and employee@workforcepro.com/Employee@123.

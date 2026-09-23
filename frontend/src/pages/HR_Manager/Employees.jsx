@@ -5,13 +5,14 @@ import {
   Grid3X3, List, Mail, Phone, MapPin, User,
   Building, Briefcase, Calendar, Clock, Eye, Edit,
   Upload, Plus, Users, RefreshCw, Camera, CheckCircle2,
-  CheckCircle, CalendarOff, UserX, ScanFace, Trash2, AlertTriangle
+  CheckCircle, UserX, ScanFace, Trash2, AlertTriangle
 } from 'lucide-react';
 import Card from '../../components/ui/Card';
 import Button from '../../components/ui/Button';
 import Badge from '../../components/ui/Badge';
 import Avatar from '../../components/ui/Avatar';
 import Input, { Select, Textarea } from '../../components/ui/Input';
+import PhoneInput from '../../components/ui/PhoneInput';
 import SearchBar from '../../components/ui/SearchBar';
 import Modal from '../../components/ui/Modal';
 import { Pagination } from '../../components/ui/Table';
@@ -94,7 +95,6 @@ const normalizeRecord = (rec) => {
   };
   const fullName = String(get('name', 'fullName', 'full_name') || '');
   const [first, ...rest] = fullName.split(/\s+/);
-  const salary = get('salary', 'monthlyRate', 'monthly_rate');
   return {
     firstName: String(get('firstName', 'first_name', 'firstname') || first || ''),
     lastName: String(get('lastName', 'last_name', 'lastname') || rest.join(' ') || ''),
@@ -105,7 +105,6 @@ const normalizeRecord = (rec) => {
     employmentType: String(get('employmentType', 'employment_type', 'employmenttype', 'type') || 'Full-time'),
     status: String(get('status', 'employmentStatus', 'employment_status') || 'Active'),
     hireDate: String(get('hireDate', 'hire_date', 'dateHired', 'date_hired', 'startDate', 'start_date') || ''),
-    salary: salary != null && salary !== '' ? Number(salary) : undefined,
     address: String(get('address', 'addressLine', 'address_line') || ''),
   };
 };
@@ -177,7 +176,7 @@ export default function Employees() {
   }, [employeesData, deptFilter]);
   const faceMissingCount = useMemo(() => employeesData.filter(e => !e.faceRegistered && e.status !== 'Inactive').length, [employeesData]);
   const types = ['All', 'Full-time', 'Part-time', 'Contract'];
-  const statuses = ['All', 'Active', 'On Leave', 'Inactive'];
+  const statuses = ['All', 'Active', 'Inactive'];
 
   const rolesForDepartment = useCallback(
     (name) => orgRoles.filter((r) => r.departmentName === name),
@@ -201,7 +200,7 @@ export default function Employees() {
   const stats = useMemo(() => ({
     total: employeesData.length,
     active: employeesData.filter(e => e.status === 'Active').length,
-    onLeave: employeesData.filter(e => e.status === 'On Leave').length,
+    faceRegistered: employeesData.filter(e => e.faceRegistered).length,
     inactive: employeesData.filter(e => e.status === 'Inactive').length,
   }), [employeesData]);
 
@@ -358,28 +357,31 @@ export default function Employees() {
       toast.success('Employee Updated', `${formData.firstName} ${formData.lastName}'s details were saved.`);
       await fetchEmployees();
       setIsFormOpen(false);
-    } catch {
-      toast.error('Error', 'Operation failed. Please try again.');
+    } catch (error) {
+      const detail = error?.response?.data?.errors
+        ? Object.values(error.response.data.errors)[0]?.[0]
+        : error?.response?.data?.message;
+      toast.error('Error', detail || 'Operation failed. Please try again.');
     }
   };
 
   const statCards = [
     { label: 'Total Employees', value: stats.total, icon: Users, color: 'blue' },
     { label: 'Active', value: stats.active, icon: CheckCircle, color: 'emerald' },
-    { label: 'On Leave', value: stats.onLeave, icon: CalendarOff, color: 'amber' },
+    { label: 'Face Registered', value: stats.faceRegistered, icon: ScanFace, color: 'violet' },
     { label: 'Inactive', value: stats.inactive, icon: UserX, color: 'red' },
   ];
 
   const colorMap = {
     blue: 'bg-blue-50 text-blue-600',
     emerald: 'bg-emerald-50 text-emerald-600',
-    amber: 'bg-amber-50 text-amber-600',
+    violet: 'bg-violet-50 text-violet-600',
     red: 'bg-red-50 text-red-600',
   };
   const barMap = {
     blue: 'bg-blue-500',
     emerald: 'bg-emerald-500',
-    amber: 'bg-amber-500',
+    violet: 'bg-violet-500',
     red: 'bg-red-500',
   };
 
@@ -563,7 +565,7 @@ export default function Employees() {
                 <option value="">Select gender</option>
                 {genders.map(g => <option key={g} value={g}>{g}</option>)}
               </Select>
-              <Input label="Phone Number" value={formData.phone || ''} onChange={e => setFormData({ ...formData, phone: e.target.value })} error={formErrors.phone} placeholder="+63 9XX XXX XXXX" />
+              <PhoneInput label="Phone Number" value={formData.phone || ''} onChange={v => setFormData({ ...formData, phone: v })} error={formErrors.phone} placeholder="9XX XXX XXXX" />
               <Input label="Email" type="email" value={formData.email || ''} onChange={e => setFormData({ ...formData, email: e.target.value })} error={formErrors.email} placeholder="email@company.com" />
             </div>
           </section>
@@ -575,7 +577,7 @@ export default function Employees() {
             <div className="mt-5 grid grid-cols-1 md:grid-cols-2 gap-4">
               <Textarea label="Home Address" containerClass="md:col-span-2" value={formData.address || ''} onChange={e => setFormData({ ...formData, address: e.target.value })} placeholder="Street, Barangay, City" rows={2} />
               <Input label="Emergency Contact Name" value={formData.emergencyContact || ''} onChange={e => setFormData({ ...formData, emergencyContact: e.target.value })} placeholder="Name of the person to contact" />
-              <Input label="Emergency Contact Number" value={formData.emergencyPhone || ''} onChange={e => setFormData({ ...formData, emergencyPhone: e.target.value })} error={formErrors.emergencyPhone} placeholder="+63 9XX XXX XXXX" />
+              <PhoneInput label="Emergency Contact Number" value={formData.emergencyPhone || ''} onChange={v => setFormData({ ...formData, emergencyPhone: v })} error={formErrors.emergencyPhone} placeholder="9XX XXX XXXX" />
             </div>
           </section>
 
@@ -599,10 +601,8 @@ export default function Employees() {
               <Input label="Date Hired" type="date" max={TODAY} value={formData.dateHired || formData.hireDate || ''} onChange={e => setFormData({ ...formData, dateHired: e.target.value })} error={formErrors.dateHired} />
               <Select label="Status" value={formData.status || ''} onChange={e => setFormData({ ...formData, status: e.target.value })}>
                 <option value="Active">Active</option>
-                <option value="On Leave">On Leave</option>
                 <option value="Inactive">Inactive</option>
               </Select>
-              <Input label="Salary" type="number" value={formData.salary || ''} onChange={e => setFormData({ ...formData, salary: e.target.value })} placeholder="Monthly salary (₱)" />
             </div>
           </section>
 

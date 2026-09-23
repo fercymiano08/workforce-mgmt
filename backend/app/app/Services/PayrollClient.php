@@ -9,7 +9,7 @@ class PayrollClient
 {
     public static function syncForEmployee(string $employeeId): void
     {
-        (new TimesheetGenerationService())->syncForEmployee($employeeId, date('Y-m-d'));
+        (new TimesheetGenerationService())->syncForEmployee($employeeId, now()->toDateString());
     }
 
     public static function regenerateAll(): void

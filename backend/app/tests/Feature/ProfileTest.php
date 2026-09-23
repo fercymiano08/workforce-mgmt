@@ -20,7 +20,6 @@ class ProfileTest extends TestCase
             'email' => "{$id}@example.com",
             'department' => 'IT & Systems',
             'position' => 'Software Developer',
-            'salary' => 50000,
         ]);
     }
 
@@ -84,7 +83,6 @@ class ProfileTest extends TestCase
         $this->actingAs($user)
             ->putJson('/api/profile', [
                 'firstName' => 'Hacked',
-                'salary' => 999999,
                 'department' => 'Executive',
                 'phone' => '+63 917 555 1234',
             ])
@@ -92,20 +90,18 @@ class ProfileTest extends TestCase
 
         $fresh = $employee->fresh();
         $this->assertSame('Juan', $fresh->first_name);
-        $this->assertEquals(50000, $fresh->salary);
         $this->assertSame('IT & Systems', $fresh->department);
         $this->assertSame('+63 917 555 1234', $fresh->phone);
     }
 
-    public function test_the_profile_does_not_expose_salary_or_the_face_template(): void
+    public function test_the_profile_does_not_expose_the_face_template(): void
     {
         $employee = $this->employee();
         $employee->update(['face_image' => 'data:image/jpeg;base64,xyz', 'face_descriptor' => array_fill(0, 128, 0.1), 'face_registered' => true]);
 
         $response = $this->actingAs($this->employeeUser($employee->id))->getJson('/api/profile')->assertOk();
 
-        $response->assertJsonMissingPath('data.salary')
-            ->assertJsonMissingPath('data.faceImage')
+        $response->assertJsonMissingPath('data.faceImage')
             ->assertJsonMissingPath('data.faceDescriptor')
             ->assertJsonPath('data.faceRegistered', true);   // the status is still shown
     }

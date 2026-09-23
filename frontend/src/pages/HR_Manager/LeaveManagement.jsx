@@ -30,7 +30,7 @@ const leaveTypeVariant = {
   Sick: 'danger',
   Emergency: 'warning',
   Special: 'purple',
-  Bereavement: 'indigo',
+  Funeral: 'indigo',
   Unpaid: 'teal',
   'Half Day': 'info',
 };
@@ -40,7 +40,7 @@ const allTabs = ['Pending Approvals', 'All Requests'];
 // Two date ranges (YYYY-MM-DD strings) share at least one day
 const overlaps = (a, b) => a.startDate <= b.endDate && b.startDate <= a.endDate;
 const statuses = ['All', 'Pending', 'Approved', 'Rejected', 'Cancelled'];
-const leaveTypes = ['All', 'Vacation', 'Sick', 'Emergency', 'Special', 'Bereavement', 'Unpaid', 'Half Day'];
+const leaveTypes = ['All', 'Vacation', 'Sick', 'Emergency', 'Special', 'Funeral', 'Unpaid', 'Half Day'];
 
 const ROWS_PER_PAGE = 8;
 

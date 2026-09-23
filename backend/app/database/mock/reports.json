@@ -98,15 +98,6 @@
       "lastGenerated": "2026-07-22T11:00:00.000Z",
       "generatedBy": "Camille Ramos",
       "status": "pending"
-    },
-    {
-      "id": "RPT012",
-      "name": "Payroll Discrepancy Report",
-      "type": "timesheet",
-      "description": "Identifies discrepancies between expected and actual payroll based on timesheet and attendance data.",
-      "lastGenerated": "2026-07-18T16:00:00.000Z",
-      "generatedBy": "Fernando Bautista",
-      "status": "failed"
     }
   ],
   "_default": [
@@ -208,15 +199,6 @@
       "lastGenerated": "2026-07-22T11:00:00.000Z",
       "generatedBy": "Camille Ramos",
       "status": "pending"
-    },
-    {
-      "id": "RPT012",
-      "name": "Payroll Discrepancy Report",
-      "type": "timesheet",
-      "description": "Identifies discrepancies between expected and actual payroll based on timesheet and attendance data.",
-      "lastGenerated": "2026-07-18T16:00:00.000Z",
-      "generatedBy": "Fernando Bautista",
-      "status": "failed"
     }
   ]
 }

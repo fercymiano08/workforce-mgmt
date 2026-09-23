@@ -23,7 +23,6 @@ class AnalyticsController extends Controller
             'leave-trend' => 'leave_trend',
             'overtime-summary' => 'overtime_summary',
             'punctuality-score' => 'punctuality_score',
-            'payroll-discrepancy' => 'payroll_discrepancy',
         ];
 
         $key = $map[$section] ?? null;

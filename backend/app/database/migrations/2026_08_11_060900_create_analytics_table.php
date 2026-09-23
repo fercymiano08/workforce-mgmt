@@ -15,7 +15,6 @@ return new class extends Migration
             $table->json('leave_trend')->nullable();
             $table->json('overtime_summary')->nullable();
             $table->json('punctuality_score')->nullable();
-            $table->json('payroll_discrepancy')->nullable();
             $table->timestamps();
         });
     }

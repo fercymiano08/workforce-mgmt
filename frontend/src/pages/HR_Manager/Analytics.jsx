@@ -1,31 +1,51 @@
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import {
-  BarChart, Bar, Cell,
-  XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend, AreaChart, Area
+  BarChart, Bar, Cell, PieChart, Pie, LineChart, Line,
+  XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend
 } from 'recharts';
 import {
-  Clock, PhilippinePeso, Award, Percent, TrendingUp
+  Clock, Percent, TrendingUp, Trophy, AlertTriangle, Gauge
 } from 'lucide-react';
 import Card, { CardHeader, CardTitle, CardDescription } from '../../components/ui/Card';
-import Badge from '../../components/ui/Badge';
 import { analyticsService } from '../../services/api';
-import { formatCurrency } from '../../utils/helpers';
 import useApiData from '../../hooks/useApiData';
 import { SkeletonPage } from '../../components/ui/LoadingSkeleton';
 
-const kpiColors = {
-  blue: 'bg-blue-50 text-blue-600',
-  emerald: 'bg-emerald-50 text-emerald-600',
-  amber: 'bg-amber-50 text-amber-600',
-  purple: 'bg-purple-50 text-purple-600',
-  red: 'bg-red-50 text-red-600',
+// One fixed color per entity, reused everywhere that entity appears (leave types
+// already carry these exact colors on the Leave and Leave Management pages) -
+// except 'special', bumped from purple to rose: purple sits too close to
+// funeral's indigo once they're adjacent chart segments (validated: ΔE 6.3,
+// below the legibility floor of 15), which never happens on the badge-only pages.
+const LEAVE_TYPE_COLORS = {
+  vacation: '#3B82F6', sick: '#EF4444', emergency: '#F59E0B',
+  special: '#F43F5E', funeral: '#6366F1', unpaid: '#14B8A6',
 };
-const kpiBar = { blue: 'bg-blue-500', emerald: 'bg-emerald-500', amber: 'bg-amber-500', purple: 'bg-purple-500', red: 'bg-red-500' };
+const LEAVE_TYPE_LABELS = {
+  vacation: 'Vacation', sick: 'Sick', emergency: 'Emergency',
+  special: 'Special', funeral: 'Funeral', unpaid: 'Unpaid',
+};
+
+const kpiColors = {
+  blue: { icon: 'bg-blue-50 text-blue-600', fill: 'bg-blue-500', track: 'bg-blue-100' },
+  amber: { icon: 'bg-amber-50 text-amber-600', fill: 'bg-amber-500', track: 'bg-amber-100' },
+  emerald: { icon: 'bg-emerald-50 text-emerald-600', fill: 'bg-emerald-500', track: 'bg-emerald-100' },
+};
+
+const scoreColor = (value) => (value >= 90 ? '#10B981' : value >= 75 ? '#F59E0B' : '#EF4444');
+
+// One fixed color per department, assigned by alphabetical name order so it never
+// shifts with API response order or a re-fetch (identity, not magnitude - the pie's
+// job is "which department", so color follows the department, not the score).
+const DEPARTMENT_COLOR_ORDER = ['#3B82F6', '#10B981', '#F59E0B', '#EF4444', '#8B5CF6', '#0EA5E9', '#6366F1', '#14B8A6'];
+function departmentColorMap(names) {
+  const sorted = [...new Set(names)].sort();
+  return Object.fromEntries(sorted.map((name, i) => [name, DEPARTMENT_COLOR_ORDER[i % DEPARTMENT_COLOR_ORDER.length]]));
+}
 
 // Charts only ever show real recorded activity. Until employees start clocking
 // in, filing leave, etc., each chart shows this honest placeholder instead of
 // an empty axis frame.
-function ChartEmpty() {
+function ChartEmpty({ message }) {
   return (
     <div className="h-72 flex flex-col items-center justify-center text-center px-4">
       <div className="w-14 h-14 rounded-2xl bg-gray-100 flex items-center justify-center mb-3">
@@ -33,8 +53,75 @@ function ChartEmpty() {
       </div>
       <p className="text-sm font-semibold text-gray-900">No data yet</p>
       <p className="text-xs text-gray-500 mt-1 max-w-xs leading-relaxed">
-        This chart fills in automatically as attendance and leave activity are recorded in the system.
+        {message || 'This chart fills in automatically as attendance and leave activity are recorded in the system.'}
       </p>
+    </div>
+  );
+}
+
+// A ratio against a limit (e.g. 98.7% attendance) reads as a filled track against
+// its own lighter shade, not a flat number - the fill width IS the value.
+function MeterTile({ label, value, displayValue, icon: Icon, color }) {
+  const c = kpiColors[color];
+  const pct = Math.max(0, Math.min(100, value));
+  return (
+    <Card className="overflow-hidden" hover>
+      <div className="flex items-center justify-between">
+        <div>
+          <p className="text-sm text-gray-500">{label}</p>
+          <p className="text-2xl font-bold text-gray-900 mt-1">{displayValue}</p>
+        </div>
+        <div className={`w-12 h-12 rounded-xl flex items-center justify-center ${c.icon}`}>
+          <Icon className="w-6 h-6" />
+        </div>
+      </div>
+      <div className={`h-1.5 rounded-full mt-4 ${c.track}`}>
+        <div className={`h-1.5 rounded-full ${c.fill} transition-all duration-700`} style={{ width: `${pct}%` }} />
+      </div>
+    </Card>
+  );
+}
+
+function StatTile({ label, value, icon: Icon, color }) {
+  const c = kpiColors[color];
+  return (
+    <Card className="overflow-hidden" hover>
+      <div className="flex items-center justify-between">
+        <div>
+          <p className="text-sm text-gray-500">{label}</p>
+          <p className="text-2xl font-bold text-gray-900 mt-1">{value}</p>
+        </div>
+        <div className={`w-12 h-12 rounded-xl flex items-center justify-center ${c.icon}`}>
+          <Icon className="w-6 h-6" />
+        </div>
+      </div>
+      <div className={`h-1.5 rounded-full mt-4 ${c.track}`}>
+        <div className={`h-1.5 rounded-full ${c.fill}`} style={{ width: '100%' }} />
+      </div>
+    </Card>
+  );
+}
+
+// A ranking is read top-to-bottom, not off an axis: name, a value-proportional
+// bar, and the score - a leaderboard, not another generic bar chart.
+function RankRow({ rank, name, department, score, tone }) {
+  return (
+    <div className="flex items-center gap-3 py-2">
+      <span className={`w-6 h-6 shrink-0 rounded-full flex items-center justify-center text-[11px] font-bold ${tone === 'top' ? 'bg-emerald-100 text-emerald-700' : 'bg-red-100 text-red-700'}`}>
+        {rank}
+      </span>
+      <div className="min-w-0 flex-1">
+        <div className="flex items-baseline justify-between gap-2">
+          <p className="text-sm font-medium text-gray-900 truncate">{name}</p>
+          <p className="text-sm font-semibold text-gray-900 tabular-nums shrink-0">{score.toFixed(1)}%</p>
+        </div>
+        <div className="flex items-center gap-2 mt-1">
+          <div className="h-1.5 flex-1 rounded-full bg-gray-100">
+            <div className="h-1.5 rounded-full" style={{ width: `${score}%`, backgroundColor: scoreColor(score) }} />
+          </div>
+          {department && <span className="text-[11px] text-gray-400 shrink-0 max-w-[80px] truncate">{department}</span>}
+        </div>
+      </div>
     </div>
   );
 }
@@ -48,26 +135,40 @@ export default function Analytics() {
   const rangeLimit = { month: 1, quarter: 3, year: 12 }[range];
   const attendanceTrend = (analyticsData?.attendanceTrend ?? []).slice(-rangeLimit);
   const departmentProductivity = analyticsData?.departmentProductivity ?? [];
-  const leaveTrend = (analyticsData?.leaveTrend ?? []).slice(-rangeLimit);
+  const leaveTrendFull = analyticsData?.leaveTrend ?? [];
+  const leaveTrend = leaveTrendFull.slice(-rangeLimit);
   const overtimeSummary = analyticsData?.overtimeSummary ?? [];
-  const payrollDiscrepancy = analyticsData?.payrollDiscrepancy ?? [];
-
-  const totalDiscrepancies = payrollDiscrepancy.filter(d => d.status !== 'Correct').length;
-  const totalOverpaid = payrollDiscrepancy.filter(d => d.status === 'Overpaid').reduce((s, d) => s + d.difference, 0);
-  const totalUnderpaid = payrollDiscrepancy.filter(d => d.status === 'Underpaid').reduce((s, d) => s + Math.abs(d.difference), 0);
+  const punctualityScore = analyticsData?.punctualityScore ?? [];
 
   const lastRate = attendanceTrend.length > 0 ? attendanceTrend[attendanceTrend.length - 1].rate ?? 0 : 0;
   const overtimeHours = overtimeSummary.reduce((s, d) => s + (d.avgOvertime ?? 0), 0);
+  const avgPunctuality = punctualityScore.length > 0
+    ? punctualityScore.reduce((s, p) => s + p.score, 0) / punctualityScore.length
+    : 0;
 
-  const kpis = [
-    { label: 'Overall Attendance Rate', value: attendanceTrend.length > 0 ? `${lastRate.toFixed(1)}%` : '—', icon: Percent, color: 'blue' },
-    { label: 'Total Overtime Hours', value: overtimeSummary.length > 0 ? `${overtimeHours.toFixed(0)}h` : '—', icon: Clock, color: 'amber' },
-    { label: 'Discrepancy Records', value: payrollDiscrepancy.length > 0 ? String(totalDiscrepancies) : '—', icon: Award, color: 'purple' },
-    { label: 'Payroll Discrepancy', value: payrollDiscrepancy.length > 0 ? formatCurrency(totalOverpaid + totalUnderpaid) : '—', sub: payrollDiscrepancy.length > 0 ? `${totalDiscrepancies} discrepancies` : undefined, icon: PhilippinePeso, color: 'red' },
-  ];
+  const deptColors = useMemo(
+    () => departmentColorMap((analyticsData?.departmentProductivity ?? []).map((d) => d.name)),
+    [analyticsData]
+  );
+
+  const topPerformers = punctualityScore.slice(0, 5);
+  const needsAttention = punctualityScore.slice(-5).reverse().filter((p) => !topPerformers.includes(p));
+
+  // The 6-month trend already holds everything a "right now" composition needs -
+  // sum the visible range per leave type instead of a second API call.
+  const leaveComposition = useMemo(() => {
+    const totals = {};
+    for (const type of Object.keys(LEAVE_TYPE_COLORS)) {
+      totals[type] = leaveTrend.reduce((s, m) => s + (m[type] ?? 0), 0);
+    }
+    return Object.entries(totals)
+      .filter(([, count]) => count > 0)
+      .map(([type, count]) => ({ type, name: LEAVE_TYPE_LABELS[type], value: count, color: LEAVE_TYPE_COLORS[type] }));
+  }, [leaveTrend]);
+  const leaveTotal = leaveComposition.reduce((s, d) => s + d.value, 0);
 
   if (loading) {
-    return <SkeletonPage kpiCount={4} />;
+    return <SkeletonPage kpiCount={3} />;
   }
 
   return (
@@ -88,23 +189,28 @@ export default function Analytics() {
         </div>
       </div>
 
-      {/* KPI Cards */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-        {kpis.map(k => (
-          <Card key={k.label} className="overflow-hidden" hover>
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm text-gray-500">{k.label}</p>
-                <p className="text-2xl font-bold text-gray-900 mt-1">{k.value}</p>
-                {k.sub && <p className="text-xs text-gray-400 mt-0.5">{k.sub}</p>}
-              </div>
-              <div className={`w-12 h-12 rounded-xl flex items-center justify-center ${kpiColors[k.color]}`}>
-                <k.icon className="w-6 h-6" />
-              </div>
-            </div>
-            <div className={`h-1 rounded-full mt-4 ${kpiBar[k.color]}`} />
-          </Card>
-        ))}
+      {/* KPI Meters */}
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+        <MeterTile
+          label="Overall Attendance Rate"
+          value={lastRate}
+          displayValue={attendanceTrend.length > 0 ? `${lastRate.toFixed(1)}%` : '—'}
+          icon={Percent}
+          color="blue"
+        />
+        <MeterTile
+          label="Overall Punctuality"
+          value={avgPunctuality}
+          displayValue={punctualityScore.length > 0 ? `${avgPunctuality.toFixed(1)}%` : '—'}
+          icon={Gauge}
+          color="emerald"
+        />
+        <StatTile
+          label="Total Overtime Hours"
+          value={overtimeSummary.length > 0 ? `${overtimeHours.toFixed(0)}h` : '—'}
+          icon={Clock}
+          color="amber"
+        />
       </div>
 
       {/* Charts Row 1 */}
@@ -119,19 +225,17 @@ export default function Analytics() {
           ) : (
           <div className="h-72">
             <ResponsiveContainer width="100%" height="100%">
-              <AreaChart data={attendanceTrend}>
-                <defs>
-                  <linearGradient id="attGrad" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="5%" stopColor="#3B82F6" stopOpacity={0.2} />
-                    <stop offset="95%" stopColor="#3B82F6" stopOpacity={0} />
-                  </linearGradient>
-                </defs>
-                <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" />
+              <BarChart data={attendanceTrend}>
+                <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" vertical={false} />
                 <XAxis dataKey="month" tick={{ fontSize: 12 }} stroke="#94a3b8" />
                 <YAxis tick={{ fontSize: 12 }} stroke="#94a3b8" domain={[80, 100]} />
-                <Tooltip contentStyle={{ borderRadius: '12px', border: '1px solid #e2e8f0', boxShadow: '0 4px 6px -1px rgba(0,0,0,0.1)' }} />
-                <Area type="monotone" dataKey="rate" stroke="#3B82F6" strokeWidth={2.5} fill="url(#attGrad)" />
-              </AreaChart>
+                <Tooltip
+                  cursor={{ fill: '#f1f5f9' }}
+                  contentStyle={{ borderRadius: '12px', border: '1px solid #e2e8f0', boxShadow: '0 4px 6px -1px rgba(0,0,0,0.1)' }}
+                  formatter={(value) => [`${value}%`, 'Attendance Rate']}
+                />
+                <Bar dataKey="rate" name="Attendance Rate" fill="#3B82F6" radius={[4, 4, 0, 0]} barSize={24} />
+              </BarChart>
             </ResponsiveContainer>
           </div>
           )}
@@ -147,17 +251,40 @@ export default function Analytics() {
           ) : (
           <div className="h-72">
             <ResponsiveContainer width="100%" height="100%">
-              <BarChart data={departmentProductivity} layout="vertical" margin={{ left: 20 }}>
-                <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" horizontal={false} />
-                <XAxis type="number" tick={{ fontSize: 12 }} stroke="#94a3b8" domain={[0, 100]} />
-                <YAxis type="category" dataKey="name" tick={{ fontSize: 12 }} stroke="#94a3b8" width={90} />
-                <Tooltip contentStyle={{ borderRadius: '12px', border: '1px solid #e2e8f0' }} />
-                <Bar dataKey="productivity" radius={[0, 6, 6, 0]} barSize={20}>
-                  {departmentProductivity.map((entry, i) => (
-                    <Cell key={i} fill={entry.productivity >= 85 ? '#10B981' : entry.productivity >= 70 ? '#F59E0B' : '#EF4444'} />
+              <PieChart>
+                <Pie
+                  data={departmentProductivity}
+                  cx="50%"
+                  cy="40%"
+                  outerRadius={72}
+                  paddingAngle={2}
+                  dataKey="productivity"
+                  nameKey="name"
+                >
+                  {departmentProductivity.map((entry) => (
+                    <Cell key={entry.name} fill={deptColors[entry.name]} />
                   ))}
-                </Bar>
-              </BarChart>
+                </Pie>
+                <Tooltip
+                  content={({ active, payload }) => {
+                    if (active && payload && payload.length) {
+                      return (
+                        <div className="bg-white rounded-xl shadow-lg border border-gray-100 p-3">
+                          <p className="text-sm font-semibold text-gray-900">{payload[0].name}</p>
+                          <p className="text-xs text-gray-600">Productivity: {payload[0].value.toFixed(1)}%</p>
+                        </div>
+                      );
+                    }
+                    return null;
+                  }}
+                />
+                <Legend
+                  iconType="square"
+                  iconSize={8}
+                  wrapperStyle={{ fontSize: 11, paddingTop: 12 }}
+                  formatter={(value, entry) => <span className="text-gray-600">{value} · {entry.payload.productivity.toFixed(0)}%</span>}
+                />
+              </PieChart>
             </ResponsiveContainer>
           </div>
           )}
@@ -176,16 +303,24 @@ export default function Analytics() {
           ) : (
           <div className="h-72">
             <ResponsiveContainer width="100%" height="100%">
-              <AreaChart data={leaveTrend}>
-                <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" />
-                <XAxis dataKey="month" tick={{ fontSize: 12 }} stroke="#94a3b8" />
-                <YAxis tick={{ fontSize: 12 }} stroke="#94a3b8" />
-                <Tooltip contentStyle={{ borderRadius: '12px', border: '1px solid #e2e8f0' }} />
+              <BarChart data={leaveTrend} layout="vertical" margin={{ left: 8 }}>
+                <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" horizontal={false} />
+                <XAxis type="number" tick={{ fontSize: 12 }} stroke="#94a3b8" allowDecimals={false} />
+                <YAxis type="category" dataKey="month" tick={{ fontSize: 12 }} stroke="#94a3b8" width={64} />
+                <Tooltip cursor={{ fill: '#f1f5f9' }} contentStyle={{ borderRadius: '12px', border: '1px solid #e2e8f0' }} />
                 <Legend />
-                <Area type="monotone" dataKey="vacation" stackId="1" stroke="#3B82F6" fill="#3B82F6" fillOpacity={0.6} />
-                <Area type="monotone" dataKey="sick" stackId="1" stroke="#EF4444" fill="#EF4444" fillOpacity={0.6} />
-                <Area type="monotone" dataKey="emergency" stackId="1" stroke="#F59E0B" fill="#F59E0B" fillOpacity={0.6} />
-              </AreaChart>
+                {Object.keys(LEAVE_TYPE_COLORS).map((type, i, arr) => (
+                  <Bar
+                    key={type}
+                    dataKey={type}
+                    name={LEAVE_TYPE_LABELS[type]}
+                    stackId="leave"
+                    fill={LEAVE_TYPE_COLORS[type]}
+                    radius={i === arr.length - 1 ? [0, 4, 4, 0] : [0, 0, 0, 0]}
+                    barSize={24}
+                  />
+                ))}
+              </BarChart>
             </ResponsiveContainer>
           </div>
           )}
@@ -201,85 +336,121 @@ export default function Analytics() {
           ) : (
           <div className="h-72">
             <ResponsiveContainer width="100%" height="100%">
-              <BarChart data={overtimeSummary}>
-                <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" />
+              <LineChart data={overtimeSummary} margin={{ top: 16, left: 4, right: 16, bottom: 4 }}>
+                <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" vertical={false} />
                 <XAxis dataKey="department" tick={{ fontSize: 11 }} stroke="#94a3b8" />
-                <YAxis tick={{ fontSize: 12 }} stroke="#94a3b8" />
-                <Tooltip contentStyle={{ borderRadius: '12px', border: '1px solid #e2e8f0' }} />
-                <Bar dataKey="avgOvertime" name="Avg Overtime" fill="#F59E0B" radius={[6, 6, 0, 0]} barSize={28} />
-              </BarChart>
+                <YAxis tick={{ fontSize: 12 }} stroke="#94a3b8" domain={[0, (max) => Math.ceil(max * 1.4 * 10) / 10]} />
+                <Tooltip
+                  cursor={{ stroke: '#e2e8f0' }}
+                  contentStyle={{ borderRadius: '12px', border: '1px solid #e2e8f0' }}
+                  formatter={(value) => [`${value}h`, 'Avg Overtime']}
+                />
+                <Line
+                  type="linear"
+                  dataKey="avgOvertime"
+                  name="Avg Overtime"
+                  stroke="#F59E0B"
+                  strokeWidth={2}
+                  dot={{ r: 4, fill: '#F59E0B', strokeWidth: 2, stroke: '#fff' }}
+                  activeDot={{ r: 6, strokeWidth: 2, stroke: '#fff' }}
+                />
+              </LineChart>
             </ResponsiveContainer>
           </div>
           )}
         </Card>
       </div>
 
-      {/* Payroll Discrepancy - ONLY in Analytics */}
-      <Card>
-        <CardHeader action={
-          <div className="flex items-center gap-4">
-            <Badge variant="danger" size="sm">{totalDiscrepancies} Discrepancies</Badge>
-          </div>
-        }>
-          <CardTitle className="flex items-center gap-2">
-            <PhilippinePeso className="w-5 h-5 text-red-500" />
-            Payroll Discrepancy Report
-          </CardTitle>
-          <CardDescription>Detected payroll discrepancies for the current period</CardDescription>
-        </CardHeader>
+      {/* Charts Row 3 - Leaderboard + Composition */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        <Card>
+          <CardHeader>
+            <CardTitle>Punctuality Leaderboard</CardTitle>
+            <CardDescription>On-time percentage per employee, all-time</CardDescription>
+          </CardHeader>
+          {punctualityScore.length === 0 ? (
+            <ChartEmpty message="Fills in once employees start clocking in." />
+          ) : (
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-6">
+              <div>
+                <div className="flex items-center gap-1.5 mb-1 text-emerald-700">
+                  <Trophy className="w-3.5 h-3.5" />
+                  <span className="text-[11px] font-semibold uppercase tracking-wide">Top Performers</span>
+                </div>
+                <div className="divide-y divide-gray-50">
+                  {topPerformers.map((p, i) => (
+                    <RankRow key={p.name + i} rank={i + 1} name={p.name} department={p.department} score={p.score} tone="top" />
+                  ))}
+                </div>
+              </div>
+              <div className="mt-5 sm:mt-0">
+                <div className="flex items-center gap-1.5 mb-1 text-red-700">
+                  <AlertTriangle className="w-3.5 h-3.5" />
+                  <span className="text-[11px] font-semibold uppercase tracking-wide">Needs Attention</span>
+                </div>
+                <div className="divide-y divide-gray-50">
+                  {needsAttention.length === 0 ? (
+                    <p className="text-sm text-gray-400 py-2">No one below the top performers yet.</p>
+                  ) : needsAttention.map((p, i) => (
+                    <RankRow key={p.name + i} rank={needsAttention.length - i} name={p.name} department={p.department} score={p.score} tone="bottom" />
+                  ))}
+                </div>
+              </div>
+            </div>
+          )}
+        </Card>
 
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-6">
-          <div className="bg-red-50 rounded-xl p-4">
-            <p className="text-sm text-red-600 font-medium">Total Overpaid</p>
-            <p className="text-xl font-bold text-red-700 mt-1">{formatCurrency(totalOverpaid)}</p>
+        <Card>
+          <CardHeader>
+            <CardTitle>Leave Type Composition</CardTitle>
+            <CardDescription>Share of approved leave by type, {range === 'month' ? 'this month' : range === 'quarter' ? 'this quarter' : 'this year'}</CardDescription>
+          </CardHeader>
+          {leaveComposition.length === 0 ? (
+            <ChartEmpty message="Fills in once leave requests are approved." />
+          ) : (
+          <div className="h-72">
+            <ResponsiveContainer width="100%" height="100%">
+              <PieChart>
+                <Pie
+                  data={leaveComposition}
+                  cx="50%"
+                  cy="45%"
+                  innerRadius={60}
+                  outerRadius={95}
+                  paddingAngle={3}
+                  dataKey="value"
+                  nameKey="name"
+                >
+                  {leaveComposition.map((entry) => (
+                    <Cell key={entry.type} fill={entry.color} />
+                  ))}
+                </Pie>
+                <Tooltip
+                  content={({ active, payload }) => {
+                    if (active && payload && payload.length) {
+                      const pct = leaveTotal > 0 ? ((payload[0].value / leaveTotal) * 100).toFixed(1) : '0.0';
+                      return (
+                        <div className="bg-white rounded-xl shadow-lg border border-gray-100 p-3">
+                          <p className="text-sm font-semibold text-gray-900">{payload[0].name}</p>
+                          <p className="text-xs text-gray-600">{payload[0].value} request{payload[0].value === 1 ? '' : 's'} ({pct}%)</p>
+                        </div>
+                      );
+                    }
+                    return null;
+                  }}
+                />
+                <Legend
+                  iconType="square"
+                  iconSize={8}
+                  wrapperStyle={{ fontSize: 12, paddingTop: 12 }}
+                  formatter={(value) => <span className="text-gray-600">{value}</span>}
+                />
+              </PieChart>
+            </ResponsiveContainer>
           </div>
-          <div className="bg-amber-50 rounded-xl p-4">
-            <p className="text-sm text-amber-600 font-medium">Total Underpaid</p>
-            <p className="text-xl font-bold text-amber-700 mt-1">{formatCurrency(totalUnderpaid)}</p>
-          </div>
-          <div className="bg-gray-50 rounded-xl p-4">
-            <p className="text-sm text-gray-600 font-medium">Records Checked</p>
-            <p className="text-xl font-bold text-gray-700 mt-1">{payrollDiscrepancy.length}</p>
-          </div>
-        </div>
-
-        <div className="overflow-x-auto">
-          <table className="w-full">
-            <thead>
-              <tr className="border-b border-gray-100 bg-gray-50/50">
-                {['Employee', 'Department', 'Expected Pay', 'Actual Pay', 'Difference', 'Status'].map(h => (
-                  <th key={h} className="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">{h}</th>
-                ))}
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-gray-50">
-              {payrollDiscrepancy.length === 0 ? (
-                <tr>
-                  <td colSpan={6} className="px-4 py-12 text-center">
-                    <p className="text-sm font-medium text-gray-500">No payroll data for this period yet</p>
-                    <p className="text-xs text-gray-400 mt-1">Discrepancies appear here once approved timesheets exist to compare against expected pay.</p>
-                  </td>
-                </tr>
-              ) : payrollDiscrepancy.map((row, i) => (
-                <tr key={i} className="hover:bg-gray-50/50 transition-colors">
-                  <td className="px-4 py-3.5 text-sm font-medium text-gray-900">{row.employeeName}</td>
-                  <td className="px-4 py-3.5 text-sm text-gray-600">{row.department}</td>
-                  <td className="px-4 py-3.5 text-sm text-gray-700">{formatCurrency(row.expectedPay)}</td>
-                  <td className="px-4 py-3.5 text-sm text-gray-700">{formatCurrency(row.actualPay)}</td>
-                  <td className={`px-4 py-3.5 text-sm font-medium ${row.difference > 0 ? 'text-red-600' : row.difference < 0 ? 'text-amber-600' : 'text-emerald-600'}`}>
-                    {row.difference > 0 ? '+' : ''}{formatCurrency(row.difference)}
-                  </td>
-                  <td className="px-4 py-3.5">
-                    <Badge variant={row.status === 'Overpaid' ? 'danger' : row.status === 'Underpaid' ? 'warning' : 'success'} dot size="sm">
-                      {row.status}
-                    </Badge>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-      </Card>
+          )}
+        </Card>
+      </div>
     </div>
   );
 }

@@ -1,13 +1,13 @@
 import { useEffect, useMemo, useState } from 'react';
 import {
   Users, CheckCircle, CalendarOff, Clock, TrendingUp,
-  Calendar, Briefcase, Check, X, ArrowRight, Inbox, FileText, LogOut, CheckCircle2,
+  Calendar, Briefcase, Check, X, ArrowRight, Inbox, FileText, LogOut, CheckCircle2, UserX,
 } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import {
   BarChart, Bar, PieChart, Pie, Cell,
   XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
-  Legend, Area, AreaChart,
+  Legend,
 } from 'recharts';
 import Avatar from '../../components/ui/Avatar';
 import Badge from '../../components/ui/Badge';
@@ -126,7 +126,8 @@ export default function Dashboard() {
         setAnalytics(an);
         setWaiting({
           overtime: (ot || []).filter((r) => r.status === 'Pending').length,
-          early: (early || []).length,
+          // /attendance/early-outs/pending returns an object of the form { pending: N }
+          early: Number(early && typeof early === 'object' ? early.pending ?? 0 : 0) || 0,
           timesheets: (sheets || []).filter((s) => s.status === 'Submitted').length,
         });
       })
@@ -162,7 +163,7 @@ export default function Dashboard() {
     const presentToday = todaysAttendance.filter((a) => isPresentGroup(a.status)).length;
     const attendedToday = todaysAttendance.filter((a) => didAttend(a.status)).length;
     const lateToday = todaysAttendance.filter((a) => a.status === 'Late').length;
-    const onLeave = employees.filter((e) => e.status === 'On Leave').length;
+    const inactive = employees.filter((e) => e.status === 'Inactive').length;
     const attendanceRate = employees.length
       ? Math.round((attendedToday / employees.length) * 1000) / 10
       : 0;
@@ -172,7 +173,7 @@ export default function Dashboard() {
       presentToday,
       onTimeToday,
       lateToday,
-      onLeave,
+      inactive,
       attendanceRate,
     };
   }, [employees, todaysAttendance]);
@@ -195,6 +196,10 @@ export default function Dashboard() {
     }
     return days;
   }, [attendance]);
+
+  const hasAttendanceData = attendanceOverviewData.some(
+    (d) => d.onTime || d.late || d.earlyLeave || d.absent
+  );
 
   const leaveStatisticsData = useMemo(() => {
     const byType = {};
@@ -265,7 +270,7 @@ export default function Dashboard() {
   const kpiCards = [
     { labelKey: 'dashboard.totalEmployees', value: kpi.totalEmployees, icon: Users, change: null, accent: 'blue' },
     { labelKey: 'dashboard.presentToday', value: kpi.presentToday, icon: CheckCircle, change: null, accent: 'emerald', subtext: `${kpi.onTimeToday} on time · ${kpi.lateToday} late` },
-    { labelKey: 'dashboard.onLeave', value: kpi.onLeave, icon: CalendarOff, change: null, accent: 'amber' },
+    { labelKey: 'dashboard.inactive', value: kpi.inactive, icon: UserX, change: null, accent: 'amber' },
     { labelKey: 'dashboard.lateEmployees', value: kpi.lateToday, icon: Clock, change: null, accent: 'red' },
     { labelKey: 'dashboard.attendanceRate', value: `${kpi.attendanceRate}%`, icon: TrendingUp, change: null, accent: 'purple' },
   ];
@@ -337,20 +342,23 @@ export default function Dashboard() {
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         <ChartCard title={t('dashboard.attendanceOverview')} badge={t('dashboard.thisWeek')} badgeVariant="primary">
           <div className="h-[320px]">
-            <ResponsiveContainer width="100%" height="100%">
-              <BarChart data={attendanceOverviewData} barGap={3} barCategoryGap="22%" margin={{ top: 8, right: 8, left: -12, bottom: 0 }}>
-                <CartesianGrid strokeDasharray="3 3" stroke="#F1F5F9" vertical={false} />
-                <XAxis dataKey="day" axisLine={false} tickLine={false} tick={{ fontSize: 12, fill: '#64748B' }} />
-                <YAxis axisLine={false} tickLine={false} tick={{ fontSize: 12, fill: '#64748B' }} />
-                <Tooltip content={<CustomTooltip />} />
-                <Legend iconType="circle" iconSize={8} wrapperStyle={{ paddingTop: 16, fontSize: 12 }} />
-                {/* One Present bar, split into On Time and Late */}
-                <Bar dataKey="onTime" name="Present - On Time" stackId="present" fill={COLORS.emerald} />
-                <Bar dataKey="late" name="Present - Late" stackId="present" fill={COLORS.amber} radius={[6, 6, 0, 0]} />
-                <Bar dataKey="earlyLeave" name="Early Leave" fill={COLORS.sky} radius={[6, 6, 0, 0]} />
-                <Bar dataKey="absent" name="Absent" fill={COLORS.red} radius={[6, 6, 0, 0]} />
-              </BarChart>
-            </ResponsiveContainer>
+            {!hasAttendanceData ? (
+              <EmptyState message={t('dashboard.noData')} />
+            ) : (
+              <ResponsiveContainer width="100%" height="100%">
+                <BarChart data={attendanceOverviewData} barGap={3} barCategoryGap="22%" margin={{ top: 8, right: 8, left: -12, bottom: 0 }}>                  <CartesianGrid strokeDasharray="3 3" stroke="#F1F5F9" vertical={false} />
+                  <XAxis dataKey="day" axisLine={false} tickLine={false} tick={{ fontSize: 12, fill: '#64748B' }} />
+                  <YAxis axisLine={false} tickLine={false} tick={{ fontSize: 12, fill: '#64748B' }} />
+                  <Tooltip content={<CustomTooltip />} />
+                  <Legend iconType="square" iconSize={8} wrapperStyle={{ paddingTop: 16, fontSize: 12 }} />
+                  {/* One Present bar, split into On Time and Late */}
+                  <Bar dataKey="onTime" name="Present - On Time" stackId="present" fill={COLORS.emerald} />
+                  <Bar dataKey="late" name="Present - Late" stackId="present" fill={COLORS.amber} radius={[6, 6, 0, 0]} />
+                  <Bar dataKey="earlyLeave" name="Early Leave" fill={COLORS.sky} radius={[6, 6, 0, 0]} />
+                  <Bar dataKey="absent" name="Absent" fill={COLORS.red} radius={[6, 6, 0, 0]} />
+                </BarChart>
+              </ResponsiveContainer>
+            )}
           </div>
         </ChartCard>
 
@@ -388,7 +396,7 @@ export default function Dashboard() {
                     }}
                   />
                   <Legend
-                    iconType="circle"
+                    iconType="square"
                     iconSize={8}
                     wrapperStyle={{ fontSize: 12, paddingTop: 12 }}
                     formatter={(value) => <span className="text-gray-600">{value}</span>}
@@ -408,19 +416,13 @@ export default function Dashboard() {
               <EmptyState message={t('dashboard.noData')} />
             ) : (
               <ResponsiveContainer width="100%" height="100%">
-                <AreaChart data={weeklyAttendanceData} margin={{ top: 8, right: 8, left: -12, bottom: 0 }}>
-                  <defs>
-                    <linearGradient id="attendanceGradient" x1="0" y1="0" x2="0" y2="1">
-                      <stop offset="5%" stopColor={COLORS.blue} stopOpacity={0.15} />
-                      <stop offset="95%" stopColor={COLORS.blue} stopOpacity={0.01} />
-                    </linearGradient>
-                  </defs>
+                <BarChart data={weeklyAttendanceData} barSize={28} margin={{ top: 8, right: 8, left: -12, bottom: 0 }}>
                   <CartesianGrid strokeDasharray="3 3" stroke="#F1F5F9" vertical={false} />
                   <XAxis dataKey="week" axisLine={false} tickLine={false} tick={{ fontSize: 12, fill: '#64748B' }} />
                   <YAxis domain={[0, 100]} axisLine={false} tickLine={false} tick={{ fontSize: 12, fill: '#64748B' }} />
-                  <Tooltip content={<CustomTooltip />} />
-                  <Area type="monotone" dataKey="percentage" name="percentage" stroke={COLORS.blue} strokeWidth={2.5} fill="url(#attendanceGradient)" />
-                </AreaChart>
+                  <Tooltip content={<CustomTooltip />} cursor={{ fill: '#F1F5F9' }} />
+                  <Bar dataKey="percentage" name="percentage" fill={COLORS.blue} radius={[6, 6, 0, 0]} />
+                </BarChart>
               </ResponsiveContainer>
             )}
           </div>

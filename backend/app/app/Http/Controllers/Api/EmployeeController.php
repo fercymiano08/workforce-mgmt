@@ -201,16 +201,16 @@ class EmployeeController extends Controller
             return response()->json(['message' => 'No employee profile is associated with this account.'], 404);
         }
 
-        // What the person needs to see on their own profile - NOT their salary (that is a payroll matter)
-        // and NOT their face photo / face template (large, and the template is a biometric)
-        $employee->makeHidden(['salary', 'face_image', 'face_descriptor']);
+        // What the person needs to see on their own profile - NOT their face photo
+        // (large, and the template is a biometric)
+        $employee->makeHidden(['face_image', 'face_descriptor']);
 
         return response()->json(['data' => $employee->toApiArray()]);
     }
 
     /**
      * Self-service update, deliberately limited to personal-contact fields
-     * and the profile photo. Name, email, department, position, salary, and
+     * and the profile photo. Name, email, department, position, and
      * status stay HR-controlled via the admin-only update() above.
      */
     public function updateMyProfile(Request $request): JsonResponse
@@ -238,7 +238,7 @@ class EmployeeController extends Controller
 
         $employee->update(Employee::apiFillable($validated));
 
-        return response()->json(['data' => $employee->fresh()->makeHidden(['salary', 'face_image', 'face_descriptor'])->toApiArray()]);
+        return response()->json(['data' => $employee->fresh()->makeHidden(['face_image', 'face_descriptor'])->toApiArray()]);
     }
 
     private function resolveOwnEmployee(Request $request): ?Employee
@@ -264,9 +264,8 @@ class EmployeeController extends Controller
             'department' => 'nullable|string|max:100',
             'position' => 'nullable|string|max:100',
             'employmentType' => 'nullable|string|max:50',
-            'status' => 'nullable|string|max:50',
+            'status' => ['nullable', Rule::in(['Active', 'Inactive'])],
             'hireDate' => 'nullable|date|before_or_equal:today',
-            'salary' => 'nullable|numeric',
             'manager' => 'nullable|string|max:20',
             'avatar' => 'nullable|string',
             'address' => 'nullable|string',

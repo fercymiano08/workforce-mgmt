@@ -343,10 +343,6 @@ export const analyticsService = {
     const { data } = await http.get('/analytics/punctuality-score');
     return data;
   },
-  getPayrollDiscrepancy: async () => {
-    const { data } = await http.get('/analytics/payroll-discrepancy');
-    return data;
-  },
   getAll: async () => {
     const { data } = await http.get('/analytics');
     return data;

@@ -15,6 +15,7 @@ use App\Services\AuditLogger;
 use App\Services\NotificationService;
 use App\Services\OvertimeReconciliationService;
 use App\Services\PayrollClient;
+use App\Services\SystemSettings;
 use App\Support\LocalTime;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -25,7 +26,13 @@ class AttendanceController extends Controller
     use AuthorizesEmployeeScope, GeneratesSequentialIds;
 
     // How long past a shift's start time before a no-show is flagged absent.
-    private const ABSENT_GRACE_MINUTES = 60;
+    // HR-configurable (Settings > Time Manager); this is only the fallback.
+    private const DEFAULT_ABSENT_GRACE_MINUTES = 60;
+
+    private function absentGraceMinutes(): int
+    {
+        return max(0, (int) app(SystemSettings::class)->get('absent_grace_minutes', self::DEFAULT_ABSENT_GRACE_MINUTES));
+    }
 
     // Most alerts one checkAlerts() call will send; the rest follow on the next call.
     // Kept small because Communications handles one request at a time (~0.5s each),
@@ -119,7 +126,7 @@ class AttendanceController extends Controller
             }
 
             $shiftStart = Carbon::parse($todayKey.' '.$startTime, $now->getTimezone());
-            if ($now->lt($shiftStart->addMinutes(self::ABSENT_GRACE_MINUTES))) {
+            if ($now->lt($shiftStart->addMinutes($this->absentGraceMinutes()))) {
                 continue;
             }
 
@@ -354,6 +361,7 @@ class AttendanceController extends Controller
         }
 
         $this->syncTimesheets($record->employee_id, $record->date);
+        NotificationService::retractNoShowAlert($record->employee_id);
         $this->notifyIfLate($record);
 
         return response()->json(['data' => $record->toApiArray()], 201);

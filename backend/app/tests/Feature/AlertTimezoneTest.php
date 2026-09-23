@@ -4,6 +4,7 @@ namespace Tests\Feature;
 
 use App\Models\Employee;
 use App\Models\Notification;
+use App\Models\Setting;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Carbon;
 use Tests\TestCase;
@@ -71,6 +72,36 @@ class AlertTimezoneTest extends TestCase
 
         $this->scanAt('09:30:00');
         $this->scanAt('10:30:00');
+
+        $this->assertSame(1, Notification::where('type', 'attendance_absent')->count());
+    }
+
+    public function test_a_no_show_alert_is_withdrawn_once_the_employee_actually_clocks_in(): void
+    {
+        $this->setUpScheduledEmployee();
+
+        // Flagged as a possible no-show at 9:30 (past the 60-minute grace, still not clocked in).
+        $this->scanAt('09:30:00');
+        $this->assertSame(1, Notification::where('type', 'attendance_absent')->count());
+
+        // They show up late at 10:00 - the earlier "possible no-show" is now simply wrong and
+        // must not sit in the inbox next to the real "late arrival" notification, contradicting it.
+        $this->travelTo(Carbon::parse(self::KIOSK_TEST_DATE.' 10:00:00', 'Asia/Manila'));
+        $this->withHeaders($this->kioskDeviceHeaders())->postJson('/api/kiosk/attendance', [
+            'employeeId' => 'EMP20260001', 'date' => self::KIOSK_TEST_DATE, 'clockIn' => '10:00:00', 'status' => 'Late',
+        ])->assertCreated();
+
+        $this->assertSame(0, Notification::where('type', 'attendance_absent')->count());
+        $this->assertSame(1, Notification::where('type', 'attendance_late')->count());
+    }
+
+    public function test_hr_can_shorten_the_no_show_threshold_from_settings(): void
+    {
+        Setting::updateOrCreate(['id' => 1], ['system' => ['absent_grace_minutes' => 20]]);
+        $this->setUpScheduledEmployee();
+
+        // 25 minutes late - not yet a no-show under the default 60-minute threshold, but this company set 20.
+        $this->scanAt('08:25:00');
 
         $this->assertSame(1, Notification::where('type', 'attendance_absent')->count());
     }

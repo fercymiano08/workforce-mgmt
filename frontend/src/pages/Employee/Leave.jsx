@@ -30,7 +30,7 @@ const leaveTypeVariant = {
   Sick: 'danger',
   Emergency: 'warning',
   Special: 'purple',
-  Bereavement: 'indigo',
+  Funeral: 'indigo',
   Unpaid: 'teal',
   'Half Day': 'info',
 };
@@ -40,11 +40,11 @@ const leaveBalanceStyle = {
   Sick: { text: 'text-red-600', barBg: 'bg-red-100', color: 'bg-red-500', icon: Heart, iconBg: 'bg-red-50' },
   Emergency: { text: 'text-amber-600', barBg: 'bg-amber-100', color: 'bg-amber-500', icon: AlertTriangle, iconBg: 'bg-amber-50' },
   Special: { text: 'text-purple-600', barBg: 'bg-purple-100', color: 'bg-purple-500', icon: Star, iconBg: 'bg-purple-50' },
-  Bereavement: { text: 'text-indigo-600', barBg: 'bg-indigo-100', color: 'bg-indigo-500', icon: Flower2, iconBg: 'bg-indigo-50' },
+  Funeral: { text: 'text-indigo-600', barBg: 'bg-indigo-100', color: 'bg-indigo-500', icon: Flower2, iconBg: 'bg-indigo-50' },
   Unpaid: { text: 'text-teal-600', barBg: 'bg-teal-100', color: 'bg-teal-500', icon: Wallet, iconBg: 'bg-teal-50' },
 };
 
-const leaveTypes = ['Vacation', 'Sick', 'Emergency', 'Special', 'Bereavement', 'Unpaid'];
+const leaveTypes = ['Vacation', 'Sick', 'Emergency', 'Special', 'Funeral', 'Unpaid'];
 
 // Days a leave costs: the server's working-day count when it has one, else the inclusive calendar count.
 const countDays = (start, end, counted) => {

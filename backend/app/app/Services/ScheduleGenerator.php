@@ -30,9 +30,6 @@ class ScheduleGenerator
 {
     public const TZ = 'Asia/Manila';
 
-    // A day where more than this share of the people being scheduled are on approved leave is a staffing risk.
-    public const LEAVE_SHORTAGE_THRESHOLD = 0.2;
-
     /**
      * @param  list<string>|null  $employeeIds  null = everyone active
      * @param  bool  $followPatterns  false = every day of the week (the old "include weekends")
@@ -51,7 +48,7 @@ class ScheduleGenerator
             'startDate' => $start->toDateString(), 'endDate' => $end->toDateString(), 'shiftId' => $shiftId,
             'employees' => $employees->count(), 'rows' => [], 'perDay' => [],
             'skippedExisting' => 0, 'skippedOnLeave' => 0, 'skippedHoliday' => 0, 'skippedOffDay' => 0,
-            'holidays' => [], 'shortageDates' => [], 'coverageShortages' => [],
+            'holidays' => [], 'coverageShortages' => [],
         ];
         if ($employees->isEmpty()) {
             return $plan;
@@ -104,7 +101,6 @@ class ScheduleGenerator
             }
 
             $working = 0;
-            $onLeaveToday = 0;
             foreach ($employees as $employee) {
                 if (! in_array($iso, $daysFor($employee), true)) {
                     $plan['skippedOffDay']++;
@@ -115,7 +111,6 @@ class ScheduleGenerator
                 $onLeave = $leaves->contains(fn ($l) => $l->employee_id === $employee->id
                     && $l->start_date->toDateString() <= $dateKey && $l->end_date->toDateString() >= $dateKey);
                 if ($onLeave) {
-                    $onLeaveToday++;
                     $plan['skippedOnLeave']++;
                     continue;
                 }
@@ -132,9 +127,6 @@ class ScheduleGenerator
             }
 
             if ($working > 0) {
-                if (($onLeaveToday / $employees->count()) > self::LEAVE_SHORTAGE_THRESHOLD) {
-                    $plan['shortageDates'][] = ['date' => $dateKey, 'onLeave' => $onLeaveToday, 'of' => $employees->count()];
-                }
                 foreach ($rules as $department => $min) {
                     $have = count($planned[$dateKey][$department] ?? []);
                     if ($have < (int) $min && $employees->contains(fn ($e) => $e->department === $department && in_array($iso, $daysFor($e), true))) {
@@ -201,17 +193,6 @@ class ScheduleGenerator
             );
         }
 
-        foreach ($plan['shortageDates'] as $short) {
-            $dateKey = $short['date'];
-            $already = \App\Models\Notification::where('type', 'staff_shortage')->whereDate('timestamp', now())->where('message', 'like', "%{$dateKey}%")->exists();
-            if (! $already) {
-                NotificationService::notifyAdmins(
-                    'staff_shortage', 'Possible Staffing Shortage',
-                    "{$short['onLeave']} of {$short['of']} employees are on approved leave on ".Carbon::parse($dateKey)->format('M d, Y').'.',
-                    'high', '/shifts'
-                );
-            }
-        }
         if ($plan['coverageShortages'] !== []) {
             $days = count(array_unique(array_column($plan['coverageShortages'], 'date')));
             NotificationService::notifyAdmins(
@@ -241,7 +222,6 @@ class ScheduleGenerator
             'skippedExisting' => $plan['skippedExisting'], 'skippedOnLeave' => $plan['skippedOnLeave'],
             'skippedHoliday' => $plan['skippedHoliday'], 'skippedOffDay' => $plan['skippedOffDay'],
             'holidays' => $plan['holidays'],
-            'shortageDates' => array_values(array_unique(array_column($plan['shortageDates'], 'date'))),
             'coverageShortages' => $plan['coverageShortages'],
             'perDay' => $plan['perDay'],
         ];

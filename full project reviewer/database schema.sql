@@ -8,7 +8,7 @@
 -- PostgreSQL database dump
 --
 
-\restrict OSflKyuTdb2JeQXSOyrTmBhRbnk26Q4bpov5cDzYNGd5Hp4IgjqelP2PuTzcEUA
+\restrict 9bqK8dn75RwQSafoJQ3yhPAJgLfpkwCegwp3HLCukY3nNSdIgnc8XXyasBnBguL
 
 -- Dumped from database version 18.4
 -- Dumped by pg_dump version 18.4
@@ -40,7 +40,6 @@ CREATE TABLE public.analytics (
     leave_trend json,
     overtime_summary json,
     punctuality_score json,
-    payroll_discrepancy json,
     created_at timestamp(0) without time zone,
     updated_at timestamp(0) without time zone
 );
@@ -241,7 +240,6 @@ CREATE TABLE public.employees (
     employment_type character varying(255) DEFAULT 'Full-time'::character varying NOT NULL,
     status character varying(255) DEFAULT 'Active'::character varying NOT NULL,
     hire_date date,
-    salary numeric(12,2) DEFAULT '0'::numeric NOT NULL,
     manager character varying(255),
     avatar text,
     address text,
@@ -1427,5 +1425,5 @@ ALTER TABLE ONLY public.roles
 -- PostgreSQL database dump complete
 --
 
-\unrestrict OSflKyuTdb2JeQXSOyrTmBhRbnk26Q4bpov5cDzYNGd5Hp4IgjqelP2PuTzcEUA
+\unrestrict 9bqK8dn75RwQSafoJQ3yhPAJgLfpkwCegwp3HLCukY3nNSdIgnc8XXyasBnBguL
 

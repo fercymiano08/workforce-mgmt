@@ -27,10 +27,6 @@ const shiftBorder = {
   SHIFT004: 'border-l-blue-500',
   SHIFT005: 'border-l-red-500',
 };
-const shiftBlockBg = {
-  SHIFT004: 'bg-blue-50 border-blue-200 text-blue-700',
-  SHIFT005: 'bg-red-50 border-red-200 text-red-700',
-};
 const shiftBadgeVariant = { SHIFT004: 'primary', SHIFT005: 'danger' };
 const statusVariant = { Scheduled: 'primary', Cancelled: 'danger' };
 const STATUS_OPTIONS = ['Scheduled', 'Cancelled'];
@@ -65,7 +61,8 @@ export default function Shifts() {
   const [generating, setGenerating] = useState(false);
   const [deleteTarget, setDeleteTarget] = useState(null);
   const [deleting, setDeleting] = useState(false);
-  const [calOffset, setCalOffset] = useState(0);
+  const [calMonthOffset, setCalMonthOffset] = useState(0);
+  const [dayDetailDate, setDayDetailDate] = useState(null);
 
   useEffect(() => {
     employeeService.getAll().then(setEmployees).catch(() => setEmployees([]));
@@ -99,16 +96,24 @@ export default function Shifts() {
     return map;
   }, [shiftSchedules]);
 
-  const calWeekStart = useMemo(() => {
+  // The calendar always shows full weeks (Mon-Sun), so a month grid starts on the Monday
+  // on/before the 1st and ends on the Sunday on/after the last day - 28, 35 or 42 days.
+  const calMonthDate = useMemo(() => {
     const now = new Date();
-    const mon = startOfWeek(now);
-    return addDays(mon, calOffset * 7);
-  }, [calOffset]);
-  const calWeekEnd = useMemo(() => addDays(calWeekStart, 6), [calWeekStart]);
+    return new Date(now.getFullYear(), now.getMonth() + calMonthOffset, 1);
+  }, [calMonthOffset]);
+  const calGridStart = useMemo(() => startOfWeek(calMonthDate), [calMonthDate]);
+  const calGridDays = useMemo(() => {
+    const lastOfMonth = new Date(calMonthDate.getFullYear(), calMonthDate.getMonth() + 1, 0);
+    const gridEnd = addDays(startOfWeek(lastOfMonth), 6);
+    const days = [];
+    for (let d = calGridStart; d <= gridEnd; d = addDays(d, 1)) days.push(d);
+    return days;
+  }, [calGridStart, calMonthDate]);
   const calSchedulesByDate = useMemo(() => {
     const map = {};
-    const startK = toDateKey(calWeekStart);
-    const endK = toDateKey(calWeekEnd);
+    const startK = toDateKey(calGridStart);
+    const endK = toDateKey(calGridDays[calGridDays.length - 1]);
     for (const s of allSchedules) {
       if (s.date >= startK && s.date <= endK) {
         if (!map[s.date]) map[s.date] = [];
@@ -116,7 +121,7 @@ export default function Shifts() {
       }
     }
     return map;
-  }, [allSchedules, calWeekStart, calWeekEnd]);
+  }, [allSchedules, calGridStart, calGridDays]);
 
   const filteredSchedules = useMemo(() => {
     const q = searchQuery.trim().toLowerCase();
@@ -157,10 +162,10 @@ export default function Shifts() {
     return true;
   };
 
-  const openAdd = () => {
+  const openAdd = (presetDate) => {
     if (noShiftTemplates()) return;
     setEditingSchedule(null);
-    setFormData({ employeeId: '', shiftId: standardShift?.id || '', date: '', notes: '' });
+    setFormData({ employeeId: '', shiftId: standardShift?.id || '', date: presetDate || '', notes: '' });
     setFormErrors({});
     setIsModalOpen(true);
   };
@@ -304,7 +309,6 @@ export default function Shifts() {
       if (summary.skippedExisting) parts.push(`${summary.skippedExisting} already scheduled`);
       if (summary.skippedHoliday) parts.push(`${summary.skippedHoliday} skipped for holidays`);
       if (summary.skippedOnLeave) parts.push(`${summary.skippedOnLeave} skipped for approved leave`);
-      if (summary.shortageDates?.length) parts.push(`${summary.shortageDates.length} day(s) flagged for staffing shortage`);
       if (summary.coverageShortages?.length) parts.push(`${new Set(summary.coverageShortages.map(c => c.date)).size} day(s) below minimum coverage`);
       toast.success('Schedule Generated', parts.join(' · '));
     } catch (err) {
@@ -391,60 +395,108 @@ export default function Shifts() {
         </div>
       </div>
 
-      {/* Weekly Coverage Calendar */}
+      {/* Monthly Coverage Calendar */}
       <Card padding={false} className="overflow-hidden">
         <div className="p-5 pb-3 flex items-center justify-between">
           <div>
-            <CardTitle>Weekly Coverage</CardTitle>
-            <CardDescription>{formatDate(toDateKey(calWeekStart))} – {formatDate(toDateKey(calWeekEnd))}</CardDescription>
+            <CardTitle>Monthly Coverage</CardTitle>
+            <CardDescription>{calMonthDate.toLocaleDateString('en-US', { month: 'long', year: 'numeric' })} — click a day to see who's scheduled</CardDescription>
           </div>
           <div className="flex items-center gap-1">
-            <button onClick={() => setCalOffset(o => o - 1)} className="p-2 rounded-lg hover:bg-gray-100 text-gray-400 hover:text-gray-600 transition-colors">
+            <button onClick={() => setCalMonthOffset(o => o - 1)} className="p-2 rounded-lg hover:bg-gray-100 text-gray-400 hover:text-gray-600 transition-colors">
               <ChevronLeft className="w-4 h-4" />
             </button>
-            <button onClick={() => setCalOffset(0)} className="px-3 py-1.5 text-xs font-semibold rounded-lg text-gray-600 hover:bg-gray-100 transition-colors">
+            <button onClick={() => setCalMonthOffset(0)} className="px-3 py-1.5 text-xs font-semibold rounded-lg text-gray-600 hover:bg-gray-100 transition-colors">
               Today
             </button>
-            <button onClick={() => setCalOffset(o => o + 1)} className="p-2 rounded-lg hover:bg-gray-100 text-gray-400 hover:text-gray-600 transition-colors">
+            <button onClick={() => setCalMonthOffset(o => o + 1)} className="p-2 rounded-lg hover:bg-gray-100 text-gray-400 hover:text-gray-600 transition-colors">
               <ChevronRight className="w-4 h-4" />
             </button>
           </div>
         </div>
         <div className="grid grid-cols-7 border-t border-gray-100">
-          {DAY_LABELS.map((label, i) => {
-            const dayDate = addDays(calWeekStart, i);
+          {DAY_LABELS.map((label) => (
+            <div key={label} className="px-2 py-2 text-center bg-gray-50/50 border-b border-gray-100">
+              <p className="text-[10px] font-semibold uppercase text-gray-400">{label}</p>
+            </div>
+          ))}
+          {calGridDays.map(dayDate => {
             const dateK = toDateKey(dayDate);
             const isToday = dateK === toDateKey(new Date());
+            const inMonth = dayDate.getMonth() === calMonthDate.getMonth();
             const daySchedules = calSchedulesByDate[dateK] || [];
+            const dayPreview = daySchedules.slice(0, 3);
             return (
-              <div key={i} className={`min-h-[120px] border-r border-gray-50 last:border-r-0 ${isToday ? 'bg-blue-50/30' : ''}`}>
-                <div className={`px-2 py-2 border-b border-gray-100 text-center ${isToday ? 'bg-blue-50' : 'bg-gray-50/50'}`}>
-                  <p className={`text-[10px] font-semibold uppercase ${isToday ? 'text-blue-600' : 'text-gray-400'}`}>{label}</p>
-                  <p className={`text-sm font-bold ${isToday ? 'text-blue-600' : 'text-gray-700'}`}>{dayDate.getDate()}</p>
-                </div>
-                <div className="p-1.5 space-y-1">
-                  {daySchedules.length === 0 && (
-                    <p className="text-[10px] text-gray-300 text-center mt-2">—</p>
-                  )}
-                  {daySchedules.slice(0, 4).map(s => {
-                    const emp = employees.find(e => e.id === s.employeeId);
-                    const def = (shiftDefs || []).find(d => d.id === s.shiftId);
-                    return (
-                      <div key={s.id} className={`rounded-lg border px-1.5 py-1 text-[10px] font-medium leading-tight ${shiftBlockBg[s.shiftId] || 'bg-gray-50 border-gray-200 text-gray-600'}`}>
-                        <p className="truncate">{emp ? `${emp.firstName} ${emp.lastName}` : s.employeeName}</p>
-                        {def && <p className="truncate opacity-70">{formatTime(def.startTime)}–{formatTime(def.endTime)}</p>}
-                      </div>
-                    );
-                  })}
-                  {daySchedules.length > 4 && (
-                    <p className="text-[10px] text-gray-400 text-center">+{daySchedules.length - 4} more</p>
-                  )}
-                </div>
-              </div>
+              <button
+                key={dateK}
+                type="button"
+                onClick={() => setDayDetailDate(dateK)}
+                className={`min-h-[92px] w-full border-r border-b border-gray-50 last:border-r-0 p-2 flex flex-col items-center gap-1.5 transition-colors hover:bg-blue-50/40 ${isToday ? 'bg-blue-50/40' : ''} ${!inMonth ? 'opacity-40' : ''}`}
+              >
+                <span className={`text-xs font-semibold ${isToday ? 'text-blue-600' : 'text-gray-700'}`}>{dayDate.getDate()}</span>
+                {daySchedules.length > 0 && (
+                  <>
+                    <span className="flex items-center -space-x-1.5">
+                      {dayPreview.map(s => {
+                        const emp = employees.find(e => e.id === s.employeeId);
+                        return (
+                          <Avatar
+                            key={s.id}
+                            firstName={emp?.firstName || s.employeeName?.split(' ')[0] || '?'}
+                            lastName={emp?.lastName || s.employeeName?.split(' ')[1] || ''}
+                            size="xs"
+                            className="ring-2 ring-white"
+                          />
+                        );
+                      })}
+                    </span>
+                    <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded-full ${isToday ? 'bg-blue-100 text-blue-700' : 'bg-gray-100 text-gray-600'}`}>
+                      {daySchedules.length} shift{daySchedules.length === 1 ? '' : 's'}
+                    </span>
+                  </>
+                )}
+              </button>
             );
           })}
         </div>
       </Card>
+
+      {/* Day Detail Modal */}
+      <Modal isOpen={!!dayDetailDate} onClose={() => setDayDetailDate(null)} title={dayDetailDate ? formatDate(dayDetailDate) : ''} size="md">
+        {(() => {
+          const daySchedules = dayDetailDate ? (calSchedulesByDate[dayDetailDate] || []) : [];
+          if (daySchedules.length === 0) {
+            return (
+              <div className="text-center py-8">
+                <p className="text-sm text-gray-500 mb-4">No one is scheduled on this day.</p>
+                <Button icon={UserPlus} onClick={() => { const d = dayDetailDate; setDayDetailDate(null); openAdd(d); }}>Assign a shift</Button>
+              </div>
+            );
+          }
+          return (
+            <div>
+              <p className="text-sm text-gray-500 mb-3">{daySchedules.length} shift{daySchedules.length === 1 ? '' : 's'} scheduled</p>
+              <div className="rounded-xl border border-gray-200 divide-y divide-gray-100 max-h-96 overflow-y-auto">
+                {daySchedules.map(s => {
+                  const emp = employees.find(e => e.id === s.employeeId);
+                  const def = (shiftDefs || []).find(d => d.id === s.shiftId);
+                  const name = emp ? `${emp.firstName} ${emp.lastName}` : s.employeeName;
+                  return (
+                    <div key={s.id} className="flex items-center gap-3 px-4 py-3">
+                      <Avatar firstName={emp?.firstName || name.split(' ')[0] || '?'} lastName={emp?.lastName || name.split(' ')[1] || ''} size="sm" />
+                      <div className="min-w-0 flex-1">
+                        <p className="text-sm font-medium text-gray-900 truncate">{name}</p>
+                        <p className="text-xs text-gray-500 truncate">{emp?.department || '—'}{def ? ` · ${formatTime(def.startTime)}–${formatTime(def.endTime)}` : ''}</p>
+                      </div>
+                      <Badge variant={statusVariant[s.status] || 'default'} size="xs">{s.status}</Badge>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          );
+        })()}
+      </Modal>
 
       {/* Schedule Management Table */}
       <Card padding={false} className="h-[560px] flex flex-col overflow-hidden">
@@ -457,7 +509,7 @@ export default function Shifts() {
             <div className="flex items-center gap-2">
               {/* Two doors, two different jobs: the system assigning many people (automated), or you assigning one person by hand. */}
               <Button variant="outline" icon={Bot} onClick={() => setRulesOpen(true)} title="Generate schedules for many people at once, and set the rules for automatic weekly scheduling">Automated Shift Assign</Button>
-              <Button icon={UserPlus} onClick={openAdd} title="Assign one shift to one person by hand">Standard Shift Assign</Button>
+              <Button icon={UserPlus} onClick={() => openAdd()} title="Assign one shift to one person by hand">Standard Shift Assign</Button>
             </div>
           </div>
 
@@ -648,7 +700,7 @@ export default function Shifts() {
 
             <div>
               <span className="text-[13px] font-semibold text-gray-700 block mb-3">1. Pick a Shift Type</span>
-              <div className="grid grid-cols-2 gap-3">
+              <div className={`grid gap-3 ${(shiftDefs || []).length > 1 ? 'grid-cols-2' : 'grid-cols-1'}`}>
                 {(shiftDefs || []).map(def => {
                   const Icon = shiftIcons[def.id] || Clock;
                   const isSelected = generateForm.shiftId === def.id;
@@ -749,23 +801,39 @@ export default function Shifts() {
               <p className="text-xs text-gray-500">Holidays in this range: {Object.entries(preview.holidays).map(([d, n]) => `${formatDate(d)} (${n})`).join(', ')}.</p>
             )}
 
-            {(preview.coverageShortages?.length > 0 || preview.shortageDates?.length > 0) && (
+            {preview.coverageShortages?.length > 0 && (
               <div className="rounded-xl border border-amber-200 bg-amber-50/70 p-4 space-y-2">
                 <p className="text-sm font-semibold text-amber-800 flex items-center gap-2"><AlertTriangle className="w-4 h-4" /> Check before publishing</p>
                 <ul className="text-sm text-amber-800 space-y-1 max-h-32 overflow-y-auto">
                   {preview.coverageShortages.map((c) => <li key={`${c.date}-${c.department}`}>• {formatDate(c.date)}: {c.department} would have {c.have} scheduled, needs at least {c.need}</li>)}
-                  {preview.shortageDates.map((d) => <li key={d}>• {formatDate(d)}: many employees are on approved leave</li>)}
                 </ul>
               </div>
             )}
 
             {Object.keys(preview.perDay || {}).length > 0 && (
               <div>
-                <p className="text-[13px] font-semibold text-gray-700 mb-2">Shifts per day</p>
-                <div className="flex items-end gap-1 h-20">
-                  {(() => { const max = Math.max(...Object.values(preview.perDay)); return Object.entries(preview.perDay).map(([d, n]) => (
-                    <div key={d} className="flex-1 min-w-[6px] max-w-8 bg-blue-500/80 rounded-t" style={{ height: `${Math.max(8, (n / max) * 100)}%` }} title={`${formatDate(d)}: ${n}`} />
-                  )); })()}
+                <p className="text-sm font-semibold text-gray-700 mb-0.5">Shifts per day</p>
+                <p className="text-xs text-gray-400 mb-2.5">How many people get a shift on each day in this range — a quick check the week isn't lopsided.</p>
+                <div className="rounded-xl border border-gray-200 max-h-72 overflow-y-auto divide-y divide-gray-100">
+                  {(() => {
+                    const entries = Object.entries(preview.perDay);
+                    const counts = entries.map(([, n]) => n);
+                    const max = Math.max(...counts);
+                    const min = Math.min(...counts);
+                    const flagged = max !== min;
+                    return entries.map(([d, n]) => (
+                      <div key={d} className="flex items-center justify-between gap-3 px-4 py-3">
+                        <span className="text-sm font-medium text-gray-700">
+                          {new Date(`${d}T00:00:00`).toLocaleDateString('en-US', { weekday: 'short' })}, {formatDate(d)}
+                        </span>
+                        <span className="flex items-center gap-2.5">
+                          <span className="text-base font-bold text-gray-900">{n} shift{n === 1 ? '' : 's'}</span>
+                          {flagged && n === max && <Badge variant="info" size="sm">busiest</Badge>}
+                          {flagged && n === min && <Badge variant="default" size="sm">lightest</Badge>}
+                        </span>
+                      </div>
+                    ));
+                  })()}
                 </div>
               </div>
             )}

@@ -56,6 +56,21 @@ class NotificationService
     }
 
     /**
+     * Withdraws today's "Possible No-Show" alert(s) for one employee, if any. A no-show alert
+     * is only ever a guess made before they clocked in; the moment they do (even late), it is
+     * factually wrong to leave it sitting in the admin inbox next to their real clock-in/late
+     * notification, so it is removed rather than left to contradict what actually happened.
+     */
+    public static function retractNoShowAlert(string $employeeId): void
+    {
+        Notification::where('type', 'attendance_absent')
+            ->whereNull('employee_id')
+            ->where('timestamp', '>=', \App\Support\LocalTime::today()->copy()->utc())
+            ->where('message', 'like', '%(#'.$employeeId.')%')
+            ->delete();
+    }
+
+    /**
      * Create a notification targeting a specific employee.
      */
     public static function notifyEmployee(

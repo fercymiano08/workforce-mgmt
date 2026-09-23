@@ -9,6 +9,7 @@ import Card, { CardHeader, CardTitle, CardDescription } from '../../components/u
 import Button from '../../components/ui/Button';
 import Badge from '../../components/ui/Badge';
 import Input from '../../components/ui/Input';
+import PhoneInput from '../../components/ui/PhoneInput';
 import Avatar from '../../components/ui/Avatar';
 import { leaveService, profileService } from '../../services/api';
 import { formatDate } from '../../utils/helpers';
@@ -25,7 +26,7 @@ const balanceStyle = {
   Sick: { bar: 'bg-red-500', track: 'bg-red-100', text: 'text-red-600' },
   Emergency: { bar: 'bg-amber-500', track: 'bg-amber-100', text: 'text-amber-600' },
   Special: { bar: 'bg-purple-500', track: 'bg-purple-100', text: 'text-purple-600' },
-  Bereavement: { bar: 'bg-indigo-500', track: 'bg-indigo-100', text: 'text-indigo-600' },
+  Funeral: { bar: 'bg-indigo-500', track: 'bg-indigo-100', text: 'text-indigo-600' },
   Unpaid: { bar: 'bg-teal-500', track: 'bg-teal-100', text: 'text-teal-600' },
 };
 const fallbackBalanceStyle = { bar: 'bg-gray-500', track: 'bg-gray-100', text: 'text-gray-600' };
@@ -345,12 +346,12 @@ export default function MyProfile() {
           </div>
         </CardHeader>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
-          <Input
+          <PhoneInput
             label="Phone"
             icon={Smartphone}
             value={values.phone}
-            onChange={(e) => setField('phone', e.target.value)}
-            placeholder="+63 9XX XXX XXXX"
+            onChange={(v) => setField('phone', v)}
+            placeholder="9XX XXX XXXX"
             error={errors.phone}
           />
           <Input
@@ -369,12 +370,12 @@ export default function MyProfile() {
             placeholder="Who should we call?"
             error={errors.emergencyContact}
           />
-          <Input
+          <PhoneInput
             label="Emergency contact number"
             icon={Phone}
             value={values.emergencyPhone}
-            onChange={(e) => setField('emergencyPhone', e.target.value)}
-            placeholder="+63 9XX XXX XXXX"
+            onChange={(v) => setField('emergencyPhone', v)}
+            placeholder="9XX XXX XXXX"
             error={errors.emergencyPhone}
           />
         </div>

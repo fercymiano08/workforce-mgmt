@@ -21,7 +21,7 @@ const NAV_GROUPS = [
     label: 'Company Configuration',
     items: [
       { id: 'company', key: 'settings.company', icon: Building },
-      { id: 'earlyLeave', key: 'settings.earlyLeave', icon: TimerOff },
+      { id: 'timeManager', key: 'settings.timeManager', icon: TimerOff },
       { id: 'regional', key: 'settings.regional', icon: Globe },
     ],
   },
@@ -126,7 +126,9 @@ function CompanySection({ settingsData, onSaved }) {
   );
 }
 
-function EarlyLeaveSection({ settingsData, onSaved }) {
+// Everything about how the clock treats a working day: how late is still "on time,"
+// the unpaid lunch, and the early clock-out policy. One place for HR to tune all three.
+function TimeManagerSection({ settingsData, onSaved }) {
   const { toast } = useToast();
   const system = settingsData.system || {};
   const [form, setForm] = useState({
@@ -155,6 +157,8 @@ function EarlyLeaveSection({ settingsData, onSaved }) {
 
   return (
     <div className="space-y-6">
+      <GracePeriodCard settingsData={settingsData} onSaved={onSaved} />
+
       <Card>
         <CardHeader>
           <div>
@@ -210,6 +214,83 @@ function EarlyLeaveSection({ settingsData, onSaved }) {
 
       <LunchBreakCard settingsData={settingsData} onSaved={onSaved} />
     </div>
+  );
+}
+
+// How many minutes after a shift's official start a clock-in still counts as On Time
+// before the kiosk marks it Late. The same number of minutes also decides how much
+// unapproved time past the shift's end is tolerated before HR is alerted.
+function GracePeriodCard({ settingsData, onSaved }) {
+  const { toast } = useToast();
+  const system = settingsData.system || {};
+  const [minutes, setMinutes] = useState(system.late_grace_minutes ?? 15);
+  const [noShowMinutes, setNoShowMinutes] = useState(system.absent_grace_minutes ?? 60);
+
+  const handleSave = async () => {
+    const value = Number(minutes);
+    const noShowValue = Number(noShowMinutes);
+    if (!(value >= 0 && value <= 120)) {
+      toast.error('Check the number', 'The grace period can be 0-120 minutes.');
+      return;
+    }
+    if (!(noShowValue >= 0 && noShowValue <= 240)) {
+      toast.error('Check the number', 'The no-show alert threshold can be 0-240 minutes.');
+      return;
+    }
+    try {
+      // 'system' is replaced wholesale by the API, so keep every value already on the row.
+      await settingsService.update({ system: { ...system, late_grace_minutes: value, absent_grace_minutes: noShowValue } });
+      toast.success('Grace periods updated', 'Applies to clock-ins, clock-outs and no-show alerts from now on.');
+      onSaved?.();
+    } catch {
+      toast.error('Error', 'Failed to save the grace periods.');
+    }
+  };
+
+  return (
+    <Card>
+      <CardHeader>
+        <div>
+          <CardTitle>Attendance Grace Periods</CardTitle>
+          <CardDescription>Two different timers: how late still counts as On Time, and when a no-show gets flagged</CardDescription>
+        </div>
+      </CardHeader>
+
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+        <Input
+          label="Late grace period (minutes)"
+          type="number"
+          min={0}
+          max={120}
+          value={minutes}
+          onChange={(e) => setMinutes(e.target.value)}
+          icon={TimerOff}
+        />
+        <Input
+          label="No-show alert threshold (minutes)"
+          type="number"
+          min={0}
+          max={240}
+          value={noShowMinutes}
+          onChange={(e) => setNoShowMinutes(e.target.value)}
+          icon={TimerOff}
+        />
+      </div>
+
+      <InfoNote>
+        <strong>Late grace period:</strong> a clock-in within this many minutes of the shift start is Present; later
+        is Late. The same window also covers the other end of the day: staying more than this many minutes past the
+        shift's end with no approved overtime alerts HR as unauthorized overtime, and that extra time is not paid.
+        <br /><br />
+        <strong>No-show alert threshold:</strong> if someone scheduled today still hasn't clocked in this many
+        minutes after their shift started, HR is alerted with a "Possible No-Show." This is a separate, independent
+        timer from the late grace period above.
+      </InfoNote>
+
+      <div className="flex justify-end mt-6">
+        <Button icon={Save} onClick={handleSave}>Save Changes</Button>
+      </div>
+    </Card>
   );
 }
 
@@ -366,8 +447,8 @@ export default function Settings() {
     switch (activeTab) {
       case 'regional':
         return <RegionalSection {...props} />;
-      case 'earlyLeave':
-        return <EarlyLeaveSection {...props} />;
+      case 'timeManager':
+        return <TimeManagerSection {...props} />;
       case 'account':
         return <AccountSection />;
       case 'appearance':

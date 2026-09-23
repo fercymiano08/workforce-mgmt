@@ -13,7 +13,7 @@ class Analytics extends Model
 
     protected $fillable = [
         'attendance_trend', 'department_productivity', 'leave_trend',
-        'overtime_summary', 'punctuality_score', 'payroll_discrepancy',
+        'overtime_summary', 'punctuality_score',
     ];
 
     protected function casts(): array
@@ -24,7 +24,6 @@ class Analytics extends Model
             'leave_trend' => 'array',
             'overtime_summary' => 'array',
             'punctuality_score' => 'array',
-            'payroll_discrepancy' => 'array',
         ];
     }
 
@@ -32,7 +31,7 @@ class Analytics extends Model
     {
         return [
             'attendanceTrend', 'departmentProductivity', 'leaveTrend',
-            'overtimeSummary', 'punctualityScore', 'payrollDiscrepancy',
+            'overtimeSummary', 'punctualityScore',
         ];
     }
 }

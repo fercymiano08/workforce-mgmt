@@ -5,24 +5,15 @@ namespace App\Services;
 use App\Models\Attendance;
 use App\Models\Employee;
 use App\Models\Leave;
-use App\Models\Timesheet;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\DB;
 
 /**
- * Computes Workforce Analytics directly from live attendance/leave/timesheet/
- * salary data, instead of reading a one-time seeded snapshot.
+ * Computes Workforce Analytics directly from live attendance/leave/timesheet
+ * data, instead of reading a one-time seeded snapshot.
  */
 class AnalyticsService
 {
-    /**
-     * Assumed standard working hours in a month (8h/day x ~22 working days).
-     * Mirrors the frontend's ATTENDANCE_CONFIG.standardHoursPerDay assumption.
-     * Used only to convert a monthly salary into an hourly rate for the
-     * payroll discrepancy comparison.
-     */
-    private const STANDARD_MONTHLY_HOURS = 176.0;
-
     public function all(): array
     {
         return [
@@ -31,7 +22,6 @@ class AnalyticsService
             'leaveTrend' => $this->leaveTrend(),
             'overtimeSummary' => $this->overtimeSummary(),
             'punctualityScore' => $this->punctualityScore(),
-            'payrollDiscrepancy' => $this->payrollDiscrepancy(),
         ];
     }
 
@@ -43,7 +33,6 @@ class AnalyticsService
             'leave_trend' => $this->leaveTrend(),
             'overtime_summary' => $this->overtimeSummary(),
             'punctuality_score' => $this->punctualityScore(),
-            'payroll_discrepancy' => $this->payrollDiscrepancy(),
             default => [],
         };
     }
@@ -103,7 +92,8 @@ class AnalyticsService
         for ($i = 0; $i < 6; $i++) {
             $m = $start->copy()->addMonths($i);
             $months->put($m->format('Y-m'), [
-                'month' => $m->format('M Y'), 'vacation' => 0, 'sick' => 0, 'emergency' => 0, 'total' => 0,
+                'month' => $m->format('M Y'), 'vacation' => 0, 'sick' => 0, 'emergency' => 0,
+                'special' => 0, 'funeral' => 0, 'unpaid' => 0, 'total' => 0,
             ]);
         }
 
@@ -205,55 +195,5 @@ class AnalyticsService
                 'efficiency' => round(min(100, max(0, $overtimeScore)), 1),
             ];
         })->values()->all();
-    }
-
-    /**
-     * Compares each salaried employee's expected monthly pay against pay
-     * derived from their actual logged hours (their timesheets summed over
-     * the most recent month that has timesheet data company-wide).
-     */
-    private function payrollDiscrepancy(): array
-    {
-        $latestWeekEnd = Timesheet::max('week_end');
-        if (! $latestWeekEnd) {
-            return [];
-        }
-        $month = Carbon::parse($latestWeekEnd)->format('Y-m');
-
-        $timesheetsByEmployee = Timesheet::get(['employee_id', 'week_end', 'total_hours'])
-            ->filter(fn ($ts) => $ts->week_end->format('Y-m') === $month)
-            ->groupBy('employee_id');
-
-        return Employee::where('salary', '>', 0)->get()
-            ->map(function (Employee $employee) use ($timesheetsByEmployee, $month) {
-                $hours = (float) ($timesheetsByEmployee->get($employee->id)?->sum('total_hours') ?? 0);
-                if ($hours <= 0) {
-                    return null;
-                }
-
-                $expectedPay = round((float) $employee->salary, 2);
-                $hourlyRate = $expectedPay / self::STANDARD_MONTHLY_HOURS;
-                $actualPay = round($hourlyRate * $hours, 2);
-                $difference = round($actualPay - $expectedPay, 2);
-
-                $status = 'Correct';
-                if (abs($difference) > max(50, $expectedPay * 0.01)) {
-                    $status = $difference > 0 ? 'Overpaid' : 'Underpaid';
-                }
-
-                return [
-                    'employeeId' => $employee->id,
-                    'employeeName' => trim($employee->first_name.' '.$employee->last_name),
-                    'department' => $employee->department,
-                    'expectedPay' => $expectedPay,
-                    'actualPay' => $actualPay,
-                    'difference' => $difference,
-                    'status' => $status,
-                    'month' => Carbon::parse($month.'-01')->format('M Y'),
-                ];
-            })
-            ->filter()
-            ->values()
-            ->all();
     }
 }

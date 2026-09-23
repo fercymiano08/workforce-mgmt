@@ -84,7 +84,6 @@ class DemoSeeder extends Seeder
             'employment_type' => $row['employment_type'] ?? 'Full-time',
             'status' => $row['status'] ?? 'Active',
             'hire_date' => $row['hire_date'] ?? null,
-            'salary' => $row['salary'] ?? 0,
             'avatar' => $row['avatar'] ?? 'https://api.dicebear.com/7.x/avataaars/svg?seed='.urlencode($row['first_name']),
             'address' => $row['address'] ?? null,
             'date_of_birth' => $row['date_of_birth'] ?? null,

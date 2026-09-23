@@ -16,7 +16,7 @@ class Employee extends Model
 
     protected $fillable = [
         'id', 'first_name', 'last_name', 'email', 'phone', 'department', 'position',
-        'employment_type', 'status', 'hire_date', 'salary', 'manager', 'avatar',
+        'employment_type', 'status', 'hire_date', 'manager', 'avatar',
         'address', 'date_of_birth', 'gender', 'blood_group', 'emergency_contact',
         'emergency_phone', 'skills', 'education', 'face_registered',
         'face_image', 'face_descriptor', 'face_registered_at', 'leave_balances',
@@ -26,7 +26,6 @@ class Employee extends Model
     {
         return [
             'hire_date' => 'date:Y-m-d',
-            'salary' => 'float',
             'date_of_birth' => 'date:Y-m-d',
             'skills' => 'array',
             'education' => 'array',
@@ -49,7 +48,7 @@ class Employee extends Model
             'Sick' => 10,
             'Emergency' => 5,
             'Special' => 5,
-            'Bereavement' => 5,
+            'Funeral' => 5,
             'Unpaid' => 30,
         ];
     }

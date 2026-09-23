@@ -28,7 +28,6 @@ class PayableOvertimeTest extends TestCase
             'last_name' => 'Dela Cruz',
             'email' => 'juan@workforcepro.com',
             'department' => 'IT & Systems',
-            'salary' => 20800,   // rate = 20800*12 / (52*40) = 120/h
         ]);
     }
 

@@ -156,7 +156,7 @@ Some columns (like `settings.kiosk`) store flexible structured data as JSON inst
 | `notifications` | In-app alerts shown in the bell dropdown | `id`, `title`, `message`, `employee_id` (nullable FK), `read` |
 | `security_events` | Buddy-punching attempts: face mismatches, failed PINs. A face mismatch also creates an admin notification (`security_face_mismatch`) | `id`, `type`, `message`, `employee_id` (nullable FK), `status` |
 | `audit_events` | Append-only audit trail: who did what, when, with before/after snapshots (read-only in the admin UI) | `id`, `service`, `event`, `entity_type`, `actor`, `before`, `after` |
-| `settings` | Single-row app config: company info, kiosk PIN hash, AI memory | `company`, `kiosk`, `ai_resolved_insights` |
+| `settings` | Single-row app config: company info, kiosk PIN hash, AI memory, and the **Time Manager** attendance-timing rules (late grace period, no-show/absent alert threshold, lunch/break rules, early-leave policy) — these used to be hardcoded constants and are now admin-configurable here | `company`, `kiosk`, `ai_resolved_insights`, `system` |
 | `analytics` | Cached dashboard statistics | `attendance_trend`, `punctuality_score`, etc. |
 
 ### Laravel Framework Tables (9) — auto-generated, ignore in documentation
@@ -316,7 +316,7 @@ Note: both restore STRUCTURE only. Live data, if any, lives on the original mach
 | How do your tables connect to each other? | Normal SQL — a `JOIN` on the shared key (usually `employee_id`), or a foreign key like `roles.department_id → departments.id`. Everything is in the same database, so there's no cross-service call or sync job involved. |
 | Do you use foreign key constraints? | Mostly enforced at the application layer rather than with hard `FOREIGN KEY` constraints (only `roles.department_id` declares one) — a normal design choice for this app, not a workaround for anything. Because everything lives in one database, every relationship in Section 6 is still a live, ordinary `JOIN`. |
 | What is a JOIN? | Combining two tables on their key, e.g. join `attendance` to `employees` so a report shows the person's name next to each clock-in. |
-| Why JSON columns? | For flexible data that doesn't deserve its own table: `employees.leave_balances`, `settings.kiosk`, `settings.ai_resolved_insights`. |
+| Why JSON columns? | For flexible data that doesn't deserve its own table: `employees.leave_balances`, `settings.kiosk`, `settings.ai_resolved_insights`, `settings.system` (the Time Manager rules). |
 | How is the database created? | One Laravel app with one flat set of migrations (`backend/app/database/migrations/`) builds every table, and one `DatabaseSeeder` (fed by JSON mock files) fills in demo data: `cd backend/app && php artisan migrate:fresh --seed`. |
 | What is an index for? | A shortcut to find rows faster, e.g. `attendance(employee_id, date)` makes the kiosk's "was this person here today?" instant. |
 | Where is the password stored? | In `backend/app/.env` as DB settings, not in code — `.env` is gitignored so secrets never reach GitHub. |

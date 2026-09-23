@@ -42,7 +42,6 @@ const reportCategories = [
     reports: [
       { name: 'Weekly Timesheet Summary', desc: 'Regular, overtime, break, and total hours per employee per week', icon: FileBarChart },
       { name: 'Overtime Analysis Report', desc: 'Requested vs approved vs actual overtime with variance', icon: TrendingUp },
-      { name: 'Payroll Discrepancy Report', desc: 'Detects mismatches between logged and expected hours', icon: AlertTriangle },
     ],
   },
   {

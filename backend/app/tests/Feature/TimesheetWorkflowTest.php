@@ -37,7 +37,7 @@ class TimesheetWorkflowTest extends TestCase
     {
         Employee::create([
             'id' => 'EMP-OTP', 'first_name' => 'Juan', 'last_name' => 'Dela Cruz',
-            'email' => 'employee@workforcepro.com', 'department' => 'IT & Systems', 'salary' => 20800,
+            'email' => 'employee@workforcepro.com', 'department' => 'IT & Systems',
         ]);
 
         return $this->otpEmployeeUser();
