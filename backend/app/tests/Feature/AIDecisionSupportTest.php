@@ -161,45 +161,113 @@ class AIDecisionSupportTest extends TestCase
         $this->assertGreaterThanOrEqual(90, $response->json('data.healthScore'));
     }
 
-    public function test_uses_gemini_when_a_key_is_configured(): void
+    public function test_gemini_writes_the_words_but_the_numbers_and_score_come_from_the_database(): void
     {
         config(['services.gemini.key' => 'test-key']);
+        Carbon::setTestNow(Carbon::parse('2026-08-13 12:00:00', 'Asia/Manila'));
+        $employee = $this->employee();
+        foreach (['2026-08-03', '2026-08-04', '2026-08-05', '2026-08-06'] as $date) {
+            Attendance::create(['id' => 'ATT'.str_replace('-', '', $date), 'employee_id' => $employee->id, 'date' => $date, 'clock_in' => '09:00', 'status' => 'Late']);
+        }
 
         Http::fake([
-            'generativelanguage.googleapis.com/*' => Http::response([
-                'candidates' => [
-                    ['content' => ['parts' => [['text' => json_encode([
-                        'summary' => 'The AI verdict from Gemini.',
-                        'healthScore' => 87,
-                        'insights' => [
-                            ['severity' => 'warning', 'category' => 'Punctuality', 'title' => 'AI Flag', 'message' => 'Late arrivals are up this period.', 'recommendation' => 'Run a team reminder about start times.', 'metric' => '4 late'],
-                        ],
-                    ])]]]],
+            'generativelanguage.googleapis.com/*' => Http::response(['candidates' => [['content' => ['parts' => [['text' => json_encode([
+                'summary' => 'Punctuality needs attention this month.',
+                'healthScore' => 99,                                  // ignored: the score is the system's
+                'insights' => [
+                    ['ref' => 'late-EMP001', 'title' => 'Frequent lateness', 'message' => 'Test EMP001 came in late 4 times in the last 30 days.', 'recommendation' => 'Talk with Test EMP001 about the start time.'],
+                    ['ref' => 'healthy-attendance', 'title' => 'Great attendance', 'message' => 'Attendance is at 97%.', 'recommendation' => 'Keep it up.'],   // 97 is invented
+                    ['ref' => 'made-up', 'title' => 'Fire half the team', 'message' => 'x', 'recommendation' => 'x'],                                         // not a finding
                 ],
-            ], 200),
+            ])]]]]]], 200),
         ]);
 
-        $admin = $this->adminUser();
-        $response = $this->actingAs($admin)->getJson('/api/analytics/ai/insights')->assertOk();
+        $data = $this->actingAs($this->adminUser())->getJson('/api/analytics/ai/insights')->assertOk()->json('data');
+        $byId = array_column($data['insights'], null, 'id');
 
-        $this->assertSame('ai', $response->json('data.source'));
-        $this->assertSame(87, $response->json('data.healthScore'));
-        $this->assertSame('The AI verdict from Gemini.', $response->json('data.summary'));
-        $this->assertSame('AI Flag', $response->json('data.insights.0.title'));
+        $this->assertSame('ai', $data['source']);
+        $this->assertSame('ok', $data['aiStatus']);
+        $this->assertNotSame(99, $data['healthScore']);
+        $this->assertSame('Punctuality needs attention this month.', $data['summary']);
+        // Gemini's wording, the system's numbers
+        $this->assertSame('Frequent lateness', $byId['late-EMP001']['title']);
+        $this->assertSame('4 late · last 30 days', $byId['late-EMP001']['metric']);
+        // the sentence with an invented number is replaced by the rule's own
+        $this->assertSame('Great attendance', $byId['healthy-attendance']['title']);
+        $this->assertStringContainsString('4 of 4 expected work days', $byId['healthy-attendance']['message']);
+        // nothing that is not a finding gets in
+        $this->assertArrayNotHasKey('made-up', $byId);
     }
 
-    public function test_falls_back_to_rules_when_gemini_fails(): void
+    public function test_a_busy_model_falls_through_to_the_next_one(): void
     {
-        config(['services.gemini.key' => 'test-key']);
+        config(['services.gemini.key' => 'test-key', 'services.gemini.model' => 'model-a', 'services.gemini.fallback_models' => ['model-b']]);
+        Carbon::setTestNow(Carbon::parse('2026-08-13 12:00:00', 'Asia/Manila'));
+        $this->pendingLeave('LV001', $this->employee()->id);
 
         Http::fake([
-            'generativelanguage.googleapis.com/*' => Http::response(['error' => 'boom'], 429),
+            'generativelanguage.googleapis.com/v1beta/models/model-a:*' => Http::response(['error' => ['message' => 'high demand']], 503),
+            'generativelanguage.googleapis.com/v1beta/models/model-b:*' => Http::response(['candidates' => [['content' => ['parts' => [
+                ['thought' => true, 'text' => 'thinking about it'],
+                ['text' => json_encode(['summary' => 'Approvals are waiting.', 'insights' => [
+                    ['ref' => 'pending-approvals', 'title' => 'Requests waiting', 'message' => 'One leave request is waiting for a decision.', 'recommendation' => 'Decide it in the Decision Queue.'],
+                ]])],
+            ]]]]], 200),
         ]);
 
-        $admin = $this->adminUser();
-        $response = $this->actingAs($admin)->getJson('/api/analytics/ai/insights')->assertOk();
+        $data = $this->actingAs($this->adminUser())->getJson('/api/analytics/ai/insights')->assertOk()->json('data');
 
-        $this->assertSame('rule-based', $response->json('data.source'));
+        $this->assertSame('ai', $data['source']);
+        $this->assertSame('Approvals are waiting.', $data['summary']);
+        $this->assertSame('Requests waiting', array_column($data['insights'], null, 'id')['pending-approvals']['title']);
+    }
+
+    public function test_a_model_that_is_out_of_daily_quota_is_not_asked_again_but_a_busy_one_is_retried_by_regenerate(): void
+    {
+        config(['services.gemini.key' => 'test-key', 'services.gemini.model' => 'model-a', 'services.gemini.fallback_models' => ['model-b', 'model-c']]);
+        Carbon::setTestNow(Carbon::parse('2026-08-13 12:00:00', 'Asia/Manila'));
+        $this->pendingLeave('LV001', $this->employee()->id);
+
+        $ok = ['candidates' => [['content' => ['parts' => [['text' => json_encode(['summary' => 'Approvals are waiting.', 'insights' => []])]]]]]];
+        Http::fake([
+            'generativelanguage.googleapis.com/v1beta/models/model-a:*' => Http::response(['error' => ['message' => 'Quota exceeded ... GenerateRequestsPerDayPerProjectPerModel-FreeTier']], 429),
+            'generativelanguage.googleapis.com/v1beta/models/model-b:*' => Http::response(['error' => ['message' => 'high demand']], 503),
+            'generativelanguage.googleapis.com/v1beta/models/model-c:*' => Http::response($ok, 200),
+        ]);
+        $admin = $this->adminUser();
+        $asked = fn (string $model) => Http::recorded(fn ($request) => str_contains($request->url(), "/{$model}:"))->count();
+
+        $this->actingAs($admin)->getJson('/api/analytics/ai/insights')->assertOk()->assertJsonPath('data.source', 'ai');
+        $this->assertSame([1, 1, 1], [$asked('model-a'), $asked('model-b'), $asked('model-c')]);
+
+        // Regenerate: the quota-exhausted model is left alone; the merely busy one gets another chance
+        $this->actingAs($admin)->getJson('/api/analytics/ai/insights?refresh=1')->assertOk();
+        $this->assertSame([1, 2, 2], [$asked('model-a'), $asked('model-b'), $asked('model-c')]);
+
+        // An ordinary page view with nothing changed costs no request at all
+        $this->actingAs($admin)->getJson('/api/analytics/ai/insights')->assertOk()->assertJsonPath('data.source', 'ai');
+        $this->assertSame([1, 2, 2], [$asked('model-a'), $asked('model-b'), $asked('model-c')]);
+    }
+
+    public function test_the_same_findings_and_score_are_shown_when_gemini_is_down_or_not_set_up(): void
+    {
+        Carbon::setTestNow(Carbon::parse('2026-08-13 12:00:00', 'Asia/Manila'));
+        $admin = $this->adminUser();
+        $this->pendingLeave('LV001', $this->employee()->id);
+
+        $without = $this->actingAs($admin)->getJson('/api/analytics/ai/insights')->json('data');
+        $this->assertSame('not_configured', $without['aiStatus']);
+
+        config(['services.gemini.key' => 'test-key']);
+        Http::fake(['generativelanguage.googleapis.com/*' => Http::response(['error' => 'high demand'], 503)]);
+        $down = $this->actingAs($admin)->getJson('/api/analytics/ai/insights')->json('data');
+
+        $this->assertSame('rule-based', $down['source']);
+        $this->assertSame('unavailable', $down['aiStatus']);
+        $this->assertSame('busy', $down['aiReason']);   // the screen says why, not just "unavailable"
+        $this->assertNotNull($down['aiRetryAt']);
+        $this->assertSame($without['healthScore'], $down['healthScore']);
+        $this->assertSame(array_column($without['insights'], 'message'), array_column($down['insights'], 'message'));
     }
 
     public function test_approves_and_rejects_individual_requests(): void

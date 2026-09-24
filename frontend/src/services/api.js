@@ -348,8 +348,8 @@ export const analyticsService = {
     const { data } = await http.get('/analytics');
     return data;
   },
-  getAiInsights: async () => {
-    const { data } = await http.get('/analytics/ai/insights');
+  getAiInsights: async (fresh = false) => {
+    const { data } = await http.get('/analytics/ai/insights', { params: fresh ? { refresh: 1 } : undefined });
     return data;
   },
   runAiAction: async (action, payload = {}) => {

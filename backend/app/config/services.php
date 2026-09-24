@@ -39,6 +39,8 @@ return [
         'key' => env('GEMINI_API_KEY'),
         'model' => env('GEMINI_MODEL', 'gemini-3.1-flash-lite'),
         'timeout' => env('GEMINI_TIMEOUT', 15),
+        // Tried in order when the model above is busy (503/429) or retired (404)
+        'fallback_models' => array_values(array_filter(array_map('trim', explode(',', (string) env('GEMINI_FALLBACK_MODELS', 'gemini-3.5-flash,gemini-3.6-flash,gemini-3-flash-preview'))))),
     ],
 
 ];

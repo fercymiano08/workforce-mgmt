@@ -7,6 +7,7 @@ use App\Models\Leave;
 use App\Models\OvertimeRequest;
 use App\Models\SecurityEvent;
 use App\Services\AIDecisionSupportService;
+use App\Services\AuditLogger;
 use App\Services\SecurityEvents;
 use App\Services\SettingsUpdater;
 use App\Services\NotificationService;
@@ -16,9 +17,10 @@ use Illuminate\Http\Request;
 
 class AIDecisionSupportController extends Controller
 {
-    public function insights(): JsonResponse
+    public function insights(Request $request): JsonResponse
     {
-        return response()->json(['data' => app(AIDecisionSupportService::class)->insights()]);
+        // ?refresh=1 (the Regenerate button) asks Gemini again instead of reusing its recent wording
+        return response()->json(['data' => app(AIDecisionSupportService::class)->insights($request->boolean('refresh'))]);
     }
 
     public function action(Request $request): JsonResponse
@@ -38,7 +40,7 @@ class AIDecisionSupportController extends Controller
             'flag_security_event' => $this->resolveSecurityEvent($request, 'Flagged'),
             'resolve_insight' => $this->toggleInsightResolution($request, true),
             'unresolve_insight' => $this->toggleInsightResolution($request, false),
-            'resolve_all_security' => $this->resolveAllSecurity(),
+            'resolve_all_security' => $this->resolveAllSecurity($request),
             default => response()->json(['message' => 'Unsupported AI action.'], 422),
         };
     }
@@ -60,13 +62,15 @@ class AIDecisionSupportController extends Controller
             NotificationService::notifyAdmins(
                 'security_alert',
                 'Kiosk Security Alert',
-                "HR escalated a security event: {$event->message}.",
+                'Escalated by '.($request->user()?->name ?? 'HR').": {$event->message}.",
                 'high',
-                '/analytics/ai'
+                '/ai-decision-support'
             );
         } else {
             SecurityEvents::resolveSecurityEvent($id, $request->user()?->name);
         }
+        $this->audit($request, $status === 'Flagged' ? 'security.escalated' : 'security.resolved', 'SecurityEvent', $event->id,
+            ['status' => 'Open'], ['status' => $status], ['type' => $event->type, 'employeeId' => $event->employee_id]);
 
         return response()->json([
             'success' => true,
@@ -100,7 +104,10 @@ class AIDecisionSupportController extends Controller
             return response()->json(['message' => 'Leave request not found or already resolved.'], 404);
         }
 
+        $before = $record->toApiArray();
         TimeOffActions::resolveLeave($id, $status, $request->user()?->name);
+        $this->audit($request, 'leave.status_changed', 'Leave', $record->id, $before, $record->fresh()->toApiArray(),
+            ['status' => $status, 'employeeId' => $record->employee_id, 'via' => 'AI Decision Support']);
 
         if ($status === 'Approved') {
             NotificationService::notifyEmployee(
@@ -142,7 +149,10 @@ class AIDecisionSupportController extends Controller
             return response()->json(['message' => 'Overtime request not found or already resolved.'], 404);
         }
 
+        $before = $record->toApiArray();
         TimeOffActions::resolveOvertime($id, $status, $request->user()?->name);
+        $this->audit($request, 'overtime.status_changed', 'OvertimeRequest', $record->id, $before, $record->fresh()->toApiArray(),
+            ['status' => $status, 'employeeId' => $record->employee_id, 'was' => 'Pending', 'via' => 'AI Decision Support']);
 
         if ($status === 'Approved') {
             NotificationService::notifyEmployee(
@@ -172,7 +182,7 @@ class AIDecisionSupportController extends Controller
         ]);
     }
 
-    private function resolveAllSecurity(): JsonResponse
+    private function resolveAllSecurity(Request $request): JsonResponse
     {
         $openEvents = SecurityEvent::where('status', 'Open')->get();
         $count = $openEvents->count();
@@ -181,12 +191,21 @@ class AIDecisionSupportController extends Controller
             return response()->json(['success' => true, 'resolved' => 0, 'message' => 'No open security events to resolve.']);
         }
 
-        SecurityEvents::resolveAllSecurityEvents('AI Decision Support (bulk)');
+        SecurityEvents::resolveAllSecurityEvents($request->user()?->name);
+        $this->audit($request, 'security.resolved_all', 'SecurityEvent', 'bulk', null, null, ['count' => $count]);
 
         return response()->json([
             'success' => true,
             'resolved' => $count,
             'queue' => app(AIDecisionSupportService::class)->approvalQueue(),
         ]);
+    }
+
+    /** Same trail the Leave / Overtime / Security screens leave, so a decision made here looks the same in the audit log. */
+    private function audit(Request $request, string $event, string $entityType, string $entityId, ?array $before, ?array $after, array $meta): void
+    {
+        AuditLogger::record('timeoff', $event, $entityType, $entityId,
+            actor: $request->user()?->name, actorId: $request->user()?->employee_id,
+            before: $before, after: $after, meta: $meta);
     }
 }

@@ -43,9 +43,10 @@ export default function Attendance() {
   const initialTab = searchParams.get('view') === 'early' ? 'early' : searchParams.get('tab') === 'overtime' ? 'overtime' : 'attendance';
   const [activeTab, setActiveTab] = useState(initialTab);
   const [employees, setEmployees] = useState([]);
-  const [search, setSearch] = useState('');
-  const [statusFilter, setStatusFilter] = useState('All');
-  const [periodFilter, setPeriodFilter] = useState('All');
+  // Links from AI Decision Support open this page already filtered (?search=Name&status=Late&period=Today)
+  const [search, setSearch] = useState(searchParams.get('search') || '');
+  const [statusFilter, setStatusFilter] = useState(searchParams.get('status') || 'All');
+  const [periodFilter, setPeriodFilter] = useState(searchParams.get('period') || 'All');
   const [currentPage, setCurrentPage] = useState(1);
   const PAGE_SIZE = 12;
 
@@ -274,6 +275,11 @@ export default function Attendance() {
       else if (periodFilter === 'This Week') {
         // Monday to Sunday (ISO 8601): from this Monday up to today
         matchPeriod = a.date >= weekOf(todayStr).start && a.date <= todayStr;
+      } else if (periodFilter === 'Last 30 Days') {
+        // The same 30 days AI Decision Support analyses: today and the 29 days before it
+        const [y, m, d] = todayStr.split('-').map(Number);
+        const from = new Date(Date.UTC(y, m - 1, d - 29)).toISOString().slice(0, 10);
+        matchPeriod = a.date >= from && a.date <= todayStr;
       }
       return matchSearch && matchStatus && matchPeriod;
     });
@@ -368,6 +374,7 @@ export default function Attendance() {
                 <option value="All">All Time</option>
                 <option value="Today">Today</option>
                 <option value="This Week">This Week</option>
+                <option value="Last 30 Days">Last 30 Days</option>
               </Select>
               <Select value={statusFilter} onChange={e => { setStatusFilter(e.target.value); setCurrentPage(1); }} containerClass="w-full sm:w-36">
                 <option value="All">All Status</option>

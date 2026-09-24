@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
   Brain, AlertTriangle, AlertCircle, Info, CheckCircle2, XCircle,
@@ -62,9 +62,10 @@ function fmtFull(iso) {
   return new Date(`${iso}T00:00:00`).toLocaleDateString(undefined, { year: 'numeric', month: 'short', day: 'numeric' });
 }
 
+// Company clock (Manila), whatever this computer's time zone is
 function fmtTime(iso) {
   if (!iso) return '—';
-  return new Date(iso).toLocaleString(undefined, { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' });
+  return new Date(iso).toLocaleString('en-US', { timeZone: 'Asia/Manila', month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' });
 }
 
 export default function AIDecisionSupport() {
@@ -81,7 +82,13 @@ export default function AIDecisionSupport() {
   const [running, setRunning] = useState(false);
   const [showHandled, setShowHandled] = useState(false);
   const [applyPending, setApplyPending] = useState(null);
-  const { data, loading, error, refresh, setData } = useApiData(() => analyticsService.getAiInsights(), []);
+  // "Regenerate" asks Gemini again; everything else (opening the page, the sidebar badge) may reuse its recent wording
+  const forceFresh = useRef(false);
+  const { data, loading, error, refresh, setData } = useApiData(() => {
+    const fresh = forceFresh.current;
+    forceFresh.current = false;
+    return analyticsService.getAiInsights(fresh);
+  }, []);
 
   const insights = data?.insights ?? [];
   const queue = data?.queue ?? { leave: [], overtime: [], security: [] };
@@ -90,9 +97,11 @@ export default function AIDecisionSupport() {
   const securityItems = queue.security ?? [];
   const totalPending = leaveItems.length + overtimeItems.length + securityItems.length;
 
-  const counts = {};
+  const counts = { critical: 0, warning: 0, info: 0, success: 0 };
   insights.forEach((i) => { if (!i.resolved) counts[i.severity] = (counts[i.severity] ?? 0) + 1; });
   const handledCount = insights.filter((i) => i.resolved).length;
+  // Good news ("Attendance is strong") is not something that needs attention
+  const needAttention = insights.filter((i) => !i.resolved && i.severity !== 'success').length;
   const shown = filter === 'all' ? insights : insights.filter((i) => i.severity === filter);
   const catShown = catFilter === 'all' ? shown : shown.filter((i) => i.category === catFilter);
   const visible = catShown.filter((i) => !i.resolved || showHandled);
@@ -110,7 +119,7 @@ export default function AIDecisionSupport() {
   const tabs = [
     { key: 'overview', label: 'Overview', icon: LayoutDashboard },
     { key: 'queue', label: 'Decision Queue', icon: Inbox, count: totalPending },
-    { key: 'insights', label: 'AI Insights', icon: Sparkles, count: insights.filter((i) => !i.resolved).length },
+    { key: 'insights', label: 'AI Insights', icon: Sparkles, count: needAttention },
   ];
   const queueFilters = [
     { key: 'all', label: 'All', count: totalPending },
@@ -221,15 +230,15 @@ export default function AIDecisionSupport() {
 
     if (action === 'navigate_attendance') {
       const params = new URLSearchParams();
-      if (payload.employeeId) params.set('employee', payload.employeeId);
-      if (payload.filter) params.set('filter', payload.filter);
-      if (payload.date) params.set('date', payload.date);
+      if (payload.search) params.set('search', payload.search);
+      if (payload.status) params.set('status', payload.status);
+      if (payload.period) params.set('period', payload.period);
       const qs = params.toString();
       return {
         title: label,
-        body: `Open the Attendance page${payload.employeeId ? ' for this employee' : ''}?`,
+        body: `Open the Attendance page${payload.search ? ` for ${payload.search}` : ''}?`,
         detail: insight.category,
-        note: 'You will be redirected to take action on this recommendation.',
+        note: 'The list opens already filtered to what this insight is about.',
         confirmLabel: 'Open Attendance',
         confirmVariant: 'primary',
         action: 'navigate',
@@ -384,6 +393,23 @@ export default function AIDecisionSupport() {
               {item.reason ? (
                 <p className="text-[12px] text-gray-400 mt-0.5 truncate">Reason: {item.reason}</p>
               ) : null}
+              {isLeave ? (
+                <div className="flex flex-wrap gap-1.5 mt-2">
+                  {item.alreadyStarted ? (
+                    <span className="text-[11px] font-medium rounded-full px-2 py-0.5 border bg-amber-50 text-amber-700 border-amber-100">
+                      Dates already started or passed
+                    </span>
+                  ) : null}
+                  {item.balance ? (
+                    <span className={`text-[11px] font-medium rounded-full px-2 py-0.5 border ${item.balance.afterApproval < 0 ? 'bg-red-50 text-red-700 border-red-100' : 'bg-gray-50 text-gray-600 border-gray-100'}`}>
+                      {item.balance.remaining} day{item.balance.remaining === 1 ? '' : 's'} left · {item.balance.afterApproval < 0 ? `${Math.abs(item.balance.afterApproval)} over the balance` : `${item.balance.afterApproval} after this`}
+                    </span>
+                  ) : null}
+                  <span className={`text-[11px] font-medium rounded-full px-2 py-0.5 border ${item.othersOff > 0 ? 'bg-amber-50 text-amber-700 border-amber-100' : 'bg-gray-50 text-gray-600 border-gray-100'}`}>
+                    {item.othersOff > 0 ? `${item.othersOff} other${item.othersOff === 1 ? '' : 's'} already off in these dates` : 'Nobody else is off in these dates'}
+                  </span>
+                </div>
+              ) : null}
               <p className="text-[11px] text-gray-400 mt-1">Applied {fmtFull(item.applied)}</p>
             </div>
           </div>
@@ -497,7 +523,7 @@ export default function AIDecisionSupport() {
         </div>
         <Button
           variant="outline"
-          onClick={() => { refresh(); insightsCtx?.refresh(); }}
+          onClick={() => { forceFresh.current = true; refresh(); insightsCtx?.refresh(); }}
           disabled={loading}
           className="sm:self-start"
         >
@@ -514,26 +540,39 @@ export default function AIDecisionSupport() {
           <div className="flex-1">
             <p className="text-sm font-semibold text-red-800">No internet connection detected</p>
             <p className="text-sm text-red-600 mt-0.5">
-              AI-powered insights require an active internet connection. Rule-based fallback insights are shown below instead. Connect to Wi-Fi or mobile data to enable full Gemini AI analysis.
+              Gemini needs an internet connection to write the explanations, so rule-based wording is shown. The findings, numbers and health score are unaffected: they come from your database.
             </p>
           </div>
           <WifiOff className="w-5 h-5 text-red-300 shrink-0 mt-0.5" />
         </div>
       )}
 
-      {isOnline && data?.source !== 'ai' && !loading && (
-        <div className="flex items-start gap-3 p-4 rounded-2xl bg-amber-50 border border-amber-200 animate-fadeIn">
-          <div className="w-10 h-10 rounded-xl bg-amber-100 flex items-center justify-center shrink-0">
-            <AlertTriangle className="w-5 h-5 text-amber-600" />
+      {isOnline && data?.source !== 'ai' && !loading && data && (() => {
+        const resetAt = data.aiRetryAt
+          ? new Date(data.aiRetryAt).toLocaleString('en-US', { timeZone: 'Asia/Manila', weekday: 'short', hour: 'numeric', minute: '2-digit' })
+          : null;
+        const why = {
+          not_configured: ['Gemini AI is not set up', 'No API key is configured.'],
+          key: ['Gemini refused the API key', 'Google rejected the key. Check GEMINI_API_KEY in the backend .env, or create a new key.'],
+          quota: ['The free daily limit for Gemini is used up', `The free tier allows only 20 requests a day per model, and they are all used. It resets ${resetAt ? `on ${resetAt} (Manila time)` : 'at midnight Pacific time'}. A key from a new Google project, or billing, avoids the limit.`],
+          busy: ['Gemini is overloaded right now', 'Google says the model is under high demand. It is tried again automatically every few minutes, or press Regenerate.'],
+          mixed: ['Gemini is unavailable right now', `Your main model is overloaded on Google's side and the backup models have used today's free quota${resetAt ? ` (resets ${resetAt}, Manila time)` : ''}. Press Regenerate to try again.`],
+          unknown: ['Gemini AI is unavailable right now', 'Gemini could not be reached or gave an unusable answer. Press Regenerate to try again.'],
+        }[data.aiStatus === 'not_configured' ? 'not_configured' : (data.aiReason || 'unknown')];
+        return (
+          <div className="flex items-start gap-3 p-4 rounded-2xl bg-amber-50 border border-amber-200 animate-fadeIn">
+            <div className="w-10 h-10 rounded-xl bg-amber-100 flex items-center justify-center shrink-0">
+              <AlertTriangle className="w-5 h-5 text-amber-600" />
+            </div>
+            <div className="flex-1">
+              <p className="text-sm font-semibold text-amber-800">{why[0]}</p>
+              <p className="text-sm text-amber-600 mt-0.5">
+                {why[1]} The wording below is written by fixed rules. The findings, numbers and health score are the same either way: they come from your database.
+              </p>
+            </div>
           </div>
-          <div className="flex-1">
-            <p className="text-sm font-semibold text-amber-800">Gemini AI unavailable</p>
-            <p className="text-sm text-amber-600 mt-0.5">
-              Connected to the internet, but Gemini AI could not be reached. This may be due to an invalid API key or a temporary service issue. Rule-based insights are shown below.
-            </p>
-          </div>
-        </div>
-      )}
+        );
+      })()}
 
       {loading && !data ? (
         <div className="grid md:grid-cols-2 gap-4">
@@ -600,6 +639,24 @@ export default function AIDecisionSupport() {
                     <Brain className="w-3.5 h-3.5" />
                     {meta.label}
                   </span>
+                  <details className="mt-4 w-full text-left group">
+                    <summary className="cursor-pointer text-[12px] font-semibold text-blue-600 text-center list-none hover:underline">
+                      How is this score calculated?
+                    </summary>
+                    <div className="mt-2 rounded-xl bg-gray-50 border border-gray-100 p-3 space-y-1.5">
+                      <div className="flex justify-between text-[12px] font-semibold text-gray-700"><span>Perfect score</span><span>100</span></div>
+                      {(data?.scoreBreakdown ?? []).map((row) => (
+                        <div key={row.label} className="flex items-start justify-between gap-3 text-[12px]">
+                          <span className="text-gray-500"><span className="font-medium text-gray-700">{row.label}</span> · {row.detail}</span>
+                          <span className="font-semibold text-red-600 shrink-0">−{row.points}</span>
+                        </div>
+                      ))}
+                      {(data?.scoreBreakdown ?? []).length === 0 ? (
+                        <p className="text-[12px] text-gray-500">Nothing is taking points off right now.</p>
+                      ) : null}
+                      <div className="flex justify-between text-[12px] font-bold text-gray-900 pt-1.5 border-t border-gray-200"><span>Health score</span><span>{score}</span></div>
+                    </div>
+                  </details>
                   <div className="flex items-center gap-2 mt-4">
                     {data?.source === 'ai' ? (
                       <span className="inline-flex items-center gap-1.5 text-[11px] font-semibold px-2.5 py-1 rounded-full bg-purple-50 text-purple-700">
@@ -638,7 +695,7 @@ export default function AIDecisionSupport() {
                     </div>
                     <div className="rounded-xl bg-amber-50 border border-amber-100 px-4 py-3">
                       <p className="text-[11px] font-semibold text-amber-600 uppercase tracking-wide">Need attention</p>
-                      <p className="text-2xl font-bold text-amber-700 mt-1">{insights.length - handledCount}</p>
+                      <p className="text-2xl font-bold text-amber-700 mt-1">{needAttention}</p>
                     </div>
                     <div className="rounded-xl bg-blue-50 border border-blue-100 px-4 py-3">
                       <p className="text-[11px] font-semibold text-blue-600 uppercase tracking-wide">Awaiting decision</p>
@@ -847,7 +904,7 @@ export default function AIDecisionSupport() {
                     </button>
                   ) : null}
                   <span className="text-[12px] text-gray-400 hidden sm:block">
-                    Analysis of the last 30 days of workforce data
+                    {data?.window ? `Attendance from ${fmtShort(data.window.from)} to ${fmtShort(data.window.to)} (last ${data.window.days} days)` : 'Analysis of the last 30 days of workforce data'}
                   </span>
                 </div>
               </div>
@@ -957,15 +1014,18 @@ export default function AIDecisionSupport() {
                                   {insight.applyLabel || 'Apply'}
                                 </Button>
                               ) : null}
-                              <Button
-                                variant={insight.resolved ? 'outline' : 'ghost'}
-                                size="xs"
-                                icon={insight.resolved ? RefreshCw : CheckCircle2}
-                                onClick={() => setPending(insightDecision(insight, !insight.resolved))}
-                                disabled={running}
-                              >
-                                {insight.resolved ? 'Restore' : 'Mark as handled'}
-                              </Button>
+                              {/* Good news has nothing to handle */}
+                              {insight.severity !== 'success' ? (
+                                <Button
+                                  variant={insight.resolved ? 'outline' : 'ghost'}
+                                  size="xs"
+                                  icon={insight.resolved ? RefreshCw : CheckCircle2}
+                                  onClick={() => setPending(insightDecision(insight, !insight.resolved))}
+                                  disabled={running}
+                                >
+                                  {insight.resolved ? 'Restore' : 'Mark as handled'}
+                                </Button>
+                              ) : null}
                             </div>
                           </div>
                         </div>

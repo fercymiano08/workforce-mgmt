@@ -18,7 +18,7 @@ export function InsightsProvider({ children }) {
     try {
       const res = await analyticsService.getAiInsights();
       const insights = res?.insights ?? [];
-      setUnresolvedCount(insights.filter((i) => !i.resolved).length);
+      setUnresolvedCount(insights.filter((i) => !i.resolved && i.severity !== 'success').length);
     } catch {
       // intelligence service unreachable / not admin yet - keep last known count
     }

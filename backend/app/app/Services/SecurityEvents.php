@@ -35,8 +35,8 @@ class SecurityEvents
 
     public static function resolveAllSecurityEvents(?string $resolvedBy): void
     {
+        // Only what is still open: an event HR already escalated stays escalated
         SecurityEvent::where('status', 'Open')
-            ->orWhere('status', 'Flagged')
             ->get()
             ->each(function (SecurityEvent $event) use ($resolvedBy): void {
                 $event->update([
