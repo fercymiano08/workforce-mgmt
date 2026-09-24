@@ -19,6 +19,12 @@ class AlertTimezoneTest extends TestCase
 {
     use RefreshDatabase;
 
+    protected function setUp(): void
+    {
+        parent::setUp();
+        $this->skipKioskFaceCheck();
+    }
+
     private ?\App\Models\User $admin = null;
 
     private function setUpScheduledEmployee(): void

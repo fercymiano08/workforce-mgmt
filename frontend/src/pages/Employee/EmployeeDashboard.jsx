@@ -11,7 +11,7 @@ import {
 } from 'recharts';
 import { useAuth } from '../../context/AuthContext';
 import TodayBadge from '../../components/common/TodayBadge';
-import { todayKey, todayRowClass, coversToday } from '../../utils/today';
+import { todayKey, todayRowClass, coversToday, thisWeek } from '../../utils/today';
 import Badge from '../../components/ui/Badge';
 import Avatar from '../../components/ui/Avatar';
 import Button from '../../components/ui/Button';
@@ -149,9 +149,12 @@ export default function EmployeeDashboard() {
 
   const hasChartData = chartData.some((d) => d.hours > 0);
 
+  // This week = Monday to Sunday (ISO 8601); only days that are finished (clocked out) count
   const hoursThisWeek = useMemo(() => {
-    const last7 = myAttendance.slice(-5);
-    return last7.reduce((sum, a) => sum + (a.clockIn && a.clockOut ? a.totalHours || 0 : 0), 0);
+    const { start, end } = thisWeek();
+    return myAttendance
+      .filter((a) => a.date >= start && a.date <= end)
+      .reduce((sum, a) => sum + (a.clockIn && a.clockOut ? a.totalHours || 0 : 0), 0);
   }, [myAttendance]);
 
   const leaveBalance = useMemo(() => {

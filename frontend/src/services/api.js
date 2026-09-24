@@ -205,10 +205,6 @@ export const shiftService = {
     const { data } = await http.post('/shifts/schedules', payload);
     return data;
   },
-  generateSchedule: async (payload) => {
-    const { data } = await http.post('/shifts/schedules/generate', payload);
-    return data;
-  },
   updateSchedule: async (id, payload) => {
     const { data } = await http.put(`/shifts/schedules/${id}`, payload);
     return data;
@@ -217,13 +213,18 @@ export const shiftService = {
     const { data } = await http.delete(`/shifts/schedules/${id}`);
     return data;
   },
-  // The rules automatic scheduling follows, and the history of generation runs (admin).
+  // Automated shift scheduling (admin): its settings and rules, "Run now", and the history of runs.
   getRules: async () => {
     const { data } = await http.get('/shifts/rules');
     return data;
   },
   saveAutomation: async (payload) => {
     const { data } = await http.put('/shifts/rules/automation', payload);
+    return data;
+  },
+  // The same run the automatic switch performs; preview: true only reports what would happen.
+  runAutomation: async (preview) => {
+    const { data } = await http.post('/shifts/automation/run', { preview });
     return data;
   },
   savePattern: async (payload) => {

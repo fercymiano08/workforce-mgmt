@@ -1,7 +1,7 @@
 import { useState, useMemo, useEffect } from 'react';
 import {
   CalendarDays, Clock, Edit, Check,
-  Zap, Search, FilterX, Wand2, Trash2, AlertTriangle, Bot, UserPlus,
+  Zap, Search, FilterX, Trash2, AlertTriangle, Bot, UserPlus,
   Flame, ChevronLeft, ChevronRight, Users,
 } from 'lucide-react';
 import Card, { CardTitle, CardDescription } from '../../components/ui/Card';
@@ -10,7 +10,7 @@ import Badge from '../../components/ui/Badge';
 import Avatar from '../../components/ui/Avatar';
 import Modal from '../../components/ui/Modal';
 import EmployeePicker from '../../components/scheduling/EmployeePicker';
-import ScheduleRulesModal from '../../components/scheduling/ScheduleRulesModal';
+import AutomatedSchedulingModal from '../../components/scheduling/AutomatedSchedulingModal';
 import Input, { Select, Textarea } from '../../components/ui/Input';
 import { employeeService, shiftService } from '../../services/api';
 import { formatDate, formatTime } from '../../utils/helpers';
@@ -49,16 +49,7 @@ export default function Shifts() {
   const [departmentFilter, setDepartmentFilter] = useState('');
   const [dateFilter, setDateFilter] = useState('');
   const [statusFilter, setStatusFilter] = useState('');
-  const [isGenerateModalOpen, setIsGenerateModalOpen] = useState(false);
-  const [generateStep, setGenerateStep] = useState(1);
-  const [generateForm, setGenerateForm] = useState({
-    startDate: '', endDate: '', shiftId: '', skipWeekends: true, employeeIds: [],
-  });
-  const [generateErrors, setGenerateErrors] = useState({});
-  const [preview, setPreview] = useState(null);
-  const [previewing, setPreviewing] = useState(false);
-  const [rulesOpen, setRulesOpen] = useState(false);
-  const [generating, setGenerating] = useState(false);
+  const [automationOpen, setAutomationOpen] = useState(false);
   const [deleteTarget, setDeleteTarget] = useState(null);
   const [deleting, setDeleting] = useState(false);
   const [calMonthOffset, setCalMonthOffset] = useState(0);
@@ -226,98 +217,13 @@ export default function Shifts() {
     setIsModalOpen(false);
   };
 
-  const openGenerate = () => {
-    if (noShiftTemplates()) return;
-    setGenerateForm({ startDate: '', endDate: '', shiftId: standardShift?.id || '', skipWeekends: true, employeeIds: [] });
-    setGenerateErrors({});
-    setGenerateStep(1);
-    setPreview(null);
-    setIsGenerateModalOpen(true);
-  };
-
-  const setQuickRange = (type) => {
-    const now = new Date();
-    const monday = startOfWeek(now);
-    if (type === 'thisWeek') {
-      setGenerateForm(p => ({ ...p, startDate: toDateKey(monday), endDate: toDateKey(addDays(monday, 4)) }));
-    } else if (type === 'nextWeek') {
-      setGenerateForm(p => ({ ...p, startDate: toDateKey(addDays(monday, 7)), endDate: toDateKey(addDays(monday, 11)) }));
-    } else if (type === 'thisMonth') {
-      const first = new Date(now.getFullYear(), now.getMonth(), 1);
-      const last = new Date(now.getFullYear(), now.getMonth() + 1, 0);
-      setGenerateForm(p => ({ ...p, startDate: toDateKey(first), endDate: toDateKey(last) }));
-    } else if (type === 'nextMonth') {
-      const first = new Date(now.getFullYear(), now.getMonth() + 1, 1);
-      const last = new Date(now.getFullYear(), now.getMonth() + 2, 0);
-      setGenerateForm(p => ({ ...p, startDate: toDateKey(first), endDate: toDateKey(last) }));
-    }
-  };
-
-  const targetCount = generateForm.employeeIds.length;
   const selectedEmployee = employees.find(e => e.id === formData.employeeId);
-  const selectedGenShift = (shiftDefs || []).find(s => s.id === generateForm.shiftId);
 
   const deleteEmpName = deleteTarget ? (() => {
     const emp = employees.find(e => e.id === deleteTarget.employeeId);
     return emp ? `${emp.firstName} ${emp.lastName}` : deleteTarget.employeeName;
   })() : '';
 
-
-  const generateErrorsFor = () => {
-    const errs = {};
-    if (!generateForm.startDate) errs.startDate = 'Required';
-    if (!generateForm.endDate) errs.endDate = 'Required';
-    if (generateForm.startDate && generateForm.endDate && generateForm.endDate < generateForm.startDate) errs.endDate = 'Must be on or after the start date';
-    if (!generateForm.shiftId) errs.shiftId = 'Required';
-    if (generateForm.employeeIds.length === 0) errs.employeeIds = 'Select at least one employee';
-    return errs;
-  };
-
-  const generatePayload = () => ({
-    startDate: generateForm.startDate, endDate: generateForm.endDate, shiftId: generateForm.shiftId,
-    skipWeekends: generateForm.skipWeekends, employeeIds: generateForm.employeeIds,
-  });
-
-  // Step 2 -> 3: ask the server what WOULD happen. Nothing is created yet.
-  const handlePreview = async () => {
-    const errs = generateErrorsFor();
-    setGenerateErrors(errs);
-    if (Object.keys(errs).length > 0) return;
-    setPreviewing(true);
-    try {
-      const result = await shiftService.generateSchedule({ ...generatePayload(), preview: true });
-      setPreview(result?.data || result);
-      setGenerateStep(3);
-    } catch (err) {
-      const data = err?.response?.data;
-      const firstFieldError = data?.errors ? Object.values(data.errors).flat()[0] : null;
-      toast.error('Could not preview', firstFieldError || data?.message || 'The server did not respond. Please try again.');
-    } finally { setPreviewing(false); }
-  };
-
-  const handleGenerate = async () => {
-    const errs = generateErrorsFor();
-    setGenerateErrors(errs);
-    if (Object.keys(errs).length > 0) return;
-    setGenerating(true);
-    try {
-      const result = await shiftService.generateSchedule(generatePayload());
-      await refreshSchedules();
-      setIsGenerateModalOpen(false);
-      const summary = result?.data || {};
-      const parts = [`${summary.created ?? 0} shift${summary.created === 1 ? '' : 's'} created`];
-      if (summary.skippedExisting) parts.push(`${summary.skippedExisting} already scheduled`);
-      if (summary.skippedHoliday) parts.push(`${summary.skippedHoliday} skipped for holidays`);
-      if (summary.skippedOnLeave) parts.push(`${summary.skippedOnLeave} skipped for approved leave`);
-      if (summary.coverageShortages?.length) parts.push(`${new Set(summary.coverageShortages.map(c => c.date)).size} day(s) below minimum coverage`);
-      toast.success('Schedule Generated', parts.join(' · '));
-    } catch (err) {
-      const data = err?.response?.data;
-      const firstFieldError = data?.errors ? Object.values(data.errors).flat()[0] : null;
-      toast.error('Could not generate schedule', firstFieldError || data?.message || 'The server did not respond. Please try again.');
-    }
-    finally { setGenerating(false); }
-  };
 
   const statsCards = [
     { label: 'Total Assignments', value: stats.total, icon: CalendarDays, color: 'blue' },
@@ -328,7 +234,9 @@ export default function Shifts() {
   const colorMap = { blue: 'bg-blue-50 text-blue-600', emerald: 'bg-emerald-50 text-emerald-600', amber: 'bg-amber-50 text-amber-600', purple: 'bg-purple-50 text-purple-600' };
   const barMap = { blue: 'bg-blue-500', emerald: 'bg-emerald-500', amber: 'bg-amber-500', purple: 'bg-purple-500' };
 
-  const shiftsLoading = loadingShiftDefs || loadingShiftSchedules;
+  // Only the FIRST load shows the skeleton. A later refresh (after a save) keeps the page, and any open window,
+  // on screen; swapping everything for the skeleton used to close the automation window and reopen it on its first tab.
+  const shiftsLoading = (loadingShiftDefs && !shiftDefs) || (loadingShiftSchedules && !shiftSchedules);
 
   if (shiftsLoading) {
     return <SkeletonPage kpiCount={4} />;
@@ -507,8 +415,8 @@ export default function Shifts() {
               <CardDescription>Assign, review, and manage employee schedules</CardDescription>
             </div>
             <div className="flex items-center gap-2">
-              {/* Two doors, two different jobs: the system assigning many people (automated), or you assigning one person by hand. */}
-              <Button variant="outline" icon={Bot} onClick={() => setRulesOpen(true)} title="Generate schedules for many people at once, and set the rules for automatic weekly scheduling">Automated Shift Assign</Button>
+              {/* Automated: the system schedules everyone by the rules. Standard: you assign one shift to one person by hand. */}
+              <Button variant="outline" icon={Bot} onClick={() => setAutomationOpen(true)} title="Schedule everyone automatically by the rules, and see what is scheduled">Automated Shift Scheduling</Button>
               <Button icon={UserPlus} onClick={() => openAdd()} title="Assign one shift to one person by hand">Standard Shift Assign</Button>
             </div>
           </div>
@@ -671,197 +579,7 @@ export default function Shifts() {
         </div>
       </Modal>
 
-      {/* Generate Schedule — 2-Step Wizard */}
-      <Modal isOpen={isGenerateModalOpen} onClose={() => setIsGenerateModalOpen(false)} title="Automated Shift Assign - Generate a schedule" size="xl">
-        {/* Step indicator */}
-        <div className="flex items-center gap-3 mb-5">
-          {[['When & What'], ['Who'], ['Review']].map(([label], idx) => {
-            const n = idx + 1;
-            const done = generateStep > n;
-            const current = generateStep === n;
-            return (
-              <div key={label} className="flex items-center gap-3 flex-1 last:flex-none">
-                <div className={`flex items-center gap-2 ${current ? 'text-blue-600' : done ? 'text-emerald-600' : 'text-gray-400'}`}>
-                  <span className={`w-7 h-7 rounded-full flex items-center justify-center text-xs font-bold ${current ? 'bg-blue-100 text-blue-700' : done ? 'bg-emerald-100 text-emerald-700' : 'bg-gray-100 text-gray-400'}`}>{done ? <Check className="w-3.5 h-3.5" /> : n}</span>
-                  <span className="text-sm font-semibold">{label}</span>
-                </div>
-                {n < 3 && <div className="flex-1 h-px bg-gray-200" />}
-              </div>
-            );
-          })}
-        </div>
-
-        {generateStep === 1 && (
-          <div className="space-y-6">
-            <div className="bg-blue-50 border border-blue-100 rounded-xl px-4 py-3 flex items-start gap-3">
-              <Zap className="w-4 h-4 text-blue-500 mt-0.5 shrink-0" />
-              <p className="text-sm text-blue-700">Select a shift type, then set the date range. Employees already scheduled or on approved leave are <span className="font-semibold">skipped automatically</span>.</p>
-            </div>
-
-            <div>
-              <span className="text-[13px] font-semibold text-gray-700 block mb-3">1. Pick a Shift Type</span>
-              <div className={`grid gap-3 ${(shiftDefs || []).length > 1 ? 'grid-cols-2' : 'grid-cols-1'}`}>
-                {(shiftDefs || []).map(def => {
-                  const Icon = shiftIcons[def.id] || Clock;
-                  const isSelected = generateForm.shiftId === def.id;
-                  let duration = parseInt(def.endTime) - parseInt(def.startTime);
-                  if (duration <= 0) duration += 24;
-                  return (
-                    <button
-                      key={def.id}
-                      onClick={() => setGenerateForm(p => ({ ...p, shiftId: def.id }))}
-                      className={`relative p-4 rounded-xl border-2 text-left transition-all duration-200 ${isSelected ? 'border-blue-500 bg-blue-50/80 shadow-md shadow-blue-500/10 ring-1 ring-blue-200' : 'border-gray-200 hover:border-gray-300 hover:shadow-sm bg-white'}`}
-                    >
-                      {isSelected && (
-                        <div className="absolute top-3 right-3 w-6 h-6 rounded-full bg-blue-500 flex items-center justify-center">
-                          <Check className="w-3.5 h-3.5 text-white" strokeWidth={3} />
-                        </div>
-                      )}
-                      <div className={`w-12 h-12 rounded-xl flex items-center justify-center mb-3 transition-all ${isSelected ? 'bg-blue-100' : shiftIconBg[def.id]}`}>
-                        <Icon className={`w-6 h-6 transition-all ${isSelected ? 'text-blue-600' : ''}`} />
-                      </div>
-                      <p className="text-sm font-bold text-gray-900">{def.name}</p>
-                      <p className="text-xs text-gray-500 mt-1">{formatTime(def.startTime)} – {formatTime(def.endTime)}</p>
-                      <p className="text-[11px] font-medium text-gray-400 mt-1.5">{duration} hours</p>
-                    </button>
-                  );
-                })}
-              </div>
-              {generateErrors.shiftId && <p className="text-xs text-red-500 mt-1.5">{generateErrors.shiftId}</p>}
-            </div>
-
-            <div>
-              <span className="text-[13px] font-semibold text-gray-700 block mb-3">2. Set the Date Range</span>
-              <div className="flex flex-wrap gap-2 mb-3">
-                {[['thisWeek', 'This Week'], ['nextWeek', 'Next Week'], ['thisMonth', 'This Month'], ['nextMonth', 'Next Month']].map(([k, l]) => (
-                  <button key={k} onClick={() => setQuickRange(k)} className="px-3 py-1.5 text-xs font-semibold rounded-lg border border-gray-200 text-gray-600 hover:border-blue-300 hover:text-blue-600 hover:bg-blue-50/50 transition-colors">{l}</button>
-                ))}
-              </div>
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                <Input label="Start Date" type="date" value={generateForm.startDate} onChange={e => setGenerateForm({ ...generateForm, startDate: e.target.value })} error={generateErrors.startDate} />
-                <Input label="End Date" type="date" min={generateForm.startDate || undefined} value={generateForm.endDate} onChange={e => setGenerateForm({ ...generateForm, endDate: e.target.value })} error={generateErrors.endDate} />
-              </div>
-            </div>
-
-            <div className="flex items-center gap-3 p-3 bg-gray-50 rounded-xl">
-              <input type="checkbox" id="skipWE" checked={generateForm.skipWeekends} onChange={e => setGenerateForm({ ...generateForm, skipWeekends: e.target.checked })} className="w-4 h-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500" />
-              <label htmlFor="skipWE" className="text-sm text-gray-700 cursor-pointer">Follow each person's work days (usually Monday to Friday - set per department under Automation & rules)</label>
-            </div>
-          </div>
-        )}
-
-        {generateStep === 2 && (
-          <div className="space-y-5">
-            <div className="flex items-center gap-3 p-3 bg-gray-50 rounded-xl">
-              <div className={`w-10 h-10 rounded-lg flex items-center justify-center shrink-0 ${selectedGenShift ? shiftIconBg[selectedGenShift.id] : 'bg-gray-100 text-gray-400'}`}>
-                {selectedGenShift ? (() => { const I = shiftIcons[selectedGenShift.id] || Clock; return <I className="w-5 h-5" />; })() : <Clock className="w-5 h-5" />}
-              </div>
-              <div className="min-w-0 flex-1">
-                <p className="text-sm font-semibold text-gray-900">{selectedGenShift?.name || 'No shift selected'}</p>
-                <p className="text-xs text-gray-500">
-                  {generateForm.startDate && generateForm.endDate ? `${formatDate(generateForm.startDate)} – ${formatDate(generateForm.endDate)}` : 'No dates set'}
-                  {generateForm.skipWeekends ? ' · Following work patterns' : ' · Every day of the week'}
-                </p>
-              </div>
-            </div>
-
-            <div>
-              <span className="text-[13px] font-semibold text-gray-700 block mb-2">Choose employees</span>
-              <p className="text-xs text-gray-400 mb-3">Pick a department, then a role, then tick the people to schedule. You can repeat this for other departments, and your ticks stay.</p>
-              <EmployeePicker mode="multi" employees={employees} value={generateForm.employeeIds} onChange={(ids) => setGenerateForm(p => ({ ...p, employeeIds: ids }))} error={generateErrors.employeeIds} listHeight="max-h-[38vh]" />
-              {generateErrors.employeeIds && <p className="text-xs text-red-500 mt-1.5">{generateErrors.employeeIds}</p>}
-            </div>
-
-          </div>
-        )}
-
-        {generateStep === 3 && preview && (
-          <div className="space-y-5">
-            <div className="rounded-2xl border border-emerald-200 bg-emerald-50/60 p-5">
-              <p className="text-sm font-semibold text-emerald-800 flex items-center gap-2"><Check className="w-4 h-4" /> This is what will happen - nothing has been created yet</p>
-              <p className="text-3xl font-bold text-emerald-700 mt-2">{preview.created.toLocaleString()} <span className="text-base font-semibold">shifts</span></p>
-              <p className="text-sm text-emerald-700 mt-1">for {preview.employees} employee{preview.employees === 1 ? '' : 's'} · {formatDate(preview.startDate)} – {formatDate(preview.endDate)} · {selectedGenShift?.name}</p>
-            </div>
-
-            <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-              {[
-                ['Already scheduled', preview.skippedExisting],
-                ['On approved leave', preview.skippedOnLeave],
-                ['Holidays', preview.skippedHoliday],
-                ['Day off (work pattern)', preview.skippedOffDay],
-              ].map(([label, n]) => (
-                <div key={label} className="rounded-xl border border-gray-100 bg-white p-3">
-                  <p className="text-xl font-bold text-gray-900">{n}</p>
-                  <p className="text-[11px] text-gray-500 leading-tight">{label} <span className="text-gray-400">(skipped)</span></p>
-                </div>
-              ))}
-            </div>
-
-            {Object.keys(preview.holidays || {}).length > 0 && (
-              <p className="text-xs text-gray-500">Holidays in this range: {Object.entries(preview.holidays).map(([d, n]) => `${formatDate(d)} (${n})`).join(', ')}.</p>
-            )}
-
-            {preview.coverageShortages?.length > 0 && (
-              <div className="rounded-xl border border-amber-200 bg-amber-50/70 p-4 space-y-2">
-                <p className="text-sm font-semibold text-amber-800 flex items-center gap-2"><AlertTriangle className="w-4 h-4" /> Check before publishing</p>
-                <ul className="text-sm text-amber-800 space-y-1 max-h-32 overflow-y-auto">
-                  {preview.coverageShortages.map((c) => <li key={`${c.date}-${c.department}`}>• {formatDate(c.date)}: {c.department} would have {c.have} scheduled, needs at least {c.need}</li>)}
-                </ul>
-              </div>
-            )}
-
-            {Object.keys(preview.perDay || {}).length > 0 && (
-              <div>
-                <p className="text-sm font-semibold text-gray-700 mb-0.5">Shifts per day</p>
-                <p className="text-xs text-gray-400 mb-2.5">How many people get a shift on each day in this range — a quick check the week isn't lopsided.</p>
-                <div className="rounded-xl border border-gray-200 max-h-72 overflow-y-auto divide-y divide-gray-100">
-                  {(() => {
-                    const entries = Object.entries(preview.perDay);
-                    const counts = entries.map(([, n]) => n);
-                    const max = Math.max(...counts);
-                    const min = Math.min(...counts);
-                    const flagged = max !== min;
-                    return entries.map(([d, n]) => (
-                      <div key={d} className="flex items-center justify-between gap-3 px-4 py-3">
-                        <span className="text-sm font-medium text-gray-700">
-                          {new Date(`${d}T00:00:00`).toLocaleDateString('en-US', { weekday: 'short' })}, {formatDate(d)}
-                        </span>
-                        <span className="flex items-center gap-2.5">
-                          <span className="text-base font-bold text-gray-900">{n} shift{n === 1 ? '' : 's'}</span>
-                          {flagged && n === max && <Badge variant="info" size="sm">busiest</Badge>}
-                          {flagged && n === min && <Badge variant="default" size="sm">lightest</Badge>}
-                        </span>
-                      </div>
-                    ));
-                  })()}
-                </div>
-              </div>
-            )}
-
-            {preview.created === 0 && <p className="text-sm text-gray-500">Nothing would be created: everyone is already scheduled, on leave, or off on those days.</p>}
-          </div>
-        )}
-
-        <div className="flex justify-between gap-3 mt-6 pt-4 border-t border-gray-100">
-          {generateStep > 1 ? (
-            <Button variant="outline" onClick={() => setGenerateStep(generateStep - 1)} disabled={generating || previewing}>Back</Button>
-          ) : <div />}
-          {generateStep === 1 && (
-            <Button onClick={() => { const errs = generateErrorsFor(); delete errs.employeeIds; setGenerateErrors(errs); if (Object.keys(errs).length === 0) setGenerateStep(2); }}>Next: choose employees</Button>
-          )}
-          {generateStep === 2 && (
-            <Button onClick={handlePreview} loading={previewing} icon={Search}>Preview{targetCount > 0 ? ` for ${targetCount} employee${targetCount === 1 ? '' : 's'}` : ''}</Button>
-          )}
-          {generateStep === 3 && (
-            <div className="flex gap-2">
-              <Button variant="outline" onClick={() => setIsGenerateModalOpen(false)} disabled={generating}>Cancel</Button>
-              <Button onClick={handleGenerate} loading={generating} icon={Wand2} disabled={!preview || preview.created === 0}>Publish schedule</Button>
-            </div>
-          )}
-        </div>
-      </Modal>
-
-      <ScheduleRulesModal isOpen={rulesOpen} onClose={() => setRulesOpen(false)} employees={employees} shiftDefs={shiftDefs} onChanged={() => refreshSchedules()} onGenerateNow={() => { setRulesOpen(false); openGenerate(); }} />
+      <AutomatedSchedulingModal isOpen={automationOpen} onClose={() => setAutomationOpen(false)} employees={employees} shiftDefs={shiftDefs} onChanged={() => refreshSchedules()} />
 
       {/* Delete Confirmation */}
       <Modal isOpen={!!deleteTarget} onClose={closeDeleteSchedule} title="Delete Shift Assignment" size="sm">

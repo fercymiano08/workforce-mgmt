@@ -16,7 +16,7 @@ import { useToast } from '../../context/ToastContext';
 import useApiData from '../../hooks/useApiData';
 import { attendanceService, overtimeService, shiftService } from '../../services/api';
 import TodayBadge from '../../components/common/TodayBadge';
-import { todayKey, todayRowClass } from '../../utils/today';
+import { todayKey, todayRowClass, weekOf } from '../../utils/today';
 import { kioskService } from '../../services/kioskService';
 import { formatDate, formatTime, approvedOvertimeHours, extendTime } from '../../utils/helpers';
 import { formatHours } from '../../services/attendanceService';
@@ -233,19 +233,12 @@ export default function MyAttendance() {
 
   const filtered = useMemo(() => {
     if (periodFilter === 'All') return myAttendance;
-    const today = new Date();
+    // This week = Monday to Sunday (ISO 8601), counted in Manila like everything else
+    const today = todayKey();
+    const week = weekOf(today);
     return myAttendance.filter((a) => {
-      const d = new Date(a.date);
-      if (periodFilter === 'This Week') {
-        const dayOfWeek = today.getDay();
-        const weekStart = new Date(today);
-        weekStart.setDate(today.getDate() - dayOfWeek);
-        weekStart.setHours(0, 0, 0, 0);
-        return d >= weekStart && d <= today;
-      }
-      if (periodFilter === 'This Month') {
-        return d.getMonth() === today.getMonth() && d.getFullYear() === today.getFullYear();
-      }
+      if (periodFilter === 'This Week') return a.date >= week.start && a.date <= today;
+      if (periodFilter === 'This Month') return a.date.slice(0, 7) === today.slice(0, 7);
       return true;
     });
   }, [myAttendance, periodFilter]);

@@ -8,7 +8,7 @@ use App\Http\Controllers\Controller;
 use App\Models\Employee;
 use App\Models\Leave;
 use App\Services\AuditLogger;
-use App\Services\SchedulingClient;
+use App\Services\WorkingDays;
 use App\Services\NotificationService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -130,7 +130,7 @@ class LeaveController extends Controller
         }
 
         // Leave costs WORKING days: nobody is charged for a weekend, a holiday or a day off.
-        $counted = SchedulingClient::workingDays($data['employee_id'], $data['start_date'], $data['end_date']);
+        $counted = (new WorkingDays())->count($data['employee_id'], $data['start_date'], $data['end_date']);
         if ($counted['days'] < 1) {
             throw ValidationException::withMessages([
                 'startDate' => ['These dates contain no working days (they fall on weekends, holidays or days off). Choose dates that include at least one working day.'],
@@ -179,7 +179,7 @@ class LeaveController extends Controller
         ]);
         $this->assertSelfOrAdmin($request, $data['employeeId']);
 
-        return response()->json(['data' => SchedulingClient::workingDays($data['employeeId'], $data['startDate'], $data['endDate'])]);
+        return response()->json(['data' => (new WorkingDays())->count($data['employeeId'], $data['startDate'], $data['endDate'])]);
     }
 
     private function assertSufficientBalance(string $employeeId, string $leaveType, float|int $requested): void
@@ -226,7 +226,7 @@ class LeaveController extends Controller
             if ($end < $start) {
                 throw ValidationException::withMessages(['endDate' => ['The end date cannot be before the start date.']]);
             }
-            $counted = SchedulingClient::workingDays($data['employee_id'] ?? $record->employee_id, $start, $end);
+            $counted = (new WorkingDays())->count($data['employee_id'] ?? $record->employee_id, $start, $end);
             if ($counted['days'] < 1) {
                 throw ValidationException::withMessages(['startDate' => ['These dates contain no working days (they fall on weekends, holidays or days off).']]);
             }

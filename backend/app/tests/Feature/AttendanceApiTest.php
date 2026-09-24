@@ -12,6 +12,12 @@ class AttendanceApiTest extends TestCase
 {
     use RefreshDatabase;
 
+    protected function setUp(): void
+    {
+        parent::setUp();
+        $this->skipKioskFaceCheck();
+    }
+
     public function test_attendance_admin_routes_require_authentication(): void
     {
         $this->getJson('/api/attendance')->assertUnauthorized();
@@ -90,7 +96,7 @@ class AttendanceApiTest extends TestCase
             'status' => 'Open',
         ]);
 
-        \App\Services\AttendanceClient::resolveSecurityEvent($event->id, 'Workforce AI');
+        \App\Services\SecurityEvents::resolveSecurityEvent($event->id, 'Workforce AI');
 
         $event->refresh();
         $this->assertSame('Resolved', $event->status);

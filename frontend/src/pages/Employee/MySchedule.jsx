@@ -4,7 +4,7 @@ import {
   Clock, MapPin, Filter, CalendarOff, CalendarPlus,
 } from 'lucide-react';
 import TodayBadge from '../../components/common/TodayBadge';
-import { todayKey, todayRowClass } from '../../utils/today';
+import { todayKey, todayRowClass, weekOf } from '../../utils/today';
 import Badge from '../../components/ui/Badge';
 import { SkeletonPage } from '../../components/ui/LoadingSkeleton';
 import { useAuth } from '../../context/AuthContext';
@@ -22,9 +22,6 @@ const statusBadgeVariant = {
   Upcoming: 'primary', Scheduled: 'warning', Completed: 'success',
   Cancelled: 'danger',
 };
-
-const toDateStr = (d) =>
-  `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
 
 export default function MySchedule() {
   const { user } = useAuth();
@@ -91,30 +88,23 @@ export default function MySchedule() {
     return mySchedules.find((s) => s.date > today) || null;
   }, [mySchedules, today]);
 
+  // This week = Monday to Sunday (ISO 8601), the same week the rest of the system uses
   const thisWeek = useMemo(() => {
     if (!referenceDate) return { count: 0, start: null, end: null };
-    const ref = new Date(today);
-    const start = new Date(ref);
-    start.setDate(ref.getDate() - ref.getDay());
-    const end = new Date(start);
-    end.setDate(start.getDate() + 6);
-    const count = mySchedules.filter(
-      (s) => s.date >= toDateStr(start) && s.date <= toDateStr(end)
-    ).length;
+    const { start, end } = weekOf(today);
+    const count = mySchedules.filter((s) => s.date >= start && s.date <= end).length;
     return { count, start, end };
   }, [mySchedules, referenceDate, today]);
 
   const filtered = useMemo(() => {
     if (periodFilter === 'All Schedules') return mySchedules;
     if (!referenceDate || !thisWeek.start) return [];
-    const ref = new Date(today);
     return mySchedules.filter((s) => {
-      const d = new Date(s.date);
       if (periodFilter === 'This Week') {
-        return d >= thisWeek.start && d <= thisWeek.end;
+        return s.date >= thisWeek.start && s.date <= thisWeek.end;
       }
       if (periodFilter === 'This Month') {
-        return d.getMonth() === ref.getMonth() && d.getFullYear() === ref.getFullYear();
+        return s.date.slice(0, 7) === today.slice(0, 7);
       }
       return true;
     });
@@ -233,7 +223,7 @@ export default function MySchedule() {
                   <p className="text-[13px] font-medium text-gray-400">Scheduled Days This Week</p>
                   <p className="text-lg font-bold text-gray-900 mt-1.5">{thisWeek.count} days</p>
                   <p className="text-xs text-gray-500 mt-1">
-                    {thisWeek.start ? `${formatDate(toDateStr(thisWeek.start))} – ${formatDate(toDateStr(thisWeek.end))}` : 'No schedule available'}
+                    {thisWeek.start ? `${formatDate(thisWeek.start)} – ${formatDate(thisWeek.end)}` : 'No schedule available'}
                   </p>
                 </div>
                 <div className="w-11 h-11 rounded-xl flex items-center justify-center shrink-0 bg-blue-50 text-blue-600">

@@ -45,6 +45,15 @@ class DatabaseSeeder extends Seeder
         if (filter_var(env('SEED_DEMO', true), FILTER_VALIDATE_BOOLEAN)) {
             $this->call(DemoSeeder::class);
         }
+
+        // A six-day week (Monday to Saturday, Sunday off), as is usual in the Philippines.
+        \App\Models\ScheduleSetting::current()->update(['default_work_days' => [1, 2, 3, 4, 5, 6]]);
+
+        // The demo employees' recent schedules, attendance and timesheets, made by the system's own rules
+        // (see demo:refresh) so they read like people who really used it.
+        if ($demo) {
+            \Illuminate\Support\Facades\Artisan::call('demo:refresh');
+        }
     }
 
     private function seedUsers(bool $demo = true): void
@@ -379,6 +388,10 @@ class DatabaseSeeder extends Seeder
         if (new DateTime($maxDay) > new DateTime('now')) {
             $shiftDays = -$shiftDays;
         }
+        // Whole weeks only, so every date keeps its weekday: a timesheet week still starts on a Monday
+        // (ISO 8601), and a weekend record stays on a weekend. Moving by, say, 87 days turned every Monday
+        // week-start into a Thursday. (Rounded towards the past, so nothing lands after today.)
+        $shiftDays = $shiftDays >= 0 ? intdiv($shiftDays, 7) * 7 : -((int) ceil(-$shiftDays / 7) * 7);
         if ($shiftDays === 0) {
             return $data;
         }

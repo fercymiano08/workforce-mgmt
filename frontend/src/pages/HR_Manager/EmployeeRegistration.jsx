@@ -233,7 +233,6 @@ export default function EmployeeRegistration() {
         gender: formData.gender,
         emergencyContact: formData.emergencyContact,
         emergencyPhone: formData.emergencyPhone,
-        assignedShift: '',
         skills: [],
         password: formData.password,
         faceRegistered: formData.faceRegistered,

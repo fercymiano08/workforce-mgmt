@@ -1,12 +1,6 @@
 <?php
 
-use Illuminate\Foundation\Inspiring;
-use Illuminate\Support\Facades\Artisan;
 use Illuminate\Support\Facades\Schedule;
-
-Artisan::command('inspire', function () {
-    $this->comment(Inspiring::quote());
-})->purpose('Display an inspiring quote');
 
 // A SICK early clock-out without a medical certificate by its deadline becomes unexcused.
 Schedule::command('early-outs:expire-certificates')->hourly()->withoutOverlapping();
@@ -28,6 +22,10 @@ Schedule::command('schedules:auto-generate')->hourly()->withoutOverlapping();
 // send the one-time reminders. Both are safe to run repeatedly.
 Schedule::command('timesheets:auto-submit')->hourly()->withoutOverlapping();
 Schedule::command('timesheets:remind')->hourly()->withoutOverlapping();
+
+// Attendance alerts for the admins (possible no-show, incomplete record, unauthorized overtime, staffing shortage):
+// checked every minute so each appears about a minute after it happens, not only when someone opens the dashboard.
+Schedule::command('attendance:check-alerts')->everyMinute()->withoutOverlapping();
 
 // Rebuild recent timesheets right after a punch or overtime approval changes the figures behind them.
 Schedule::command('timesheets:refresh')->everyMinute()->withoutOverlapping();

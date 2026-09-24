@@ -18,7 +18,7 @@ class SchedulingRoleBoundaryTest extends TestCase
     private const ADMIN_ONLY = [
         ['GET', '/api/shifts/schedules'],
         ['POST', '/api/shifts/schedules'],
-        ['POST', '/api/shifts/schedules/generate'],
+        ['POST', '/api/shifts/automation/run'],
         ['PUT', '/api/shifts/schedules/SCH001'],
         ['DELETE', '/api/shifts/schedules/SCH001'],
         ['GET', '/api/shifts/rules'],

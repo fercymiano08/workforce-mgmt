@@ -14,6 +14,22 @@ class Employee extends Model
     public $incrementing = false;
     protected $keyType = 'string';
 
+    protected static function booted(): void
+    {
+        // Someone who no longer works here keeps no upcoming shifts (they would only turn into false no-shows);
+        // someone reactivated is put back on the weeks already scheduled.
+        static::saved(function (Employee $employee): void {
+            if (! $employee->wasChanged('status')) {
+                return;
+            }
+            if ($employee->status === 'Inactive') {
+                \App\Services\ScheduleCleanup::forInactiveEmployee($employee);
+            } elseif ($employee->getOriginal('status') === 'Inactive') {
+                app(\App\Services\ScheduleGenerator::class)->refill([$employee->id], '0000-01-01', '9999-12-31', 'you are active again');
+            }
+        });
+    }
+
     protected $fillable = [
         'id', 'first_name', 'last_name', 'email', 'phone', 'department', 'position',
         'employment_type', 'status', 'hire_date', 'manager', 'avatar',

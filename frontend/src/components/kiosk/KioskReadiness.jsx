@@ -69,9 +69,11 @@ export default function KioskReadiness({ overview }) {
           detail={!r ? 'Checking...' : r.pinSet ? 'A PIN is set. Devices unlock with it once a day.' : 'No PIN yet. Enable kiosk mode to create one.'}
         />
         <Row
-          state={!r ? 'wait' : r.kioskActive ? 'ok' : 'warn'}
+          state={!r ? 'wait' : r.kioskActive ? 'ok' : 'bad'}
           title="Kiosk mode"
-          detail={!r ? 'Checking...' : r.kioskActive ? 'On. The entrance device accepts clock-ins.' : 'Off. Clock-ins are disabled until it is enabled.'}
+          detail={!r ? 'Checking...' : r.kioskActive
+            ? 'Enabled for today. The entrance device accepts clock-ins until midnight.'
+            : 'Disabled. Clock-ins are off until it is enabled (it turns off every midnight).'}
         />
         <Row
           state={!r ? 'wait' : r.withoutFace === 0 ? 'ok' : 'warn'}

@@ -24,6 +24,7 @@ class EarlyLeaveAbuseControlsTest extends TestCase
     protected function setUp(): void
     {
         parent::setUp();
+        $this->skipKioskFaceCheck();
         $this->withHeaders($this->kioskDeviceHeaders());
     }
 

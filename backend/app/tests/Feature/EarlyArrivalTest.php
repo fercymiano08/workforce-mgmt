@@ -17,6 +17,12 @@ class EarlyArrivalTest extends TestCase
 {
     use RefreshDatabase;
 
+    protected function setUp(): void
+    {
+        parent::setUp();
+        $this->skipKioskFaceCheck();
+    }
+
     private function setUpEmployee(string $now): void
     {
         Employee::create([

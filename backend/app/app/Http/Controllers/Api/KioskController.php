@@ -12,15 +12,16 @@ use App\Models\OvertimeRequest;
 use App\Models\SecurityEvent;
 use App\Models\Setting;
 use App\Models\ShiftSchedule;
-use App\Services\ConfigurationClient;
+use App\Services\SettingsUpdater;
 use App\Services\EarlyLeaveEnforcer;
 use App\Services\NotificationService;
-use App\Services\PayrollClient;
+use App\Services\TimesheetGenerationService;
 use App\Services\ShiftHours;
 use App\Services\SystemSettings;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use App\Services\KioskDeviceToken;
+use App\Services\KioskFaceTicket;
 use Illuminate\Support\Carbon;
 
 /**
@@ -53,9 +54,20 @@ class KioskController extends Controller
         return max(0, (int) app(SystemSettings::class)->get('late_grace_minutes', self::DEFAULT_LATE_GRACE_MINUTES));
     }
 
-    // face-api.js's own convention for its 128-value descriptors: distances
-    // at or below this are considered the same person.
-    private const FACE_MATCH_THRESHOLD = 0.6;
+    // Face matching on face-api.js's 128-value descriptors (Euclidean distance: lower = more alike). Its
+    // library default of 0.6 is tuned for "probably the same person" and lets close relatives through, so the
+    // kiosk is stricter: the AVERAGE over several live frames must be at or below FACE_MATCH_THRESHOLD, and
+    // no single frame may be further than FACE_FRAME_LIMIT. Typical same-person distances are 0.25-0.45.
+    private const FACE_MATCH_THRESHOLD = 0.5;
+
+    private const FACE_FRAME_LIMIT = 0.55;
+
+    // All live frames must show one and the same face (no swapping people mid-scan).
+    private const FACE_SAME_SCAN_LIMIT = 0.6;
+
+    // 1:N check against every other enrolled employee: if someone else is closer, or within this margin of
+    // the claimed employee, the scan cannot tell the two apart (siblings, twins, look-alikes) and is refused.
+    private const FACE_AMBIGUITY_MARGIN = 0.08;
 
     /** The activity log (employee names, clock times, security attempts): Administrator only. */
     public function logs(): JsonResponse
@@ -175,7 +187,23 @@ class KioskController extends Controller
     /** Adds an entry to the kiosk activity log (and a security event when it is one). */
     private function appendLog(string $type, string $message, ?string $detail = null, ?string $employeeId = null): array
     {
-        $entry = [
+        $entry = $this->logEntry($type, $message, $detail, $employeeId);
+
+        $setting = Setting::query()->firstOrCreate([]);
+        $kiosk = $this->kiosk($setting);
+        $kiosk['logs'] = array_slice([$entry, ...($kiosk['logs'] ?? [])], 0, self::MAX_LOGS);
+        SettingsUpdater::updateKiosk($kiosk);
+
+        if ($type === 'security') {
+            $this->recordSecurityEvent($message, $employeeId);
+        }
+
+        return $entry;
+    }
+
+    private function logEntry(string $type, string $message, ?string $detail = null, ?string $employeeId = null): array
+    {
+        return [
             'id' => 'KLOG-'.strtoupper(substr(uniqid('', true), 0, 13)),
             'type' => $type,
             'message' => $message,
@@ -183,17 +211,6 @@ class KioskController extends Controller
             'employeeId' => $employeeId,
             'at' => now()->toISOString(),
         ];
-
-        $setting = Setting::query()->firstOrCreate([]);
-        $kiosk = $this->kiosk($setting);
-        $kiosk['logs'] = array_slice([$entry, ...($kiosk['logs'] ?? [])], 0, self::MAX_LOGS);
-        ConfigurationClient::updateKiosk($kiosk);
-
-        if ($type === 'security') {
-            $this->recordSecurityEvent($message, $employeeId);
-        }
-
-        return $entry;
     }
 
     /**
@@ -203,7 +220,8 @@ class KioskController extends Controller
      */
     private function recordSecurityEvent(string $message, ?string $employeeId): void
     {
-        $type = str_contains($message, 'Face mismatch') ? 'face_mismatch'
+        // A punch without a verified face scan is someone trying to clock in as a person they did not prove to be.
+        $type = str_contains($message, 'Face mismatch') || str_contains($message, 'no verified face scan') ? 'face_mismatch'
             : (str_contains($message, 'incorrect PIN') ? 'pin_failed' : null);
 
         if ($type === null) {
@@ -254,7 +272,7 @@ class KioskController extends Controller
             }
         }
 
-        ConfigurationClient::updateKiosk($kiosk);
+        SettingsUpdater::updateKiosk($kiosk);
 
         return response()->json(['data' => $this->publicConfig()]);
     }
@@ -272,8 +290,9 @@ class KioskController extends Controller
     {
         $request->validate([
             'employeeId' => 'required|string|max:20',
-            'descriptor' => 'required|array|size:128',
-            'descriptor.*' => 'numeric',
+            'descriptors' => 'required|array|min:1|max:5',
+            'descriptors.*' => 'required|array|size:128',
+            'descriptors.*.*' => 'numeric',
         ]);
 
         $employee = Employee::find($request->input('employeeId'));
@@ -281,26 +300,80 @@ class KioskController extends Controller
             return response()->json(['ok' => false, 'message' => 'Employee not found'], 404);
         }
 
-        if (! $employee->face_registered || empty($employee->face_descriptor)) {
+        if (! $employee->face_registered || ! is_array($employee->face_descriptor) || count($employee->face_descriptor) !== 128) {
             return response()->json([
                 'ok' => false,
                 'message' => 'No face is registered for this employee yet. Ask HR to register your face first.',
             ], 422);
         }
 
-        $distance = $this->euclideanDistance($employee->face_descriptor, $request->input('descriptor'));
-        $matched = $distance <= self::FACE_MATCH_THRESHOLD;
+        $frames = array_values($request->input('descriptors'));
+        $name = trim($employee->first_name.' '.$employee->last_name);
 
-        // Simple linear distance-to-percentage mapping for display only -
-        // not a calibrated probability.
-        $confidence = max(0, round((1 - min($distance, 1)) * 100, 1));
+        // Every frame must be the same person as the first one.
+        foreach ($frames as $frame) {
+            if ($this->euclideanDistance($frames[0], $frame) > self::FACE_SAME_SCAN_LIMIT) {
+                return response()->json([
+                    'ok' => false,
+                    'message' => 'The camera saw more than one face during the scan. Only one person should be in front of the camera. Please try again.',
+                ], 422);
+            }
+        }
 
-        if (! $matched) {
+        $distances = array_map(fn ($frame) => $this->euclideanDistance($employee->face_descriptor, $frame), $frames);
+        $average = array_sum($distances) / count($distances);
+        // Simple linear distance-to-percentage mapping for display only - not a calibrated probability.
+        $confidence = max(0, round((1 - min($average, 1)) * 100, 1));
+
+        if ($average > self::FACE_MATCH_THRESHOLD || max($distances) > self::FACE_FRAME_LIMIT) {
+            // Recorded here, on the server, so a modified terminal cannot keep failed attempts quiet.
+            $this->appendLog('security', "Face mismatch - person does not match {$name} ({$employee->id})",
+                'Average distance '.round($average, 3), $employee->id);
+
             return response()->json([
                 'ok' => false,
                 'message' => 'Face did not match the registered employee. Please try again.',
                 'data' => ['confidence' => $confidence],
             ], 401);
+        }
+
+        // 1:N: is this face also (nearly) as close to another enrolled employee? Then the scan cannot tell who
+        // it is. A closer match elsewhere means it is most likely that other person using this ID.
+        $closest = null;
+        Employee::where('id', '!=', $employee->id)->where('face_registered', true)->whereNotNull('face_descriptor')
+            ->get(['id', 'first_name', 'last_name', 'face_descriptor'])
+            ->each(function (Employee $other) use ($frames, &$closest): void {
+                if (! is_array($other->face_descriptor) || count($other->face_descriptor) !== 128) {
+                    return;
+                }
+                $d = array_sum(array_map(fn ($frame) => $this->euclideanDistance($other->face_descriptor, $frame), $frames)) / count($frames);
+                if ($closest === null || $d < $closest['distance']) {
+                    $closest = ['employee' => $other, 'distance' => $d];
+                }
+            });
+
+        if ($closest && $closest['distance'] <= $average + self::FACE_AMBIGUITY_MARGIN) {
+            $other = $closest['employee'];
+            $otherName = trim($other->first_name.' '.$other->last_name);
+            $closer = $closest['distance'] < $average;
+            $this->appendLog('security',
+                $closer
+                    ? "Face mismatch - person does not match {$name} ({$employee->id})"
+                    : "Ambiguous face match - {$name} ({$employee->id}) cannot be told apart from another employee",
+                "Closest enrolled face: {$otherName} ({$other->id}), distance ".round($closest['distance'], 3).' vs '.round($average, 3),
+                $employee->id);
+
+            return $closer
+                ? response()->json([
+                    'ok' => false,
+                    'message' => 'Face did not match the registered employee. Please try again.',
+                    'data' => ['confidence' => $confidence],
+                ], 401)
+                : response()->json([
+                    'ok' => false,
+                    'code' => 'ambiguous',
+                    'message' => 'Your face is too similar to another registered employee for the kiosk to be sure it is you. Please see HR to record your attendance.',
+                ], 409);
         }
 
         return response()->json([
@@ -311,8 +384,26 @@ class KioskController extends Controller
                 'liveness' => 'Not Checked',
                 'approval' => 'Successful',
                 'faceRegistered' => true,
+                'faceTicket' => app(KioskFaceTicket::class)->issue($employee->id),
             ],
         ]);
+    }
+
+    /** The face-match proof a clock-in/out must carry (see KioskFaceTicket); null when it is present and valid. */
+    private function faceTicketMissing(Request $request, string $employeeId): ?JsonResponse
+    {
+        if (app(KioskFaceTicket::class)->valid($request->input('faceTicket'), $employeeId)) {
+            return null;
+        }
+
+        $employee = Employee::find($employeeId);
+        $name = $employee ? trim($employee->first_name.' '.$employee->last_name) : $employeeId;
+        $this->appendLog('security', "Punch refused - no verified face scan for {$name} ({$employeeId})", null, $employeeId);
+
+        return response()->json([
+            'message' => 'Face verification is required. Please scan your face again.',
+            'code' => 'face_required',
+        ], 403);
     }
 
     private function euclideanDistance(array $a, array $b): float
@@ -336,7 +427,7 @@ class KioskController extends Controller
         $setting = Setting::query()->firstOrCreate([]);
         $kiosk = $this->kiosk($setting);
         $kiosk['pinHash'] = hash('sha256', 'wfp-kiosk:'.$request->input('pin'));
-        ConfigurationClient::updateKiosk($kiosk);
+        SettingsUpdater::updateKiosk($kiosk);
 
         // The Administrator setting the PIN is standing at the device being enabled,
         // so it is issued a token straight away (any older token is now void).
@@ -351,7 +442,8 @@ class KioskController extends Controller
 
     public function reset(): JsonResponse
     {
-        ConfigurationClient::updateKiosk(self::DEFAULT_CONFIG);
+        // updateKiosk merges, so the PIN and the log must be cleared explicitly or they would survive the reset.
+        SettingsUpdater::updateKiosk([...self::DEFAULT_CONFIG, 'pinHash' => null, 'logs' => []]);
 
         return response()->json(['data' => $this->publicConfig()]);
     }
@@ -507,6 +599,10 @@ class KioskController extends Controller
             'location' => 'nullable|string|max:100',
         ]));
 
+        if ($refused = $this->faceTicketMissing($request, $data['employee_id'])) {
+            return $refused;
+        }
+
         // The server's clock decides the date, the time and Present/Late - never
         // the terminal's. A wrong device clock or a hand-made request must not be
         // able to record an on-time arrival that did not happen.
@@ -583,8 +679,9 @@ class KioskController extends Controller
             // Two clock-ins raced each other; the database let only one through.
             return response()->json(['message' => 'This employee already has an attendance record for today.'], 409);
         }
+        app(KioskFaceTicket::class)->spend($request->input('faceTicket'));
 
-        PayrollClient::syncForEmployee($record->employee_id);
+        (new TimesheetGenerationService())->syncForEmployee($record->employee_id, now()->toDateString());
         NotificationService::retractNoShowAlert($record->employee_id);
 
         if ($record->status === 'Late') {
@@ -627,6 +724,10 @@ class KioskController extends Controller
 
         if (! $record->clock_in || $record->clock_out) {
             return response()->json(['message' => 'This attendance record cannot be clocked out.'], 409);
+        }
+
+        if ($refused = $this->faceTicketMissing($request, $record->employee_id)) {
+            return $refused;
         }
 
         if ($leave = $this->approvedLeaveOn($record->employee_id, $record->date->toDateString())) {
@@ -726,6 +827,7 @@ class KioskController extends Controller
         $data['actual_clock_out'] = $clockOut->format('H:i:s');
 
         $record->update($data);
+        app(KioskFaceTicket::class)->spend($request->input('faceTicket'));
 
         // A few minutes over is normal; staying well past the end with no approval is worth HR's attention.
         if ($uncountedMinutes > $this->lateGraceMinutes()) {
@@ -761,7 +863,7 @@ class KioskController extends Controller
             NotificationService::notifyEmployee($record->employee_id, 'attendance_clock_out', 'Clocked Out', $message, 'low', '/my-attendance');
         }
 
-        PayrollClient::syncForEmployee($record->employee_id);
+        (new TimesheetGenerationService())->syncForEmployee($record->employee_id, now()->toDateString());
 
         return response()->json([
             'data' => $record->fresh()->toApiArray(),
@@ -869,7 +971,18 @@ class KioskController extends Controller
     private function kiosk(?Setting $setting = null): array
     {
         $setting ??= Setting::query()->firstOrCreate([]);
+        $kiosk = array_merge(self::DEFAULT_CONFIG, ['pinHash' => null, 'logs' => []], $setting->kiosk ?? []);
 
-        return array_merge(self::DEFAULT_CONFIG, ['pinHash' => null, 'logs' => []], $setting->kiosk ?? []);
+        // Kiosk mode lasts for the day it was switched on: at midnight (kiosk time zone) it turns itself off, the
+        // same moment the device's unlock ends, and an Administrator enables it again the next morning. Checked on
+        // every read, so it holds even when the scheduler is not running.
+        $startOfToday = now($kiosk['timezone'] ?: 'Asia/Manila')->startOfDay();
+        if ($kiosk['active'] && $kiosk['enabledAt'] && Carbon::parse($kiosk['enabledAt'])->lt($startOfToday)) {
+            $logs = array_slice([$this->logEntry('mode', 'Kiosk mode turned off automatically at midnight'), ...$kiosk['logs']], 0, self::MAX_LOGS);
+            $kiosk = array_merge($kiosk, ['active' => false, 'enabledAt' => null, 'logs' => $logs]);
+            SettingsUpdater::updateKiosk(['active' => false, 'enabledAt' => null, 'logs' => $logs]);
+        }
+
+        return $kiosk;
     }
 }

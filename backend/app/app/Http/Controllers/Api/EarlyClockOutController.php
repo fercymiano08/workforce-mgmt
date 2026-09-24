@@ -9,7 +9,7 @@ use App\Models\Employee;
 use App\Services\AuditLogger;
 use App\Services\EarlyLeavePolicy;
 use App\Services\NotificationService;
-use App\Services\TimeoffClient;
+use App\Services\TimeOffActions;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 
@@ -171,7 +171,7 @@ class EarlyClockOutController extends Controller
 
         if ($chosen === 'EXCUSED_SICK') {
             $employee = Employee::find($record->employee_id);
-            TimeoffClient::autoDraftSickLeave(
+            TimeOffActions::autoDraftSickLeave(
                 $record->employee_id,
                 $employee ? trim($employee->first_name.' '.$employee->last_name) : $record->employee_name,
                 $record->date->toDateString(),

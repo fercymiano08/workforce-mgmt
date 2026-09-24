@@ -143,7 +143,7 @@ Some columns (like `settings.kiosk`) store flexible structured data as JSON inst
 |-------|---------|-------------|
 | `shift_definitions` | The single shift template (Standard Shift 08:00–17:00). Overtime is not a shift - it extends this one when an overtime request is approved | `id`, `name`, `start_time`, `end_time` |
 | `shift_schedules` | Who works which shift on which date | `id`, `employee_id` (FK), `shift_id` (FK), `date`, `status` |
-| `schedule_settings` | The one row of automatic-scheduling settings: on/off, the day and hour it runs, weeks ahead, the usual work days, the shift | `auto_enabled`, `run_day`, `run_hour`, `weeks_ahead`, `default_work_days` |
+| `schedule_settings` | The one row of automated-scheduling settings: the automatic switch, the calendar period to keep scheduled (`window`: `week`, `two_weeks`, `month` or `next_month`; weeks are Monday–Sunday, ISO 8601), everyone's usual work days, the shift | `auto_enabled`, `window`, `default_work_days` (ISO weekdays, 1 = Mon … 7 = Sun), `shift_id` |
 | `work_patterns` | Which weekdays a department or one employee works (overrides the usual days) | `scope` (department / employee), `scope_key`, `work_days` |
 | `holidays` | Days nobody is scheduled | `date` (unique), `name` |
 | `coverage_rules` | The minimum scheduled people per department per day | `department` (unique), `min_staff` |

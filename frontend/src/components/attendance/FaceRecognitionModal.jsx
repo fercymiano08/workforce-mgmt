@@ -15,6 +15,13 @@ import {
 } from '../../services/faceVerificationService';
 import { getFaceDescriptor, loadModels } from '../../services/faceMatchService';
 
+// Frames sent per scan (the server needs them all to agree), and how many tries to get them.
+const SCAN_FRAMES = 3;
+const SCAN_ATTEMPTS = 6;
+// How long the "Verified" result stays up: long enough for the person to SEE that their face was
+// checked and whose it matched (at 0.2 s it was invisible, and people thought no scan had happened).
+const RESULT_HOLD_MS = 1500;
+
 const STEP_ICONS = {
   camera: Camera,
   detect: ScanFace,
@@ -131,16 +138,17 @@ export default function FaceRecognitionModal({ isOpen, employeeName, employeeId,
           return;
         }
 
-        let descriptor = null;
+        // Several separate frames, not one snapshot: the server averages them and
+        // checks they all show the same face, so one lucky frame cannot pass.
+        const descriptors = [];
         try {
           await loadModels();
-          // getFaceDescriptor now never throws (it snapshots a stable frame
-          // and resolves null on failure), so 2 quick attempts are plenty.
-          for (let attempt = 0; attempt < 2; attempt += 1) {
+          // getFaceDescriptor never throws (it resolves null when no face is found).
+          for (let attempt = 0; attempt < SCAN_ATTEMPTS && descriptors.length < SCAN_FRAMES; attempt += 1) {
             if (cancelled) return;
-            descriptor = await getFaceDescriptor(videoRef.current);
-            if (descriptor) break;
-            await new Promise((resolve) => setTimeout(resolve, 120));
+            const descriptor = await getFaceDescriptor(videoRef.current);
+            if (descriptor) descriptors.push(Array.from(descriptor));
+            await new Promise((resolve) => setTimeout(resolve, 150));
           }
         } catch {
           setVerifyError('Face recognition models could not be loaded. Please try again.');
@@ -149,7 +157,7 @@ export default function FaceRecognitionModal({ isOpen, employeeName, employeeId,
         }
         if (cancelled) return;
 
-        if (!descriptor) {
+        if (descriptors.length < SCAN_FRAMES) {
           setVerifyError('No face detected. Make sure your face is well-lit, centered, and close enough to fill most of the camera frame, then try again.');
           setPhase('error');
           return;
@@ -157,7 +165,7 @@ export default function FaceRecognitionModal({ isOpen, employeeName, employeeId,
 
         const verification = await verifyFace({
           employeeId,
-          descriptor,
+          descriptors,
           signal: controller.signal,
           onStep: (index) => {
             if (!cancelled) setStepIndex(index);
@@ -179,10 +187,9 @@ export default function FaceRecognitionModal({ isOpen, employeeName, employeeId,
 
         setResult(verification.data);
         setPhase('result');
-        // Just a brief confirmation flash - every extra 100ms slows the line.
         completeTimer = setTimeout(() => {
           if (!cancelled) onCompleteRef.current(verification.data);
-        }, 220);
+        }, RESULT_HOLD_MS);
       } catch {
         if (cancelled) return;
         setVerifyError('Face verification failed. Please try again.');
@@ -377,7 +384,7 @@ export default function FaceRecognitionModal({ isOpen, employeeName, employeeId,
                     </div>
                     <div className="rounded-xl bg-white border border-emerald-100 p-3 text-center">
                       <p className="text-[10px] font-semibold uppercase tracking-wider text-gray-400">Liveness</p>
-                      <p className="text-lg font-bold text-emerald-600 mt-1">{result.liveness}</p>
+                      <p className={clsx('text-lg font-bold mt-1', result.liveness === 'Not Checked' ? 'text-gray-400' : 'text-emerald-600')}>{result.liveness}</p>
                     </div>
                     <div className="rounded-xl bg-white border border-emerald-100 p-3 text-center">
                       <p className="text-[10px] font-semibold uppercase tracking-wider text-gray-400">Approval</p>

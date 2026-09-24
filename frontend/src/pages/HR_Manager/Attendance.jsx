@@ -15,6 +15,7 @@ import { attendanceService, employeeService, overtimeService } from '../../servi
 import { kioskService } from '../../services/kioskService';
 import { formatHours, toDateKey } from '../../services/attendanceService';
 import { formatDate, formatTime } from '../../utils/helpers';
+import { weekOf } from '../../utils/today';
 import useApiData from '../../hooks/useApiData';
 import { useToast } from '../../context/ToastContext';
 import { useAuth } from '../../context/AuthContext';
@@ -271,12 +272,8 @@ export default function Attendance() {
       let matchPeriod = true;
       if (periodFilter === 'Today') matchPeriod = a.date === todayStr;
       else if (periodFilter === 'This Week') {
-        const d = new Date(a.date);
-        const now = new Date(todayStr);
-        const dayOfWeek = now.getDay();
-        const weekStart = new Date(now);
-        weekStart.setDate(now.getDate() - dayOfWeek);
-        matchPeriod = d >= weekStart && d <= now;
+        // Monday to Sunday (ISO 8601): from this Monday up to today
+        matchPeriod = a.date >= weekOf(todayStr).start && a.date <= todayStr;
       }
       return matchSearch && matchStatus && matchPeriod;
     });

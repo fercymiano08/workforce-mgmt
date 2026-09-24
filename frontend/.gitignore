@@ -22,3 +22,6 @@ dist-ssr
 *.njsproj
 *.sln
 *.sw?
+
+# Headless Chrome for the smoke test (npm run smoke:setup)
+.smoke-browser/

@@ -17,6 +17,12 @@ class BreakRuleTest extends TestCase
 {
     use RefreshDatabase;
 
+    protected function setUp(): void
+    {
+        parent::setUp();
+        $this->skipKioskFaceCheck();
+    }
+
     private function clockIn(string $time): string
     {
         Employee::create([

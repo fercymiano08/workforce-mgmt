@@ -9,6 +9,7 @@ use App\Models\ShiftDefinition;
 use App\Models\ShiftSchedule;
 use App\Models\User;
 use App\Services\KioskDeviceToken;
+use App\Services\KioskFaceTicket;
 use Illuminate\Foundation\Testing\TestCase as BaseTestCase;
 use Illuminate\Support\Carbon;
 
@@ -92,6 +93,21 @@ abstract class TestCase extends BaseTestCase
         $setting->save();
 
         return ['X-Kiosk-Token' => KioskDeviceToken::issue()['token']];
+    }
+
+    /**
+     * For tests about attendance RULES (lateness, breaks, overtime...), not face matching: accept any kiosk
+     * punch as face-verified. The face gate itself is covered, for real, by KioskFaceVerificationTest.
+     */
+    protected function skipKioskFaceCheck(): void
+    {
+        $this->app->instance(KioskFaceTicket::class, new class extends KioskFaceTicket
+        {
+            public function valid(?string $ticket, string $employeeId): bool
+            {
+                return true;
+            }
+        });
     }
 
     protected function seedOrgStructure(): void

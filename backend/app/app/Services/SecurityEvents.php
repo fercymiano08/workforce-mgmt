@@ -7,7 +7,7 @@ use App\Models\SecurityEvent;
 /**
  * Security-event resolution (kiosk PIN/face mismatches).
  */
-class AttendanceClient
+class SecurityEvents
 {
     public static function resolveSecurityEvent(string $id, ?string $resolvedBy): void
     {

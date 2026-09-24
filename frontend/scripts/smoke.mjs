@@ -1,20 +1,39 @@
-// Smoke test: opens the RUNNING system in a real browser (Edge), logs in, visits every page for the role,
-// and reports anything broken - a crashed page, an error in the console, a failed API call, an empty screen.
+// Smoke test: opens the RUNNING system in a real browser, logs in, visits every page for the role, and
+// reports anything broken - a crashed page, an error in the console, a failed API call, an empty screen.
 // It also takes a screenshot of every page (scripts/smoke-output/), so a person can look through them fast.
+// Run it after every larger change: it catches what the backend tests cannot see (a screen reading an API
+// answer the wrong way, a page that crashes).
 //
+//   npm run smoke:setup                             # once: downloads a headless Chrome into .smoke-browser/
 //   npm run smoke                                   # administrator, every admin page
 //   SMOKE_EMPLOYEE_EMAIL=... SMOKE_EMPLOYEE_PASSWORD=... npm run smoke -- --role employee
 //
-// The system must be running first (start-all.ps1). Exit code 1 when anything fails.
+// The system must be running first (start-all.ps1). Exit code 1 when anything fails. SMOKE_BROWSER picks
+// another browser; without smoke:setup it falls back to Edge.
 import puppeteer from 'puppeteer-core';
 import fs from 'node:fs';
+import os from 'node:os';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 const here = path.dirname(fileURLToPath(import.meta.url));
 const out = path.join(here, 'smoke-output');
 const BASE = process.env.SMOKE_BASE || 'http://localhost:5173';
-const EDGE = process.env.SMOKE_BROWSER || 'C:/Program Files (x86)/Microsoft/Edge/Application/msedge.exe';
+// The headless Chrome from `npm run smoke:setup` if present, else Edge.
+function findBrowser() {
+  const root = path.join(here, '..', '.smoke-browser', 'chrome-headless-shell');
+  if (fs.existsSync(root)) {
+    const folders = (dir) => fs.readdirSync(dir, { withFileTypes: true }).filter((e) => e.isDirectory()).map((e) => e.name);
+    for (const version of folders(root)) {
+      for (const dir of folders(path.join(root, version))) {
+        const exe = path.join(root, version, dir, process.platform === 'win32' ? 'chrome-headless-shell.exe' : 'chrome-headless-shell');
+        if (fs.existsSync(exe)) return exe;
+      }
+    }
+  }
+  return 'C:/Program Files (x86)/Microsoft/Edge/Application/msedge.exe';
+}
+const BROWSER = process.env.SMOKE_BROWSER || findBrowser();
 const role = process.argv.includes('--role') ? process.argv[process.argv.indexOf('--role') + 1] : 'admin';
 
 const ACCOUNTS = {
@@ -37,6 +56,15 @@ const PAGES = {
     ['notifications', '/notifications', 'Notifications'], ['settings', '/settings', 'Settings'],
   ],
 };
+// Windows that open inside a page (a crash there does not show when the page itself loads): open each one,
+// click through its tabs, and check nothing breaks. [page name, buttons to click in order]
+const INSIDE = {
+  admin: [
+    ['shifts', ['Automated Shift Scheduling', 'Work days', 'Holidays', 'Coverage', 'History', 'Schedule']],
+  ],
+  employee: [],
+};
+
 // What an employee must NOT be able to open
 const FORBIDDEN_FOR_EMPLOYEE = ['/employees', '/attendance', '/shifts', '/timesheets', '/analytics', '/reports', '/audit-logs', '/kiosk-setup', '/ai-decision-support'];
 
@@ -49,7 +77,11 @@ if (!ACCOUNTS[role]?.email) {
 }
 fs.mkdirSync(out, { recursive: true });
 
-const browser = await puppeteer.launch({ executablePath: EDGE, headless: true, args: ['--no-sandbox'], defaultViewport: { width: 1440, height: 900 } });
+// A fresh profile every run, so an already-open browser window cannot take over (or leave a login behind).
+const browser = await puppeteer.launch({
+  executablePath: BROWSER, headless: true, args: ['--no-sandbox', '--no-first-run'],
+  userDataDir: fs.mkdtempSync(path.join(os.tmpdir(), 'wfp-smoke-')), defaultViewport: { width: 1440, height: 900 },
+});
 const page = await browser.newPage();
 const problems = [];
 let current = 'login';
@@ -94,6 +126,28 @@ for (const [name, route, mustSee] of PAGES[role]) {
   else if (!text.toLowerCase().includes(mustSee.toLowerCase())) problems.push([name, 'unexpected page', `"${mustSee}" not found (redirected to ${page.url().replace(BASE, '')}?)`]);
   if (/something went wrong|unexpected error|cannot read prop/i.test(text)) problems.push([name, 'error screen', 'the page shows an error message']);
   rows.push([name, problems.length === before ? 'ok' : 'PROBLEM']);
+
+  for (const [pageName, clicks] of INSIDE[role]) {
+    if (pageName !== name) continue;
+    current = `${name} > ${clicks[0]}`;
+    const beforeInside = problems.length;
+    for (const label of clicks) {
+      const found = await page.evaluate((label) => {
+        const b = [...document.querySelectorAll('button')].filter((x) => x.innerText.trim() === label && x.offsetParent).pop();
+        if (b) b.click();
+        return Boolean(b);
+      }, label);
+      if (!found) { problems.push([current, 'missing button', `"${label}" not found`]); break; }
+      await settle();
+      const inner = await page.evaluate(() => document.body.innerText || '');
+      if (/something went wrong|unexpected error|cannot read prop|is not a function/i.test(inner)) {
+        problems.push([current, 'error screen', `crashed after clicking "${label}"`]);
+        break;
+      }
+    }
+    await page.screenshot({ path: path.join(out, `${role}-${name}-inside.png`) });
+    rows.push([current, problems.length === beforeInside ? 'ok' : 'PROBLEM']);
+  }
 }
 
 if (role === 'employee') {

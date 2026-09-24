@@ -51,6 +51,39 @@ class KioskOverviewTest extends TestCase
         $this->assertSame(2, $data['readiness']['withoutFace']);   // neither has a registered face
     }
 
+    public function test_kiosk_mode_turns_itself_off_at_midnight(): void
+    {
+        Carbon::setTestNow(Carbon::parse('2030-01-14 07:00', 'Asia/Manila'));
+        $headers = $this->kioskDeviceHeaders();
+        $admin = $this->adminUser();
+
+        Carbon::setTestNow(Carbon::parse('2030-01-14 23:59', 'Asia/Manila'));
+        $this->getJson('/api/kiosk/config')->assertJsonPath('data.active', true);
+
+        // Past midnight (kiosk time zone): disabled, clock-ins refused, and the switch-off is in the activity log
+        Carbon::setTestNow(Carbon::parse('2030-01-15 00:01', 'Asia/Manila'));
+        $this->getJson('/api/kiosk/config')->assertJsonPath('data.active', false)->assertJsonPath('data.enabledAt', null);
+        $this->actingAs($admin)->getJson('/api/kiosk/overview')->assertJsonPath('data.readiness.kioskActive', false);
+        $this->actingAs($admin)->getJson('/api/kiosk/logs')->assertJsonPath('data.0.message', 'Kiosk mode turned off automatically at midnight');
+        $this->withHeaders($headers)->postJson('/api/kiosk/log', ['type' => 'clock-in', 'message' => 'x'])->assertStatus(401);
+
+        // Enabling it again the next morning works as usual
+        $this->actingAs($admin)->postJson('/api/kiosk/config', ['active' => true, 'enabledAt' => now()->toISOString()])
+            ->assertOk()->assertJsonPath('data.active', true);
+        $this->getJson('/api/kiosk/config')->assertJsonPath('data.active', true);
+    }
+
+    public function test_reset_clears_the_pin_and_the_activity_log(): void
+    {
+        $headers = $this->kioskDeviceHeaders();
+        $admin = $this->adminUser();
+        $this->withHeaders($headers)->postJson('/api/kiosk/log', ['type' => 'clock-in', 'message' => 'Someone clocked in'])->assertCreated();
+
+        $this->actingAs($admin)->postJson('/api/kiosk/reset')->assertOk()
+            ->assertJsonPath('data.hasPin', false)->assertJsonPath('data.active', false);
+        $this->actingAs($admin)->getJson('/api/kiosk/logs')->assertOk()->assertJsonCount(0, 'data');
+    }
+
     public function test_only_failed_attempts_count_as_security_alerts(): void
     {
         $headers = $this->kioskDeviceHeaders();

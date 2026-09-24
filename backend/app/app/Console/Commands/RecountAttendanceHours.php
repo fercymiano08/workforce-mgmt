@@ -4,7 +4,7 @@ namespace App\Console\Commands;
 
 use App\Models\Attendance;
 use App\Models\ShiftSchedule;
-use App\Services\PayrollClient;
+use App\Services\TimesheetGenerationService;
 use App\Services\ShiftHours;
 use Illuminate\Console\Command;
 use Illuminate\Support\Carbon;
@@ -55,7 +55,7 @@ class RecountAttendanceHours extends Command
                     'total_hours' => $hours['total'],
                     'break_hours' => $hours['break'],
                 ]);
-                PayrollClient::syncForEmployee($row->employee_id);
+                (new TimesheetGenerationService())->syncForEmployee($row->employee_id, now()->toDateString());
                 $changed++;
             });
 

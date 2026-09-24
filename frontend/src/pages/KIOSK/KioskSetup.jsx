@@ -245,7 +245,7 @@ export default function KioskSetup() {
               {[
                 ['1', 'Tap the clock-in screen 5 times quickly.'],
                 ['2', 'Enter the secret 4-digit PIN when the pad appears.'],
-                ['3', 'It stays unlocked until midnight, then asks again the next day.'],
+                ['3', 'At midnight kiosk mode turns off by itself. Enable it again the next morning.'],
               ].map(([step, text]) => (
                 <div key={step} className="flex items-start gap-3">
                   <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-blue-50 text-xs font-bold text-blue-600">{step}</span>

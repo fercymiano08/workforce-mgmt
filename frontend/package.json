@@ -8,7 +8,8 @@
     "build": "vite build",
     "lint": "eslint .",
     "preview": "vite preview",
-    "smoke": "node scripts/smoke.mjs"
+    "smoke": "node scripts/smoke.mjs",
+    "smoke:setup": "npx -y @puppeteer/browsers install chrome-headless-shell@stable --path .smoke-browser"
   },
   "dependencies": {
     "@tailwindcss/vite": "^4.3.3",

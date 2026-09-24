@@ -97,6 +97,8 @@ export default function AttendanceTerminal() {
   const [earlyOutReason, setEarlyOutReason] = useState({ reasonCode: null, reasonNote: '' });
   const [serverCheckPending, setServerCheckPending] = useState(false);
   const faceStrikes = useRef(0);
+  // The server's proof of a matched face (from verify-face); the clock-in/out must carry it.
+  const faceTicket = useRef(null);
 
   const [lockPin, setLockPin] = useState('');
   const [lockError, setLockError] = useState(null);
@@ -114,13 +116,18 @@ export default function AttendanceTerminal() {
 
   // The server says this device is no longer unlocked (the day ended, or the PIN was changed):
   // fall back to the PIN screen instead of showing errors on every clock-in.
+  // (Kiosk mode itself also turns off at midnight, so re-reading the settings shows the "disabled" screen.)
   useEffect(() => {
-    const relock = () => setUnlocked(false);
+    const relock = () => {
+      setUnlocked(false);
+      kioskService.load().then(setSettings).catch(() => {});
+    };
     window.addEventListener(KIOSK_LOCKED_EVENT, relock);
     return () => window.removeEventListener(KIOSK_LOCKED_EVENT, relock);
   }, []);
 
-  // The unlock ends at midnight: lock the screen at that moment instead of failing on the next clock-in.
+  // The unlock and kiosk mode both end at midnight: switch the screen off at that moment instead of failing
+  // on the next clock-in.
   const sessionEndsAt = unlocked ? kioskService.sessionEndsAt() : null;
   const sessionEndLabel = sessionEndsAt
     ? new Date(sessionEndsAt * 1000).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', timeZone: timezone })
@@ -128,7 +135,10 @@ export default function AttendanceTerminal() {
   useEffect(() => {
     if (!sessionEndsAt) return undefined;
     const wait = Math.max(0, sessionEndsAt * 1000 - Date.now());
-    const timer = setTimeout(() => setUnlocked(false), Math.min(wait, 2 ** 31 - 1));
+    const timer = setTimeout(() => {
+      setUnlocked(false);
+      kioskService.load().then(setSettings).catch(() => {});
+    }, Math.min(wait, 2 ** 31 - 1));
     return () => clearTimeout(timer);
   }, [sessionEndsAt]);
 
@@ -187,6 +197,7 @@ export default function AttendanceTerminal() {
 
   const resetToMode = () => {
     if (resetTimer.current) clearTimeout(resetTimer.current);
+    faceTicket.current = null;
     setPhase('mode');
     clearFlowState();
   };
@@ -421,8 +432,9 @@ export default function AttendanceTerminal() {
     setPhase('verify');
   };
 
-  const handleFaceComplete = () => {
+  const handleFaceComplete = (verified) => {
     faceStrikes.current = 0;
+    faceTicket.current = verified?.faceTicket || null;
     if (action === 'clock-in') {
       evaluateClockIn();
     } else {
@@ -442,12 +454,7 @@ export default function AttendanceTerminal() {
   const handleFaceMismatch = async () => {
     if (!employee) return;
     faceStrikes.current += 1;
-
-    kioskService.log(
-      'security',
-      `Face mismatch - person does not match ${employee.firstName} ${employee.lastName} (${employee.id})`,
-      { employeeId: employee.id }
-    );
+    // (The server records the mismatch itself, so a modified terminal cannot hide it.)
 
     if (faceStrikes.current >= FACE_MAX_STRIKES) {
       faceStrikes.current = 0;
@@ -533,10 +540,10 @@ export default function AttendanceTerminal() {
       const minutesLate = nowMin - startMin;
       setNotice({
         tone: 'warning',
-        title: 'You Are Late',
-        message: `Your shift started at ${formatTime(start)}. It is now ${minutesLate} ${minutesLate === 1 ? 'minute' : 'minutes'} after your start time - beyond the ${grace}-minute grace period - so this clock-in will be recorded as Late and reported to HR.`,
-        confirmLabel: 'Clock In Anyway',
-        cancelLabel: 'Cancel',
+        title: 'You Are Late - Not Clocked In Yet',
+        message: `Face verified. Nothing has been recorded yet. Your shift started at ${formatTime(start)}, and it is now ${minutesLate} ${minutesLate === 1 ? 'minute' : 'minutes'} after your start time (beyond the ${grace}-minute grace period). If you continue, your clock-in will be recorded as Late and reported to HR.`,
+        confirmLabel: 'Clock In as Late',
+        cancelLabel: "Cancel - Don't Clock In",
         onConfirm: () => { setNotice(null); recordAttendance('late'); },
         onCancel: resetToMode,
       });
@@ -561,10 +568,10 @@ export default function AttendanceTerminal() {
       }
       setNotice({
         tone: 'info',
-        title: 'Clocking In Early',
-        message: `Your shift starts at ${formatTime(start)}. You are ${minutesEarly} ${minutesEarly === 1 ? 'minute' : 'minutes'} early. Your time is recorded, but paid hours count from ${formatTime(start)}.`,
-        confirmLabel: 'Clock In Anyway',
-        cancelLabel: 'Cancel',
+        title: 'Early - Not Clocked In Yet',
+        message: `Face verified. Nothing has been recorded yet. Your shift starts at ${formatTime(start)} and you are ${minutesEarly} ${minutesEarly === 1 ? 'minute' : 'minutes'} early. If you continue, your arrival time is recorded, but paid hours count from ${formatTime(start)}.`,
+        confirmLabel: 'Clock In Early',
+        cancelLabel: "Cancel - Don't Clock In",
         onConfirm: () => { setNotice(null); recordAttendance('early'); },
         onCancel: resetToMode,
       });
@@ -614,12 +621,12 @@ export default function AttendanceTerminal() {
       const amount = `${h > 0 ? `${h}h ` : ''}${m}m`;
       setNotice({
         tone: 'warning',
-        title: 'Overtime Not Approved',
+        title: 'Overtime Not Approved - Not Clocked Out Yet',
         message: otHours > 0
-          ? `You are clocking out ${amount} after your approved overtime ended (${formatTime(`${pad(Math.floor(endMin / 60) % 24)}:${pad(endMin % 60)}`)}). That extra time will NOT be counted - your day will end at the approved time. To have overtime counted, send an overtime request from My Attendance.`
-          : `Your shift ended at ${formatTime(shiftInfo.endTime)} and you have no approved overtime. You are clocking out ${amount} later. That extra time will NOT be counted - your day will end at ${formatTime(shiftInfo.endTime)}. To have overtime counted, send an overtime request from My Attendance.`,
+          ? `Face verified. Nothing has been recorded yet. You are clocking out ${amount} after your approved overtime ended (${formatTime(`${pad(Math.floor(endMin / 60) % 24)}:${pad(endMin % 60)}`)}). That extra time will NOT be counted - your day will end at the approved time. To have overtime counted, send an overtime request from My Attendance.`
+          : `Face verified. Nothing has been recorded yet. Your shift ended at ${formatTime(shiftInfo.endTime)} and you have no approved overtime. You are clocking out ${amount} later. That extra time will NOT be counted - your day will end at ${formatTime(shiftInfo.endTime)}. To have overtime counted, send an overtime request from My Attendance.`,
         confirmLabel: 'Clock Out',
-        cancelLabel: 'Go Back',
+        cancelLabel: "Cancel - Don't Clock Out",
         onConfirm: () => { setNotice(null); recordAttendance(); },
         onCancel: resetToMode,
       });
@@ -646,6 +653,7 @@ export default function AttendanceTerminal() {
           clockIn: time,
           status: calculateAttendanceStatus(time, { ...ATTENDANCE_CONFIG, startTime: start }),
           location: ATTENDANCE_CONFIG.location,
+          faceTicket: faceTicket.current,
         });
         setTodayRecord(created);
         setRecordedHours(null);
@@ -658,6 +666,7 @@ export default function AttendanceTerminal() {
         const punched = await kioskService.clockOut(todayRecord.id, {
           clockOut: time,
           ...reason,
+          faceTicket: faceTicket.current,
         });
         // The server works out which hours count (lunch, shift end, approved overtime); show its answer.
         setRecordedHours(punched?.data?.totalHours ?? null);
@@ -672,6 +681,7 @@ export default function AttendanceTerminal() {
         { employeeId: employee.id, detail: 'Method: Facial recognition' }
       );
 
+      faceTicket.current = null;
       setRecordedType(action);
       setRecordedAt(time);
       setPhase('success');
@@ -806,7 +816,7 @@ export default function AttendanceTerminal() {
   if (!enabled) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-[#0B1F3A] via-[#0E2747] to-[#0B1F3A] flex flex-col">
-        <BrandHeader subtitle="Attendance Terminal · Not Configured" />
+        <BrandHeader subtitle="Attendance Terminal · Disabled" />
         <main className="flex-1 flex items-center justify-center px-4 py-10">
           <div className="w-full max-w-md bg-white rounded-3xl shadow-2xl p-8 sm:p-10 text-center">
             <div className="w-16 h-16 mx-auto rounded-2xl bg-amber-50 flex items-center justify-center">
@@ -814,7 +824,7 @@ export default function AttendanceTerminal() {
             </div>
             <h2 className="text-2xl font-bold text-gray-900 mt-4">Clock-In Disabled</h2>
             <p className="text-gray-500 mt-1.5">
-              Clock-in attendance is disabled. Wait for the administrator to set up the kiosk before clocking in.
+              Clock-in attendance is disabled. Kiosk mode turns off every midnight; wait for the administrator to enable it for today.
             </p>
             <Button
               size="lg"

@@ -10,7 +10,6 @@ use App\Models\ShiftDefinition;
 use App\Models\ShiftSchedule;
 use App\Services\AuditLogger;
 use App\Services\NotificationService;
-use App\Services\ScheduleGenerator;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Carbon;
@@ -92,33 +91,6 @@ class ShiftController extends Controller
         AuditLogger::record('scheduling', 'schedule.created', 'ShiftSchedule', $record->id, actor: $request->user()?->name, after: $record->toApiArray(), meta: ['employeeId' => $record->employee_id]);
 
         return response()->json(['data' => $record->toApiArray()], 201);
-    }
-
-    /**
-     * Generate schedules for a date range. With `preview: true` nothing is created: the answer says what WOULD
-     * be created and what would be skipped and why. Without it the schedules are created and recorded as a
-     * batch that can be undone. The rules (work patterns, holidays, leave, existing shifts, coverage) live in
-     * ScheduleGenerator, shared with the automatic weekly job.
-     */
-    public function generateSchedule(Request $request, ScheduleGenerator $generator): JsonResponse
-    {
-        $data = $request->validate([
-            'startDate' => 'required|date',
-            'endDate' => 'required|date|after_or_equal:startDate',
-            'shiftId' => 'required|string|max:20|exists:shift_definitions,id',
-            'employeeIds' => 'nullable|array',
-            'employeeIds.*' => 'string|max:20',
-            'skipWeekends' => 'nullable|boolean',
-            'preview' => 'nullable|boolean',
-        ]);
-
-        $plan = $generator->plan($data['startDate'], $data['endDate'], $data['shiftId'], $data['employeeIds'] ?? null, (bool) ($data['skipWeekends'] ?? true));
-
-        if ($request->boolean('preview')) {
-            return response()->json(['data' => $generator->summary($plan) + ['preview' => true, 'sample' => array_slice($plan['rows'], 0, 60)]]);
-        }
-
-        return response()->json(['data' => $generator->commit($plan, 'manual', $request->user()?->name ?: 'Workforce Admin')]);
     }
 
     /**

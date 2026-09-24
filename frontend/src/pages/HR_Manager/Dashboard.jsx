@@ -26,6 +26,7 @@ import { toDateKey } from '../../services/attendanceService';
 import { kioskService } from '../../services/kioskService';
 import { didAttend, isPresentGroup } from '../../utils/constants';
 import { formatDate } from '../../utils/helpers';
+import { thisWeek } from '../../utils/today';
 
 const COLORS = {
   blue: '#3B82F6', emerald: '#10B981', amber: '#F59E0B',
@@ -178,13 +179,11 @@ export default function Dashboard() {
     };
   }, [employees, todaysAttendance]);
 
+  // "This Week" = Monday to Sunday (ISO 8601) of the current week; days still ahead show as empty
   const attendanceOverviewData = useMemo(() => {
     const days = [];
-    for (let i = 6; i >= 0; i--) {
-      const d = kioskService.now();
-      d.setDate(d.getDate() - i);
-      const key = toDateKey(d);
-      const label = d.toLocaleDateString('en-US', { weekday: 'short' });
+    for (const key of thisWeek().days) {
+      const label = new Date(`${key}T12:00:00`).toLocaleDateString('en-US', { weekday: 'short' });
       const rows = attendance.filter((a) => a.date === key);
       days.push({
         day: label,

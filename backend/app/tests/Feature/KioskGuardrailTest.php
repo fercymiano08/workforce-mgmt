@@ -24,6 +24,12 @@ class KioskGuardrailTest extends TestCase
 {
     use RefreshDatabase;
 
+    protected function setUp(): void
+    {
+        parent::setUp();
+        $this->skipKioskFaceCheck();
+    }
+
     private function employee(string $id = 'EMP20260001'): Employee
     {
         return Employee::create([

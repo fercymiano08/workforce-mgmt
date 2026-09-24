@@ -9,7 +9,7 @@ use App\Models\OvertimeRequest;
  * Leave/overtime actions triggered from outside their own controllers
  * (the early clock-out auto-draft, and AI Decision Support's resolve actions).
  */
-class TimeoffClient
+class TimeOffActions
 {
     public static function resolveLeave(string $id, string $status, ?string $approvedBy): void
     {

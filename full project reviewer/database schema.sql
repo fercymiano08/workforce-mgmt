@@ -592,9 +592,7 @@ CREATE TABLE public.schedule_batches (
 CREATE TABLE public.schedule_settings (
     id smallint NOT NULL,
     auto_enabled boolean DEFAULT false NOT NULL,
-    run_day smallint DEFAULT '5'::smallint NOT NULL,
-    run_hour smallint DEFAULT '17'::smallint NOT NULL,
-    weeks_ahead smallint DEFAULT '1'::smallint NOT NULL,
+    "window" character varying(20) DEFAULT 'week'::character varying NOT NULL,
     default_work_days json,
     shift_id character varying(20),
     created_at timestamp(0) without time zone,

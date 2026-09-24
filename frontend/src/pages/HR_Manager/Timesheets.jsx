@@ -2,7 +2,7 @@ import { useState, useMemo } from 'react';
 import { createPortal } from 'react-dom';
 import clsx from 'clsx';
 import {
-  FileText, Clock, AlertTriangle, CheckCircle, Calendar, TrendingUp, Timer, Eye, Send, Info,
+  FileText, Clock, AlertTriangle, CheckCircle, Calendar, TrendingUp, Timer, Eye, Info,
   X, XCircle, CheckCheck, ChevronLeft, ChevronRight, RefreshCw, ArrowUpDown, ArrowUp, ArrowDown, RotateCcw, Banknote,
 } from 'lucide-react';
 import Card from '../../components/ui/Card';
@@ -15,11 +15,12 @@ import Modal from '../../components/ui/Modal';
 import { Pagination } from '../../components/ui/Table';
 import {
   useTimesheets, useTimesheetsLoaded, approveTimesheet, rejectTimesheet, reopenTimesheet, exportTimesheetsForPayroll,
-  submitTimesheet, refreshTimesheets,
+  refreshTimesheets,
 } from '../../hooks/useTimesheets';
 import { StatusSteps, HistoryTimeline } from '../../components/timesheets/WorkflowParts';
 import { FLAG_INFO } from '../../utils/timesheetWorkflow';
 import { formatDate, formatTime } from '../../utils/helpers';
+import { thisWeek } from '../../utils/today';
 import { toDateKey } from '../../services/attendanceService';
 import { attendanceService } from '../../services/api';
 import useApiData from '../../hooks/useApiData';
@@ -54,11 +55,6 @@ const hoursText = (n) => `${Number(n || 0).toFixed(2).replace(/\.?0+$/, '') || '
 const addDays = (key, n) => {
   const d = new Date(`${key}T00:00:00`);
   d.setDate(d.getDate() + n);
-  return toDateKey(d);
-};
-const mondayOf = (date) => {
-  const d = new Date(date);
-  d.setDate(d.getDate() - ((d.getDay() + 6) % 7));
   return toDateKey(d);
 };
 const shortRange = (a, b) => `${formatDate(a)} – ${formatDate(b)}`;
@@ -315,7 +311,7 @@ function AdminTimesheetsView() {
   const timesheetsLoaded = useTimesheetsLoaded();
 
   const departments = useMemo(() => ['All', ...new Set(data.map((t) => t.department).filter(Boolean))], [data]);
-  const thisMonday = mondayOf(new Date());
+  const thisMonday = thisWeek().start;   // Monday of this week (ISO 8601), in Manila like the server
   const flagsOf = (t) => t.flags || [];
 
   // Everything except the status filter, so the status pills can show honest counts.
@@ -676,305 +672,7 @@ function AdminTimesheetsView() {
 // Employees can view details and submit draft timesheets only. They cannot
 // approve, reject, or modify timesheets.
 // ---------------------------------------------------------------------------
-function EmployeeTimesheetsView() {
-  const { user } = useAuth();
-  const { toast } = useToast();
-  const employeeId = user?.id || 'EMP001';
-  const [statusFilter, setStatusFilter] = useState('All');
-  const [currentPage, setCurrentPage] = useState(1);
-  const [selectedTimesheet, setSelectedTimesheet] = useState(null);
-  const [isDetailOpen, setIsDetailOpen] = useState(false);
-
-  const data = useTimesheets();
-  const timesheetsLoaded = useTimesheetsLoaded();
-
-  const records = useMemo(
-    () => data.filter((t) => t.employeeId === employeeId),
-    [data, employeeId]
-  );
-
-  const statuses = ['All', 'Draft', 'Submitted', 'Approved', 'Rejected'];
-
-  const latest = useMemo(() => {
-    return [...records].sort((a, b) => b.weekEnd.localeCompare(a.weekEnd))[0];
-  }, [records]);
-
-  const stats = useMemo(() => ({
-    totalHoursThisWeek: latest?.totalHours || 0,
-    overtimeHours: latest?.overtimeHours || 0,
-    approved: records.filter(t => t.status === 'Approved').length,
-    pendingSubmission: records.filter(t => t.status === 'Draft').length,
-  }), [records, latest]);
-
-  const statCards = [
-    { label: 'Total Hours This Week', value: `${stats.totalHoursThisWeek}h`, icon: Timer, color: 'blue' },
-    { label: 'Overtime Hours', value: `${stats.overtimeHours}h`, icon: TrendingUp, color: 'amber' },
-    { label: 'Approved Timesheets', value: stats.approved, icon: CheckCircle, color: 'emerald' },
-    { label: 'Pending Submission', value: stats.pendingSubmission, icon: Clock, color: 'purple' },
-  ];
-
-  const colorMap = {
-    blue: 'bg-blue-50 text-blue-600',
-    emerald: 'bg-emerald-50 text-emerald-600',
-    amber: 'bg-amber-50 text-amber-600',
-    purple: 'bg-purple-50 text-purple-600',
-  };
-  const barMap = {
-    blue: 'bg-blue-500',
-    emerald: 'bg-emerald-500',
-    amber: 'bg-amber-500',
-    purple: 'bg-purple-500',
-  };
-
-  const filtered = useMemo(() => {
-    return records.filter(t => statusFilter === 'All' || t.status === statusFilter);
-  }, [records, statusFilter]);
-
-  const totalPages = Math.max(1, Math.ceil(filtered.length / 10));
-  const paginated = filtered.slice((currentPage - 1) * 10, currentPage * 10);
-
-  const openDetail = (ts) => { setSelectedTimesheet(ts); setIsDetailOpen(true); };
-
-  const handleSubmit = async (ts) => {
-    try {
-      const updated = await submitTimesheet(ts.id);
-      await refreshTimesheets();
-      setSelectedTimesheet(updated || { ...ts, status: 'Submitted', submittedDate: new Date().toISOString().slice(0, 10) });
-      toast.success('Timesheet Submitted', 'Timesheet submitted successfully for HR review.');
-    } catch {
-      toast.error('Error', 'Failed to submit timesheet.');
-    }
-  };
-
-  if (!timesheetsLoaded) {
-    return <SkeletonPage kpiCount={4} />;
-  }
-
-  return (
-    <div className="space-y-6 animate-fadeIn">
-      {/* Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-        <div>
-          <h1 className="text-2xl font-bold text-gray-900">My Timesheets</h1>
-          <p className="text-[14px] text-gray-500 mt-1">Review, submit, and track your weekly timesheets</p>
-        </div>
-      </div>
-
-      {/* Auto-generated note */}
-      <div className="flex items-center gap-2 px-4 py-3 bg-sky-50 border border-sky-200 rounded-xl">
-        <Info className="w-4 h-4 text-sky-600 flex-shrink-0" />
-        <p className="text-sm text-sky-700">
-          Timesheets are automatically generated based on your recorded attendance and working hours.
-        </p>
-      </div>
-
-      {/* Stats */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-        {statCards.map(s => (
-          <Card key={s.label} className="overflow-hidden">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm text-gray-500">{s.label}</p>
-                <p className="text-2xl font-bold text-gray-900 mt-1">{s.value}</p>
-              </div>
-              <div className={`w-12 h-12 rounded-xl flex items-center justify-center ${colorMap[s.color]}`}>
-                <s.icon className="w-6 h-6" />
-              </div>
-            </div>
-            <div className={`h-1 rounded-full mt-4 ${barMap[s.color]}`} />
-          </Card>
-        ))}
-      </div>
-
-      {/* Timesheet list */}
-      <Card padding={false}>
-        <div className="p-4 border-b border-gray-100 flex items-center justify-between gap-3 flex-wrap">
-          <Select
-            value={statusFilter}
-            onChange={(e) => { setStatusFilter(e.target.value); setCurrentPage(1); }}
-            containerClass="w-44"
-          >
-            {statuses.map(s => (
-              <option key={s} value={s}>{s === 'All' ? 'All Statuses' : s}</option>
-            ))}
-          </Select>
-          <p className="text-sm text-gray-500">{records.length} timesheet{records.length === 1 ? '' : 's'}</p>
-        </div>
-
-        <div className="overflow-x-auto">
-          <table className="w-full">
-            <thead>
-              <tr className="border-b border-gray-100 bg-gray-50/50">
-                {['Period', 'Regular Hours', 'Overtime', 'Total Hours', 'Status', 'Actions'].map(h => (
-                  <th key={h} className="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">{h}</th>
-                ))}
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-gray-50">
-              {paginated.length === 0 ? (
-                <tr>
-                  <td colSpan={6} className="px-4 py-12 text-center text-sm text-gray-400">
-                    No timesheets found.
-                  </td>
-                </tr>
-              ) : (
-                paginated.map(ts => (
-                  <tr key={ts.id} className="hover:bg-gray-50/50 transition-colors">
-                    <td className="px-4 py-3.5">
-                      <div className="flex items-center gap-1.5 text-sm text-gray-700">
-                        <Calendar className="w-3.5 h-3.5 text-gray-400" />
-                        {formatDate(ts.weekStart)} &ndash; {formatDate(ts.weekEnd)}
-                      </div>
-                    </td>
-                    <td className="px-4 py-3.5 text-sm text-gray-700 font-medium">{ts.regularHours}h</td>
-                    <td className="px-4 py-3.5 text-sm text-gray-700">
-                      {ts.overtimeHours > 0 ? (
-                        <div className="flex items-center gap-1.5">
-                          <span className="text-amber-600 font-medium">{ts.overtimeHours}h</span>
-                          {ts.approvedOtHours > 0 && (
-                            <span className="text-xs text-gray-400">· {ts.approvedOtHours}h approved</span>
-                          )}
-                          {(ts.approvedOtHours == null || ts.approvedOtHours === 0) && (
-                            <AlertTriangle className="w-3.5 h-3.5 text-amber-500" title={`Unauthorized overtime - ${ts.overtimeHours}h clocked with no approved request this week`} />
-                          )}
-                          {ts.approvedOtHours > 0 && ts.overtimeHours > ts.approvedOtHours && (
-                            <AlertTriangle className="w-3.5 h-3.5 text-amber-500" title={`Overtime overrun - ${ts.approvedOtHours}h approved, ${ts.overtimeHours}h clocked this week`} />
-                          )}
-                          {ts.overtimeHours > (ts.paidOtHours ?? 0) && (
-                            <span className="text-xs font-medium text-red-500" title="Overtime that was not approved for that day is recorded but not paid">· {(ts.overtimeHours - (ts.paidOtHours ?? 0)).toFixed(1)}h not paid</span>
-                          )}
-                        </div>
-                      ) : (
-                        <span className="text-gray-400">-</span>
-                      )}
-                    </td>
-                    <td className="px-4 py-3.5 text-sm text-gray-900 font-semibold">{ts.totalHours}h</td>
-                    <td className="px-4 py-3.5">
-                      <div className="flex items-center gap-2">
-                        <Badge variant={statusVariant[ts.status]} dot size="xs">{ts.status}</Badge>
-                        {ts.regularHours === 0 && (
-                          <AlertTriangle className="w-4 h-4 text-amber-500" />
-                        )}
-                      </div>
-                    </td>
-                    <td className="px-4 py-3.5">
-                      <div className="flex items-center gap-2">
-                        <button
-                          onClick={() => openDetail(ts)}
-                          className="p-1.5 pointer-coarse:p-2.5 rounded-lg hover:bg-gray-100 text-gray-400 hover:text-blue-600 transition-colors"
-                        >
-                          <Eye className="w-4 h-4" />
-                        </button>
-                        {ts.status === 'Draft' && (
-                          <Button variant="primary" size="xs" icon={Send} onClick={() => handleSubmit(ts)}>Submit</Button>
-                        )}
-                      </div>
-                    </td>
-                  </tr>
-                ))
-              )}
-            </tbody>
-          </table>
-        </div>
-
-        {totalPages > 1 && (
-          <div className="px-4 border-t border-gray-100">
-            <Pagination currentPage={currentPage} totalPages={totalPages} onPageChange={setCurrentPage} />
-          </div>
-        )}
-      </Card>
-
-      {/* View Detail Modal — view only; employees can submit drafts */}
-      <Modal isOpen={isDetailOpen} onClose={() => setIsDetailOpen(false)} title="Timesheet Details" size="lg">
-        {selectedTimesheet && (
-          <div className="space-y-6">
-            {/* Employee Info */}
-            <div className="flex items-center gap-4">
-              <Avatar
-                firstName={(selectedTimesheet.employeeName || '').split(' ')[0]}
-                lastName={(selectedTimesheet.employeeName || '').split(' ').slice(1).join(' ')}
-                size="xl"
-              />
-              <div>
-                <h3 className="text-xl font-bold text-gray-900">{selectedTimesheet.employeeName}</h3>
-                <p className="text-gray-500">{selectedTimesheet.employeeId}</p>
-                <div className="flex gap-2 mt-2">
-                  <Badge variant={statusVariant[selectedTimesheet.status]} dot>{selectedTimesheet.status}</Badge>
-                </div>
-              </div>
-            </div>
-
-            {/* Week Period */}
-            <div className="flex items-center gap-2 px-4 py-3 bg-gray-50 rounded-xl">
-              <Calendar className="w-4 h-4 text-gray-500" />
-              <span className="text-sm font-medium text-gray-700">
-                {formatDate(selectedTimesheet.weekStart)} &ndash; {formatDate(selectedTimesheet.weekEnd)}
-              </span>
-            </div>
-
-            {/* Hours Grid */}
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-              <div className="bg-blue-50 rounded-xl p-4 text-center">
-                <p className="text-xs font-medium text-blue-600 uppercase tracking-wide">Regular</p>
-                <p className="text-2xl font-bold text-blue-700 mt-1">{selectedTimesheet.regularHours}h</p>
-              </div>
-              <div className="bg-amber-50 rounded-xl p-4 text-center">
-                <p className="text-xs font-medium text-amber-600 uppercase tracking-wide">Break</p>
-                <p className="text-2xl font-bold text-amber-700 mt-1">{selectedTimesheet.breakHours}h</p>
-              </div>
-              <div className="bg-purple-50 rounded-xl p-4 text-center">
-                <p className="text-xs font-medium text-purple-600 uppercase tracking-wide">Overtime</p>
-                <p className="text-2xl font-bold text-purple-700 mt-1">{selectedTimesheet.overtimeHours}h</p>
-                {selectedTimesheet.overtimeHours > 0 && (
-                  <>
-                    <p className="text-[11px] text-purple-500 mt-1">
-                      {selectedTimesheet.approvedOtHours > 0 ? `${selectedTimesheet.approvedOtHours}h approved` : 'No approval on file'}
-                    </p>
-                    {selectedTimesheet.approvedOtHours > 0 && selectedTimesheet.overtimeHours > selectedTimesheet.approvedOtHours && (
-                      <p className="text-[11px] text-amber-600 font-medium flex items-center justify-center gap-1 mt-0.5">
-                        <AlertTriangle className="w-3 h-3" /> Overrun by {(selectedTimesheet.overtimeHours - selectedTimesheet.approvedOtHours).toFixed(1)}h
-                      </p>
-                    )}
-                    <p className="text-[11px] mt-0.5 font-medium text-purple-700">{Number(selectedTimesheet.paidOtHours ?? 0).toFixed(1)}h paid{selectedTimesheet.overtimeHours > (selectedTimesheet.paidOtHours ?? 0) ? <span className="text-red-500"> · {(selectedTimesheet.overtimeHours - (selectedTimesheet.paidOtHours ?? 0)).toFixed(1)}h not paid</span> : null}</p>
-                  </>
-                )}
-              </div>
-              <div className="bg-emerald-50 rounded-xl p-4 text-center">
-                <p className="text-xs font-medium text-emerald-600 uppercase tracking-wide">Total</p>
-                <p className="text-2xl font-bold text-emerald-700 mt-1">{selectedTimesheet.totalHours}h</p>
-              </div>
-            </div>
-
-            {/* Meta Info */}
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <p className="text-sm"><span className="text-gray-500">Submitted:</span> <span className="font-medium text-gray-900">{selectedTimesheet.submittedDate ? formatDate(selectedTimesheet.submittedDate) : 'Not submitted'}</span></p>
-                <p className="text-sm"><span className="text-gray-500">Approved By:</span> <span className="font-medium text-gray-900">{selectedTimesheet.approvedBy || 'N/A'}</span></p>
-              </div>
-              <div>
-                {selectedTimesheet.notes && (
-                  <div className="bg-gray-50 rounded-xl p-4">
-                    <p className="text-xs font-medium text-gray-500 uppercase tracking-wide mb-1">Notes</p>
-                    <p className="text-sm text-gray-700">{selectedTimesheet.notes}</p>
-                  </div>
-                )}
-              </div>
-            </div>
-
-            {/* Actions — employees may only submit draft timesheets */}
-            {selectedTimesheet.status === 'Draft' && (
-              <div className="flex justify-end gap-3 pt-4 border-t border-gray-100">
-                <Button variant="primary" icon={Send} onClick={() => handleSubmit(selectedTimesheet)}>Submit Timesheet</Button>
-              </div>
-            )}
-          </div>
-        )}
-      </Modal>
-    </div>
-  );
-}
-
+// Admin-only route (employees use My Timesheet), so this is always the admin view.
 export default function Timesheets() {
-  const { isAdmin } = useAuth();
-  return isAdmin ? <AdminTimesheetsView /> : <EmployeeTimesheetsView />;
+  return <AdminTimesheetsView />;
 }

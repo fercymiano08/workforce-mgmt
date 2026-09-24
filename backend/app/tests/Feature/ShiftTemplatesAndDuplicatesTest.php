@@ -101,31 +101,37 @@ class ShiftTemplatesAndDuplicatesTest extends TestCase
         $this->assign('SHIFT999')->assertStatus(422)->assertJsonValidationErrors('shiftId');
     }
 
-    public function test_automated_generation_uses_the_standard_shift(): void
+    /** Automated scheduling's "Run now" early on Monday 14 Jan 2030: "1 week" is this week, Mon 14 - Sun 20 Jan. */
+    private function runNow()
+    {
+        \Illuminate\Support\Carbon::setTestNow(\Illuminate\Support\Carbon::parse('2030-01-14 06:00:00', 'Asia/Manila'));
+
+        return $this->actingAs($this->admin())->postJson('/api/shifts/automation/run');
+    }
+
+    protected function tearDown(): void
+    {
+        \Illuminate\Support\Carbon::setTestNow();
+        parent::tearDown();
+    }
+
+    public function test_automated_scheduling_uses_the_standard_shift(): void
     {
         $this->employee();
 
-        $this->actingAs($this->admin())->postJson('/api/shifts/schedules/generate', [
-            'shiftId' => 'SHIFT004',
-            'startDate' => '2030-01-14',  // Monday
-            'endDate' => '2030-01-18',    // Friday
-            'skipWeekends' => true,
-        ])->assertOk()
-            ->assertJsonPath('data.created', 5);
+        $this->runNow()->assertOk()->assertJsonPath('data.totals.created', 5);
 
         $this->assertSame(5, ShiftSchedule::where('shift_id', 'SHIFT004')->count());
     }
 
-    public function test_running_generation_twice_does_not_duplicate(): void
+    public function test_running_it_twice_does_not_duplicate(): void
     {
         $this->employee();
-        $payload = ['shiftId' => 'SHIFT004', 'startDate' => '2030-01-14', 'endDate' => '2030-01-18'];
 
-        $this->actingAs($this->admin())->postJson('/api/shifts/schedules/generate', $payload)->assertOk();
-        $this->actingAs($this->admin())->postJson('/api/shifts/schedules/generate', $payload)
-            ->assertOk()
-            ->assertJsonPath('data.created', 0)
-            ->assertJsonPath('data.skippedExisting', 5);
+        $this->runNow()->assertOk();
+        $this->runNow()->assertOk()
+            ->assertJsonPath('data.totals.created', 0)
+            ->assertJsonPath('data.totals.skippedExisting', 5);
 
         $this->assertSame(5, ShiftSchedule::count());
     }
@@ -190,15 +196,13 @@ class ShiftTemplatesAndDuplicatesTest extends TestCase
         $this->assertSame('2030-01-15', ShiftSchedule::find($id)->date->toDateString());
     }
 
-    public function test_generation_skips_the_leave_days(): void
+    public function test_automated_scheduling_skips_the_leave_days(): void
     {
         $this->employee();
         $this->leave('Approved', '2030-01-16', '2030-01-16');   // Wednesday
 
-        $this->actingAs($this->admin())->postJson('/api/shifts/schedules/generate', [
-            'shiftId' => 'SHIFT004', 'startDate' => '2030-01-14', 'endDate' => '2030-01-18',
-        ])->assertOk()
-            ->assertJsonPath('data.created', 4)
-            ->assertJsonPath('data.skippedOnLeave', 1);
+        $this->runNow()->assertOk()
+            ->assertJsonPath('data.totals.created', 4)
+            ->assertJsonPath('data.totals.skippedOnLeave', 1);
     }
 }

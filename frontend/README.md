@@ -1,16 +1,22 @@
-# React + Vite
+# WorkForce Pro — Frontend
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+React 19 + Vite + Tailwind CSS single-page app for the three user roles:
 
-Currently, two official plugins are available:
+- **HR / Administrator** (`src/pages/HR_Manager`): dashboard, employees, shifts, attendance, leave, timesheets, analytics, reports, AI decision support, audit logs, settings
+- **Employee** (`src/pages/Employee`): own dashboard, schedule, attendance, timesheet, leave, profile
+- **Kiosk** (`src/pages/KIOSK`): the entrance attendance terminal with face verification (models in `public/models`) and PIN fallback
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Oxc](https://oxc.rs)
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/)
+API calls go through `src/services/`. In development, Vite proxies `/api` to the backend on `http://127.0.0.1:8000`.
 
-## React Compiler
+## Scripts
 
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
+| Command | What it does |
+|---|---|
+| `npm run dev` | Dev server on http://localhost:5173 (the backend must be running) |
+| `npm run build` | Production build into `dist/` |
+| `npm run lint` | ESLint |
+| `npm run smoke:setup` | Once per machine: downloads a headless Chrome into `.smoke-browser/` for the smoke test (git-ignored) |
+| `npm run smoke` | Opens the running system in a real browser, visits every page for a role (and opens windows such as Automated Shift Scheduling), and reports crashes, console errors and failed API calls (screenshots go to `scripts/smoke-output/`). Run it after every larger change. |
 
-## Expanding the ESLint configuration
-
-If you are developing a production application, we recommend using TypeScript with type-aware lint rules enabled. Check out the [TS template](https://github.com/vitejs/vite/tree/main/packages/create-vite/template-react-ts) for information on how to integrate TypeScript and [`typescript-eslint`](https://typescript-eslint.io) in your project.
+Every production build carries a version stamp (`dist/version.json`). A tab that was open during an update shows
+"WorkForce Pro was updated — Reload", and if it crashes on the old code it reloads into the new version by itself.

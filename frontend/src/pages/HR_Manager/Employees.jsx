@@ -19,8 +19,9 @@ import { Pagination } from '../../components/ui/Table';
 import EmptyState from '../../components/ui/EmptyState';
 import { SkeletonPage } from '../../components/ui/LoadingSkeleton';
 import FaceCaptureModal from '../../components/employees/FaceCaptureModal';
-import { departmentService, employeeService, roleService } from '../../services/api';
-import { formatDate } from '../../utils/helpers';
+import { departmentService, employeeService, roleService, shiftService } from '../../services/api';
+import { formatDate, formatTime } from '../../utils/helpers';
+import { todayKey } from '../../utils/today';
 import { useToast } from '../../context/ToastContext';
 
 const statusVariant = { Active: 'success', 'On Leave': 'warning', Inactive: 'danger' };
@@ -132,6 +133,8 @@ export default function Employees() {
   const fileInputRef = useRef(null);
   const [orgDepartments, setOrgDepartments] = useState([]);
   const [orgRoles, setOrgRoles] = useState([]);
+  const [schedules, setSchedules] = useState([]);
+  const [shiftDefs, setShiftDefs] = useState([]);
 
   const fetchEmployees = useCallback(async () => {
     try {
@@ -155,6 +158,39 @@ export default function Employees() {
       .finally(() => { if (active) setLoading(false); });
     return () => { active = false; };
   }, [toast]);
+
+  // The real schedule, so each card can say which shift the person works (today's, or their next one)
+  useEffect(() => {
+    let active = true;
+    Promise.all([shiftService.getSchedules(), shiftService.getAllShifts()])
+      .then(([rows, defs]) => {
+        if (!active) return;
+        setSchedules(rows || []);
+        setShiftDefs(defs || []);
+      })
+      .catch(() => {});
+    return () => { active = false; };
+  }, []);
+
+  const shiftLabel = useMemo(() => {
+    const today = todayKey();
+    const defs = Object.fromEntries(shiftDefs.map((d) => [d.id, d]));
+    const byEmployee = {};
+    for (const s of schedules) {
+      if (s.status !== 'Scheduled' || s.date < today) continue;
+      const current = byEmployee[s.employeeId];
+      if (!current || s.date < current.date) byEmployee[s.employeeId] = s;
+    }
+    return (employeeId) => {
+      const s = byEmployee[employeeId];
+      if (!s) return 'No upcoming shift';
+      const d = defs[s.shiftId];
+      const name = d ? d.name : s.shiftId;
+      return s.date === today
+        ? `${name} · ${d ? `${formatTime(d.startTime)} – ${formatTime(d.endTime)} · ` : ''}today`
+        : `Next: ${formatDate(s.date)} · ${name}`;
+    };
+  }, [schedules, shiftDefs]);
 
   useEffect(() => {
     let active = true;
@@ -487,7 +523,7 @@ export default function Employees() {
                       <Phone className="w-3.5 h-3.5" /> {emp.phone}
                     </div>
                     <div className="flex items-center gap-2 text-xs text-gray-500">
-                      <Clock className="w-3.5 h-3.5" /> {emp.assignedShift || 'No shift assigned'}
+                      <Clock className="w-3.5 h-3.5" /> {shiftLabel(emp.id)}
                     </div>
                     <div className="flex items-center gap-2 text-xs text-gray-500">
                       <Calendar className="w-3.5 h-3.5" /> {formatDate(emp.hireDate)}
@@ -528,7 +564,7 @@ export default function Employees() {
                     <td className="px-4 py-3.5 text-sm text-gray-700">{emp.department}</td>
                     <td className="px-4 py-3.5 text-sm text-gray-700">{emp.position}</td>
                     <td className="px-4 py-3.5 text-sm text-gray-700">{emp.employmentType}</td>
-                    <td className="px-4 py-3.5 text-sm text-gray-700">{emp.assignedShift || '—'}</td>
+                    <td className="px-4 py-3.5 text-sm text-gray-700">{shiftLabel(emp.id)}</td>
                     <td className="px-4 py-3.5"><Badge variant={statusVariant[emp.status]} dot size="xs">{emp.status}</Badge></td>
                     <td className="px-4 py-3.5">
                       <div className="flex items-center gap-1">
@@ -700,7 +736,7 @@ export default function Employees() {
                 <div className="space-y-2">
                   <div className="flex items-center gap-2 text-sm text-gray-600"><Building className="w-4 h-4 text-gray-400" />{selectedEmployee.department}</div>
                   <div className="flex items-center gap-2 text-sm text-gray-600"><Briefcase className="w-4 h-4 text-gray-400" />{selectedEmployee.employmentType}</div>
-                  <div className="flex items-center gap-2 text-sm text-gray-600"><Clock className="w-4 h-4 text-gray-400" />{selectedEmployee.assignedShift || 'No shift assigned'}</div>
+                  <div className="flex items-center gap-2 text-sm text-gray-600"><Clock className="w-4 h-4 text-gray-400" />{shiftLabel(selectedEmployee.id)}</div>
                   <div className="flex items-center gap-2 text-sm text-gray-600"><Calendar className="w-4 h-4 text-gray-400" />Hired {formatDate(selectedEmployee.hireDate)}</div>
                 </div>
               </div>

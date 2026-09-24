@@ -13,6 +13,12 @@ class KioskDeviceTokenTest extends TestCase
 {
     use RefreshDatabase;
 
+    protected function setUp(): void
+    {
+        parent::setUp();
+        $this->skipKioskFaceCheck();
+    }
+
     private const PROTECTED = [
         ['GET', '/api/kiosk/employees'],
         ['GET', '/api/kiosk/employees/EMP20260001'],

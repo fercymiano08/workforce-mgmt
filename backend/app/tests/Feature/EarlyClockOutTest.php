@@ -18,6 +18,7 @@ class EarlyClockOutTest extends TestCase
     protected function setUp(): void
     {
         parent::setUp();
+        $this->skipKioskFaceCheck();
 
         // Every kiosk call below comes from a device that has passed the kiosk PIN.
         $this->withHeaders($this->kioskDeviceHeaders());

@@ -17,6 +17,12 @@ class CountedHoursTest extends TestCase
 {
     use RefreshDatabase;
 
+    protected function setUp(): void
+    {
+        parent::setUp();
+        $this->skipKioskFaceCheck();
+    }
+
     private function clockInAt8(): string
     {
         Employee::create([

@@ -60,7 +60,7 @@ class ShiftTest extends TestCase
             ->assertJsonStructure(['data']);
     }
 
-    public function test_generate_schedule_assigns_shifts(): void
+    public function test_automated_scheduling_assigns_shifts(): void
     {
         Employee::create([
             'id' => 'EMP20260001',
@@ -75,13 +75,13 @@ class ShiftTest extends TestCase
             'end_time' => '15:00:00',
         ]);
 
+        \Illuminate\Support\Carbon::setTestNow(\Illuminate\Support\Carbon::parse('2030-01-14 06:00:00', 'Asia/Manila'));
+
         $this->actingAs($this->adminUser())
-            ->postJson('/api/shifts/schedules/generate', [
-                'shiftId' => 'SFT001',
-                'startDate' => '2030-01-13',
-                'endDate' => '2030-01-19',
-            ])
+            ->postJson('/api/shifts/automation/run')
             ->assertOk()
-            ->assertJsonStructure(['data']);
+            ->assertJsonPath('data.totals.created', 5);
+
+        \Illuminate\Support\Carbon::setTestNow();
     }
 }

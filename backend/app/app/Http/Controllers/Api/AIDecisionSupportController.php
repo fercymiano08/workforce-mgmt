@@ -7,10 +7,10 @@ use App\Models\Leave;
 use App\Models\OvertimeRequest;
 use App\Models\SecurityEvent;
 use App\Services\AIDecisionSupportService;
-use App\Services\AttendanceClient;
-use App\Services\ConfigClient;
+use App\Services\SecurityEvents;
+use App\Services\SettingsUpdater;
 use App\Services\NotificationService;
-use App\Services\TimeoffClient;
+use App\Services\TimeOffActions;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 
@@ -56,7 +56,7 @@ class AIDecisionSupportController extends Controller
         }
 
         if ($status === 'Flagged') {
-            AttendanceClient::flagSecurityEvent($id, $request->user()?->name);
+            SecurityEvents::flagSecurityEvent($id, $request->user()?->name);
             NotificationService::notifyAdmins(
                 'security_alert',
                 'Kiosk Security Alert',
@@ -65,7 +65,7 @@ class AIDecisionSupportController extends Controller
                 '/analytics/ai'
             );
         } else {
-            AttendanceClient::resolveSecurityEvent($id, $request->user()?->name);
+            SecurityEvents::resolveSecurityEvent($id, $request->user()?->name);
         }
 
         return response()->json([
@@ -83,7 +83,7 @@ class AIDecisionSupportController extends Controller
             return response()->json(['message' => 'Insight key is required.'], 422);
         }
 
-        app(ConfigClient::class)->updateAiInsights($key, $resolved);
+        SettingsUpdater::updateAiInsights($key, $resolved);
 
         return response()->json(['success' => true, 'resolved' => $resolved, 'key' => $key]);
     }
@@ -100,7 +100,7 @@ class AIDecisionSupportController extends Controller
             return response()->json(['message' => 'Leave request not found or already resolved.'], 404);
         }
 
-        TimeoffClient::resolveLeave($id, $status, $request->user()?->name);
+        TimeOffActions::resolveLeave($id, $status, $request->user()?->name);
 
         if ($status === 'Approved') {
             NotificationService::notifyEmployee(
@@ -142,7 +142,7 @@ class AIDecisionSupportController extends Controller
             return response()->json(['message' => 'Overtime request not found or already resolved.'], 404);
         }
 
-        TimeoffClient::resolveOvertime($id, $status, $request->user()?->name);
+        TimeOffActions::resolveOvertime($id, $status, $request->user()?->name);
 
         if ($status === 'Approved') {
             NotificationService::notifyEmployee(
@@ -181,7 +181,7 @@ class AIDecisionSupportController extends Controller
             return response()->json(['success' => true, 'resolved' => 0, 'message' => 'No open security events to resolve.']);
         }
 
-        AttendanceClient::resolveAllSecurityEvents('AI Decision Support (bulk)');
+        SecurityEvents::resolveAllSecurityEvents('AI Decision Support (bulk)');
 
         return response()->json([
             'success' => true,

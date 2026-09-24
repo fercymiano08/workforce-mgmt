@@ -23,13 +23,13 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::middleware('admin')->group(function () {
             Route::get('/schedules', [ShiftController::class, 'schedules']);
             Route::post('/schedules', [ShiftController::class, 'createSchedule']);
-            Route::post('/schedules/generate', [ShiftController::class, 'generateSchedule']);
             Route::put('/schedules/{id}', [ShiftController::class, 'updateSchedule']);
             Route::delete('/schedules/{id}', [ShiftController::class, 'destroySchedule']);
 
             // The rules automatic scheduling follows, and the history of generation runs.
             Route::get('/rules', [ScheduleRulesController::class, 'rules']);
             Route::put('/rules/automation', [ScheduleRulesController::class, 'saveAutomation']);
+            Route::post('/automation/run', [ScheduleRulesController::class, 'runNow']);
             Route::put('/rules/patterns', [ScheduleRulesController::class, 'savePattern']);
             Route::delete('/rules/patterns/{id}', [ScheduleRulesController::class, 'deletePattern']);
             Route::post('/rules/holidays', [ScheduleRulesController::class, 'addHoliday']);

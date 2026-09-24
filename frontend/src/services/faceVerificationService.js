@@ -14,12 +14,12 @@ export const FACE_VERIFICATION_STEPS = [
 const STEP_DURATION_MS = 110;
 
 // Runs the verification flow against the backend. Real identity matching
-// happens server-side (POST /api/kiosk/verify-face), comparing the live
-// descriptor (computed locally by face-api.js) against the one captured at
-// registration. The step animation is a client-side affordance shown while
+// happens server-side (POST /api/kiosk/verify-face), comparing several live
+// descriptors (computed locally by face-api.js, one per camera frame) against
+// the one captured at registration, and against every other enrolled face. The step animation is a client-side affordance shown while
 // the request is in flight - it does not represent separate real checks.
 // Returns { ok: true, data } on success or { ok: false, message } on failure.
-export async function verifyFace({ employeeId, descriptor, signal, onStep }) {
+export async function verifyFace({ employeeId, descriptors, signal, onStep }) {
   let currentStep = 0;
 
   const tick = () => {
@@ -36,19 +36,20 @@ export async function verifyFace({ employeeId, descriptor, signal, onStep }) {
     }
   }, STEP_DURATION_MS);
 
-  if (!descriptor) {
+  if (!descriptors?.length) {
     clearInterval(timer);
     return { ok: false, code: 'no-face', message: 'No face detected. Please center your face in the frame and try again.' };
   }
 
   try {
-    const response = await http.post('/kiosk/verify-face', { employeeId, descriptor }, { signal });
+    const response = await http.post('/kiosk/verify-face', { employeeId, descriptors }, { signal });
     return { ok: true, data: response.data };
   } catch (error) {
     if (signal?.aborted) return { ok: false, aborted: true };
     const status = error.response?.status;
     const code = status === 401 ? 'mismatch'
       : status === 404 ? 'not-found'
+      : status === 409 ? 'ambiguous'
       : status === 422 ? 'not-registered'
       : 'unknown';
     return {
