@@ -60,7 +60,7 @@ const PAGES = {
 // click through its tabs, and check nothing breaks. [page name, buttons to click in order]
 const INSIDE = {
   admin: [
-    ['shifts', ['Automated Shift Scheduling', 'Work days', 'Holidays', 'Coverage', 'History', 'Schedule']],
+    ['shifts', ['+ Automated Shift', 'Continue', 'Back']],
   ],
   employee: [],
 };

@@ -5,10 +5,11 @@
 -- Laravel monolith backend. Schema only (no data).
 -- ============================================================
 --
+--
 -- PostgreSQL database dump
 --
 
-\restrict 9bqK8dn75RwQSafoJQ3yhPAJgLfpkwCegwp3HLCukY3nNSdIgnc8XXyasBnBguL
+\restrict bedFQFcrQbv6TAjqy2j6Rb61HeLNLnwuvLCF0dEcNVniObtbPcOmPVtJQcheeYh
 
 -- Dumped from database version 18.4
 -- Dumped by pg_dump version 18.4
@@ -145,38 +146,6 @@ CREATE TABLE public.cache_locks (
     owner character varying(255) NOT NULL,
     expiration bigint NOT NULL
 );
-
-
---
--- Name: coverage_rules; Type: TABLE; Schema: public; Owner: -
---
-
-CREATE TABLE public.coverage_rules (
-    id bigint NOT NULL,
-    department character varying(100) NOT NULL,
-    min_staff integer NOT NULL,
-    created_at timestamp(0) without time zone,
-    updated_at timestamp(0) without time zone
-);
-
-
---
--- Name: coverage_rules_id_seq; Type: SEQUENCE; Schema: public; Owner: -
---
-
-CREATE SEQUENCE public.coverage_rules_id_seq
-    START WITH 1
-    INCREMENT BY 1
-    NO MINVALUE
-    NO MAXVALUE
-    CACHE 1;
-
-
---
--- Name: coverage_rules_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: -
---
-
-ALTER SEQUENCE public.coverage_rules_id_seq OWNED BY public.coverage_rules.id;
 
 
 --
@@ -535,68 +504,15 @@ CREATE TABLE public.roles (
 
 
 --
--- Name: schedule_batch_items; Type: TABLE; Schema: public; Owner: -
---
-
-CREATE TABLE public.schedule_batch_items (
-    id bigint NOT NULL,
-    batch_id character varying(20) NOT NULL,
-    schedule_id character varying(20) NOT NULL
-);
-
-
---
--- Name: schedule_batch_items_id_seq; Type: SEQUENCE; Schema: public; Owner: -
---
-
-CREATE SEQUENCE public.schedule_batch_items_id_seq
-    START WITH 1
-    INCREMENT BY 1
-    NO MINVALUE
-    NO MAXVALUE
-    CACHE 1;
-
-
---
--- Name: schedule_batch_items_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: -
---
-
-ALTER SEQUENCE public.schedule_batch_items_id_seq OWNED BY public.schedule_batch_items.id;
-
-
---
--- Name: schedule_batches; Type: TABLE; Schema: public; Owner: -
---
-
-CREATE TABLE public.schedule_batches (
-    id character varying(20) NOT NULL,
-    source character varying(20) NOT NULL,
-    created_by character varying(150),
-    start_date date NOT NULL,
-    end_date date NOT NULL,
-    shift_id character varying(20),
-    created_count integer DEFAULT 0 NOT NULL,
-    summary json,
-    status character varying(20) DEFAULT 'Published'::character varying NOT NULL,
-    undone_at timestamp(0) without time zone,
-    undone_by character varying(150),
-    created_at timestamp(0) without time zone,
-    updated_at timestamp(0) without time zone
-);
-
-
---
 -- Name: schedule_settings; Type: TABLE; Schema: public; Owner: -
 --
 
 CREATE TABLE public.schedule_settings (
     id smallint NOT NULL,
-    auto_enabled boolean DEFAULT false NOT NULL,
-    "window" character varying(20) DEFAULT 'week'::character varying NOT NULL,
     default_work_days json,
-    shift_id character varying(20),
     created_at timestamp(0) without time zone,
-    updated_at timestamp(0) without time zone
+    updated_at timestamp(0) without time zone,
+    max_weekly_hours smallint DEFAULT '48'::smallint NOT NULL
 );
 
 
@@ -778,39 +694,6 @@ ALTER SEQUENCE public.users_id_seq OWNED BY public.users.id;
 
 
 --
--- Name: work_patterns; Type: TABLE; Schema: public; Owner: -
---
-
-CREATE TABLE public.work_patterns (
-    id bigint NOT NULL,
-    scope character varying(20) NOT NULL,
-    scope_key character varying(100) NOT NULL,
-    work_days json NOT NULL,
-    created_at timestamp(0) without time zone,
-    updated_at timestamp(0) without time zone
-);
-
-
---
--- Name: work_patterns_id_seq; Type: SEQUENCE; Schema: public; Owner: -
---
-
-CREATE SEQUENCE public.work_patterns_id_seq
-    START WITH 1
-    INCREMENT BY 1
-    NO MINVALUE
-    NO MAXVALUE
-    CACHE 1;
-
-
---
--- Name: work_patterns_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: -
---
-
-ALTER SEQUENCE public.work_patterns_id_seq OWNED BY public.work_patterns.id;
-
-
---
 -- Name: analytics id; Type: DEFAULT; Schema: public; Owner: -
 --
 
@@ -822,13 +705,6 @@ ALTER TABLE ONLY public.analytics ALTER COLUMN id SET DEFAULT nextval('public.an
 --
 
 ALTER TABLE ONLY public.audit_events ALTER COLUMN id SET DEFAULT nextval('public.audit_events_id_seq'::regclass);
-
-
---
--- Name: coverage_rules id; Type: DEFAULT; Schema: public; Owner: -
---
-
-ALTER TABLE ONLY public.coverage_rules ALTER COLUMN id SET DEFAULT nextval('public.coverage_rules_id_seq'::regclass);
 
 
 --
@@ -867,13 +743,6 @@ ALTER TABLE ONLY public.personal_access_tokens ALTER COLUMN id SET DEFAULT nextv
 
 
 --
--- Name: schedule_batch_items id; Type: DEFAULT; Schema: public; Owner: -
---
-
-ALTER TABLE ONLY public.schedule_batch_items ALTER COLUMN id SET DEFAULT nextval('public.schedule_batch_items_id_seq'::regclass);
-
-
---
 -- Name: settings id; Type: DEFAULT; Schema: public; Owner: -
 --
 
@@ -885,13 +754,6 @@ ALTER TABLE ONLY public.settings ALTER COLUMN id SET DEFAULT nextval('public.set
 --
 
 ALTER TABLE ONLY public.users ALTER COLUMN id SET DEFAULT nextval('public.users_id_seq'::regclass);
-
-
---
--- Name: work_patterns id; Type: DEFAULT; Schema: public; Owner: -
---
-
-ALTER TABLE ONLY public.work_patterns ALTER COLUMN id SET DEFAULT nextval('public.work_patterns_id_seq'::regclass);
 
 
 --
@@ -940,22 +802,6 @@ ALTER TABLE ONLY public.cache_locks
 
 ALTER TABLE ONLY public.cache
     ADD CONSTRAINT cache_pkey PRIMARY KEY (key);
-
-
---
--- Name: coverage_rules coverage_rules_department_unique; Type: CONSTRAINT; Schema: public; Owner: -
---
-
-ALTER TABLE ONLY public.coverage_rules
-    ADD CONSTRAINT coverage_rules_department_unique UNIQUE (department);
-
-
---
--- Name: coverage_rules coverage_rules_pkey; Type: CONSTRAINT; Schema: public; Owner: -
---
-
-ALTER TABLE ONLY public.coverage_rules
-    ADD CONSTRAINT coverage_rules_pkey PRIMARY KEY (id);
 
 
 --
@@ -1103,30 +949,6 @@ ALTER TABLE ONLY public.roles
 
 
 --
--- Name: schedule_batch_items schedule_batch_items_pkey; Type: CONSTRAINT; Schema: public; Owner: -
---
-
-ALTER TABLE ONLY public.schedule_batch_items
-    ADD CONSTRAINT schedule_batch_items_pkey PRIMARY KEY (id);
-
-
---
--- Name: schedule_batch_items schedule_batch_items_schedule_id_unique; Type: CONSTRAINT; Schema: public; Owner: -
---
-
-ALTER TABLE ONLY public.schedule_batch_items
-    ADD CONSTRAINT schedule_batch_items_schedule_id_unique UNIQUE (schedule_id);
-
-
---
--- Name: schedule_batches schedule_batches_pkey; Type: CONSTRAINT; Schema: public; Owner: -
---
-
-ALTER TABLE ONLY public.schedule_batches
-    ADD CONSTRAINT schedule_batches_pkey PRIMARY KEY (id);
-
-
---
 -- Name: schedule_settings schedule_settings_pkey; Type: CONSTRAINT; Schema: public; Owner: -
 --
 
@@ -1204,22 +1026,6 @@ ALTER TABLE ONLY public.users
 
 ALTER TABLE ONLY public.users
     ADD CONSTRAINT users_pkey PRIMARY KEY (id);
-
-
---
--- Name: work_patterns work_patterns_pkey; Type: CONSTRAINT; Schema: public; Owner: -
---
-
-ALTER TABLE ONLY public.work_patterns
-    ADD CONSTRAINT work_patterns_pkey PRIMARY KEY (id);
-
-
---
--- Name: work_patterns work_patterns_scope_scope_key_unique; Type: CONSTRAINT; Schema: public; Owner: -
---
-
-ALTER TABLE ONLY public.work_patterns
-    ADD CONSTRAINT work_patterns_scope_scope_key_unique UNIQUE (scope, scope_key);
 
 
 --
@@ -1349,13 +1155,6 @@ CREATE INDEX personal_access_tokens_tokenable_type_tokenable_id_index ON public.
 
 
 --
--- Name: schedule_batch_items_batch_id_index; Type: INDEX; Schema: public; Owner: -
---
-
-CREATE INDEX schedule_batch_items_batch_id_index ON public.schedule_batch_items USING btree (batch_id);
-
-
---
 -- Name: security_events_employee_id_index; Type: INDEX; Schema: public; Owner: -
 --
 
@@ -1423,5 +1222,5 @@ ALTER TABLE ONLY public.roles
 -- PostgreSQL database dump complete
 --
 
-\unrestrict 9bqK8dn75RwQSafoJQ3yhPAJgLfpkwCegwp3HLCukY3nNSdIgnc8XXyasBnBguL
+\unrestrict bedFQFcrQbv6TAjqy2j6Rb61HeLNLnwuvLCF0dEcNVniObtbPcOmPVtJQcheeYh
 

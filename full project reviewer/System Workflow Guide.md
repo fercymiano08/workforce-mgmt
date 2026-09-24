@@ -687,7 +687,7 @@ An employee with an **Approved leave** covering today is marked on-leave rather 
 
 **What it is:** two connected pieces — the **templates** (what a shift is) and the **assignments** (who works which template on which day).
 
-**Files:** `HR_Manager/Shifts.jsx`, `components/scheduling/EmployeePicker.jsx` (Department → Role → Employee picker), `components/scheduling/ScheduleRulesModal.jsx`, backend `ShiftController.php`, `ScheduleGenerator.php`, `ScheduleRulesController.php`, `AutoGenerateSchedules.php`
+**Files:** `HR_Manager/Shifts.jsx`, `components/scheduling/EmployeePicker.jsx` (Department → Role → Employee picker), `components/scheduling/AutomatedShiftModal.jsx`, backend `ShiftController.php`, `AutomatedShiftController.php`, `ShiftPlanner.php`, `ScheduleCleanup.php`
 
 ### The Active Shift Templates (`shift_definitions`)
 
@@ -701,48 +701,24 @@ An employee with an **Approved leave** covering today is marked on-leave rather 
 >
 > **The template can never be missing.** Nothing can be scheduled without it (the Assign form would have nothing to pick, and schedule generation is refused). There is no screen to create or delete templates, so a migration (`ensure_default_shift_definitions`) puts SHIFT004 in place on any database that lacks it — fresh install, Docker start, or a database whose demo seed was never run — and never touches existing rows. The Shifts page also says so plainly if the list is ever empty, instead of showing an empty dropdown.
 >
-> **One shift per person per day.** Assigning a second shift to someone who already has one that day is refused with a message naming the existing assignment; running the automated generator twice creates nothing new the second time (it reports the days as "already scheduled").
+> **One shift per person per day.** Assigning a second shift to someone who already has one that day is refused with a message naming the existing assignment; the automated generator skips anyone who already has a shift that day, so generating over an existing schedule only fills the gaps.
 
-### Flow A — Automated Shift Scheduling (one feature, one flow)
+### Flow A — Automated Shift Scheduling (rules build a draft, HR approves it)
 
-**Shifts → Automated Shift Scheduling.** There is one feature and one engine (`ScheduleGenerator::run()`). "Run now" and the automatic switch perform **the same run**; the switch simply does it by itself.
+**Shifts → + Automated Shift.** "Automated" here means **rule-based automation, not AI**: fixed business rules do the tedious work (who is eligible, who goes first, who is already booked), and a person reviews and approves the result. Nothing runs by itself and nothing is saved until **Approve**. One engine: `ShiftPlanner` (`plan()` builds the draft and writes nothing; `commit()` saves what HR approved).
 
 | Step | What happens |
 |------|--------------|
-| **1. Rules** | Who works which days (**Work days** tab: everyone's default, then department and employee exceptions), **holidays**, **approved leave**, **coverage** minimums. |
-| **2. Window** | A **calendar period** (weeks run **Monday to Sunday**, ISO 8601): **1 week** = this week; **2 weeks** = this week and next; **1 month** = this calendar month; **Next month** = all of next month. Example on Thu 24 Sep 2026: 1 week = Sep 21–27, 2 weeks = Sep 21–Oct 4, 1 month = Sep 1–30, Next month = Oct 1–31. Days that have **already started are never filled** (a day stays open until its shift starts), so a new week or month is scheduled just after midnight on its first day. The Schedule tab lists each week as *Passed*, *Scheduled · N shifts*, *Partly scheduled*, *Undone · Run now to refill*, or *Not scheduled yet*. |
-| **3. Publish** | **Run now** first shows a **preview** (nothing is written): new shifts per week, skipped for *already scheduled / approved leave / holidays / day off*, and days below minimum coverage. **Publish** (`POST /api/shifts/automation/run`) creates the shifts, records **one history entry per week** (`BAT001`...), sends each employee **one** notification for the whole run, warns the admins about coverage, and writes an **audit** entry. |
-| **4. Undo** | **History → Undo** removes that week's shifts **that have not happened yet** (days already passed stay, because attendance may rely on them) and tells the employees. |
+| **1. Period** | HR picks a **start date** (from tomorrow on), a **duration** (1–4 weeks; the **end date** is worked out), and the **work days** (Mon–Sat by default; holidays are skipped automatically). |
+| **2. Requirement** | **Employees required per day**, an optional **department** and **position** filter, and the **max paid hours per week** per employee (48 by default). The **shift is always the Standard Shift** (8:00 AM – 5:00 PM), the only shift the company works: it is shown, not chosen, and a request cannot pick or create another. The screen shows how many employees match the filters and warns when fewer people match than are needed. **Generate Schedule** builds the draft. |
+| **3. The system builds the draft** | For each working day: **(a) the eligible pool** — active, matches the department / position, **not on approved leave** that day, **not already scheduled** that day, and **still under the weekly hours limit** (hours already scheduled that Monday–Sunday week count, paid hours = shift length minus the unpaid lunch); **(b) fairness ranking** — the person with the **fewest shifts so far in this draft** goes first (ties: fewest hours already that week, then employee id, so the same input always gives the same draft); **(c) assign the top N** (N = employees required) and count them, so nobody is booked twice in a day. |
+| **4. Review** | A wide window with a table of every eligible employee against each working day (one week at a time for longer periods): **assigned** shifts, **On leave** days, days they **already have a shift**, **Max hrs** days (the weekly hours limit was reached), and a *n / N* count under each day, plus each person's shifts and paid hours. The header shows **Eligible employees**, **Needed per day**, **Working days**, **Total assignments** and **Paid hours**. A side panel explains the draft: **Fairness** (each person works between X and Y shifts), **Coverage by day** for the whole period, and **Why some people are not scheduled** (who is on leave, who is at the hours limit, who already has a shift, which holidays were skipped). |
+| **5. HR decision** | **Approve Schedule** saves it, or **Edit Schedule** lets HR click any cell to assign or remove someone first (leave days and existing shifts can't be changed). |
+| **6. Done** | Approving (`POST /api/shifts/automated/approve`) creates the shifts, re-checks each one (someone may have got leave approved while the draft was open — that assignment is skipped and reported), saves them all as the Standard Shift, sends each employee **one** notification for the whole schedule, and writes an **audit** entry. The shifts show in each employee's **My Schedule** and can be changed later like any other shift. |
 
-**Who gets scheduled on which day** — an employee's **own days**, else their **department's**, else **everyone's default** (Monday–Friday unless changed). Nobody is scheduled on a **holiday**, on **approved leave**, or twice on the same day. **Coverage rules** never block anything: they produce warnings.
+**Who works what.** A shift is only ever created for a **working day** (the chosen work days minus holidays), for someone who is **active**, **not on approved leave** and **not already scheduled** that day. Because only N people are picked per day, employees who are not picked have no shift that day — and the kiosk refuses a clock-in without a shift.
 
-**The automatic switch (OFF by default).** When it is ON, a job (`schedules:auto-generate`) checks **every hour** and performs the same run for any week of the window **that has not been scheduled yet**. So:
-
-1. Switching it on schedules the whole window within the hour.
-2. Each new week is scheduled **the moment it enters the window** (for a 1-week window: on Monday, the following week).
-3. If the computer was off, the next hourly check **catches up**.
-4. A week that was already scheduled — by Run now or by the job, **even with nothing new to add, or undone** — is **left alone**: the job never repeats a week, never refills shifts an admin deleted, and never sends the same summary twice. (To refill an undone week, press **Run now**.)
-
-**A published schedule stays true.** Changes made after a week was scheduled update it by themselves (only shifts from today on that nobody has clocked in for; a worked day is never rewritten), and the employee is told:
-
-| When this happens... | ...the schedule does this | ...and the reverse |
-|---|---|---|
-| A leave is **approved** (from any screen, including AI Decision Support) | removes the person's shifts on the leave days | leave **withdrawn / cancelled** → puts them back |
-| An employee is set **Inactive** | removes their upcoming shifts | **reactivated** → puts them back |
-| A **holiday is added** | clears everyone's shifts that day (the screen says how many) | holiday **deleted** → puts them back |
-| A **new employee** is hired | with Automatic ON, added to the weeks already scheduled within the hour | — |
-
-"Put back" only happens in weeks that are still scheduled — never in a week an admin **undid** — and appears in History as **Restored**. Changing **work days or the shift** applies to weeks scheduled from then on; weeks already scheduled keep their shifts (press Run now to add new work days to them). **Undo** removes a week's shifts from **tomorrow** on — today and earlier stay, because people may already be at work.
-
-When it runs, the admins get one summary: *"42 shifts were created for Sep 28 – Oct 4; skipped: 3 for approved leave. Review or undo it in Automated Shift Scheduling > History."*
-
-| Tab | What it holds |
-|-----|---------------|
-| **Schedule** | The 4-step flow, the Automatic switch, the window (1 week / 2 weeks / 1 month / Next month, each showing its dates), the shift used, the week-by-week status, and **Run now** (preview → Publish) |
-| **Work days** | Everyone's default days, plus exceptions for a department or one employee |
-| **Holidays** | A company calendar of days nobody is scheduled (starter list of Philippine holidays, editable) |
-| **Coverage** | Minimum scheduled people per department per day |
-| **History** | One entry per week (Automatic or Run now), with Undo |
+**A saved schedule stays true.** Two changes made afterwards update it by themselves (only shifts from today on that nobody has clocked in for; a worked day is never rewritten), and the employee is told: a leave is **approved** (from any screen, including AI Decision Support) → the person's shifts on the leave days are removed; an employee is set **Inactive** → their upcoming shifts are removed.
 
 To give **one person** a shift by hand, use **Standard Shift Assign** instead (Flow B).
 
@@ -779,7 +755,7 @@ An employee with **approved leave** on a date cannot be given a shift that day: 
 
 ### Leave Costs Working Days, Not Calendar Days
 
-A leave request is charged in **working days**: the days the person's work pattern says they work (their own pattern, else their department's, else the usual days), **minus company holidays**. A Friday-to-Monday leave costs **2** days of balance, not 4. While the employee picks dates the form shows the live cost ("This will use 2 working days of your balance (4 calendar days; weekends, holidays and days off are not counted)"). The server does the counting: the time-off domain calls the scheduling domain's `WorkingDays` calculator in-process (`WorkingDays::count` → a plain query against `holidays` and the employee's work pattern in the same database), stores the result in `leaves.days`, refuses a range with no working day at all, and checks the balance against it. There is no HTTP hop and no fallback needed — both domains share one database. Old requests keep their calendar-day cost (backfilled).
+A leave request is charged in **working days**: the company's **usual work days** (Monday to Saturday; Sunday is the day off), **minus company holidays**. A Friday-to-Monday leave costs **3** days of balance (Friday, Saturday, Monday), not 4 - Sunday is never charged. While the employee picks dates the form shows the live cost ("This will use 2 working days of your balance (4 calendar days; weekends, holidays and days off are not counted)"). The server does the counting: the time-off domain calls the scheduling domain's `WorkingDays` calculator in-process (`WorkingDays::count` → a plain query against `holidays` and the company's usual work days in the same database), stores the result in `leaves.days`, refuses a range with no working day at all, and checks the balance against it. There is no HTTP hop and no fallback needed — both domains share one database. Old requests keep their calendar-day cost (backfilled).
 
 ### The Administrator's Queue (Leave Management)
 

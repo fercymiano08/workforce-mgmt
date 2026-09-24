@@ -126,7 +126,7 @@ Browser (frontend) → sends a request to `/api/...` → the frontend's proxy (V
 
 **Plain story (one smooth sentence):**
 1. HR **registers** the employee (start with basic info + a password + face).
-2. HR **assigns a schedule** (shift times) - or auto-generates schedules for everyone.
+2. HR **assigns a schedule** (the Standard Shift) - by hand, or with **+ Automated Shift**, where the rules build a draft and HR approves it.
 3. Each day the employee **clocks in/out** (face at the kiosk).
 4. If they can't come in, they **file a leave request**; HR **approves or rejects** it, and a "leave balance" is updated.
 5. Weekly, the system builds a **timesheet** (hours worked). When the week ends the employee reviews and submits it (or the system submits it Monday noon); HR approves it, or rejects it with a reason, and approved ones go to payroll once. Employees can also open a live **"This Week"** timesheet and a **history** of past weeks right from the My Timesheet page.
@@ -164,7 +164,7 @@ Use these as quick talking points. Say each in ONE breath.
 - **Kiosk Setup/Controls** - "Configure the door device: name, location, PIN, active on/off."
 
 **HR + Employee:**
-- **Shifts & Schedules** - "When each employee works. HR can auto-generate a whole week of schedules."
+- **Shifts & Schedules** - "When each employee works. HR can let the rules build a draft for up to 4 weeks, then review and approve it."
 - **Notifications** - "Announcements and alerts, with read/unread tracking for each employee."
 - **Settings** - "Company info and system preferences, including a Time Manager tab for grace period, no-show threshold, break rules and early-leave policy. HR can edit; employees see the formatting settings."
 
@@ -517,5 +517,5 @@ Use this as a rapid-fire review. One line = one idea. Cover the right column, th
 - **Absences are recorded automatically:** a nightly job marks a finished, scheduled day with no clock-in and no approved leave as Absent, so the numbers are honest.
 - **Everything sensitive is audited:** sign-ins, failed sign-ins, password changes, overtime decisions, and any change to settings. Exporting a report or the audit log asks the administrator to type their password again.
 - **Administrator's daily workflow:** the dashboard's "Needs your attention" panel, bulk leave approval with a team-impact view, reopenable overtime decisions, and a Notifications page.
-- **Automated shift assignment** follows work patterns, holidays, approved leave and coverage rules, previews before publishing, and can be undone.
+- **Automated shift scheduling** is rule-based, not AI: it picks only eligible people (active, not on leave, not already scheduled, under the weekly hours limit), shares shifts fairly, shows a draft that HR can edit, and saves nothing until HR approves.
 

@@ -16,16 +16,10 @@ class Employee extends Model
 
     protected static function booted(): void
     {
-        // Someone who no longer works here keeps no upcoming shifts (they would only turn into false no-shows);
-        // someone reactivated is put back on the weeks already scheduled.
+        // Someone who no longer works here keeps no upcoming shifts (they would only turn into false no-shows).
         static::saved(function (Employee $employee): void {
-            if (! $employee->wasChanged('status')) {
-                return;
-            }
-            if ($employee->status === 'Inactive') {
+            if ($employee->wasChanged('status') && $employee->status === 'Inactive') {
                 \App\Services\ScheduleCleanup::forInactiveEmployee($employee);
-            } elseif ($employee->getOriginal('status') === 'Inactive') {
-                app(\App\Services\ScheduleGenerator::class)->refill([$employee->id], '0000-01-01', '9999-12-31', 'you are active again');
             }
         });
     }

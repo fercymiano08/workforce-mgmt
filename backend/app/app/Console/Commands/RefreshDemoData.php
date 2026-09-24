@@ -7,12 +7,13 @@ use App\Models\Attendance;
 use App\Models\EarlyClockOut;
 use App\Models\Employee;
 use App\Models\Notification;
-use App\Models\ScheduleBatchItem;
+use App\Models\Holiday;
+use App\Models\Leave;
+use App\Models\ScheduleSetting;
 use App\Models\ShiftDefinition;
 use App\Models\ShiftSchedule;
 use App\Models\Timesheet;
 use App\Models\User;
-use App\Services\ScheduleGenerator;
 use App\Services\ShiftHours;
 use App\Services\SystemSettings;
 use App\Services\TimesheetGenerationService;
@@ -30,7 +31,7 @@ use Illuminate\Support\Facades\DB;
  * registered through the system (e.g. Fercy Miano) is never touched.
  *
  * Nothing is typed in by hand: it goes through the same rules real data does -
- *   schedules  ScheduleGenerator::plan() - the saved work days (Mon-Sat), holidays, approved leave
+ *   schedules  everyone on the company's usual work days (Mon-Sat), except holidays and approved leave
  *   arrival    Present up to the late-grace minutes after the shift start, Late after (the kiosk's rule)
  *   hours      ShiftHours::count() - paid time from the shift start, lunch deducted, overtime only if approved
  *   timesheets TimesheetGenerationService, Monday-Sunday weeks, moved through TimesheetWorkflow
@@ -45,7 +46,7 @@ class RefreshDemoData extends Command
 
     protected $description = "Rebuild the demo employees' schedules, attendance and timesheets up to today";
 
-    public function handle(ScheduleGenerator $generator, TimesheetGenerationService $timesheets, TimesheetWorkflow $workflow): int
+    public function handle(TimesheetGenerationService $timesheets, TimesheetWorkflow $workflow): int
     {
         $ids = $this->demoEmployeeIds();
         if ($ids === []) {
@@ -54,21 +55,21 @@ class RefreshDemoData extends Command
             return self::SUCCESS;
         }
 
-        $tz = ScheduleGenerator::TZ;
+        $tz = ShiftHours::timezone();
         $now = Carbon::now($tz);
         $today = $now->toDateString();
         $from = $now->copy()->startOfWeek(Carbon::MONDAY)->subWeeks(max(1, (int) $this->option('weeks')))->toDateString();
-        $shiftId = $generator->defaultShiftId();
-        $shift = ShiftDefinition::find($shiftId);
+        $shift = ShiftDefinition::orderBy('id')->first();   // the company's standard shift
         if (! $shift) {
             $this->error('There is no shift to schedule.');
 
             return self::FAILURE;
         }
+        $shiftId = $shift->id;
         $grace = max(0, (int) app(SystemSettings::class)->get('late_grace_minutes', 15));
         $admin = User::where('role', 'Administrator')->value('name') ?: 'Workforce Admin';
 
-        DB::transaction(function () use ($ids, $from, $today, $now, $tz, $shift, $shiftId, $grace, $generator, $timesheets, $workflow, $admin): void {
+        DB::transaction(function () use ($ids, $from, $today, $now, $tz, $shift, $shiftId, $grace, $timesheets, $workflow, $admin): void {
             // Initials instead of borrowed cartoon pictures
             Employee::whereIn('id', $ids)->update(['avatar' => null]);
 
@@ -88,12 +89,10 @@ class RefreshDemoData extends Command
             EarlyClockOut::whereIn('employee_id', $ids)->delete();
             Attendance::whereIn('employee_id', $ids)->delete();
             Timesheet::whereIn('employee_id', $ids)->delete();
-            $old = ShiftSchedule::whereIn('employee_id', $ids)->where('date', '<=', $today)->pluck('id');
-            ScheduleBatchItem::whereIn('schedule_id', $old)->delete();
-            ShiftSchedule::whereIn('id', $old)->delete();
+            ShiftSchedule::whereIn('employee_id', $ids)->where('date', '<=', $today)->delete();
 
             // 1. Schedules: exactly what automated scheduling would give them (work days, holidays, leave)
-            $plan = $generator->plan($from, $today, $shiftId, $ids);
+            $plan = ['rows' => $this->scheduleRows($ids, $from, $today)];
             $scheduleNo = $this->maxNumber(ShiftSchedule::class, 'SCH');
             foreach ($plan['rows'] as $row) {
                 ShiftSchedule::create([
@@ -172,6 +171,37 @@ class RefreshDemoData extends Command
         $this->info('Demo data rebuilt for '.count($ids).' demo employees, '.$from.' to '.$today.'.');
 
         return self::SUCCESS;
+    }
+
+    /**
+     * Who works which day between two dates: every demo employee on the company's usual work days, except holidays
+     * and days of approved leave.
+     *
+     * @param  list<string>  $ids
+     * @return list<array{employee_id: string, employee_name: string, date: string}>
+     */
+    private function scheduleRows(array $ids, string $from, string $to): array
+    {
+        $workDays = ScheduleSetting::current()->usualDays();
+        $holidays = Holiday::whereBetween('date', [$from, $to])->get()->map(fn ($h) => $h->date->toDateString())->all();
+        $leaves = Leave::whereIn('employee_id', $ids)->where('status', 'Approved')
+            ->where('start_date', '<=', $to)->where('end_date', '>=', $from)->get();
+
+        $rows = [];
+        foreach (Employee::whereIn('id', $ids)->where('status', '!=', 'Inactive')->orderBy('id')->get() as $employee) {
+            for ($day = Carbon::parse($from); $day->toDateString() <= $to; $day->addDay()) {
+                $date = $day->toDateString();
+                if (! in_array($day->isoWeekday(), $workDays, true) || in_array($date, $holidays, true)) {
+                    continue;
+                }
+                if ($leaves->contains(fn ($l) => $l->employee_id === $employee->id && $l->start_date->toDateString() <= $date && $l->end_date->toDateString() >= $date)) {
+                    continue;
+                }
+                $rows[] = ['employee_id' => $employee->id, 'employee_name' => trim($employee->first_name.' '.$employee->last_name), 'date' => $date];
+            }
+        }
+
+        return $rows;
     }
 
     /** @return list<string> the demo employees that exist in this database */

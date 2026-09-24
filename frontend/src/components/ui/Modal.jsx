@@ -9,6 +9,8 @@ const sizes = {
   lg: 'max-w-2xl',
   xl: 'max-w-4xl',
   full: 'max-w-6xl',
+  // For screens with a table and a side panel: almost the whole window, up to 1480px
+  wide: 'max-w-[min(96vw,1480px)]',
 };
 
 export default function Modal({ isOpen, onClose, title, children, size = 'md', className }) {

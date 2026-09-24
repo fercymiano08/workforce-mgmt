@@ -14,10 +14,6 @@ Schedule::command('attendance:recount-hours')->everyMinute()->withoutOverlapping
 Schedule::command('attendance:mark-absent')->dailyAt('00:10')->timezone('Asia/Manila')->withoutOverlapping();
 Schedule::command('attendance:mark-absent')->dailyAt('12:00')->timezone('Asia/Manila')->withoutOverlapping();
 
-// Automatic scheduling: checks every hour, and does its work once per week at the day and hour HR chose
-// (only when switched on). See AutoGenerateSchedules.
-Schedule::command('schedules:auto-generate')->hourly()->withoutOverlapping();
-
 // Timesheet workflow: submit unsubmitted finished weeks at the deadline (Monday 12:00 Manila time) and
 // send the one-time reminders. Both are safe to run repeatedly.
 Schedule::command('timesheets:auto-submit')->hourly()->withoutOverlapping();

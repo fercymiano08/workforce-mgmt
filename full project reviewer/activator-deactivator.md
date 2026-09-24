@@ -86,7 +86,7 @@ Open a terminal in VS Code at the project root and run:
 This single script:
 
 1. Starts the backend on port `8000` (`php artisan serve`).
-2. Starts the background scheduler (`php artisan schedule:work`) — the jobs that expire early-leave certificates, mark absent days, run automatic scheduling and drive the timesheet workflow.
+2. Starts the background scheduler (`php artisan schedule:work`) — the jobs that expire early-leave certificates, mark absent days, raise attendance alerts and drive the timesheet workflow.
 3. Starts the React frontend (`npm run dev`, Vite — usually `5173`, or `5174` if `5173` is busy).
 4. Waits until the backend is actually listening on its port, then hits `/up` **with retries** (so a backend still warming up on its first request is never reported `DOWN`), and prints `UP` / `DOWN` so you know immediately if it didn't boot.
 5. If the port is already occupied (e.g. you never stopped a previous run), it skips starting it again instead of erroring — the health check at the end still tells you the true state.

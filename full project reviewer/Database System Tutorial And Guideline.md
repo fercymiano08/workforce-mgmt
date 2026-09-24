@@ -45,7 +45,7 @@ The 22 business tables are grouped below by domain. This is a **logical grouping
 |--------|--------|
 | Identity | `users`, `employees`, `departments`, `roles`, `audit_events` |
 | Attendance | `attendance`, `early_clock_outs`, `security_events` |
-| Scheduling | `shift_definitions`, `shift_schedules`, `work_patterns`, `holidays`, `coverage_rules`, `schedule_settings`, `schedule_batches`, `schedule_batch_items` |
+| Scheduling | `shift_definitions`, `shift_schedules`, `holidays`, `schedule_settings` |
 | Time-off | `leaves`, `overtime_requests` |
 | Payroll | `timesheets` |
 | Communications | `notifications` |
@@ -133,7 +133,7 @@ Some columns (like `settings.kiosk`) store flexible structured data as JSON inst
 
 | Table | Purpose | Key Columns |
 |-------|---------|-------------|
-| `leaves` | Leave applications with approval workflow. `days` = the WORKING days the request costs (work pattern minus holidays, counted in-process by the same app when it is filed) | `id`, `employee_id` (FK), `leave_type`, `start_date`, `end_date`, `days`, `status` |
+| `leaves` | Leave applications with approval workflow. `days` = the WORKING days the request costs (the usual work days minus holidays, counted in-process by the same app when it is filed) | `id`, `employee_id` (FK), `leave_type`, `start_date`, `end_date`, `days`, `status` |
 
 > Note: leave balances are stored as a JSON column inside `employees.leave_balances`, not a separate table.
 
@@ -143,11 +143,8 @@ Some columns (like `settings.kiosk`) store flexible structured data as JSON inst
 |-------|---------|-------------|
 | `shift_definitions` | The single shift template (Standard Shift 08:00–17:00). Overtime is not a shift - it extends this one when an overtime request is approved | `id`, `name`, `start_time`, `end_time` |
 | `shift_schedules` | Who works which shift on which date | `id`, `employee_id` (FK), `shift_id` (FK), `date`, `status` |
-| `schedule_settings` | The one row of automated-scheduling settings: the automatic switch, the calendar period to keep scheduled (`window`: `week`, `two_weeks`, `month` or `next_month`; weeks are Monday–Sunday, ISO 8601), everyone's usual work days, the shift | `auto_enabled`, `window`, `default_work_days` (ISO weekdays, 1 = Mon … 7 = Sun), `shift_id` |
-| `work_patterns` | Which weekdays a department or one employee works (overrides the usual days) | `scope` (department / employee), `scope_key`, `work_days` |
-| `holidays` | Days nobody is scheduled | `date` (unique), `name` |
-| `coverage_rules` | The minimum scheduled people per department per day | `department` (unique), `min_staff` |
-| `schedule_batches` / `schedule_batch_items` | Every generation (manual or automatic) and which shifts it created, so it can be reviewed and undone | `source`, `created_by`, `start_date`, `end_date`, `status` / `batch_id`, `schedule_id` |
+| `schedule_settings` | The one row of scheduling settings: the company's usual work days (Monday–Saturday by default; leave counting and the automated shift generator both start from them) and the most paid hours per week the generator may give one employee | `default_work_days` (ISO weekdays, 1 = Monday), `max_weekly_hours` |
+| `holidays` | Days nobody is scheduled and leave is not counted for (starter list of Philippine holidays) | `date` (unique), `name` |
 
 #### System Support
 

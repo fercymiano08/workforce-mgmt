@@ -16,7 +16,7 @@ API calls go through `src/services/`. In development, Vite proxies `/api` to the
 | `npm run build` | Production build into `dist/` |
 | `npm run lint` | ESLint |
 | `npm run smoke:setup` | Once per machine: downloads a headless Chrome into `.smoke-browser/` for the smoke test (git-ignored) |
-| `npm run smoke` | Opens the running system in a real browser, visits every page for a role (and opens windows such as Automated Shift Scheduling), and reports crashes, console errors and failed API calls (screenshots go to `scripts/smoke-output/`). Run it after every larger change. |
+| `npm run smoke` | Opens the running system in a real browser, visits every page for a role (and opens windows such as + Automated Shift), and reports crashes, console errors and failed API calls (screenshots go to `scripts/smoke-output/`). Run it after every larger change. |
 
 Every production build carries a version stamp (`dist/version.json`). A tab that was open during an update shows
 "WorkForce Pro was updated — Reload", and if it crashes on the old code it reloads into the new version by itself.

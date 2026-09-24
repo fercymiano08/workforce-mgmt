@@ -213,40 +213,13 @@ export const shiftService = {
     const { data } = await http.delete(`/shifts/schedules/${id}`);
     return data;
   },
-  // Automated shift scheduling (admin): its settings and rules, "Run now", and the history of runs.
-  getRules: async () => {
-    const { data } = await http.get('/shifts/rules');
+  // Automated shift scheduling (admin): the rules build a draft (nothing is saved), HR approves it.
+  previewAutomated: async (payload) => {
+    const { data } = await http.post('/shifts/automated/preview', payload);
     return data;
   },
-  saveAutomation: async (payload) => {
-    const { data } = await http.put('/shifts/rules/automation', payload);
-    return data;
-  },
-  // The same run the automatic switch performs; preview: true only reports what would happen.
-  runAutomation: async (preview) => {
-    const { data } = await http.post('/shifts/automation/run', { preview });
-    return data;
-  },
-  savePattern: async (payload) => {
-    const { data } = await http.put('/shifts/rules/patterns', payload);
-    return data;
-  },
-  deletePattern: async (id) => http.delete(`/shifts/rules/patterns/${id}`),
-  addHoliday: async (payload) => {
-    const { data } = await http.post('/shifts/rules/holidays', payload);
-    return data;
-  },
-  deleteHoliday: async (id) => http.delete(`/shifts/rules/holidays/${id}`),
-  saveCoverage: async (payload) => {
-    const { data } = await http.put('/shifts/rules/coverage', payload);
-    return data;
-  },
-  getBatches: async () => {
-    const { data } = await http.get('/shifts/batches');
-    return data;
-  },
-  undoBatch: async (id) => {
-    const { data } = await http.delete(`/shifts/batches/${id}`);
+  approveAutomated: async (payload) => {
+    const { data } = await http.post('/shifts/automated/approve', payload);
     return data;
   },
 };

@@ -10,7 +10,7 @@ import Badge from '../../components/ui/Badge';
 import Avatar from '../../components/ui/Avatar';
 import Modal from '../../components/ui/Modal';
 import EmployeePicker from '../../components/scheduling/EmployeePicker';
-import AutomatedSchedulingModal from '../../components/scheduling/AutomatedSchedulingModal';
+import AutomatedShiftModal from '../../components/scheduling/AutomatedShiftModal';
 import Input, { Select, Textarea } from '../../components/ui/Input';
 import { employeeService, shiftService } from '../../services/api';
 import { formatDate, formatTime } from '../../utils/helpers';
@@ -235,7 +235,7 @@ export default function Shifts() {
   const barMap = { blue: 'bg-blue-500', emerald: 'bg-emerald-500', amber: 'bg-amber-500', purple: 'bg-purple-500' };
 
   // Only the FIRST load shows the skeleton. A later refresh (after a save) keeps the page, and any open window,
-  // on screen; swapping everything for the skeleton used to close the automation window and reopen it on its first tab.
+  // on screen; swapping everything for the skeleton would close the automation window in the middle of its steps.
   const shiftsLoading = (loadingShiftDefs && !shiftDefs) || (loadingShiftSchedules && !shiftSchedules);
 
   if (shiftsLoading) {
@@ -415,8 +415,8 @@ export default function Shifts() {
               <CardDescription>Assign, review, and manage employee schedules</CardDescription>
             </div>
             <div className="flex items-center gap-2">
-              {/* Automated: the system schedules everyone by the rules. Standard: you assign one shift to one person by hand. */}
-              <Button variant="outline" icon={Bot} onClick={() => setAutomationOpen(true)} title="Schedule everyone automatically by the rules, and see what is scheduled">Automated Shift Scheduling</Button>
+              {/* Automated: the rules build a draft for a period, you review and approve it. Standard: you assign one shift to one person by hand. */}
+              <Button variant="outline" icon={Bot} onClick={() => setAutomationOpen(true)} title="Let the system build a schedule from your rules, then review and approve it">+ Automated Shift</Button>
               <Button icon={UserPlus} onClick={() => openAdd()} title="Assign one shift to one person by hand">Standard Shift Assign</Button>
             </div>
           </div>
@@ -579,7 +579,7 @@ export default function Shifts() {
         </div>
       </Modal>
 
-      <AutomatedSchedulingModal isOpen={automationOpen} onClose={() => setAutomationOpen(false)} employees={employees} shiftDefs={shiftDefs} onChanged={() => refreshSchedules()} />
+      <AutomatedShiftModal isOpen={automationOpen} onClose={() => setAutomationOpen(false)} employees={employees} shiftDefs={shiftDefs || []} onChanged={() => refreshSchedules()} />
 
       {/* Delete Confirmation */}
       <Modal isOpen={!!deleteTarget} onClose={closeDeleteSchedule} title="Delete Shift Assignment" size="sm">

@@ -4,23 +4,20 @@ namespace App\Services;
 
 use App\Models\Attendance;
 use App\Models\Employee;
-use App\Models\Holiday;
 use App\Models\Leave;
-use App\Models\ScheduleBatchItem;
 use App\Models\ShiftSchedule;
-use Illuminate\Support\Carbon;
+use App\Support\LocalTime;
 use Illuminate\Support\Collection;
 
 /**
  * Keeps a published schedule true when something changes afterwards. Automated scheduling skips approved
- * leave, inactive people and holidays when it PLANS a week - this does the same for weeks already published:
+ * leave and inactive people when it builds a draft - this does the same for shifts already saved:
  *
  *   a leave becomes Approved      -> that person's shifts on the leave days go
  *   an employee becomes Inactive  -> their upcoming shifts go
- *   a holiday is added            -> everyone's shifts on that day go
  *
  * Only shifts from today on that nobody has clocked in for are removed; a worked day is never rewritten.
- * Called from the Leave, Employee and Holiday models, so every screen that changes them is covered.
+ * Called from the Leave and Employee models, so every screen that changes them is covered.
  */
 class ScheduleCleanup
 {
@@ -38,17 +35,10 @@ class ScheduleCleanup
         return self::remove(ShiftSchedule::where('employee_id', $employee->id)->get(), null, 'inactive', $employee->id);
     }
 
-    public static function forHoliday(Holiday $holiday): int
-    {
-        $shifts = ShiftSchedule::whereDate('date', $holiday->date->toDateString())->get();
-
-        return self::remove($shifts, $holiday->date->format('M j').' is now a holiday ('.$holiday->name.')', 'holiday', (string) $holiday->id);
-    }
-
     /** @param  Collection<int, ShiftSchedule>  $shifts */
     private static function remove(Collection $shifts, ?string $why, string $cause, string $causeId): int
     {
-        $today = Carbon::now(ScheduleGenerator::TZ)->toDateString();
+        $today = LocalTime::today()->toDateString();
         $removable = $shifts->filter(fn (ShiftSchedule $s) => $s->date->toDateString() >= $today
             && ! Attendance::where('employee_id', $s->employee_id)->whereDate('date', $s->date->toDateString())->exists());
         if ($removable->isEmpty()) {
@@ -57,7 +47,6 @@ class ScheduleCleanup
 
         $ids = $removable->pluck('id');
         ShiftSchedule::whereIn('id', $ids)->delete();
-        ScheduleBatchItem::whereIn('schedule_id', $ids)->delete();
 
         if ($why !== null) {
             foreach ($removable->groupBy('employee_id') as $employeeId => $rows) {
@@ -70,7 +59,7 @@ class ScheduleCleanup
             }
         }
 
-        AuditLogger::record('scheduling', 'schedule.cleared', ['leave' => 'Leave', 'inactive' => 'Employee', 'holiday' => 'Holiday'][$cause], $causeId,
+        AuditLogger::record('scheduling', 'schedule.cleared', ['leave' => 'Leave', 'inactive' => 'Employee'][$cause], $causeId,
             meta: ['removed' => $ids->count(), 'shiftIds' => $ids->values()->all(), 'dates' => $removable->map(fn ($s) => $s->date->toDateString())->unique()->values()->all()]);
 
         return $ids->count();

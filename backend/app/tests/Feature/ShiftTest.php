@@ -59,29 +59,4 @@ class ShiftTest extends TestCase
             ->assertCreated()
             ->assertJsonStructure(['data']);
     }
-
-    public function test_automated_scheduling_assigns_shifts(): void
-    {
-        Employee::create([
-            'id' => 'EMP20260001',
-            'first_name' => 'Juan',
-            'last_name' => 'Dela Cruz',
-            'email' => 'juan@workforcepro.com',
-        ]);
-        ShiftDefinition::create([
-            'id' => 'SFT001',
-            'name' => 'Morning',
-            'start_time' => '07:00:00',
-            'end_time' => '15:00:00',
-        ]);
-
-        \Illuminate\Support\Carbon::setTestNow(\Illuminate\Support\Carbon::parse('2030-01-14 06:00:00', 'Asia/Manila'));
-
-        $this->actingAs($this->adminUser())
-            ->postJson('/api/shifts/automation/run')
-            ->assertOk()
-            ->assertJsonPath('data.totals.created', 5);
-
-        \Illuminate\Support\Carbon::setTestNow();
-    }
 }

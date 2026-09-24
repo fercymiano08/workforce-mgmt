@@ -227,7 +227,7 @@ Two more ideas:
 |---|-----------|-----------|---------------------|
 | 1 | `postgres` | **One** PostgreSQL 18 server holding **one** database, `workforce_mgnt` (created automatically the first time). Data lives in the `pgdata` volume | `5433` (so it never clashes with a normal PostgreSQL on 5432) |
 | 2 | `app` | **The one Laravel backend** — every domain (identity, attendance, scheduling, time-off, payroll, communications, configuration, intelligence) lives in this single app. Built from `docker/backend.Dockerfile` | `8000` |
-| 3 | `scheduler` | **The same backend image**, but instead of serving web requests it runs `php artisan schedule:work` — the background jobs (certificate expiry, absence marking, automatic scheduling, timesheet auto-submit and reminders). In the normal scripts this is a hidden PowerShell window | none |
+| 3 | `scheduler` | **The same backend image**, but instead of serving web requests it runs `php artisan schedule:work` — the background jobs (certificate expiry, absence marking, attendance alerts, timesheet auto-submit and reminders). In the normal scripts this is a hidden PowerShell window | none |
 | 4 | `frontend` | The React app **plus nginx**. nginx serves the screens and routes every `/api/...` request to the one backend (`http://app:8000`) — the Docker version of the Vite proxy. A *router*, **not** an API gateway | `5173` |
 
 4 = 1 + 1 + 1 + 1.
