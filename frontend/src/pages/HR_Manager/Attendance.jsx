@@ -11,7 +11,8 @@ import Modal from '../../components/ui/Modal';
 import Input, { Select, Textarea } from '../../components/ui/Input';
 import { Pagination } from '../../components/ui/Table';
 import { SkeletonTable } from '../../components/ui/LoadingSkeleton';
-import { attendanceService, employeeService, overtimeService } from '../../services/api';
+import { adjustmentService, attendanceService, employeeService, overtimeService } from '../../services/api';
+import CorrectionsAdmin from '../../components/attendance/CorrectionsAdmin';
 import { kioskService } from '../../services/kioskService';
 import { formatHours, toDateKey } from '../../services/attendanceService';
 import { formatDate, formatTime } from '../../utils/helpers';
@@ -40,9 +41,13 @@ export default function Attendance() {
   const { toast } = useToast();
   const { user } = useAuth();
   const [searchParams] = useSearchParams();
-  const initialTab = searchParams.get('view') === 'early' ? 'early' : searchParams.get('tab') === 'overtime' ? 'overtime' : 'attendance';
+  const initialTab = searchParams.get('view') === 'early' ? 'early'
+    : searchParams.get('tab') === 'overtime' ? 'overtime'
+      : searchParams.get('tab') === 'corrections' ? 'corrections' : 'attendance';
   const [activeTab, setActiveTab] = useState(initialTab);
   const [employees, setEmployees] = useState([]);
+  // Corrections waiting for a decision: shown as a badge on the tab, and refreshed after each decision
+  const { data: pendingCorrections, refresh: refreshPendingCorrections } = useApiData(() => adjustmentService.getAll({ status: 'Pending' }), []);
   // Links from AI Decision Support open this page already filtered (?search=Name&status=Late&period=Today)
   const [search, setSearch] = useState(searchParams.get('search') || '');
   const [statusFilter, setStatusFilter] = useState(searchParams.get('status') || 'All');
@@ -299,7 +304,9 @@ export default function Attendance() {
               ? 'Decide on overtime requests. Only approved overtime is counted and paid.'
               : activeTab === 'early'
                 ? 'Review employees who clocked out before the end of their shift.'
-                : 'Who came in, who was late and who was absent. Days are closed automatically after midnight.'}
+                : activeTab === 'corrections'
+                  ? 'Review employees who worked past their shift or whose kiosk failed, and make the manual entry.'
+                  : 'Who came in, who was late and who was absent. Days are closed automatically after midnight.'}
           </p>
         </div>
       </div>
@@ -310,6 +317,7 @@ export default function Attendance() {
           { key: 'attendance', label: 'Attendance Records' },
           { key: 'overtime', label: 'Overtime Requests' },
           { key: 'early', label: 'Early Clock Outs' },
+          { key: 'corrections', label: 'Corrections' },
         ].map(tab => (
           <button
             key={tab.key}
@@ -327,6 +335,11 @@ export default function Attendance() {
             {tab.key === 'early' && earlyStats.pending > 0 && (
               <span className="ml-1.5 inline-flex items-center justify-center min-w-[18px] h-[18px] px-1 text-[10px] font-semibold rounded-full bg-amber-100 text-amber-700">
                 {earlyStats.pending}
+              </span>
+            )}
+            {tab.key === 'corrections' && (pendingCorrections?.length || 0) > 0 && (
+              <span className="ml-1.5 inline-flex items-center justify-center min-w-[18px] h-[18px] px-1 text-[10px] font-semibold rounded-full bg-amber-100 text-amber-700">
+                {pendingCorrections.length}
               </span>
             )}
           </button>
@@ -607,6 +620,8 @@ export default function Attendance() {
         document.body
       )}
       </>
+      ) : activeTab === 'corrections' ? (
+      <CorrectionsAdmin onChanged={refreshPendingCorrections} />
       ) : (
       <>
       {/* Early Clock Outs Stats */}

@@ -1,7 +1,8 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import {
   CheckCircle, AlertTriangle, TrendingUp,
-  CalendarDays, MapPin, Filter, Clock, Plus, XCircle, Pencil, LogOut, Printer,
+  CalendarDays, MapPin, Filter, Clock, Plus, XCircle, Pencil, LogOut, Printer, ShieldAlert,
 } from 'lucide-react';
 import Badge from '../../components/ui/Badge';
 import Button from '../../components/ui/Button';
@@ -11,6 +12,7 @@ import { SkeletonTable } from '../../components/ui/LoadingSkeleton';
 import KpiCard from '../../components/dashboard/KpiCard';
 import LiveClock from '../../components/attendance/LiveClock';
 import ShiftTimer from '../../components/attendance/ShiftTimer';
+import CorrectionsEmployee from '../../components/attendance/CorrectionsEmployee';
 import { useAuth } from '../../context/AuthContext';
 import { useToast } from '../../context/ToastContext';
 import useApiData from '../../hooks/useApiData';
@@ -54,6 +56,7 @@ function formatMinutesShort(minutes) {
 export default function MyAttendance() {
   const { user } = useAuth();
   const { toast } = useToast();
+  const [searchParams] = useSearchParams();
   const employeeId = user?.id || 'EMP001';
   const printRef = useRef(null);
 
@@ -62,7 +65,7 @@ export default function MyAttendance() {
     [employeeId]
   );
   const [periodFilter, setPeriodFilter] = useState('All');
-  const [activeTab, setActiveTab] = useState('attendance');
+  const [activeTab, setActiveTab] = useState(searchParams.get('tab') === 'corrections' ? 'corrections' : 'attendance');
   const [todayShift, setTodayShift] = useState(null);
 
   const {
@@ -278,6 +281,9 @@ export default function MyAttendance() {
             <span className="font-medium">{formatDate(new Date().toISOString())}</span>
           </div>
           <LiveClock />
+          <Button variant="outline" size="md" icon={ShieldAlert} onClick={() => setActiveTab('corrections')}>
+            Report a problem
+          </Button>
           <Button variant="outline" size="md" icon={Printer} onClick={handlePrint}>Print / PDF</Button>
         </div>
       </div>
@@ -297,6 +303,7 @@ export default function MyAttendance() {
           { key: 'attendance', label: 'Attendance History' },
           { key: 'overtime', label: 'Overtime Requests' },
           { key: 'early', label: 'Early Clock Outs' },
+          { key: 'corrections', label: 'Corrections' },
         ].map((tab) => (
           <button
             key={tab.key}
@@ -410,6 +417,8 @@ export default function MyAttendance() {
         )}
       </div>
         </>
+      ) : activeTab === 'corrections' ? (
+        <CorrectionsEmployee />
       ) : (
         <>
           {loadingEarlyOuts ? (

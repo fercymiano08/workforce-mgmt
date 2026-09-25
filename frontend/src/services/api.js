@@ -112,6 +112,86 @@ export const auditService = {
   },
 };
 
+/**
+ * Corrections (Time & Attendance > Corrections) - "the kiosk failed", "I worked past my shift".
+ *
+ * `create` deliberately takes no hours field. The employee sends what happened (a claimed time, a reason and photo
+ * proof) and the server works the arithmetic out from the roster, so there is nothing on the client that could put a
+ * number into payroll. Only the Workforce Admin decides, and approving is the manual entry of the final time.
+ */
+export const adjustmentService = {
+  mine: async () => {
+    const { data } = await http.get('/attendance/adjustments/mine');
+    return data;
+  },
+  // photos: [{ name, dataUrl, caption }] - already shrunk by the browser
+  create: async (payload) => {
+    const { data } = await http.post('/attendance/adjustments', payload);
+    return data;
+  },
+  cancel: async (id) => {
+    const { data } = await http.post(`/attendance/adjustments/${id}/cancel`);
+    return data;
+  },
+  getAll: async (params = {}) => {
+    const { data } = await http.get('/attendance/adjustments', { params });
+    return data;
+  },
+  // one request with its photos and the day as it stands now (admin)
+  getById: async (id) => {
+    const { data } = await http.get(`/attendance/adjustments/${id}`);
+    return data;
+  },
+  // what an entry of `time` would do, before it is made (admin)
+  preview: async (id, time) => {
+    const { data } = await http.post(`/attendance/adjustments/${id}/preview`, { time });
+    return data;
+  },
+  // approving IS the manual entry: `time` is the final clock time the admin enters (defaults to the claim)
+  decide: async (id, { decision, note, time }) => {
+    const { data } = await http.post(`/attendance/adjustments/${id}/decide`, { decision, note, time });
+    return data;
+  },
+};
+
+// The two kinds of correction the employee can raise. The kiosk failure has two sides, so three types in all.
+export const ADJUSTMENT_TYPES = [
+  {
+    value: 'worked_past_shift',
+    group: 'past',
+    label: 'I worked past my shift',
+    short: 'Worked past shift',
+    help: 'You stayed after your scheduled end and your clock-out did not fail or was not counted.',
+    timeLabel: 'What time did you finish?',
+    photoHint: 'e.g. the kiosk error at the entrance, your phone showing the live time, the work you were finishing',
+  },
+  {
+    value: 'kiosk_clock_in',
+    group: 'kiosk',
+    label: 'The kiosk failed to clock me in',
+    short: 'Kiosk failed: clock-in',
+    help: 'The kiosk or the internet was down when you arrived, so nothing was recorded.',
+    timeLabel: 'What time did you arrive?',
+    photoHint: 'e.g. the broken kiosk or its error screen, a picture of you at the entrance, the live time on your phone',
+  },
+  {
+    value: 'kiosk_clock_out',
+    group: 'kiosk',
+    label: 'The kiosk failed to clock me out',
+    short: 'Kiosk failed: clock-out',
+    help: 'You clocked in, but the kiosk would not clock you out when you left.',
+    timeLabel: 'What time did you leave?',
+    photoHint: 'e.g. the kiosk error when you tried to clock out, the live time on your phone or a wall clock',
+  },
+];
+
+export const ADJUSTMENT_TYPE_LABELS = Object.fromEntries(
+  ADJUSTMENT_TYPES.map((t) => [t.value, t.label])
+);
+export const ADJUSTMENT_TYPE_SHORT = Object.fromEntries(
+  ADJUSTMENT_TYPES.map((t) => [t.value, t.short])
+);
+
 export const overtimeService = {
   getAll: async () => {
     const { data } = await http.get('/overtime');
@@ -361,8 +441,11 @@ export const authService = {
     const { data } = await http.post('/auth/change-password', payload);
     return data;
   },
+  // Returns the body so the reset screen can count down the SERVER's expiresAt instead of
+  // guessing from when the response happened to arrive.
   forgotPassword: async (email) => {
-    return http.post('/auth/forgot-password', { email });
+    const { data } = await http.post('/auth/forgot-password', { email });
+    return data;
   },
   resetPassword: async ({ email, otp, password, passwordConfirmation }) => {
     return http.post('/auth/reset-password', {

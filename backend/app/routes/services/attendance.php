@@ -11,12 +11,37 @@
 |----------------------------------------------------------------------------
 */
 
+use App\Http\Controllers\Api\AttendanceAdjustmentController;
 use App\Http\Controllers\Api\AttendanceController;
 use App\Http\Controllers\Api\EarlyClockOutController;
 use App\Http\Controllers\Api\KioskController;
 use Illuminate\Support\Facades\Route;
 
 Route::middleware('auth:sanctum')->group(function () {
+    // Corrections, inside Time & Attendance ("the kiosk failed", "I worked past my shift"). An employee files one for
+    // themselves with photo proof; only the Workforce Admin decides and makes the manual entry.
+    Route::prefix('attendance/adjustments')->group(function () {
+        Route::get('/mine', [AttendanceAdjustmentController::class, 'mine']);
+        Route::post('/', [AttendanceAdjustmentController::class, 'store']);
+        Route::post('/{id}/cancel', [AttendanceAdjustmentController::class, 'cancel']);
+
+        Route::middleware('admin')->group(function () {
+            Route::get('/', [AttendanceAdjustmentController::class, 'index']);
+            Route::get('/{id}', [AttendanceAdjustmentController::class, 'show']);
+            Route::post('/{id}/preview', [AttendanceAdjustmentController::class, 'preview']);
+            Route::post('/{id}/decide', [AttendanceAdjustmentController::class, 'decide']);
+        });
+    });
+
+    // Kiosk device configuration - Administrator only.
+    Route::middleware('admin')->prefix('kiosk')->group(function () {
+        Route::get('/logs', [KioskController::class, 'logs']);
+        Route::get('/overview', [KioskController::class, 'overview']);
+        Route::post('/config', [KioskController::class, 'updateConfig']);
+        Route::post('/pin', [KioskController::class, 'setPin']);
+        Route::post('/reset', [KioskController::class, 'reset']);
+    });
+
     Route::prefix('attendance')->group(function () {
         Route::middleware('admin')->group(function () {
             Route::get('/', [AttendanceController::class, 'index']);
@@ -41,15 +66,6 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::put('/early-outs/{id}/reason', [EarlyClockOutController::class, 'updateReason']);
         // Any authenticated employee can nudge themselves to clock out once a day.
         Route::post('/remind-clock-out', [AttendanceController::class, 'remindClockOut']);
-    });
-
-    // Kiosk device configuration - Administrator only.
-    Route::middleware('admin')->prefix('kiosk')->group(function () {
-        Route::get('/logs', [KioskController::class, 'logs']);
-        Route::get('/overview', [KioskController::class, 'overview']);
-        Route::post('/config', [KioskController::class, 'updateConfig']);
-        Route::post('/pin', [KioskController::class, 'setPin']);
-        Route::post('/reset', [KioskController::class, 'reset']);
     });
 });
 
