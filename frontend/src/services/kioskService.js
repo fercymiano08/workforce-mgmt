@@ -143,11 +143,15 @@ export const kioskService = {
     removeStorage(KIOSK_TOKEN_KEY);
   },
 
-  // Called by an Administrator while enabling the kiosk; the server returns a device
-  // token so this very device is unlocked straight away.
+  // Called by an Administrator while creating/changing the PIN.
+  //
+  // This deliberately stores NO device token and clears any unlock the browser already had.
+  // The terminal must always ask a person standing at the entrance to type the PIN: unlocking
+  // the device that created it would let anyone walk past the gate on the admin's machine.
   async setPin(pin) {
-    const response = await http.post('/kiosk/pin', { pin });
-    this.storeDeviceToken(response.token, response.expiresAt);
+    const { data } = await http.post('/kiosk/pin', { pin });
+    this.clearUnlocked();
+    if (data?.data) merge(data.data);
     return this.load();
   },
 
@@ -171,7 +175,7 @@ export const kioskService = {
       enabledAt: new Date().toISOString(),
     });
     await this.log('mode', `Kiosk mode enabled on "${next.deviceName || 'this device'}"`, {
-      detail: `Location: ${next.location}`,
+      detail: `Location: ${next.location}. The PIN is now required on the terminal.`,
     });
     return next;
   },

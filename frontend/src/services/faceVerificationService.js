@@ -47,15 +47,26 @@ export async function verifyFace({ employeeId, descriptors, signal, onStep }) {
   } catch (error) {
     if (signal?.aborted) return { ok: false, aborted: true };
     const status = error.response?.status;
-    const code = status === 401 ? 'mismatch'
+    const body = error.response?.data;
+
+    // The server's own code wins over the status code. Both a mismatch and a locked-out reader
+    // can come back as a failure, and the device being locked is a completely different thing
+    // from a face being wrong - treating one as the other sent people to a security notice for
+    // what was really just an expired unlock.
+    const code = body?.code === 'face_locked' ? 'face-locked'
+      : body?.code === 'kiosk_locked' ? 'kiosk-locked'
+      : status === 401 ? 'mismatch'
       : status === 404 ? 'not-found'
       : status === 409 ? 'ambiguous'
       : status === 422 ? 'not-registered'
       : 'unknown';
+
     return {
       ok: false,
       code,
-      message: error.response?.data?.message || 'Face verification failed. Please try again.',
+      attemptsRemaining: body?.data?.attemptsRemaining ?? null,
+      retryAfter: body?.data?.retryAfter ?? null,
+      message: body?.message || 'Face verification failed. Please try again.',
     };
   } finally {
     clearInterval(timer);

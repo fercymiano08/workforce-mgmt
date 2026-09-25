@@ -21,6 +21,13 @@ const SCAN_ATTEMPTS = 6;
 // How long the "Verified" result stays up: long enough for the person to SEE that their face was
 // checked and whose it matched (at 0.2 s it was invisible, and people thought no scan had happened).
 const RESULT_HOLD_MS = 1500;
+// A beat to get ready before anything is read from the camera. The scan itself is quick, which is
+// the point - but it used to begin the instant the preview appeared, so the first frames were taken
+// while the person was still walking up, turning their face, or looking at the screen to see what
+// was happening. Those frames are the ones most likely to be a blur, and a blur is either a wasted
+// retry or a false "that is not you". Three seconds of visible countdown, showing their own face,
+// fixes that without making the check itself any slower.
+const PREP_SECONDS = 3;
 
 const STEP_ICONS = {
   camera: Camera,
@@ -87,6 +94,7 @@ export default function FaceRecognitionModal({ isOpen, employeeName, employeeId,
   const { videoRef, error, start, stop, isActive } = useWebcam();
   const [runId, setRunId] = useState(0);
   const [phase, setPhase] = useState('initializing');
+  const [prepLeft, setPrepLeft] = useState(PREP_SECONDS);
   const [stepIndex, setStepIndex] = useState(0);
   const [result, setResult] = useState(null);
   const [verifyError, setVerifyError] = useState(null);
@@ -106,10 +114,12 @@ export default function FaceRecognitionModal({ isOpen, employeeName, employeeId,
     let cancelled = false;
     const controller = new AbortController();
     let completeTimer;
+    let prepTimer;
 
     const run = async () => {
       setPhase('initializing');
       setStepIndex(0);
+      setPrepLeft(PREP_SECONDS);
       setResult(null);
       setVerifyError(null);
 
@@ -125,8 +135,6 @@ export default function FaceRecognitionModal({ isOpen, employeeName, employeeId,
           return;
         }
 
-        setPhase('verifying');
-
         // Wait until the <video> is actually painting frames before
         // snapshotting it - running detection on a not-yet-ready stream
         // makes face-api fail (zero-size canvas / no frames).
@@ -137,6 +145,19 @@ export default function FaceRecognitionModal({ isOpen, employeeName, employeeId,
           setPhase('error');
           return;
         }
+
+        // "Get ready" countdown, with the live preview already on screen so the person can centre
+        // themselves. Nothing is captured or sent during this: it is purely time to prepare.
+        setPhase('preparing');
+        for (let remaining = PREP_SECONDS; remaining > 0; remaining -= 1) {
+          if (cancelled) return;
+          setPrepLeft(remaining);
+          await new Promise((resolve) => { prepTimer = setTimeout(resolve, 1000); });
+        }
+        if (cancelled) return;
+        setPrepLeft(0);
+
+        setPhase('verifying');
 
         // Several separate frames, not one snapshot: the server averages them and
         // checks they all show the same face, so one lucky frame cannot pass.
@@ -176,7 +197,9 @@ export default function FaceRecognitionModal({ isOpen, employeeName, employeeId,
           // A mismatched face means the person in the frame is not the
           // registered employee. Hand that off to the kiosk so it can warn
           // them to stop (with escalation) instead of a generic retry error.
-          if (verification.code === 'mismatch') {
+          // A locked-out reader goes the same way: the kiosk owns the countdown
+          // and the "too many attempts" screen, so the rule is shown in one place.
+          if (verification.code === 'mismatch' || verification.code === 'face-locked') {
             onMismatchRef.current?.(verification);
             return;
           }
@@ -203,6 +226,7 @@ export default function FaceRecognitionModal({ isOpen, employeeName, employeeId,
       cancelled = true;
       controller.abort();
       clearTimeout(completeTimer);
+      clearTimeout(prepTimer);
       stop();
     };
   }, [isOpen, runId, start, stop, employeeId, videoRef]);
@@ -295,6 +319,17 @@ export default function FaceRecognitionModal({ isOpen, employeeName, employeeId,
                       state={phase === 'result' && result ? 'success' : phase === 'verifying' ? 'scanning' : 'idle'}
                     />
                   )}
+                  {phase === 'preparing' && (
+                    <div className="absolute inset-0 flex flex-col items-center justify-center gap-2 bg-[#0B1F3A]/55 animate-fadeIn">
+                      <p className="text-3xl font-bold text-white tabular-nums drop-shadow-lg">{prepLeft}</p>
+                      <p className="text-xs font-semibold text-white tracking-wide text-center px-6">
+                        Get ready
+                      </p>
+                      <p className="text-[11px] text-white/70 text-center px-6 leading-snug">
+                        Look at the camera and center your face
+                      </p>
+                    </div>
+                  )}
                   {phase === 'result' && result && (
                     <div className="absolute inset-x-0 bottom-3 flex justify-center animate-fadeIn">
                       <div className="flex items-center gap-1.5 rounded-full bg-emerald-500/90 px-3 py-1 text-white">
@@ -309,7 +344,9 @@ export default function FaceRecognitionModal({ isOpen, employeeName, employeeId,
               <div className="mt-5 space-y-1">
                 {FACE_VERIFICATION_STEPS.map((step, index) => {
                   const done = index < stepIndex;
-                  const active = index === stepIndex && phase !== 'result';
+                  // Only light up during the real check: during the "get ready" countdown the
+                  // steps are not running yet, and showing one spinning would be a lie.
+                  const active = index === stepIndex && phase === 'verifying';
                   const StepIcon = STEP_ICONS[step.icon] || ScanFace;
                   return (
                     <div

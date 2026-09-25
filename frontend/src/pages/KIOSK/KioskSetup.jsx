@@ -124,7 +124,7 @@ export default function KioskSetup() {
         setSettings(kioskService.getSettings());
         setPinModal(null);
         refreshOverview();
-        toast.success('Kiosk Mode enabled', 'The kiosk PIN now gates the clock-in terminal.');
+        toast.success('Kiosk Mode enabled', 'The terminal now asks for this PIN before anyone can clock in or out. Open the terminal and enter it to start the day.');
         return;
       }
 

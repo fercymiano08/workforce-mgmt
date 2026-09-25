@@ -27,7 +27,9 @@ import { ATTENDANCE_CONFIG } from '../../utils/attendanceConfig';
 const RESET_DELAY_MS = 2000;
 const TAP_WINDOW_MS = 2500;
 const TAP_COUNT = 5;
-const FACE_MAX_STRIKES = 3;
+// Face reader patience. The count is enforced by the server (KioskFaceLockout) and only mirrored
+// here so the screen can warn people before they are surprised; these must match it.
+const FACE_MAX_STRIKES = 5;
 const FACE_COOLDOWN_MS = 60 * 1000;
 
 const pad = (n) => String(n).padStart(2, '0');
@@ -451,8 +453,18 @@ export default function AttendanceTerminal() {
 
   // A face that did not match the confirmed employee - warn them to stop,
   // log it as a security event, and lock the terminal after repeat offenses.
-  const handleFaceMismatch = async () => {
+  const handleFaceMismatch = async (verification) => {
     if (!employee) return;
+
+    // The server owns the strike count (it survives a reload of this page), so its verdict wins.
+    // Counting again here only drives the wording of the warning.
+    if (verification?.code === 'face-locked') {
+      setFaceLockUntil(Date.now() + (verification.retryAfter || FACE_COOLDOWN_MS / 1000) * 1000);
+      faceStrikes.current = 0;
+      setPhase('locked');
+      return;
+    }
+
     faceStrikes.current += 1;
     // (The server records the mismatch itself, so a modified terminal cannot hide it.)
 
@@ -463,10 +475,15 @@ export default function AttendanceTerminal() {
       return;
     }
 
+    const left = verification?.attemptsRemaining;
+    const warning = typeof left === 'number'
+      ? ` ${left} attempt${left === 1 ? '' : 's'} left before the reader pauses for a minute.`
+      : '';
+
     setNotice({
       tone: 'danger',
       title: 'Identity Verification Failed',
-      message: `The face in the camera does not match ${employee.firstName} ${employee.lastName}'s registered photo. Clocking in under another person's ID is a security violation. This attempt has been logged and the Workforce Admin has been alerted. Please step aside and see HR if you believe this is a mistake.`,
+      message: `The face in the camera does not match ${employee.firstName} ${employee.lastName}'s registered photo. Clocking in under another person's ID is a security violation. This attempt has been logged and the Workforce Admin has been alerted.${warning} Please step aside and see HR if you believe this is a mistake.`,
       confirmLabel: 'I Understand',
       cancelLabel: 'Cancel',
       onConfirm: resetToMode,
@@ -825,6 +842,37 @@ export default function AttendanceTerminal() {
             <h2 className="text-2xl font-bold text-gray-900 mt-4">Clock-In Disabled</h2>
             <p className="text-gray-500 mt-1.5">
               Clock-in attendance is disabled. Kiosk mode turns off every midnight; wait for the administrator to enable it for today.
+            </p>
+            <Button
+              size="lg"
+              className="mt-8 w-full"
+              icon={RefreshCw}
+              onClick={() => kioskService.load().then(setSettings)}
+            >
+              Check Again
+            </Button>
+          </div>
+        </main>
+      </div>
+    );
+  }
+
+  // --- Dead end: kiosk mode is on but no PIN has been set -----------------
+  // The server cannot issue a device token without a PIN, so a keypad here would be
+  // a screen nobody can get past. Say who to contact instead.
+  if (settings.hasPin === false) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-[#0B1F3A] via-[#0E2747] to-[#0B1F3A] flex flex-col">
+        <BrandHeader subtitle={`Attendance Terminal · ${settings.deviceName}`} />
+        <main className="flex-1 flex items-center justify-center px-4 py-10">
+          <div className="w-full max-w-md bg-white rounded-3xl shadow-2xl p-8 sm:p-10 text-center">
+            <div className="w-16 h-16 mx-auto rounded-2xl bg-amber-50 flex items-center justify-center">
+              <AlertTriangle className="w-8 h-8 text-amber-500" />
+            </div>
+            <h2 className="text-2xl font-bold text-gray-900 mt-4">Awaiting Setup</h2>
+            <p className="text-gray-500 mt-1.5">
+              Kiosk mode is on, but no access PIN has been created yet. Please ask the Workforce Admin to create one
+              in Kiosk Management before using this terminal.
             </p>
             <Button
               size="lg"
@@ -1293,9 +1341,9 @@ export default function AttendanceTerminal() {
               <div className="w-16 h-16 mx-auto rounded-full bg-red-50 flex items-center justify-center">
                 <ShieldAlert className="w-8 h-8 text-red-500" />
               </div>
-              <h2 className="text-2xl font-bold text-gray-900 mt-4">Terminal Temporarily Locked</h2>
+              <h2 className="text-2xl font-bold text-gray-900 mt-4">Face Verification Paused</h2>
               <p className="text-gray-500 mt-1.5 max-w-md mx-auto">
-                Multiple failed identity checks were detected. The terminal is suspended for the countdown below. This incident has been logged and will be reviewed by HR.
+                {FACE_MAX_STRIKES} failed identity checks in a row. The face reader is paused for the countdown below. This incident has been logged and will be reviewed by HR.
               </p>
               <p className="mt-6 text-5xl font-bold text-red-600 tabular-nums">{lockSecondsLeft}</p>
               <p className="text-sm text-gray-400 mt-2">seconds remaining</p>

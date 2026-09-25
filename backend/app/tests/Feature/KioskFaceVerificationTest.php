@@ -202,6 +202,72 @@ class KioskFaceVerificationTest extends TestCase
         $this->verify(self::EMP, [$this->near($juan, 0.1, 1), $this->face(3), $this->near($juan, 0.1, 2)])->assertStatus(422);
     }
 
+    public function test_five_wrong_faces_pause_the_reader_for_a_minute(): void
+    {
+        $juan = $this->face(1);
+        $this->enroll(self::EMP, $juan);
+        $stranger = $this->scan($this->face(3));
+
+        // Four refusals, each still an ordinary "that is not you" with tries remaining.
+        for ($attempt = 1; $attempt <= 4; $attempt++) {
+            $this->verify(self::EMP, $stranger)
+                ->assertStatus(401)
+                ->assertJsonPath('code', 'mismatch')
+                ->assertJsonPath('data.attemptsRemaining', 5 - $attempt);
+        }
+
+        // The fifth trips the lock: same 401 shape replaced by a 429 the terminal can count down.
+        $this->verify(self::EMP, $stranger)
+            ->assertStatus(429)
+            ->assertJsonPath('code', 'face_locked')
+            ->assertJsonPath('data.retryAfter', 60);
+
+        // While locked, even the real employee is refused - the pause is on the reader, not the person.
+        $this->verify(self::EMP, $this->scan($juan))
+            ->assertStatus(429)
+            ->assertJsonPath('code', 'face_locked');
+
+        Carbon::setTestNow(now()->addSeconds(61));
+
+        $this->verify(self::EMP, $this->scan($juan))->assertOk();
+    }
+
+    public function test_a_good_scan_clears_the_strike_count(): void
+    {
+        $juan = $this->face(1);
+        $this->enroll(self::EMP, $juan);
+        $stranger = $this->scan($this->face(3));
+
+        for ($attempt = 1; $attempt <= 4; $attempt++) {
+            $this->verify(self::EMP, $stranger)->assertStatus(401);
+        }
+
+        $this->verify(self::EMP, $this->scan($juan))->assertOk();
+
+        // Four more wrong guesses must still be allowed: passing resets the count, so an honest
+        // employee who fumbled a few frames is not one mistake from a lockout.
+        for ($attempt = 1; $attempt <= 4; $attempt++) {
+            $this->verify(self::EMP, $stranger)
+                ->assertStatus(401)
+                ->assertJsonPath('data.attemptsRemaining', 5 - $attempt);
+        }
+    }
+
+    public function test_the_lockout_survives_the_terminal_being_reloaded(): void
+    {
+        $juan = $this->face(1);
+        $this->enroll(self::EMP, $juan);
+        $stranger = $this->scan($this->face(3));
+
+        for ($attempt = 1; $attempt <= 5; $attempt++) {
+            $this->verify(self::EMP, $stranger);
+        }
+
+        // The count used to live in the browser, so a refresh handed out five more guesses.
+        // It is kept server-side now, and nothing in this request resets it.
+        $this->verify(self::EMP, $this->scan($juan))->assertStatus(429);
+    }
+
     private function kioskLogs(): array
     {
         return \App\Models\Setting::first()->kiosk['logs'] ?? [];

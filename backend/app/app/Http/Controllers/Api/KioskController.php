@@ -21,6 +21,7 @@ use App\Services\SystemSettings;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use App\Services\KioskDeviceToken;
+use App\Services\KioskFaceLockout;
 use App\Services\KioskFaceTicket;
 use Illuminate\Support\Carbon;
 
@@ -295,6 +296,17 @@ class KioskController extends Controller
             'descriptors.*.*' => 'numeric',
         ]);
 
+        // Checked before anything else: while the reader is paused, every scan is refused without
+        // even being looked at. Enforced server-side so reloading the terminal does not clear it.
+        if (KioskFaceLockout::isLocked()) {
+            return response()->json([
+                'ok' => false,
+                'code' => 'face_locked',
+                'message' => 'Too many failed face attempts. Face verification is paused for a moment - please wait and try again.',
+                'data' => ['retryAfter' => KioskFaceLockout::secondsRemaining()],
+            ], 429);
+        }
+
         $employee = Employee::find($request->input('employeeId'));
         if (! $employee) {
             return response()->json(['ok' => false, 'message' => 'Employee not found'], 404);
@@ -330,11 +342,7 @@ class KioskController extends Controller
             $this->appendLog('security', "Face mismatch - person does not match {$name} ({$employee->id})",
                 'Average distance '.round($average, 3), $employee->id);
 
-            return response()->json([
-                'ok' => false,
-                'message' => 'Face did not match the registered employee. Please try again.',
-                'data' => ['confidence' => $confidence],
-            ], 401);
+            return $this->faceMismatch($confidence);
         }
 
         // 1:N: is this face also (nearly) as close to another enrolled employee? Then the scan cannot tell who
@@ -363,18 +371,22 @@ class KioskController extends Controller
                 "Closest enrolled face: {$otherName} ({$other->id}), distance ".round($closest['distance'], 3).' vs '.round($average, 3),
                 $employee->id);
 
-            return $closer
-                ? response()->json([
-                    'ok' => false,
-                    'message' => 'Face did not match the registered employee. Please try again.',
-                    'data' => ['confidence' => $confidence],
-                ], 401)
-                : response()->json([
+            // Being told you look like a colleague is not a wrong guess, so it does not spend a strike -
+            // it sends the person to HR, which is the only honest answer to "we cannot tell you apart".
+            if (! $closer) {
+                return response()->json([
                     'ok' => false,
                     'code' => 'ambiguous',
                     'message' => 'Your face is too similar to another registered employee for the kiosk to be sure it is you. Please see HR to record your attendance.',
                 ], 409);
+            }
+
+            return $this->faceMismatch($confidence);
         }
+
+        // A good scan wipes the strike count, so an honest employee who fumbled a few times is not
+        // left one mistake away from a lockout for the rest of the day.
+        KioskFaceLockout::clear();
 
         return response()->json([
             'ok' => true,
@@ -387,6 +399,28 @@ class KioskController extends Controller
                 'faceTicket' => app(KioskFaceTicket::class)->issue($employee->id),
             ],
         ]);
+    }
+
+    /**
+     * A face that did not match: spends one of the reader's attempts and tells the terminal how many
+     * are left, so the screen can warn people before the reader locks rather than surprising them.
+     */
+    private function faceMismatch(float $confidence): JsonResponse
+    {
+        $strike = KioskFaceLockout::recordFailure();
+
+        return response()->json([
+            'ok' => false,
+            'code' => $strike['locked'] ? 'face_locked' : 'mismatch',
+            'message' => $strike['locked']
+                ? 'Too many failed face attempts. Face verification is paused for one minute - please wait and try again.'
+                : 'Face did not match the registered employee. Please try again.',
+            'data' => [
+                'confidence' => $confidence,
+                'attemptsRemaining' => $strike['attemptsRemaining'],
+                'retryAfter' => $strike['retryAfter'],
+            ],
+        ], $strike['locked'] ? 429 : 401);
     }
 
     /** The face-match proof a clock-in/out must carry (see KioskFaceTicket); null when it is present and valid. */
@@ -429,14 +463,14 @@ class KioskController extends Controller
         $kiosk['pinHash'] = hash('sha256', 'wfp-kiosk:'.$request->input('pin'));
         SettingsUpdater::updateKiosk($kiosk);
 
-        // The Administrator setting the PIN is standing at the device being enabled,
-        // so it is issued a token straight away (any older token is now void).
-        $device = KioskDeviceToken::issue();
-
+        // No device token is issued here on purpose. Creating the PIN must not unlock anything:
+        // the whole point of the gate is that the person at the entrance types that PIN on the
+        // terminal itself. Handing a token to the Administrator's browser used to make the terminal
+        // skip the PIN screen entirely on that machine, so the PIN nobody was ever asked to enter
+        // was the one gating the device.
         return response()->json([
             'success' => true,
-            'token' => $device['token'] ?? null,
-            'expiresAt' => $device['expiresAt'] ?? null,
+            'data' => $this->publicConfig(),
         ]);
     }
 

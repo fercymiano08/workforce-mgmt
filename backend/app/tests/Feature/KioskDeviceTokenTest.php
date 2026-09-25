@@ -115,28 +115,30 @@ class KioskDeviceTokenTest extends TestCase
             ->assertUnauthorized();
     }
 
-    public function test_setting_the_pin_gives_the_admins_device_a_working_token(): void
+    public function test_setting_the_pin_does_not_unlock_the_admins_device(): void
     {
         $this->employee();
         $this->freezeKioskClock('08:00:00');
         $this->scheduleShift('EMP20260001');
 
-        $token = $this->actingAs($this->adminUser())
+        // Creating the PIN must not hand out a device token: the gate is only passed by
+        // typing the PIN on the terminal, otherwise the device that set the PIN would skip it.
+        $response = $this->actingAs($this->adminUser())
             ->postJson('/api/kiosk/pin', ['pin' => '4321'])
             ->assertOk()
-            ->json('token');
+            ->assertJsonPath('data.hasPin', true)
+            ->assertJsonMissingPath('token');
 
-        $this->assertNotEmpty($token);
+        $this->assertNull($response->json('token'));
 
-        // The kiosk must also be switched on before it accepts clock-ins.
         $setting = Setting::first();
         $setting->kiosk = array_merge($setting->kiosk, ['active' => true]);
         $setting->save();
 
-        $this->app['auth']->forgetGuards();
-        $this->withHeaders(['X-Kiosk-Token' => $token])
+        // ...and the new PIN is the only way in from there.
+        $this->withHeaders(['X-Kiosk-Token' => '1.bogus'])
             ->postJson('/api/kiosk/attendance', $this->clockInPayload())
-            ->assertCreated();
+            ->assertUnauthorized();
     }
 
     public function test_correct_pin_returns_a_token_and_wrong_pin_does_not(): void
