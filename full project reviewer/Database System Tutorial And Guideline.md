@@ -14,7 +14,7 @@
 2. [Connection Details](#2-connection-details)
 3. [The Tools](#3-the-tools)
 4. [Database Concepts You Need To Know](#4-database-concepts-you-need-to-know)
-5. [All 31 Tables Explained (22 business + 9 framework)](#5-all-31-tables-explained-22-business--9-framework)
+5. [All 28 Tables Explained (19 business + 9 framework)](#5-all-28-tables-explained-19-business--9-framework)
 6. [Relationships Map](#6-relationships-map)
 7. [pgAdmin 4 Walkthrough](#7-pgadmin-4-walkthrough)
 8. [Essential SQL Queries (Cheat Sheet)](#8-essential-sql-queries-cheat-sheet)
@@ -30,7 +30,7 @@
 |----------|-------|
 | Database Engine | PostgreSQL 18 |
 | Database Name | **One database: `workforce_mgnt`** (the system was originally split into 8 databases, one per microservice; it was consolidated back into a single Laravel monolith + single database before the defense — see the note below) |
-| Total Tables | 31 tables in `workforce_mgnt`: 22 "business" tables + 9 Laravel framework tables. Every table has exactly **one** copy — there are no more read-only replica tables and nothing to keep in sync |
+| Total Tables | 28 tables in `workforce_mgnt`: 19 "business" tables + 9 Laravel framework tables. Every table has exactly **one** copy — there are no more read-only replica tables and nothing to keep in sync |
 | Managed By | One flat set of Laravel 13 migrations (`backend/app/database/migrations/`) + pgAdmin 4 |
 | Runs On | Local machine (`127.0.0.1:5432`), one PostgreSQL server hosting the one database |
 | Runs On (Docker) | The `postgres` container, published on the host at **`127.0.0.1:5433`**, hosting the same single database (data in the `pgdata` Docker volume). It is a **separate** server from the local one on 5432; the password is in the git-ignored `.env` |
@@ -39,12 +39,12 @@ The database stores everything the system knows: employee records, attendance hi
 
 > **Why one database?** The Workforce Management System is itself just one microservice inside a larger E-Commerce Enterprise platform under development. Splitting *its own* internals into 8 further microservices/databases was applying the pattern one level too deep, and it was corrected before the defense. With one database, normal foreign keys and joins work directly across every domain — e.g. a timesheet query can join straight to `attendance` and `employees` in a single SQL statement — with no replication lag and no risk of a replica going stale.
 
-The 22 business tables are grouped below by domain. This is a **logical grouping only** — there is no schema or database boundary between them; every table lives in the same `workforce_mgnt` database and can be joined to any other with a normal SQL `JOIN`.
+The 19 business tables are grouped below by domain. This is a **logical grouping only** — there is no schema or database boundary between them; every table lives in the same `workforce_mgnt` database and can be joined to any other with a normal SQL `JOIN`.
 
 | Domain | Tables |
 |--------|--------|
 | Identity | `users`, `employees`, `departments`, `roles`, `audit_events` |
-| Attendance | `attendance`, `early_clock_outs`, `security_events` |
+| Attendance | `attendance`, `early_clock_outs`, `attendance_adjustments`, `security_events` |
 | Scheduling | `shift_definitions`, `shift_schedules`, `holidays`, `schedule_settings` |
 | Time-off | `leaves`, `overtime_requests` |
 | Payroll | `timesheets` |
@@ -105,11 +105,11 @@ Some columns (like `settings.kiosk`) store flexible structured data as JSON inst
 
 ---
 
-## 5. All 31 Tables Explained (22 business + 9 framework)
+## 5. All 28 Tables Explained (19 business + 9 framework)
 
 > The tables below are described once, logically — each still means the same thing it always did, and every one lives as a single, real copy in the one `workforce_mgnt` database (see the domain grouping in Section 1). Table shapes (columns, types, relationships) are unchanged from the earlier multi-database design.
 
-### Core Business Tables (22) — 20 appear in the original ERD; `early_clock_outs` and `audit_events` were added later
+### Core Business Tables (19) — most appear in the original ERD; `early_clock_outs`, `attendance_adjustments` and `audit_events` were added later
 
 #### People & Organization
 
@@ -126,6 +126,7 @@ Some columns (like `settings.kiosk`) store flexible structured data as JSON inst
 |-------|---------|-------------|
 | `attendance` | One row per employee per day: clock in/out, hours, status (an `Absent` row is written automatically after a finished day with a shift, no clock-in and no approved leave). The kiosk writes `date`, `clock_in` and the Present/Late `status` from the **server's** clock and the employee's scheduled shift | `id`, `employee_id` (FK), `date`, `clock_in`, `clock_out` (the COUNTED end of the day - never past the shift end plus approved overtime), `actual_clock_out` (the real tap-out, kept so a later overtime approval can restore time), `total_hours`, `status` |
 | `early_clock_outs` | One row per early clock-out: the reason the employee gave at the kiosk, minutes lost, proof (medical certificate) and its deadline `proof_due_at`, and the Excused/Unpaid classification - set automatically at the punch when the free allowance is used up or a sick certificate is overdue, otherwise by HR (immutable punch snapshot) | `id`, `attendance_id`, `employee_id`, `reason_code`, `minutes_early`, `proof_due_at`, `classification` |
+| `attendance_adjustments` | Corrections (Time & Attendance): a request when the record is wrong because something stopped it being recorded - `worked_past_shift`, `kiosk_clock_in` or `kiosk_clock_out`. Holds what the employee said (claimed time, reason, 1-5 proof photos with captions), what the system derived from the shift, the time the admin finally entered (`final_time`), and who decided | `id`, `employee_id`, `date`, `type`, `claimed_time`, `final_time`, `proof`, `derived_hours`, `status`, `decided_by` |
 | `timesheets` | Weekly hour summaries that move Draft → Submitted → Approved / Rejected → sent to payroll. `overtime_hours` = worked, `approved_ot_hours` = approved, `paid_ot_hours` = payable (per day the smaller of the two). Workflow columns: `submitted_at`, `submitted_by`, `auto_submitted`, `reviewed_at`, `status_reason` (why it was rejected or reopened), `needs_refresh` (attendance changed after it was locked), `reminded_at`, `nudged_at`, `exported_at` (sent to payroll), and `history` (JSON timeline of every step) | `id`, `employee_id` (FK), `week_start`, `week_end`, `regular_hours`, `overtime_hours`, `paid_ot_hours`, `status` |
 | `overtime_requests` | OT applications: expected vs approved hours | `id`, `employee_id` (FK), `expected_hours`, `approved_hours`, `status` |
 
@@ -307,7 +308,7 @@ Note: both restore STRUCTURE only. Live data, if any, lives on the original mach
 | Likely question | Ready answer (plain) |
 |----------------|----------------------|
 | Why PostgreSQL and not MySQL? | Both work; PostgreSQL handles JSON columns and complex reporting cleanly, and it's genuinely free. Our team chose it for reliability. |
-| How many tables did you design? | 22 logical business tables + 9 Laravel framework tables = 31 tables, all in one database, `workforce_mgnt`. |
+| How many tables did you design? | 19 logical business tables + 9 Laravel framework tables = 28 tables, all in one database, `workforce_mgnt`. |
 | Why one database instead of splitting it up? | The Workforce Management System is itself one microservice inside a larger E-Commerce Enterprise platform we're building. Splitting its own internals into 8 further microservices/databases applied the pattern one level too deep, so we consolidated back into one Laravel app and one database before the defense. One database means normal foreign keys and joins work directly across every domain — e.g. a timesheet query can join straight to `attendance` and `employees` — with no replication lag and no risk of a stale replica. |
 | Which table is the most important? | `employees` — it's the center. Attendance, leaves, overtime, schedules, and timesheets all point back to it by `employee_id`, as a direct join against the one real `employees` table. |
 | How do your tables connect to each other? | Normal SQL — a `JOIN` on the shared key (usually `employee_id`), or a foreign key like `roles.department_id → departments.id`. Everything is in the same database, so there's no cross-service call or sync job involved. |

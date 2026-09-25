@@ -85,7 +85,7 @@ Browser (frontend) → sends a request to `/api/...` → the frontend's proxy (V
 **Extra defense points:**
 - Wrong password → error. After **5 wrong attempts**, a **60-second cool-down** (lockout).
 - Passwords must be **8+ characters with uppercase, lowercase, and a number**.
-- Forgot password → a **6-digit code (OTP)** is emailed; valid **1 minute**, one-time use (then request a new one).
+- Forgot password → email, then the new password, and only then is a **6-digit code (OTP)** emailed and its countdown started; valid **5 minutes**, one-time use (then request a new one).
 - Workforce Admin (admin) account **cannot** reset via forgot-password (it's the reserved owner account).
 
 ## Flow 2 - Attendance with facial recognition (the kiosk)
@@ -109,7 +109,7 @@ Browser (frontend) → sends a request to `/api/...` → the frontend's proxy (V
 | Clock in before the shift starts | Popup "Clocking In Early" → can continue |
 | Clock out before the shift end | Must **state a reason first** (reason picker) → recorded "Early Leave" |
 | Clock out at/after the shift end | "Clocked Out" - success. If it is more than 15 min past the end with no approved overtime: amber **"Overtime Not Approved"** warning - the extra time is not counted (the day ends at the approved end) |
-| Someone else's face | Red **"Identity Verification Failed"** warning, security event logged, **Workforce Admins alerted**, 3 strikes = 60 s lockout |
+| Someone else's face | Red **"Identity Verification Failed"** warning, security event logged, **Workforce Admins alerted**, 5 wrong faces = 60 s lockout (kept on the server, per kiosk) |
 
 > **Key defense point:** these rules are enforced by the **server**, not just the screen. The server uses its own clock and looks up the shift itself, so a wrong tablet clock or a hand-made request can't fake an on-time punch. The popups just explain the rule to the employee first.
 
@@ -136,9 +136,9 @@ Browser (frontend) → sends a request to `/api/...` → the frontend's proxy (V
 
 **Plain story:**
 1. The **Analytics** page shows dashboards: who's late, attendance rates, overtime summaries, etc.
-2. The **AI Decision Support** page looks at that data and gives HR **suggestions** (e.g. "too many absences for this department", "overtime trending up").
-3. When online, the app calls **Google Gemini** for the smart suggestions.
-4. When **offline/no API key**, it **falls back to built-in rules** so it still works.
+2. The **AI Decision Support** page looks at the last 30 days and gives HR **findings and recommendations** (e.g. "3 late arrivals in 30 days", "overtime above 1 hour a day"). **Fixed rules decide the findings and the Workforce Health Score** (the page shows how the score is calculated).
+3. When online, **Google Gemini writes the explanation** in plain language. It cannot add, drop or re-rate a finding, and a sentence with a number that is not in the data is thrown away.
+4. When **Gemini is unavailable** (no internet, no key, Google busy, or the free daily limit used up), the rules' own wording is shown: **the same findings and the same score**, with a banner saying why.
 5. HR can also act directly ("approve this leave", "resolve this security event") in one click - the intelligence domain performs the real action with the same in-process service classes the manual path uses (approving a leave checks the real `Leave` is still Pending, then updates it, in one database), then reports back.
 
 ---
@@ -179,7 +179,7 @@ These are the exact things the panel may probe. Say them confidently.
 | **Sanctum tokens** | The login "ID badge". Each badge belongs to one user and is revoked on logout. |
 | **Password hashing (bcrypt)** | Passwords are scrambled before storage, so even the database can't reveal the original. |
 | **Role-based access (RBAC)** | Employees and Workforce Admin see different menus. Admin-only routes are protected server-side. |
-| **OTP reset** | Forgot password sends a 6-digit code that expires in 1 minute and works only once. |
+| **OTP reset** | Forgot password asks for the email and the new password first, then sends a 6-digit code that expires in 5 minutes and works only once. |
 | **Login lockout** | 5 wrong attempts = 60-second cool-down (stops guessing/brute-force). |
 | **Password policy** | Min 8 + upper + lower + number (enforced on change, reset, and registration). |
 | **Throttling** | Forgot-password and reset endpoints are throttled (limited requests per minute). |
@@ -244,7 +244,7 @@ These are the exact things the panel may probe. Say them confidently.
 - React/Vite + Tailwind → fast, modern web interface that runs in any browser.
 - Laravel → a mature PHP backend with built-in security (auth, validation, hashing).
 - PostgreSQL → a reliable relational database that fits structured HR data.
-- Google Gemini (with offline fallback) → smart insights even when the internet is unavailable.
+- Google Gemini (only words the findings; rule wording when it is unavailable) → the page works even when the internet or Google is down.
 
 ---
 
@@ -272,13 +272,13 @@ A: No. The server refuses it ("No Shift Scheduled Today" / "Shift Over"). It's c
 A: Up to and including 15 minutes after the shift start is Present. After that the kiosk shows an "You Are Late" warning and still lets them clock in ("Clock In Anyway"); it's recorded as Late and the Workforce Admins are notified.
 
 **Q: What if someone clocks in as another person?**
-A: The face doesn't match, so the kiosk shows an "Identity Verification Failed" warning, logs a security event and alerts the Workforce Admins immediately. Three failed attempts lock the terminal for 60 seconds.
+A: The face doesn't match, so the kiosk shows an "Identity Verification Failed" warning, logs a security event and alerts the Workforce Admins immediately. Five wrong faces stop the face reader for 60 seconds (counted on the server, so refreshing does not reset it).
 
 **Q: Why is the system slow on your laptop but fast in Docker?**
 A: Every action makes several requests and each one boots the Laravel framework (about half a second on a low-power laptop CPU), locally run on PHP's built-in single-request server. We measured it. We cut the load in code (light employee lists, bounded notification batches, concurrent alert pushes, short timeouts on external calls) — and the pre-consolidation performance burden (identity hops to `core`, replica sync) is simply gone, since it's one in-process backend now. The remaining slowness is mostly the laptop (a low-power CPU, limited free RAM, running on battery) and the one-request-at-a-time local server, not a bug; Docker's multiple workers help.
 
 **Q: Where is data stored?**
-A: In **one** PostgreSQL database, `workforce_mgnt` — 31 tables: 22 business tables (users, employees, attendance, shifts, leaves, timesheets, notifications, security events, settings, AI insights...) plus 9 Laravel framework tables. The database used to be split into 8 separate databases, one per service, with synced read-only copies so services could see each other's data; after consolidation every table has exactly one copy, and any domain that needs another domain's data just queries the real table in the same database.
+A: In **one** PostgreSQL database, `workforce_mgnt` — 28 tables: 19 business tables (users, employees, attendance, shifts, leaves, timesheets, notifications, security events, settings, AI insights...) plus 9 Laravel framework tables. The database used to be split into 8 separate databases, one per service, with synced read-only copies so services could see each other's data; after consolidation every table has exactly one copy, and any domain that needs another domain's data just queries the real table in the same database.
 
 ---
 
@@ -349,7 +349,7 @@ The "scariest" architecture question — and your answer is actually a strength,
 - **Splitting Workforce Management into 8 services added cost with no benefit.** Nothing in this system needs independent scaling (attendance doesn't get 10x the traffic of payroll), a different release schedule (we ship them all together anyway), or a different team owning each piece (it's one team). Splitting it gave us 8 databases to keep in sync, a background job copying "replica" tables so services could see each other's data, and network calls between pieces of the SAME domain — pure overhead.
 - **The real microservice boundary is one level up.** Workforce Management as a WHOLE is the right unit to separate from Orders, Inventory, Customers, and the other subsystems of the e-commerce platform — those genuinely are different domains, likely different teams, and could genuinely need independent scaling or release schedules. That's where the microservices pattern earns its keep.
 - **The fix was mechanical, not a rewrite:** the 8 domains' routes, controllers, and models moved into one Laravel app's folders, the 8 databases merged into one (`workforce_mgnt`), and the inter-service HTTP glue (SERVICE_TOKEN, snapshot sync, `/internal/*` routes) was deleted because nothing needed it anymore.
-- **Every business-rule test survived.** Consolidation only removed tests that existed purely to check the removed inter-service HTTP transport (e.g. "does service A correctly call service B's internal API"). Every test that checks an actual business rule (attendance rules, leave balances, payroll math, security lockouts, etc.) was kept, and the suite has grown since with new features (early-leave reasons, audit logging, timesheet history) to **310 tests, 1272 assertions, all passing today**.
+- **Every business-rule test survived.** Consolidation only removed tests that existed purely to check the removed inter-service HTTP transport (e.g. "does service A correctly call service B's internal API"). Every test that checks an actual business rule (attendance rules, leave balances, payroll math, security lockouts, etc.) was kept, and the suite has grown since with new features (early-leave reasons, audit logging, timesheet history) to **385 tests, 1272 assertions, all passing today**.
 
 ## How the 8 domains stay organized without 8 databases
 
@@ -393,7 +393,7 @@ Use this as a rapid-fire review. One line = one idea. Cover the right column, th
 | **Dashboard** | Today's numbers at a glance | Reads cached aggregates + live counts | Manager sees the company in 5 seconds |
 | **Analytics** | Deep trend charts | `AnalyticsService` pre-computes 6 JSON sections into `analytics` table | Instant chart loads; heavy math runs once |
 | **Reports** | Printable/CSV outputs | Reads live data + formats via `reportHelpers.js` | Proof and paperwork done from one button |
-| **AI Decision Support** | AI insights + one-click actions | Reads 30 days of data → Gemini if online, else rule engine → decision queue | Flags problems HR would miss; actions reuse normal endpoints |
+| **AI Decision Support** | AI insights + one-click actions | Rules build the findings and the score from 30 days of data → Gemini only words them (rule wording if it is unavailable) → decision queue | Flags problems HR would miss; actions reuse normal endpoints |
 | **Security Events** | Log of suspicious kiosk activity | `face_mismatch`/`pin_failed` stored Open → HR resolves/escalates | Buddy-punching is caught and reviewable |
 | **Notifications** | In-app bell messages | Backend INSERTs a row; bell refreshes every 30 s while the tab is visible (newest 200) | People learn of approvals/leaves/SO immediately |
 | **Kiosk Setup** | Configures the door device | PIN hash, location, verification method stored in `settings.kiosk` | The entrance behaves exactly how HR wants |
@@ -436,7 +436,7 @@ Use this as a rapid-fire review. One line = one idea. Cover the right column, th
 12. Why did we pick each tech? → React=fast UI, Laravel=secure backend, PostgreSQL=reliable relational database, Gemini=smart insights.
 
 ## Database (13-19)
-13. How many tables? → 31 (22 business + 9 Laravel plumbing). The 22 business tables include the newest: `early_clock_outs` (early-leave reasons) and `audit_events` (the audit trail).
+13. How many tables? → 28 (19 business + 9 Laravel plumbing). The 19 business tables include the newest: `early_clock_outs` (early-leave reasons), `attendance_adjustments` (corrections with photo proof) and `audit_events` (the audit trail).
 14. Which table is most important? → `employees` - everything links by `employee_id`.
 15. What is a primary key? → Unique row ID (e.g. `EMP20260001`).
 16. What is a foreign key? → A column pointing to another table's key (attendance.employee_id → employees.id).
@@ -453,7 +453,7 @@ Use this as a rapid-fire review. One line = one idea. Cover the right column, th
 24. What does the kiosk refuse? → No schedule today, shift already ended, already clocked in, approved leave. All enforced on the server.
 24a. What does the kiosk do when someone is late? → Warns ("You Are Late") but lets them "Clock In Anyway"; recorded Late; admins notified.
 24b. What happens on an early clock-out? → Never refused for a real reason, but a reason must be picked first (Feeling Unwell / Family Emergency / Personal Emergency / Other). It is treated as a CLAIM, not a fact: 2 free early clock-outs per 30 days, the 3rd is unexcused automatically; a sick claim needs a medical certificate within 48 hours or it becomes unexcused; the admins are alerted about EVERY early clock-out; 3 people using the same excuse the same day is flagged.
-25. What happens on face mismatch? → Red warning + `face_mismatch` security event + a high-priority notification to every admin + 3 strikes → 60s lockout.
+25. What happens on face mismatch? → Red warning + `face_mismatch` security event + a high-priority notification to every admin + 5 wrong faces → 60s lockout (server-side).
 26. How does the face match work? → 128-number descriptor compared; distance < 0.6 = match; runs in-browser (offline).
 
 ## Leave & timesheet (27-33)
@@ -469,7 +469,7 @@ Use this as a rapid-fire review. One line = one idea. Cover the right column, th
 34. How are passwords stored? → bcrypt hash (one-way scramble), never readable.
 35. Login lockout? → 5 wrong attempts → 60-second cool-down.
 36. Password policy? → 8+ chars, uppercase, lowercase, digit.
-37. OTP reset? → 6-digit code by email, 1-minute expiry, one-time use. An inactive employee is signed out after 3 minutes (the login token itself expires; admins are not timed out).
+37. OTP reset? → 6-digit code by email (sent after the new password is chosen), 5-minute expiry, one-time use. An inactive employee is signed out after 3 minutes (the login token itself expires; admins are not timed out).
 38. Why can't admin self-reset? → It's the reserved owner account.
 39. How is the kiosk secured if it has no login? → PIN unlock gives the device a signed, expiring token that every clock-in call must send; the PIN check is rate-limited; the token dies when the PIN changes; and the endpoints return minimal fields only (name, photo, dept, today's schedule) - never salary/email/phone/address.
 40. Where is the kiosk PIN stored? → SHA-256 hash in settings.kiosk.

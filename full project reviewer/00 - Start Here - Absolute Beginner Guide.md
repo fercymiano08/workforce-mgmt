@@ -154,11 +154,12 @@ Notice: only the **Attendance domain** was involved in the core action. The othe
 
 Good question to be ready for — say this honestly, it's actually a strength if you explain it right:
 
-- The AI (Google Gemini, when there's internet) is NEVER allowed to make up numbers. It only receives real data pulled from the database — attendance counts, pending leave requests, security events from the last 30 days — and its job is to **describe and prioritize** that real data in plain language, not invent facts.
-- If there's no internet, or the AI service fails, the system automatically falls back to a **built-in rule engine** — plain PHP code with fixed thresholds ("if late count > 3, flag it") — so the feature never just breaks. This is called a fallback, and it's a deliberate safety design, not a bug.
-- So "accurate" here means: the underlying facts (attendance numbers, pending requests) are always 100% accurate because they come straight from the database. The AI's *commentary* on those facts is generated language, which is why it's clearly labeled on-screen as "Powered by Gemini" vs "Offline / rule-based" — the system is honest about which brain answered.
+- **The rules decide; the AI only explains.** Plain PHP code with fixed thresholds ("3 or more late arrivals in 30 days = flag it") reads the real database, decides which problems exist and works out the **Workforce Health Score**. The page even shows how the score is calculated.
+- Google Gemini (when there's internet and a working key) only **rewrites those findings as plain-language sentences and recommendations**. It cannot add, drop or re-rate a finding, and if a sentence of its contains a number that is not in the data, that sentence is thrown away and the rule's own wording is shown.
+- If there's no internet, no key, Google is busy, or the free daily limit is used up, the page shows the rule-made wording: **the same findings and the same score**, with a banner that says exactly why. That is a deliberate safety design, not a bug.
+- So "accurate" here means: every number comes straight from the database and the rules, never from the AI. The AI's only job is wording.
 
-**One sentence:** *"The AI never invents data — it only summarizes real numbers pulled from our database, and if it can't reach Google's AI, it automatically falls back to a rule-based system so the feature never silently fails during a demo."*
+**One sentence:** *"Our rules compute every number and decide every finding from the database; Gemini only turns them into readable sentences, and if it is unavailable the same findings and score are shown with rule-written wording."*
 
 ---
 

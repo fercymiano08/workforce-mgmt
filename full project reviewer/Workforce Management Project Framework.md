@@ -20,8 +20,9 @@ Workforce Analytics
 
 Features:
 -Employee ID + Facial Recognition-Based Clock In (shift-aware: Present within 15 min of the shift start, Late warning afterwards, reason required for early clock-out, admin alert on a face mismatch — all enforced by the server)
--AI Decision Support (AI API Supported)
--Automated Logic/Rule-Based Shift Scheduling
+-AI Decision Support (rules decide the findings and score; the AI API only words them, with a rule-based fallback)
+-Automated Logic/Rule-Based Shift Scheduling (rules build a draft, HR reviews and approves it; the Standard Shift only)
+-Attendance Corrections (worked past shift / kiosk failure, with photo proof; the admin makes the manual entry)
 -Timesheet Generation (Weekly)
 -Leave Management
 -Workforce Analytical View

@@ -58,7 +58,7 @@ The backend is a single Laravel app living at `backend/app/`, with one `vendor/`
 |------|-----------|---------------|------------------|
 | **React** | A JavaScript library for building web screens | 24 page files under `frontend/src/pages/` | Fast, component-based, huge ecosystem; runs in any browser |
 | **Laravel** | A PHP web framework | One Laravel app under `backend/app/app/`, organized into 8 domain folders (routes/controllers/services/models) | Secure by default (hashing, validation), clean layered structure (routes → controllers → services → models) |
-| **PostgreSQL** | A relational database (tables with rows/columns) | One database (`workforce_mgnt`), 31 tables total (22 business + 9 framework). Any domain that needs another domain's data just queries the real table directly — no copies, no sync | Reliable, handles relational + JSON data well, free |
+| **PostgreSQL** | A relational database (tables with rows/columns) | One database (`workforce_mgnt`), 28 tables total (19 business + 9 framework). Any domain that needs another domain's data just queries the real table directly — no copies, no sync | Reliable, handles relational + JSON data well, free |
 
 > If a panelist asks "why PostgreSQL instead of MySQL?" — add: "PostgreSQL handles JSON columns and complex reporting cleanly, and it's what our team is consistent with. MySQL would also work; ours was a deliberate choice for reliability."
 
@@ -252,27 +252,37 @@ Wrong password → error message, nothing stored.
 ### Flow B — Forgot / Reset Password
 
 ```
-User clicks "Forgot password?"
+Step 1 - User clicks "Forgot password?" and types the email
+        (nothing is sent yet: no code exists, no timer runs)
         │
         ▼
-POST /api/auth/forgot-password   (email address)
+Step 2 - User types the new password twice
+        (checked on the spot: 8+ characters, upper and lower case, a number, both match;
+         a weak or mismatched password stops here, before any code is sent)
         │
         ▼
-Backend creates a one-time 6-digit code (stored hashed) and emails it
-→ stores it in the `password_reset_tokens` table
-→ the code is valid for ONE MINUTE only: after 60 seconds it is useless
-  and the user has to ask for a new code (the screen shows a live
-  countdown and a "Send a new code" button)
+POST /api/auth/forgot-password   (email address) - sent when the password is accepted
+→ backend creates a one-time 6-digit code, stores it HASHED in `password_reset_tokens`
+  and emails it (the email goes out right after the response, so the screen is not kept waiting)
+→ the response carries the server's expiry time: the code is valid for FIVE MINUTES
         │
         ▼
-User submits new password + code
+Step 3 - The code screen opens and the live countdown starts HERE
+        ("Send a new code" gives a fresh code and a fresh countdown; the new password is kept)
         │
         ▼
-POST /api/auth/reset-password
-→ token checked and consumed
-→ users.password updated (hashed)
-→ old tokens invalidated
+POST /api/auth/reset-password   (email + code + new password)
+→ code checked (right, not expired) and consumed: it works only once
+→ users.password updated (stored hashed)
+→ every session already signed in with the old password is dropped
+→ the reset is written to the audit log
+        │
+        ▼
+Step 4 - "Password reset" screen, then sign in with the new password
 ```
+
+Rules: reset requests are limited to 3 a minute; the Workforce Admin account cannot use this flow; an unknown email
+gets the same answer as a real one, so the page never reveals which emails exist.
 
 ### Flow B2 — Session Timeout (Employees: 3 Minutes Of Inactivity)
 
@@ -468,6 +478,17 @@ The checks run **in this order** — the first one that applies wins. Steps 1–
 
 > **History note (good to know for the defense):** the "no shift → blocked" rule is the original design. For a short time the terminal checked *lateness first* and fell back to a default 08:00 start when there was no shift — so at 9:30 pm an employee with no shift was told they were "810 minutes late" and the punch was accepted. That was fixed by (a) restoring the correct order above and (b) moving the rules to the server. It is covered by automated tests (`KioskGuardrailTest`).
 
+### Face Verification - no face, no clock-in
+
+The face check is made by the **server**, not trusted from the browser, and a punch cannot happen without it:
+
+1. The terminal takes up to **3 frames** of the person's face (`descriptors`, 128 numbers each) and sends them to `POST /api/kiosk/verify-face`.
+2. The server compares them with the descriptor saved at registration (Euclidean distance; lower = more alike). It must be the **same live scan** (the frames are close to each other), the **average distance must be at most 0.5**, and **no single frame may be over 0.55**. Typical same-person distances are 0.25-0.45.
+3. It also compares against every other enrolled employee: if someone else's face is nearly as close (within 0.08), the answer is **"ambiguous"** (HTTP 409). This is what stops a sibling or a twin from being accepted as the employee.
+4. Only a pass returns a **face ticket**: single-use, valid for **5 minutes**, tied to that employee. `clock-in` and `clock-out` refuse (HTTP 403 `face_required`, and a security event is logged) without a valid ticket, and spend it on success. So clocking in without scanning a face is not possible, even by calling the API directly.
+
+The wrong-face limit is kept on the **server, per kiosk**, so refreshing the page or opening another tab does not reset it: after **5 wrong faces the reader stops for 60 seconds** (`KioskFaceLockout`); a successful scan clears the count.
+
 ### Face Mismatch → Warning → Alert → Strikes → Lockout
 
 ```
@@ -485,8 +506,8 @@ The server (from the kiosk log call) does TWO things:
      (type 'security_face_mismatch', "Face Mismatch at Kiosk", deep-links to AI Decision Support)
         │
         ▼
-Strike counter increases. After 3 strikes the terminal locks for
-60 seconds (countdown shown).
+Strike counter increases (kept on the server, per kiosk). After 5 wrong faces
+the reader stops for 60 seconds (countdown shown).
 ```
 
 Every one of these events also surfaces in the **Security Events** area of AI Decision Support for HR to resolve or escalate (Module 15).
@@ -509,7 +530,7 @@ The terminal has one popup component with four tones. Use this table to explain 
 | Red/Amber banner | Early-out allowance | On the early clock-out reason screen: "1 of 2 used", or "this one will be recorded as UNEXCUSED" once used up; extra line for *Feeling Unwell* (certificate within 48 h) | — |
 | Blue (info) | Clocking In Early | Within 30 minutes before the shift start | Clock In Anyway / Cancel |
 | Screens | Already Clocked In Today · No Clock-In Found | Duplicate / missing punch | Suggests the right action |
-| Screen | Terminal locked (60 s countdown) | 3 face-mismatch strikes | — |
+| Screen | Terminal locked (60 s countdown) | 5 wrong faces | — |
 | Success | Clocked In Successfully (green) · Clocked In (Late) (amber) · Clocked In (Early) (blue) · Clocked Out (green) · Clocked Out Early (amber) | After a recorded punch | auto-returns to the start screen |
 
 While the face is being scanned, the camera view shows the same **face-shaped oval with a sweeping scan band and landmark dots**, turning green when identity is confirmed (`FaceScanOverlay.jsx`).
@@ -653,7 +674,7 @@ Creates a notification reminding the employee
 | Correct a record | `PUT /api/attendance/{id}` | Fix times/hours; audit-friendly |
 | Remove a bad record | `DELETE /api/attendance/{id}` | |
 | View a date window | `GET /api/attendance?from=YYYY-MM-DD&to=YYYY-MM-DD` | Optional window; with no parameters it returns everything. The HR Dashboard asks only for the last 35 days |
-| Run alert checks | `GET /api/attendance/alerts/check` | Runs when the HR dashboard loads. Flags no-shows, un-closed clock-ins from earlier days, unauthorized overtime and staffing shortage. Efficient by design: one query for "already flagged today", one name lookup per group, alerts sent as one concurrent batch (max 15 per scan — the rest follow on the next scan) |
+| Run alert checks | `GET /api/attendance/alerts/check` (and the every-minute job `attendance:check-alerts`) | Runs every minute in the background (also when the HR dashboard loads), on the company clock (Manila). Flags no-shows, un-closed clock-ins from earlier days, unauthorized overtime and staffing shortage. Efficient by design: one query for "already flagged today", one name lookup per group, alerts sent as one concurrent batch (max 15 per scan — the rest follow on the next scan) |
 | **Review & classify early clock-outs** | `GET /api/attendance/early-outs`, `POST /api/attendance/early-outs/{id}/classify` | One tab; pending badge shows health/emergency cases waiting |
 
 The **Early Clock Outs tab** (badge = count of `Pending Review`) lists every early-out with employee, date, time lost, the reason the employee gave at the kiosk, and current classification. HR opens one and picks `Excused (Sick)` / `Excused (Emergency)` / `Excused (Early Leave)` / `Unpaid` — unpaid early time is deducted from pay, excused is not. The employee can still edit their reason afterwards, but the punch snapshot that HR judged never changes.
@@ -680,6 +701,25 @@ An employee with an **Approved leave** covering today is marked on-leave rather 
 ### Tech Trail
 
 - Tables: `attendance` (read/write), `shift_schedules`, `shift_definitions`, `leaves` (context for decisions)
+
+### Corrections — when the record is wrong because something stopped it being recorded
+
+A **Corrections** tab sits inside Time & Attendance, beside Early Clock Outs: on the employee's **My Attendance** page and on the admin's **Time & Attendance** page. It is not a separate module.
+
+The employee files a correction (last 7 days only) for one of two problems:
+
+| Problem | What it means | What HR's approval does |
+|---|---|---|
+| **I worked past my shift** | Stayed after the scheduled end and the clock-out failed or was not counted | HR edits the shift: the **clock-out** is set to the time HR enters, and the extra time past the shift end becomes **approved overtime** (only the hours not already approved that day, so nothing is paid twice) |
+| **The kiosk failed** (two sides) | It would not clock the employee **in**, or would not clock them **out** | HR makes a **manual clock-in** (counted Present or Late by the kiosk's own rule; a day that is already over ends at the scheduled end) or a **manual clock-out** |
+
+**Photo proof is required**: 1 to 5 photos (the broken kiosk at the entrance, a phone showing the live time, ...), each with an optional caption. The browser shrinks them; the server checks each one is a real image.
+
+**The employee never types hours.** They give the day, the time and the reason. The system works out what the day is worth from the schedule (lunch taken off) and refuses claims that cannot be true: before the shift started, in the future, more than 4 hours past the shift end, a clock-in when one exists, a clock-out that is past the shift end (that is "worked past shift"), or a day older than 7 days.
+
+**Only the Workforce Admin decides.** The review screen shows the employee's account, the photos (click to enlarge), the shift, and the day as it stands. The **manual entry** starts from the time the employee gave; HR can change it, and a live preview says what the day would then be worth. **Approve & record** writes it to the attendance record through the normal hour rules, stamps it *Manually entered via ADJ... by ...*, refreshes the timesheet and notifies the employee. **Decline** needs a reason the employee reads. Both are in the audit log, which keeps the day as it was before the entry. A request with several claims in 30 days is flagged as a pattern for the admin to look at.
+
+Endpoints: `POST /api/attendance/adjustments` (file), `GET /api/attendance/adjustments/mine`, `POST .../{id}/cancel`; admin only: `GET /api/attendance/adjustments`, `GET .../{id}` (with photos), `POST .../{id}/preview`, `POST .../{id}/decide`. Table: `attendance_adjustments`.
 
 ---
 
@@ -1004,9 +1044,9 @@ No writes happen here. Reports are a lens over the same tables everything else u
 
 ---
 
-## Module 14 — AI Decision Support (The Two Brains)
+## Module 14 — AI Decision Support (Rules Decide, Gemini Explains)
 
-**What it is:** the flagship module. It reads the last 30 days of real workforce activity and produces a health score, insights, and an actionable decision queue — using **Google Gemini** when available, or a built-in PHP rule engine when not.
+**What it is:** the flagship module. It reads the last 30 days of real workforce activity and produces a health score, findings with recommendations, and a decision queue. **The rules decide what is a problem and what the score is; Google Gemini only writes the explanation in plain language.** Every number comes from the database, and the page works with or without Gemini.
 
 **Files:** `HR_Manager/AIDecisionSupport.jsx`, backend `AIDecisionSupportController.php`, `AIDecisionSupportService.php`
 
@@ -1014,67 +1054,77 @@ No writes happen here. Reports are a lens over the same tables everything else u
 
 ```
 HR opens the page
-        │
-        ▼
+        |
+        v
 GET /api/analytics/ai/insights                    (admin only)
-        │
-        ▼
-STEP 1 — GATHER REAL DATA (PostgreSQL, last 30 days):
-   attendance per employee (Present/Late/Absent counts)
-   pending leave requests
-   pending overtime requests
-   shift coverage
-   open security events (face_mismatch, pin_failed counts)
-        │
-        ▼
-STEP 2 — CHOOSE A BRAIN
-        │
-        ├── Internet up AND GEMINI_API_KEY set?
-        │        │
-        │        YES → send structured JSON to Google Gemini API
-        │              → Gemini returns natural-language insights as strict JSON
-        │              → result marked  source: "ai"
-        │              → invalid/unparseable reply? fall through ↓
-        │
-        └── NO (offline / no key / bad reply)
-                 → run the built-in PHP rule engine
-                   (deterministic thresholds, e.g.
-                    repeated lates → warning,
-                    open security events → attention)
-                 → result marked  source: "rule-based"
-        │
-        ▼
-STEP 3 — UNIFIED RESPONSE
-   { healthScore, insights[], decisionQueue[], source }
-   Both brains emit the SAME shape — the frontend doesn't care who answered
-        │
-        ▼
-STEP 4 — RENDER
-   Health score ring + insight cards + decision queue
-   Source badge tells the truth about which engine ran:
-     purple  "Powered by Gemini AI"    (source = ai)
-     amber   "Gemini unavailable"      (online but API failed)
-     red     "Offline"                 (no network at all)
+        |
+        v
+STEP 1 - FACTS, from PostgreSQL, on the company clock (Manila):
+   the last 30 calendar days (today and the 29 before it), active employees only
+   per person: on time, late, left early, absent, overtime hours
+   attended = on time + late + left early;  expected = attended + absent
+   (approved leave has no attendance row, so it is never held against anyone;
+    a day that ended as "Early Leave" is judged on time or late by its clock-in)
+   today: scheduled, clocked in, not due yet, overdue (past the absent-grace time,
+          the same rule as the "Possible No-Show" alert; people on leave excluded)
+   pending leave and overtime, approved leave this month vs last, open security events
+        |
+        v
+STEP 2 - FINDINGS, by fixed rules (the thresholds live at the top of the service):
+   attendance rate below 90%            -> critical (else a "strong" note)
+   3+ late arrivals in 30 days           -> warning, per person
+   2+ absences in 30 days                -> warning, per person
+   punctuality below 80% (5+ days, fewer than 3 lates) -> info, per person
+   overtime averaging over 1 h per day worked -> warning, per person
+   scheduled people overdue today        -> warning
+   requests waiting for a decision       -> warning (with the age of the oldest)
+   approved leave up 1.5x on last month  -> info
+   open face mismatch -> critical;  open failed PIN -> warning
+        |
+        v
+STEP 3 - THE HEALTH SCORE = 100 minus five deductions, each in proportion to how bad it is
+   Attendance   2 points per % below 100% attended (up to 40)
+   Punctuality  0.5 points per % below 100% on time (up to 25)
+   People flagged   20 x the share of employees with a late / absence / punctuality / overtime finding
+   Security     8 for open face mismatches, 3 for open failed PINs
+   Approvals    2 for anything waiting, 3 more when a request has waited over a week
+   The page shows this breakdown ("How is this score calculated?"), so the number can always be explained.
+        |
+        v
+STEP 4 - THE WORDING (optional)
+   Gemini receives the findings and the facts and returns a title, message and recommendation for each.
+   It cannot add, drop or re-rate a finding, and cannot change the score. Any sentence of its that states a number
+   which is not in the data is thrown away and the rule's own sentence is shown instead.
+   No key, Google busy or out of quota, slow, or an unusable answer -> the rule-made sentences are shown:
+   the SAME findings and the SAME score.
+        |
+        v
+STEP 5 - RENDER: score ring + breakdown, findings, decision queue.
+   The banner says the real reason when Gemini is not used: not set up, key refused, the free daily limit is
+   used up (with the reset time), Google overloaded, or both.
 ```
 
-### The Decision Queue (Insights → Actions)
+**Keeping Gemini usable on the free tier.** Google's free tier allows only 20 requests a day per model, so the service is careful: the same findings reuse the same wording for 6 hours (opening the page or the sidebar badge costs nothing when nothing changed); the configured model is tried first, then `GEMINI_FALLBACK_MODELS`; a model that is out of quota or busy is remembered and skipped until it recovers (daily quotas reset at midnight Pacific time, 3 PM in Manila); all attempts together are capped at 20 seconds, so a slow Google can never crash the page; **Regenerate** asks again but never retries a model that is out of quota.
 
-Each insight can carry a suggested action. HR clicks once; the frontend calls `POST /api/analytics/ai/actions` with an `action` + target key. The controller executes real operations:
+### The Decision Queue (Findings -> Actions)
+
+The queue lists what is waiting for HR: security events, leave and overtime requests. A leave request also shows the balance left after approving and how many others are already off on those dates. Each click calls `POST /api/analytics/ai/actions`:
 
 | Action | What the backend actually does |
 |--------|-------------------------------|
-| `approve_leave` / `reject_leave` | Same code path as LeaveManagement: validates the request is still Pending, updates status/approver/comments, deducts balance if approved, notifies employee |
-| `approve_overtime` / `reject_overtime` | Updates the overtime request incl. `approved_hours`/`approved_at`, triggers reconciliation, notifies employee |
-| `resolve_security_event` | Finds the event, requires it to still be `Open`, stamps `Resolved` + `resolved_by` + `resolved_at`, notifies |
+| `approve_leave` / `reject_leave` | Checks the request is still Pending, updates status and approver, notifies the employee, writes the **audit** entry (the same trail the Leave screen leaves); an approved leave also clears that person's shifts on those days |
+| `approve_overtime` / `reject_overtime` | Same for overtime, including the approved hours; the recount of the attendance day follows within a minute |
+| `resolve_security_event` / `flag_security_event` | Only an `Open` event: stamps Resolved (or escalates it, which notifies every admin with a link back here), with who and when, and audits it |
+| `resolve_all_security` | Resolves only events still Open (an escalated one stays escalated) |
 
-### Memory — So Dismissed Insights Stay Dismissed
+### Memory - "Mark as handled" holds until the problem changes
 
-Resolved insight keys are saved into `settings.ai_resolved_insights` (JSON). Next time insights generate, anything already handled isn't nagged about again. The AI has a memory of what you've already dealt with.
+Handled findings are saved in `settings.ai_resolved_insights`. The key includes what the finding is about (for example the date of the latest late arrival), so a NEW late arrival brings the finding back. Good news is never "handled".
 
-### Two Honest Guarantees
+### Honest Guarantees
 
-1. **The AI never invents data.** It only receives what the database returned; it interprets, it doesn't imagine numbers.
-2. **The system never depends on Gemini.** Kill the internet mid-demo and the page still works, clearly labeled as rule-based.
+1. **The numbers never come from the AI.** They are computed from the database; Gemini only words them, and a sentence with a number that is not in the data is discarded.
+2. **The system never depends on Gemini.** With no internet, no key, or Google down, the page still shows the same findings and score, with a banner that says why.
 
 ---
 
@@ -1208,6 +1258,25 @@ Profile and Settings are separate pages. **My Profile** (`/my-profile`) answers 
 
 ---
 
+## Background Jobs (The Scheduler)
+
+`php artisan schedule:work` (its own container or window) runs these on its own; every one is safe to run repeatedly.
+
+| Job | When | What it does |
+|-----|------|--------------|
+| `attendance:check-alerts` | every minute | Raises the admins' alerts (possible no-show after the absent-grace time, incomplete record, unauthorized overtime, staffing shortage) about a minute after they happen, each once a day, using the Manila clock |
+| `attendance:recount-hours` | every minute | Re-counts recent days from the real clock-out after an overtime approval or withdrawal |
+| `timesheets:refresh` | every minute | Rebuilds recent timesheets after a punch, overtime approval or correction |
+| `attendance:mark-absent` | 00:10 and 12:00 Manila | Writes Absent for finished, scheduled days with no clock-in and no approved leave |
+| `timesheets:auto-submit`, `timesheets:remind` | hourly | Submits unsubmitted finished weeks at Monday 12:00 Manila; sends the one-time reminders |
+| `early-outs:expire-certificates` | hourly | A SICK early clock-out without a certificate by its deadline becomes unexcused |
+
+Weeks everywhere (timesheets, "this week", schedules) run **Monday to Sunday** (ISO 8601); "today" is always the company's calendar day in Manila, whatever the viewer's computer says.
+
+The demo employees cannot use the kiosk, so before a presentation run `php artisan demo:refresh` (see the backend README): it rebuilds their recent history through the system's own rules.
+
+---
+
 ## Module 18 — Network Awareness (Small But Nice)
 
 The frontend watches connectivity via a dedicated hook (`useNetworkStatus.js`):
@@ -1266,12 +1335,12 @@ Which tables each module touches (R = read, W = write). This map is logical — 
 | 15 min | Grace period after shift start before a clock-in counts as Late — **default**, admin-configurable on Settings → Time Manager (`late_grace_minutes`) |
 | 60 min | Absence grace before "no show" becomes Absent — **default**, admin-configurable on Settings → Time Manager (`absent_grace_minutes`) |
 | 30 min | How early before the shift the kiosk lets someone clock in (earlier is refused; paid time still starts at the shift start) |
-| 60 sec | Kiosk lockout duration after repeat face-mismatch strikes |
+| 60 sec | How long the kiosk face reader stops after 5 wrong faces (server-side, per kiosk) |
 | 30 days | Lookback window the AI analyzes |
 | 5 taps | Secret rhythm to summon the kiosk PIN prompt |
 | 1/day | Rate limit on self "remind me to clock out" nudges |
-| 3 strikes | Face mismatches before the terminal locks |
-| 0.6 | Face-match distance threshold (below = same person) |
+| 5 wrong faces | Face mismatches before the reader stops (server-side, per kiosk) |
+| 0.5 / 0.55 | Face match: average distance at most 0.5, no single frame over 0.55 (below = same person); 5-minute single-use face ticket |
 | 15 s | (legacy) How long a pre-consolidation service reused `core`'s "who is this token?" answer — no longer exists |
 | 15 alerts | Most no-show/overtime alerts one dashboard scan sends |
 | 2 per 30 days | Free early clock-outs per rolling window — the 3rd is unexcused automatically (editable in Settings) |
@@ -1328,9 +1397,9 @@ Workforce MGNT/
 │       │   └── services/             {auth,identity,audit,attendance,scheduling,
 │       │                             timeoff,payroll,communications,configuration,
 │       │                             intelligence}.php   ← one per domain
-│       ├── database/migrations/      ALL tables (31 total: 22 business + 9 framework)
+│       ├── database/migrations/      ALL tables (28 total: 19 business + 9 framework)
 │       ├── database/seeders/         demo workforce data
-│       ├── tests/                    ONE offline test suite — 310 tests (1272 assertions)
+│       ├── tests/                    ONE offline test suite — 385 tests (1725 assertions)
 │       └── .env                      ONE database: workforce_mgnt (PostgreSQL)
 ├── docker-compose.yml               Docker: 4 containers (see Start Here §10)
 ├── docker/                          backend.Dockerfile (app + scheduler, same image),

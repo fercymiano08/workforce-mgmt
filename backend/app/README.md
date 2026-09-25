@@ -10,7 +10,7 @@ React frontend in `../../frontend`; it has no web pages of its own.
 | `routes/api.php` | Mounts one route file per domain from `routes/services/` (auth, identity, attendance, scheduling, time-off, payroll, communications, configuration, intelligence, audit) |
 | `app/Http/Controllers/Api` | One controller per area (attendance, kiosk, leave, shifts, timesheets, AI decision support, …) |
 | `app/Services` | Business rules shared by controllers and commands (timesheet generation, working days, break/early-leave policy, notifications, audit logging, AI insights) |
-| `app/Console/Commands` | Background jobs, scheduled in `routes/console.php` (mark absences, recount hours, auto-generate schedules, timesheet submit/remind/refresh, expire early-out certificates) |
+| `app/Console/Commands` | Background jobs, scheduled in `routes/console.php` (mark absences, attendance alerts every minute, recount hours, timesheet submit/remind/refresh, expire early-out certificates) |
 | `database/migrations` | The full schema |
 | `database/seeders`, `database/mock` | The admin account plus optional demo data (`SEED_DEMO_DATA`) |
 | `tests/Feature` | API tests, including role-boundary tests for every domain |
@@ -41,7 +41,7 @@ php artisan demo:refresh            # rebuilds their last 4 weeks up to today (-
 It rebuilds their schedules, attendance and timesheets through the system's own rules (Monday-Saturday work
 days, holidays and approved leave skipped, Present/Late by the kiosk's grace rule, hours counted like the
 kiosk counts them, timesheets moved through the real workflow). Employees registered through the system are
-never touched. Back up first: `pg_dump -U postgres -d workforce_mgnt -f ../../db-backups/before-demo.sql`.
+never touched. Back up first: `pg_dump -U postgres -d workforce_mgnt -f before-demo.sql` (keep the file outside the project, and never commit it).
 
 ## Tests
 

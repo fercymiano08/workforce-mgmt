@@ -9,7 +9,7 @@
 -- PostgreSQL database dump
 --
 
-\restrict bedFQFcrQbv6TAjqy2j6Rb61HeLNLnwuvLCF0dEcNVniObtbPcOmPVtJQcheeYh
+\restrict D9Zas3wN7lgK5cvvyumwlJt6h6A1KVFXcWYAGmw5dgZ4UjJOHP8MVzeqcgwVVhz
 
 -- Dumped from database version 18.4
 -- Dumped by pg_dump version 18.4
@@ -85,6 +85,35 @@ CREATE TABLE public.attendance (
     created_at timestamp(0) without time zone,
     updated_at timestamp(0) without time zone,
     actual_clock_out time(0) without time zone
+);
+
+
+--
+-- Name: attendance_adjustments; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.attendance_adjustments (
+    id character varying(255) NOT NULL,
+    employee_id character varying(255) NOT NULL,
+    employee_name character varying(255) NOT NULL,
+    date date NOT NULL,
+    type character varying(255) NOT NULL,
+    claimed_time time(0) without time zone,
+    reason text NOT NULL,
+    proof json,
+    shift_start time(0) without time zone,
+    shift_end time(0) without time zone,
+    derived_hours numeric(5,2) DEFAULT '0'::numeric NOT NULL,
+    derived_overtime numeric(5,2) DEFAULT '0'::numeric NOT NULL,
+    recorded_hours numeric(5,2) DEFAULT '0'::numeric NOT NULL,
+    status character varying(255) NOT NULL,
+    decided_by character varying(255),
+    decided_at timestamp(0) without time zone,
+    decision_note text,
+    requested_date date NOT NULL,
+    created_at timestamp(0) without time zone,
+    updated_at timestamp(0) without time zone,
+    final_time time(0) without time zone
 );
 
 
@@ -765,6 +794,14 @@ ALTER TABLE ONLY public.analytics
 
 
 --
+-- Name: attendance_adjustments attendance_adjustments_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.attendance_adjustments
+    ADD CONSTRAINT attendance_adjustments_pkey PRIMARY KEY (id);
+
+
+--
 -- Name: attendance attendance_employee_date_unique; Type: CONSTRAINT; Schema: public; Owner: -
 --
 
@@ -1029,6 +1066,27 @@ ALTER TABLE ONLY public.users
 
 
 --
+-- Name: attendance_adjustments_employee_id_date_index; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX attendance_adjustments_employee_id_date_index ON public.attendance_adjustments USING btree (employee_id, date);
+
+
+--
+-- Name: attendance_adjustments_employee_id_index; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX attendance_adjustments_employee_id_index ON public.attendance_adjustments USING btree (employee_id);
+
+
+--
+-- Name: attendance_adjustments_status_type_index; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX attendance_adjustments_status_type_index ON public.attendance_adjustments USING btree (status, type);
+
+
+--
 -- Name: attendance_employee_id_date_index; Type: INDEX; Schema: public; Owner: -
 --
 
@@ -1222,5 +1280,5 @@ ALTER TABLE ONLY public.roles
 -- PostgreSQL database dump complete
 --
 
-\unrestrict bedFQFcrQbv6TAjqy2j6Rb61HeLNLnwuvLCF0dEcNVniObtbPcOmPVtJQcheeYh
+\unrestrict D9Zas3wN7lgK5cvvyumwlJt6h6A1KVFXcWYAGmw5dgZ4UjJOHP8MVzeqcgwVVhz
 
