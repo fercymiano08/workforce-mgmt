@@ -49,6 +49,9 @@ class AIDecisionSupportService
     // model, so a page view must never cost a request when nothing has changed.
     private const AI_CACHE_MINUTES = 360;
 
+    // The most time, in seconds, every Gemini attempt together may take before the rule-based wording is used instead.
+    private const AI_TOTAL_SECONDS = 20;
+
     // A model that failed with a busy / server error is left alone this long before it is tried again.
     private const AI_BUSY_MINUTES = 3;
 
@@ -716,14 +719,21 @@ class AIDecisionSupportService
         // is remembered for as long as it lasts, so a model that cannot answer is not asked again and again. The
         // configured model goes first, then the fallbacks.
         $briefing = null;
+        // One overall budget for all the models together, well inside PHP's 30-second limit: several slow models in a row
+        // must end in the rule-based wording, never in a crashed page.
+        $deadline = microtime(true) + self::AI_TOTAL_SECONDS;
         foreach (array_values(array_unique([$model, ...(array) config('services.gemini.fallback_models', [])])) as $candidate) {
+            $remaining = $deadline - microtime(true);
+            if ($remaining < 2) {
+                break;
+            }
             $cooling = Cache::get("gemini-cooldown:{$candidate}");
             // "Regenerate" retries a model that was only busy, but never one that is out of quota or retired
             if ($cooling && ! ($fresh && $cooling === 'busy')) {
                 continue;
             }
             try {
-                $response = Http::timeout((int) config('services.gemini.timeout', 30))
+                $response = Http::timeout(max(2, (int) min((int) config('services.gemini.timeout', 30), floor($remaining))))
                     ->asJson()
                     ->withQueryParameters(['key' => $key])
                     ->post("https://generativelanguage.googleapis.com/v1beta/models/{$candidate}:generateContent", [
