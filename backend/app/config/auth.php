@@ -103,6 +103,26 @@ return [
 
     /*
     |--------------------------------------------------------------------------
+    | Password Reset Codes (self-service OTP flow)
+    |--------------------------------------------------------------------------
+    |
+    | The app does not use Laravel's reset-link broker: employees get a six-digit
+    | code by email and type it in themselves (see AuthController::forgotPassword).
+    | This is how many SECONDS that code stays valid.
+    |
+    | It used to be 60, which expired while people were still typing their new
+    | password and forced them to start over. It is deliberately generous: a
+    | six-digit code is worthless without the mailbox it was mailed to, and the
+    | route is throttled and attempt-limited instead.
+    |
+    */
+
+    'password_reset_code' => [
+        'ttl' => (int) env('AUTH_PASSWORD_RESET_CODE_TTL', 300),
+    ],
+
+    /*
+    |--------------------------------------------------------------------------
     | Password Confirmation Timeout
     |--------------------------------------------------------------------------
     |

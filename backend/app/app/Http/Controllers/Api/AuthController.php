@@ -3,13 +3,13 @@
 namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
+use App\Jobs\SendPasswordResetCode;
 use App\Models\User;
 use App\Services\AuditLogger;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
-use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Facades\RateLimiter;
 use Illuminate\Validation\Rules\Password;
 use Illuminate\Validation\ValidationException;
@@ -17,8 +17,17 @@ use Laravel\Sanctum\PersonalAccessToken;
 
 class AuthController extends Controller
 {
-    /** How long a password-reset code stays valid: one minute, then a new one has to be requested. */
-    private const OTP_SECONDS = 60;
+    /**
+     * How long a password-reset code stays valid, in seconds.
+     *
+     * Read from config (auth.password_reset_code.ttl, default 5 minutes) rather than fixed, and always
+     * paired with expiresAt in the response so the browser counts down the SERVER's clock instead of
+     * its own - a slow mail server used to eat into the window before the countdown even started.
+     */
+    private function otpTtl(): int
+    {
+        return max(60, (int) config('auth.password_reset_code.ttl', 300));
+    }
 
     /**
      * An employee's login expires this many seconds after their last real activity (the browser keeps it
@@ -193,6 +202,12 @@ class AuthController extends Controller
         $request->validate(['email' => 'required|email']);
 
         $user = User::where('email', $request->email)->first();
+        $ttl = $this->otpTtl();
+
+        // The code is stamped with the moment it was BORN, before any mail server is contacted, so
+        // slow delivery eats into the window rather than silently extending it past what the browser shows.
+        $issuedAt = now();
+        $expiresAt = $issuedAt->copy()->addSeconds($ttl)->timestamp;
 
         // Admin accounts are reserved, fixed credentials (not real mailboxes),
         // so password reset is employee-only. We no-op silently and return the
@@ -204,31 +219,33 @@ class AuthController extends Controller
             DB::table('password_reset_tokens')->insert([
                 'email' => $request->email,
                 'token' => Hash::make($otp),
-                'created_at' => now(),
+                'created_at' => $issuedAt,
             ]);
 
             $this->audit('auth.password_reset_requested', (string) $user->id, $user, ['ip' => $request->ip()]);
 
             $name = $user->firstName ?? $user->name ?? 'there';
-            try {
-                Mail::raw(
-                    "Hi {$name},\n\n"
-                    . "Your WorkForce Pro password reset code is:\n\n"
-                    . "   {$otp}\n\n"
-                    . "This code expires in ".self::OTP_SECONDS." seconds (1 minute). If it runs out, request a new one. If you did not request a reset, ignore this email.",
-                    fn ($m) => $m->to($request->email)->subject('WorkForce Pro — Password Reset Code')
-                );
-            } catch (\Throwable $e) {
-                \Illuminate\Support\Facades\Log::warning('Password reset email could not be sent.', [
-                    'email' => $request->email,
-                    'reason' => $e->getMessage(),
-                ]);
-            }
+            $minutes = max(1, (int) round($ttl / 60));
+
+            // The code is already stored, so the browser can be answered right now and the person
+            // can start typing their new password while the mail goes out. Handing the message to
+            // SMTP is the slow part, and it has no business happening in front of the countdown.
+            SendPasswordResetCode::dispatchAfterResponse(
+                $request->email,
+                $name,
+                $otp,
+                $minutes,
+                $issuedAt->timestamp,
+            );
         }
 
+        // Identical for a real account, an Administrator, an unknown address, or a mail failure: the
+        // response must not tell an attacker which emails exist or which ones are staff accounts.
         return response()->json([
             'success' => true,
             'message' => 'If an account exists for that email, a reset code has been sent.',
+            'expiresAt' => $expiresAt,
+            'expiresIn' => $ttl,
         ]);
     }
 
@@ -245,7 +262,7 @@ class AuthController extends Controller
         if (
             ! $record
             // (diffInMinutes is negative for a past date in this Carbon version, so compare the moments themselves)
-            || \Illuminate\Support\Carbon::parse($record->created_at)->lt(now()->subSeconds(self::OTP_SECONDS))
+            || \Illuminate\Support\Carbon::parse($record->created_at)->lt(now()->subSeconds($this->otpTtl()))
             || ! Hash::check($request->otp, $record->token)
         ) {
             throw ValidationException::withMessages([
@@ -270,6 +287,9 @@ class AuthController extends Controller
 
         $user->update(['password' => $request->password]);
         DB::table('password_reset_tokens')->where('email', $request->email)->delete();
+        // A reset is what someone does precisely because they think the old password leaked, so every
+        // session already signed in with it is dropped too - not just the code.
+        $user->tokens()->delete();
         $this->audit('auth.password_reset', (string) $user->id, $user, ['ip' => $request->ip()]);
 
         return response()->json([

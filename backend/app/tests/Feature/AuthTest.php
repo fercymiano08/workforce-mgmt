@@ -2,8 +2,10 @@
 
 namespace Tests\Feature;
 
+use App\Mail\PasswordResetCodeMail;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Mail;
@@ -181,6 +183,192 @@ class AuthTest extends TestCase
         );
     }
 
+    public function test_the_reset_code_email_really_is_sent(): void
+    {
+        Mail::fake();
+        $this->otpEmployeeUser();
+
+        $this->postJson('/api/auth/forgot-password', ['email' => 'employee@workforcepro.com'])->assertOk();
+
+        // Storing the token is not the same as sending the code. The old Mail::raw() version of
+        // this could not be asserted at all (Laravel's MailFake makes raw() a no-op), so the send
+        // could stop happening entirely and the suite would stay green.
+        Mail::assertSentCount(1);
+        Mail::assertSent(PasswordResetCodeMail::class, function (PasswordResetCodeMail $mail) {
+            return $mail->hasTo('employee@workforcepro.com')
+                && $mail->hasSubject('WorkForce Pro - Password Reset Code');
+        });
+    }
+
+    public function test_the_email_carries_a_code_that_actually_works(): void
+    {
+        Mail::fake();
+        $this->otpEmployeeUser();
+
+        $this->postJson('/api/auth/forgot-password', ['email' => 'employee@workforcepro.com'])->assertOk();
+
+        // Pull the real code out of the rendered body and use it. A mail that renders fine but
+        // carries the wrong digits is the most annoying possible failure, and it is invisible
+        // until somebody actually tries to log in.
+        $body = '';
+        Mail::assertSent(PasswordResetCodeMail::class, function (PasswordResetCodeMail $mail) use (&$body) {
+            $body = $mail->render();
+
+            return true;
+        });
+        preg_match('/^\s*(\d{6})\s*$/m', $body, $m);
+
+        $this->assertNotEmpty($m, "The emailed message did not contain a 6-digit code. Body was:\n".$body);
+
+        $this->postJson('/api/auth/reset-password', [
+            'email' => 'employee@workforcepro.com',
+            'otp' => $m[1],
+            'password' => 'BrandNew@123',
+            'password_confirmation' => 'BrandNew@123',
+        ])->assertOk();
+    }
+
+    /** Asks for a reset code and returns the digits from the email that "was sent". */
+    private function requestResetCode(string $email): string
+    {
+        Mail::fake();
+        $this->postJson('/api/auth/forgot-password', ['email' => $email])->assertOk();
+
+        $body = '';
+        Mail::assertSent(PasswordResetCodeMail::class, function (PasswordResetCodeMail $mail) use (&$body) {
+            $body = $mail->render();
+
+            return true;
+        });
+        preg_match('/^\s*(\d{6})\s*$/m', $body, $m);
+
+        return $m[1];
+    }
+
+    private function signIn(string $email, string $password)
+    {
+        return $this->postJson('/api/auth/login', ['email' => $email, 'password' => $password]);
+    }
+
+    public function test_forgot_password_round_trip_really_saves_the_new_password(): void
+    {
+        $user = $this->otpEmployeeUser();
+        $user->update(['password' => 'Balderama@123']);
+        $email = 'employee@workforcepro.com';
+        $oldSession = $user->createToken('signed-in-before-the-reset')->plainTextToken;
+
+        $code = $this->requestResetCode($email);
+        $this->postJson('/api/auth/reset-password', [
+            'email' => $email, 'otp' => $code, 'password' => 'Fresh@Start9', 'password_confirmation' => 'Fresh@Start9',
+        ])->assertOk();
+
+        // What was saved is the NEW password, stored hashed, and it actually signs in
+        $this->assertNotSame('Fresh@Start9', $user->fresh()->password);
+        $this->signIn($email, 'Fresh@Start9')->assertOk()->assertJsonPath('success', true)->assertJsonStructure(['token']);
+        // The old one no longer does
+        $this->signIn($email, 'Balderama@123')->assertStatus(422);
+        // A session that was open when the reset happened is dropped
+        $this->assertSame(0, $user->fresh()->tokens()->where('name', 'signed-in-before-the-reset')->count());
+        // The code is single-use and no longer waiting in the table
+        $this->assertSame(0, DB::table('password_reset_tokens')->where('email', $email)->count());
+        $this->postJson('/api/auth/reset-password', [
+            'email' => $email, 'otp' => $code, 'password' => 'Another@Pass1', 'password_confirmation' => 'Another@Pass1',
+        ])->assertStatus(422)->assertJsonValidationErrors('otp');
+        $this->signIn($email, 'Fresh@Start9')->assertOk();   // and the reused code changed nothing
+    }
+
+    public function test_a_wrong_code_or_weak_password_saves_nothing(): void
+    {
+        $user = $this->otpEmployeeUser();
+        $user->update(['password' => 'Balderama@123']);
+        $email = 'employee@workforcepro.com';
+        $code = $this->requestResetCode($email);
+        $wrong = $code === '000000' ? '111111' : '000000';
+
+        $this->postJson('/api/auth/reset-password', ['email' => $email, 'otp' => $wrong, 'password' => 'Fresh@Start9', 'password_confirmation' => 'Fresh@Start9'])
+            ->assertStatus(422)->assertJsonValidationErrors('otp');
+        $this->postJson('/api/auth/reset-password', ['email' => $email, 'otp' => $code, 'password' => 'weak', 'password_confirmation' => 'weak'])
+            ->assertStatus(422)->assertJsonValidationErrors('password');
+        $this->postJson('/api/auth/reset-password', ['email' => $email, 'otp' => $code, 'password' => 'Fresh@Start9', 'password_confirmation' => 'Different@1'])
+            ->assertStatus(422)->assertJsonValidationErrors('password');
+
+        $this->signIn($email, 'Balderama@123')->assertOk();   // still the old password
+        $this->assertSame(1, DB::table('password_reset_tokens')->where('email', $email)->count());   // and the good code still works
+        $this->postJson('/api/auth/reset-password', ['email' => $email, 'otp' => $code, 'password' => 'Fresh@Start9', 'password_confirmation' => 'Fresh@Start9'])->assertOk();
+    }
+
+    public function test_asking_again_replaces_the_earlier_code(): void
+    {
+        $this->otpEmployeeUser();
+        $email = 'employee@workforcepro.com';
+
+        $first = $this->requestResetCode($email);
+        $second = $this->requestResetCode($email);
+
+        $this->assertSame(1, DB::table('password_reset_tokens')->where('email', $email)->count());
+        if ($first !== $second) {
+            $this->postJson('/api/auth/reset-password', ['email' => $email, 'otp' => $first, 'password' => 'Fresh@Start9', 'password_confirmation' => 'Fresh@Start9'])->assertStatus(422);
+        }
+        $this->postJson('/api/auth/reset-password', ['email' => $email, 'otp' => $second, 'password' => 'Fresh@Start9', 'password_confirmation' => 'Fresh@Start9'])->assertOk();
+    }
+
+    public function test_change_password_round_trip_really_saves_the_new_password(): void
+    {
+        $user = $this->otpEmployeeUser();
+        $user->update(['password' => 'Balderama@123']);
+        $email = 'employee@workforcepro.com';
+        $token = $this->signIn($email, 'Balderama@123')->assertOk()->json('token');
+
+        $this->withHeader('Authorization', 'Bearer '.$token)->postJson('/api/auth/change-password', [
+            'current_password' => 'Balderama@123', 'new_password' => 'Changed@Pass7', 'new_password_confirmation' => 'Changed@Pass7',
+        ])->assertOk();
+
+        $this->assertNotSame('Changed@Pass7', $user->fresh()->password);   // stored hashed
+        $this->signIn($email, 'Changed@Pass7')->assertOk();
+        $this->signIn($email, 'Balderama@123')->assertStatus(422);
+    }
+
+    public function test_the_code_is_only_sent_once_per_request(): void
+    {
+        Mail::fake();
+        $this->otpEmployeeUser();
+
+        $this->postJson('/api/auth/forgot-password', ['email' => 'employee@workforcepro.com'])->assertOk();
+
+        // Guards against a second send sneaking in (retry, double dispatch, terminate running
+        // twice), which would mean the code in the inbox and the code in the database disagree.
+        Mail::assertSentCount(1);
+    }
+
+    public function test_the_send_is_deferred_until_after_the_response(): void
+    {
+        Mail::fake();
+        $this->otpEmployeeUser();
+
+        $request = Request::create('/api/auth/forgot-password', 'POST', ['email' => 'employee@workforcepro.com']);
+
+        $callbacks = new \ReflectionProperty($this->app, 'terminatingCallbacks');
+        $callbacks->setAccessible(true);
+        $before = count($callbacks->getValue($this->app));
+
+        // Called directly rather than through the HTTP kernel, so the test harness does not
+        // terminate the app for us and we can see the state the controller leaves behind.
+        $controller = $this->app->make(\App\Http\Controllers\Api\AuthController::class);
+        $controller->forgotPassword($request);
+
+        // Nothing on the wire yet: this is the whole point. The browser is already looking at the
+        // password screen and the countdown opens on a full 5:00 while SMTP is still being dialled.
+        Mail::assertNothingSent();
+        $this->assertGreaterThan(
+            $before,
+            count($callbacks->getValue($this->app)),
+            'The mail was not deferred to after the response.'
+        );
+
+        $this->app->terminate();
+        Mail::assertSentCount(1);
+    }
+
     public function test_forgot_password_does_not_crash_when_mail_fails(): void
     {
         Mail::shouldReceive('raw')->andThrow(new \RuntimeException('SMTP unreachable'));
@@ -194,6 +382,20 @@ class AuthTest extends TestCase
         $this->assertNotNull(
             DB::table('password_reset_tokens')->where('email', 'employee@workforcepro.com')->first()
         );
+    }
+
+    public function test_a_mail_failure_after_the_response_is_swallowed_not_fatal(): void
+    {
+        Mail::shouldReceive('to')->andThrow(new \RuntimeException('SMTP unreachable'));
+        $this->otpEmployeeUser();
+
+        $this->postJson('/api/auth/forgot-password', ['email' => 'employee@workforcepro.com'])->assertOk();
+
+        // The send happens after the response, outside anything the person is waiting on. A mail
+        // server that is down must not become an unhandled error on a request that already
+        // succeeded and told the truth.
+        // If the catch in the job were missing, this would blow up here instead of passing.
+        $this->assertTrue(true);
     }
 
     public function test_forgot_password_gives_the_same_response_for_an_unknown_email(): void
@@ -231,14 +433,15 @@ class AuthTest extends TestCase
         $this->assertTrue(password_verify('BrandNew@123', $user->password));
     }
 
-    public function test_a_reset_code_older_than_one_minute_is_rejected(): void
+    public function test_a_reset_code_older_than_the_configured_window_is_rejected(): void
     {
+        config(['auth.password_reset_code.ttl' => 300]);
         $this->otpEmployeeUser();
 
         DB::table('password_reset_tokens')->insert([
             'email' => 'employee@workforcepro.com',
             'token' => Hash::make('123456'),
-            'created_at' => now()->subSeconds(61),
+            'created_at' => now()->subSeconds(301),
         ]);
 
         $this->postJson('/api/auth/reset-password', [
@@ -252,14 +455,17 @@ class AuthTest extends TestCase
         $this->assertFalse(password_verify('BrandNew@123', $user->password));
     }
 
-    public function test_a_reset_code_just_under_one_minute_old_still_works(): void
+    public function test_a_code_is_still_good_while_the_person_is_still_typing_their_new_password(): void
     {
+        config(['auth.password_reset_code.ttl' => 300]);
         $this->otpEmployeeUser();
 
+        // The flow puts the password step BEFORE the code step, so a code is routinely a few
+        // minutes old by the time it is typed. It was 60 seconds and forced people to start over.
         DB::table('password_reset_tokens')->insert([
             'email' => 'employee@workforcepro.com',
             'token' => Hash::make('123456'),
-            'created_at' => now()->subSeconds(50),
+            'created_at' => now()->subSeconds(240),
         ]);
 
         $this->postJson('/api/auth/reset-password', [
@@ -268,6 +474,46 @@ class AuthTest extends TestCase
             'password' => 'BrandNew@123',
             'password_confirmation' => 'BrandNew@123',
         ])->assertOk();
+    }
+
+    public function test_forgot_password_returns_a_server_deadline_so_the_countdown_is_honest(): void
+    {
+        Mail::fake();
+        config(['auth.password_reset_code.ttl' => 300]);
+        $this->otpEmployeeUser();
+
+        $before = now()->timestamp;
+        $response = $this->postJson('/api/auth/forgot-password', ['email' => 'employee@workforcepro.com'])
+            ->assertOk()
+            ->assertJsonPath('expiresIn', 300);
+        $after = now()->timestamp;
+
+        // A range, not an exact value: the deadline is stamped inside the request, so pinning it to
+        // the second the test happened to start makes this fail at every second boundary.
+        $this->assertGreaterThanOrEqual($before + 300, $response->json('expiresAt'));
+        $this->assertLessThanOrEqual($after + 300, $response->json('expiresAt'));
+    }
+
+    public function test_the_shipped_window_is_five_minutes(): void
+    {
+        // Pinned so that shortening (or accidentally lengthening) the window is a deliberate,
+        // reviewed change rather than a side effect of editing a default somewhere else.
+        $this->assertSame(300, (int) config('auth.password_reset_code.ttl'));
+    }
+
+    public function test_the_deadline_does_not_reveal_whether_an_account_exists(): void
+    {
+        Mail::fake();
+
+        $known = $this->postJson('/api/auth/forgot-password', ['email' => 'employee@workforcepro.com']);
+        $unknown = $this->postJson('/api/auth/forgot-password', ['email' => 'nobody@example.com']);
+
+        $known->assertOk();
+        $unknown->assertOk();
+
+        // Same message, and a deadline that differs only by the second the request happened to land.
+        $this->assertSame($known->json('message'), $unknown->json('message'));
+        $this->assertEqualsWithDelta($known->json('expiresAt'), $unknown->json('expiresAt'), 5);
     }
 
     public function test_reset_password_rejects_an_invalid_otp(): void
