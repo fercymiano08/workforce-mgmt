@@ -3,11 +3,13 @@
 namespace Tests\Feature;
 
 use App\Models\Attendance;
+use App\Models\EarlyClockOut;
 use App\Models\Employee;
 use App\Models\Holiday;
 use App\Models\Leave;
 use App\Models\Notification;
 use App\Models\ScheduleSetting;
+use App\Models\ShiftDefinition;
 use App\Models\ShiftSchedule;
 use App\Models\Timesheet;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -72,6 +74,17 @@ class DemoRefreshTest extends TestCase
 
                 continue;
             }
+            if ($a->status === 'Early Leave') {
+                // an early leaver arrived like any other day but went home before the 5pm end,
+                // and the kiosk recorded why - the same record HR is alerted about
+                $this->assertTrue($a->actual_clock_out < '17:00:00', "left at/after the end on {$day}");
+                $this->assertNotNull(EarlyClockOut::where('attendance_id', $a->id)->first(), "no early clock-out record on {$day}");
+                if ($day < '2030-01-16') {
+                    $this->assertLessThan(8.0, (float) $a->total_hours, "an early day should be short on {$day}");
+                }
+
+                continue;
+            }
             // Present up to 8:15, Late after - the kiosk's rule
             $this->assertSame($a->clock_in > '08:15:00' ? 'Late' : 'Present', $a->status, "wrong status on {$day}");
             if ($day < '2030-01-16') {
@@ -110,7 +123,49 @@ class DemoRefreshTest extends TestCase
 
         $this->artisan('demo:refresh')->assertSuccessful();
 
-        $this->assertSame(['N4', 'N5', 'N6'], Notification::orderBy('id')->pluck('id')->all());
+        // The records these notifications talked about are gone, so they go too
+        foreach (['N1', 'N2', 'N3'] as $gone) {
+            $this->assertFalse(Notification::where('id', $gone)->exists(), $gone.' should be gone');
+        }
+        // Everything that is still true stays
+        foreach (['N4', 'N5', 'N6'] as $kept) {
+            $this->assertTrue(Notification::where('id', $kept)->exists(), $kept.' should stay');
+        }
+        // The only new notifications are the HR alerts the demo's early clock-outs legitimately raise
+        foreach (Notification::whereNotIn('id', ['N4', 'N5', 'N6'])->get() as $extra) {
+            $this->assertSame('early_clock_out', $extra->type);
+            $this->assertNull($extra->employee_id, 'an admin alert, not one about a real employee');
+        }
+    }
+
+    public function test_today_is_open_by_default_and_closed_with_the_flag(): void
+    {
+        $this->artisan('demo:refresh')->assertSuccessful();
+        $this->assertSame(0, Attendance::whereDate('date', '2030-01-16')->whereNotNull('clock_out')->count(),
+            'by default today is a shift in progress, so nothing has clocked out yet');
+
+        $this->artisan('demo:refresh', ['--close-today' => true])->assertSuccessful();
+        $this->assertSame(0, Attendance::whereDate('date', '2030-01-16')->whereNotNull('clock_in')->whereNull('clock_out')->count(),
+            'every demo punch today should be finished with --close-today');
+
+        // Fercy registered through the system: his open punch is never the demo's business
+        $this->assertSame('ATT900', Attendance::where('employee_id', self::REAL)->value('id'));
+        $this->assertNull(Attendance::where('employee_id', self::REAL)->value('clock_out'));
+    }
+
+    public function test_the_demo_uses_the_standard_shift_even_if_another_sorts_first(): void
+    {
+        // A fresh seed re-creates the Morning/Night templates, whose ids sort before Standard
+        ShiftDefinition::create(['id' => 'SHIFT001', 'name' => 'Morning Shift', 'start_time' => '06:00:00', 'end_time' => '14:00:00', 'color' => '#111111']);
+        ShiftDefinition::create(['id' => 'SHIFT002', 'name' => 'Night Shift', 'start_time' => '22:00:00', 'end_time' => '06:00:00', 'color' => '#222222']);
+
+        $this->artisan('demo:refresh', ['--close-today' => true])->assertSuccessful();
+
+        $this->assertSame('SHIFT004', ShiftSchedule::where('employee_id', self::DEMO)->value('shift_id'),
+            'the demo belongs on the 8-to-5 Standard Shift');
+        $in = Attendance::where('employee_id', self::DEMO)->whereNotNull('clock_in')->orderBy('date')->value('clock_in');
+        $this->assertGreaterThanOrEqual('07:00:00', $in, 'arrivals should be around 8am, not the 6am Morning Shift');
+        $this->assertLessThan('09:00:00', $in);
     }
 
     public function test_people_registered_through_the_system_are_never_touched(): void

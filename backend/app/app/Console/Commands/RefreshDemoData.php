@@ -14,6 +14,7 @@ use App\Models\ShiftDefinition;
 use App\Models\ShiftSchedule;
 use App\Models\Timesheet;
 use App\Models\User;
+use App\Services\EarlyLeaveEnforcer;
 use App\Services\ShiftHours;
 use App\Services\SystemSettings;
 use App\Services\TimesheetGenerationService;
@@ -33,16 +34,23 @@ use Illuminate\Support\Facades\DB;
  * Nothing is typed in by hand: it goes through the same rules real data does -
  *   schedules  everyone on the company's usual work days (Mon-Sat), except holidays and approved leave
  *   arrival    Present up to the late-grace minutes after the shift start, Late after (the kiosk's rule)
+ *   leaving    a few minutes after the (approved-overtime-extended) end; about one day in 17 ends early,
+ *              which becomes an Early Leave day plus the early clock-out record HR is alerted about
  *   hours      ShiftHours::count() - paid time from the shift start, lunch deducted, overtime only if approved
  *   timesheets TimesheetGenerationService, Monday-Sunday weeks, moved through TimesheetWorkflow
- *               (older weeks approved, last week waiting for review, this week still a draft)
+ *              (older weeks approved, last week waiting for review, this week still a draft)
  * Arrival times vary per person and day but are the same on every run for the same day (no randomness).
+ *
+ * By default today is left mid-shift: the people are at their desks and have not clocked out yet. Pass
+ * --close-today to treat today as a finished workday instead, so today's clock-outs are written too.
  */
 class RefreshDemoData extends Command
 {
     use GeneratesSequentialIds;
 
-    protected $signature = 'demo:refresh {--weeks=4 : full weeks of history before the current one}';
+    protected $signature = 'demo:refresh
+        {--weeks=4 : full weeks of history before the current one}
+        {--close-today : also write today\'s clock-outs, treating today as a finished workday rather than a shift in progress}';
 
     protected $description = "Rebuild the demo employees' schedules, attendance and timesheets up to today";
 
@@ -59,7 +67,13 @@ class RefreshDemoData extends Command
         $now = Carbon::now($tz);
         $today = $now->toDateString();
         $from = $now->copy()->startOfWeek(Carbon::MONDAY)->subWeeks(max(1, (int) $this->option('weeks')))->toDateString();
-        $shift = ShiftDefinition::orderBy('id')->first();   // the company's standard shift
+        // The demo is an office day on the standard shift. Don't take "whichever id sorts
+        // first": a fresh seed re-creates Morning/Afternoon/Night before Standard, which
+        // would silently move the whole demo onto a different shift than a live database.
+        $shift = ShiftDefinition::whereRaw("lower(name) like '%standard%'")
+            ->orWhereRaw("lower(name) like '%office%'")
+            ->orderBy('id')->first()
+            ?? ShiftDefinition::orderBy('id')->first();
         if (! $shift) {
             $this->error('There is no shift to schedule.');
 
@@ -67,9 +81,10 @@ class RefreshDemoData extends Command
         }
         $shiftId = $shift->id;
         $grace = max(0, (int) app(SystemSettings::class)->get('late_grace_minutes', 15));
+        $closeToday = (bool) $this->option('close-today');
         $admin = User::where('role', 'Administrator')->value('name') ?: 'Workforce Admin';
 
-        DB::transaction(function () use ($ids, $from, $today, $now, $tz, $shift, $shiftId, $grace, $timesheets, $workflow, $admin): void {
+        DB::transaction(function () use ($ids, $from, $today, $now, $tz, $shift, $shiftId, $grace, $closeToday, $timesheets, $workflow, $admin): void {
             // Initials instead of borrowed cartoon pictures
             Employee::whereIn('id', $ids)->update(['avatar' => null]);
 
@@ -104,9 +119,12 @@ class RefreshDemoData extends Command
 
             // 2. Attendance for every scheduled day, by the kiosk's rules
             $attendanceNo = $this->maxNumber(Attendance::class, 'ATT');
+            $earlyNo = $this->maxNumber(EarlyClockOut::class, 'ECO');
+            $enforcer = app(EarlyLeaveEnforcer::class);
             foreach ($plan['rows'] as $row) {
                 $date = $row['date'];
-                $roll = crc32($row['employee_id'].'|'.$date) % 100;
+                $employeeId = $row['employee_id'];
+                $roll = crc32($employeeId.'|'.$date) % 100;
                 $isToday = $date === $today;
                 $start = ShiftHours::baseStart($date, $shift->start_time, $tz);
 
@@ -114,7 +132,7 @@ class RefreshDemoData extends Command
                     if (! $isToday) {
                         Attendance::create([
                             'id' => 'ATT'.str_pad((string) ++$attendanceNo, 3, '0', STR_PAD_LEFT),
-                            'employee_id' => $row['employee_id'], 'date' => $date, 'status' => 'Absent',
+                            'employee_id' => $employeeId, 'date' => $date, 'status' => 'Absent',
                             'notes' => 'Recorded automatically: scheduled, no clock-in, no approved leave.',
                         ]);
                     }
@@ -132,14 +150,26 @@ class RefreshDemoData extends Command
 
                 $record = [
                     'id' => 'ATT'.str_pad((string) ++$attendanceNo, 3, '0', STR_PAD_LEFT),
-                    'employee_id' => $row['employee_id'], 'date' => $date, 'status' => $status,
+                    'employee_id' => $employeeId, 'date' => $date, 'status' => $status,
                     'clock_in' => $clockIn->format('H:i:s'), 'location' => 'Main Entrance',
                 ];
 
                 // Leaving: a few minutes after the (approved-overtime-extended) end; today they are still at work
-                $effectiveEnd = ShiftHours::effectiveEnd($row['employee_id'], $date, $shift->start_time, $shift->end_time, $tz);
+                // unless --close-today says the day is over.
+                $effectiveEnd = ShiftHours::effectiveEnd($employeeId, $date, $shift->start_time, $shift->end_time, $tz);
                 $out = $effectiveEnd?->copy()->addMinutes(($roll * 3) % 12);
-                if (! $isToday && $out) {
+                $closed = $out && (! $isToday || $closeToday);
+
+                // About one day in 17 they have to leave before the end. The kiosk never refuses the punch, it
+                // asks why, and the day is scored as Early Leave with a record HR is alerted about.
+                $earlyRoll = crc32($employeeId.'|'.$date.'|early') % 100;
+                $isEarly = $closed && $earlyRoll < 6;
+                if ($isEarly) {
+                    $out = $out->copy()->subMinutes(60 + ($earlyRoll * 7) % 46);
+                    $record['status'] = 'Early Leave';
+                }
+
+                if ($closed) {
                     $hours = ShiftHours::count($clockIn, $out, ShiftHours::baseEnd($date, $shift->start_time, $shift->end_time, $tz), $effectiveEnd, null, $start);
                     $record += [
                         'clock_out' => $hours['countedOut']->format('H:i:s'), 'actual_clock_out' => $out->format('H:i:s'),
@@ -147,7 +177,22 @@ class RefreshDemoData extends Command
                         'total_hours' => $hours['total'], 'break_hours' => $hours['break'],
                     ];
                 }
-                Attendance::create($record);
+                $attendance = Attendance::create($record);
+
+                if ($isEarly) {
+                    $reason = $this->earlyReason($employeeId);
+                    $enforcer->applyAtPunch(EarlyClockOut::create([
+                        'id' => 'ECO'.str_pad((string) ++$earlyNo, 3, '0', STR_PAD_LEFT),
+                        'attendance_id' => $attendance->id,
+                        'employee_id' => $employeeId, 'employee_name' => $row['employee_name'], 'date' => $date,
+                        'scheduled_end_time' => $effectiveEnd->format('H:i:s'),
+                        'actual_clock_out_time' => $out->format('H:i:s'),
+                        'minutes_early' => (int) abs($effectiveEnd->diffInMinutes($out)),
+                        'reason_code' => $reason['code'], 'reason_note' => $reason['note'],
+                        'proof' => [], 'reason_status' => 'PROVIDED',
+                        'classification' => 'PENDING_REVIEW', 'notification_sent' => false,
+                    ]));
+                }
             }
 
             // 3. Timesheets from that attendance, Monday-Sunday, moved through the real workflow
@@ -168,9 +213,27 @@ class RefreshDemoData extends Command
             }
         });
 
-        $this->info('Demo data rebuilt for '.count($ids).' demo employees, '.$from.' to '.$today.'.');
+        $this->info('Demo data rebuilt for '.count($ids).' demo employees, '.$from.' to '.$today
+            .($closeToday ? ' (today closed).' : ' (today still in progress).'));
 
         return self::SUCCESS;
+    }
+
+    /**
+     * The same claim for the same person on every early-leave day, so one person does not tell HR
+     * a different story each time. Deterministic, like the rest of this command.
+     *
+     * @return array{code: string, note: string}
+     */
+    private function earlyReason(string $employeeId): array
+    {
+        $reasons = [
+            ['code' => 'FAMILY_EMERGENCY', 'note' => 'Had to leave early for a family matter.'],
+            ['code' => 'PERSONAL_EMERGENCY', 'note' => 'Had to handle an urgent personal matter.'],
+            ['code' => 'OTHER', 'note' => 'Left early to attend a scheduled appointment.'],
+        ];
+
+        return $reasons[crc32($employeeId.'|early-reason') % count($reasons)];
     }
 
     /**
