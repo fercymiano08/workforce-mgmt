@@ -36,7 +36,7 @@ const blankForm = () => ({ group: 'past', kioskSide: 'kiosk_clock_in', date: kio
  * failed (to clock in or out). The employee says what happened, gives the time, and attaches photo proof; they never
  * state hours - HR decides and enters the final time.
  */
-export default function CorrectionsEmployee() {
+export default function CorrectionsEmployee({ onChanged }) {
   const { user } = useAuth();
   const { toast } = useToast();
   const employeeId = user?.id;
@@ -63,6 +63,10 @@ export default function CorrectionsEmployee() {
   const open = () => { setForm(blankForm()); setPhotos([]); setErrors({}); setIsOpen(true); };
   const set = (key, value) => { setForm((f) => ({ ...f, [key]: value })); setErrors((e) => ({ ...e, [key]: undefined, claimedTime: key === 'claimedTime' ? undefined : e.claimedTime })); };
 
+  // A filed or withdrawn request is the employee acting on their own record, so the page they are looking at has to
+  // catch up with it - the same way the admin's list does after a decision.
+  const done = async () => { await refresh(); onChanged?.(); };
+
   const submit = async () => {
     const errs = {};
     if (!form.claimedTime) errs.claimedTime = 'Tell us the time it happened.';
@@ -77,7 +81,7 @@ export default function CorrectionsEmployee() {
         employeeId, date: form.date, type, claimedTime: form.claimedTime, reason: form.reason.trim(),
         proof: photos.map((p) => ({ name: p.name, dataUrl: p.dataUrl, caption: p.caption })),
       });
-      await refresh();
+      await done();
       setIsOpen(false);
       toast.success('Request sent', 'HR will review your photos and explanation. Your attendance record changes only if it is approved.');
     } catch (error) {
@@ -96,7 +100,7 @@ export default function CorrectionsEmployee() {
     setCancelling(request.id);
     try {
       await adjustmentService.cancel(request.id);
-      await refresh();
+      await done();
       toast.success('Withdrawn', 'Your request has been taken back.');
     } catch {
       toast.error('Could not withdraw', 'This request has already been decided.');

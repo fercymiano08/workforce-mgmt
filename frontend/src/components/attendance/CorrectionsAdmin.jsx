@@ -28,6 +28,47 @@ const ENTRY = {
 };
 
 /**
+ * What the machines recorded about this claim, measured when it was filed.
+ *
+ * A photo cannot show when it was taken, so it says nothing about a time - these are the records that
+ * can. Shown beside the claim rather than buried, so the decision is made with the evidence in view.
+ * Anything the claim contradicts never reaches this screen: the server refuses it at filing.
+ */
+function ConsistencyChecks({ checks }) {
+  if (!checks?.length) return null;
+
+  const tone = {
+    pass: { Icon: CheckCircle2, wrap: 'border-emerald-200 bg-emerald-50/60', text: 'text-emerald-700' },
+    warn: { Icon: AlertTriangle, wrap: 'border-amber-200 bg-amber-50/60', text: 'text-amber-700' },
+    fail: { Icon: XCircle, wrap: 'border-red-200 bg-red-50/60', text: 'text-red-700' },
+  };
+
+  return (
+    <section className={clsx('rounded-xl border p-4', checks.some((c) => c.state === 'warn') ? tone.warn.wrap : tone.pass.wrap)}>
+      <h4 className="text-[13px] font-semibold text-gray-900">Checked against the record</h4>
+      <p className="mt-1 text-xs text-gray-500">
+        From the kiosk's own punches at the time this was filed. Photos cannot show when they were taken.
+      </p>
+      <ul className="mt-3 space-y-2.5">
+        {checks.map((c, i) => {
+          const t = tone[c.state] || tone.pass;
+          const { Icon } = t;
+          return (
+            <li key={i} className="flex gap-2.5">
+              <Icon className={clsx('w-4 h-4 mt-0.5 shrink-0', t.text)} />
+              <div className="min-w-0">
+                <p className="text-[13px] font-semibold text-gray-900">{c.label}</p>
+                <p className="text-xs text-gray-600 leading-relaxed">{c.detail}</p>
+              </div>
+            </li>
+          );
+        })}
+      </ul>
+    </section>
+  );
+}
+
+/**
  * Time & Attendance > Corrections, the Workforce Admin's side. The list of requests, and for each one a review screen:
  * the photos and the employee's account, the day as it stands, and the manual entry - approving records the time the
  * admin confirms (or corrects), rejecting needs a reason the employee will read.
@@ -224,6 +265,8 @@ function ReviewModal({ id, onClose, onDone }) {
               <p className="mt-3 text-sm text-gray-700 leading-relaxed rounded-lg bg-gray-50 px-3 py-2.5">“{request.reason}”</p>
             </section>
 
+            <ConsistencyChecks checks={request.checks} />
+
             <section className="rounded-xl border border-gray-200 p-4">
               <h4 className="text-[13px] font-semibold text-gray-900">The day as it stands now</h4>
               {day ? (
@@ -260,9 +303,21 @@ function ReviewModal({ id, onClose, onDone }) {
                     : !preview.ok ? <span className="flex items-start gap-1.5"><AlertTriangle className="w-4 h-4 shrink-0 mt-0.5" />{preview.error}</span>
                       : (
                         <div>
-                          <p className="text-xs text-gray-400">If you approve, this day is worth</p>
-                          <p className="text-lg font-bold text-gray-900">{formatHours(preview.hours)} hours paid</p>
-                          {preview.overtime > 0 && <p className="text-xs text-blue-700 font-medium">including {formatHours(preview.overtime)} hours of overtime past the shift</p>}
+                          {preview.open
+                            ? (
+                              <>
+                                <p className="text-xs text-gray-400">If you approve</p>
+                                <p className="text-sm font-semibold text-gray-900">The clock-in is recorded, and the day stays open</p>
+                                <p className="text-xs text-gray-500 mt-1">Their shift has not ended yet, so no hours are counted until they clock out.</p>
+                              </>
+                            )
+                            : (
+                              <>
+                                <p className="text-xs text-gray-400">If you approve, this day is worth</p>
+                                <p className="text-lg font-bold text-gray-900">{formatHours(preview.hours)} hours paid</p>
+                                {preview.overtime > 0 && <p className="text-xs text-blue-700 font-medium">including {formatHours(preview.overtime)} hours of overtime past the shift</p>}
+                              </>
+                            )}
                         </div>
                       )}
                 </div>
@@ -271,7 +326,7 @@ function ReviewModal({ id, onClose, onDone }) {
                   placeholder="Optional when approving. Required when you decline." />
 
                 <div className="flex gap-2">
-                  <Button variant="success" className="flex-1" icon={CheckCircle2} loading={saving === 'Approved'} disabled={!!saving || (preview && !preview.ok)} onClick={() => decide('Approved')}>Approve &amp; record</Button>
+                  <Button variant="success" className="flex-1" icon={CheckCircle2} loading={saving === 'Approved'} disabled={!!saving || !preview || !preview.ok} onClick={() => decide('Approved')}>Approve &amp; record</Button>
                   <Button variant="dangerOutline" icon={XCircle} loading={saving === 'Rejected'} disabled={!!saving} onClick={() => decide('Rejected')}>Decline</Button>
                 </div>
               </div>

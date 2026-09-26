@@ -60,7 +60,10 @@ export default function MyAttendance() {
   const employeeId = user?.id || 'EMP001';
   const printRef = useRef(null);
 
-  const { data: records } = useApiData(
+  const {
+    data: records,
+    refresh: refreshAttendance,
+  } = useApiData(
     () => attendanceService.getByEmployeeId(employeeId),
     [employeeId]
   );
@@ -418,7 +421,7 @@ export default function MyAttendance() {
       </div>
         </>
       ) : activeTab === 'corrections' ? (
-        <CorrectionsEmployee />
+        <CorrectionsEmployee onChanged={() => { refreshAttendance(); refreshOvertime(); }} />
       ) : (
         <>
           {loadingEarlyOuts ? (

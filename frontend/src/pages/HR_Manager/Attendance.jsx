@@ -55,7 +55,10 @@ export default function Attendance() {
   const [currentPage, setCurrentPage] = useState(1);
   const PAGE_SIZE = 12;
 
-  const { data: attendanceRecords } = useApiData(
+  const {
+    data: attendanceRecords,
+    refresh: refreshAttendance,
+  } = useApiData(
     () => attendanceService.getAll(),
     []
   );
@@ -621,7 +624,7 @@ export default function Attendance() {
       )}
       </>
       ) : activeTab === 'corrections' ? (
-      <CorrectionsAdmin onChanged={refreshPendingCorrections} />
+      <CorrectionsAdmin onChanged={() => { refreshPendingCorrections(); refreshAttendance(); refreshOvertime(); }} />
       ) : (
       <>
       {/* Early Clock Outs Stats */}

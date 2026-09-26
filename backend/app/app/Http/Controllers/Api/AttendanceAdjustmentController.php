@@ -90,7 +90,7 @@ class AttendanceAdjustmentController extends Controller
         $shift = AttendanceAdjustmentService::shiftFor($data['employeeId'], $dateKey);
         $claimed = isset($data['claimedTime']) ? substr($data['claimedTime'], 0, 5) : null;
 
-        $derived = AttendanceAdjustmentService::derive($data['type'], $dateKey, $claimed, $shift, $attendance);
+        $derived = AttendanceAdjustmentService::derive($data['type'], $dateKey, $claimed, $shift, $attendance, $data['employeeId']);
         if (isset($derived['error'])) {
             throw ValidationException::withMessages(['claimedTime' => [$derived['error']]]);
         }
@@ -109,6 +109,9 @@ class AttendanceAdjustmentController extends Controller
             'shift_end' => $derived['shift']['end'],
             'derived_hours' => $derived['hours'],
             'derived_overtime' => $derived['overtime'],
+            // Frozen here, while the punch that judged the claim is still intact. Approving overwrites
+            // actual_clock_out, so by the time the admin opens this the evidence would otherwise be gone.
+            'corroboration' => $derived['checks'] ?? [],
             'recorded_hours' => 0,
             'status' => AttendanceAdjustment::STATUS_PENDING,
             'requested_date' => now(ShiftHours::timezone())->toDateString(),
@@ -188,8 +191,8 @@ class AttendanceAdjustmentController extends Controller
         $result = AttendanceAdjustmentService::preview($adjustment, $data['time']);
 
         return response()->json(['data' => isset($result['error'])
-            ? ['ok' => false, 'error' => $result['error']]
-            : ['ok' => true, 'hours' => $result['hours'], 'overtime' => $result['overtime']],
+            ? ['ok' => false, 'error' => $result['error'], 'checks' => $result['checks'] ?? []]
+            : ['ok' => true, 'hours' => $result['hours'], 'overtime' => $result['overtime'], 'open' => (bool) ($result['open'] ?? false), 'checks' => $result['checks'] ?? []],
         ]);
     }
 
@@ -292,6 +295,9 @@ class AttendanceAdjustmentController extends Controller
         $out['proofCaptions'] = array_values(array_map(fn ($p) => $p['caption'] ?? '', $photos));
         $out['recentClaimCount'] = AttendanceAdjustmentService::recentClaimCount($a->employee_id);
         $out['isPattern'] = AttendanceAdjustmentService::isPattern($a);
+        // What the machine records said when the claim was filed, so a stored request is judged on
+        // evidence that still exists rather than on state the approval has since changed.
+        $out['checks'] = $a->corroboration ?? [];
 
         return $out;
     }

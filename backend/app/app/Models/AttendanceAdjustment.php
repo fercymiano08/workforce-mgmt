@@ -16,6 +16,7 @@ class AttendanceAdjustment extends Model
     protected $table = 'attendance_adjustments';
 
     public $incrementing = false;
+
     protected $keyType = 'string';
 
     /** An employee cannot have two open requests for the same day and the same problem. */
@@ -43,12 +44,12 @@ class AttendanceAdjustment extends Model
     protected $fillable = [
         'id', 'employee_id', 'employee_name', 'date', 'type', 'claimed_time', 'final_time', 'reason', 'proof',
         'shift_start', 'shift_end', 'derived_hours', 'derived_overtime', 'recorded_hours', 'status',
-        'decided_by', 'decided_at', 'decision_note', 'requested_date',
+        'corroboration', 'decided_by', 'decided_at', 'decision_note', 'requested_date',
     ];
 
     protected function apiNullToEmpty(): array
     {
-        return ['proof'];
+        return ['proof', 'corroboration'];
     }
 
     protected function casts(): array
@@ -64,6 +65,7 @@ class AttendanceAdjustment extends Model
             'derived_overtime' => 'float',
             'recorded_hours' => 'float',
             'proof' => 'array',
+            'corroboration' => 'array',
             'decided_at' => 'datetime',
         ];
     }

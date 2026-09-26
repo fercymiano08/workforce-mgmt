@@ -68,11 +68,16 @@ class AttendanceAdjustmentService
      * What a claim is worth, or why it is refused.
      *
      * `hours` is what the day is worth once the correction lands (paid hours, lunch taken off); `overtime` is only the
-     * part past the end of the shift.
+     * part past the end of the shift. `open` marks a day that is still running, where nothing is counted yet and the
+     * hours follow the clock-out rather than this claim.
      *
-     * @return array{hours: float, overtime: float, shift: array{start: string, end: string}}|array{error: string}
+     * `checks` is what the machine records say about the claim: a claim the kiosk's own punch
+     * contradicts is refused here, and a claim that is merely uncorroborated is passed through with
+     * the doubt attached so the admin can see it.
+     *
+     * @return array{hours: float, overtime: float, open?: bool, shift: array{start: string, end: string}, checks?: list<array{state: string, label: string, detail: string}>}|array{error: string, checks?: list<array{state: string, label: string, detail: string}>}
      */
-    public static function derive(string $type, string $dateKey, ?string $claimedTime, ?array $shift, ?Attendance $attendance): array
+    public static function derive(string $type, string $dateKey, ?string $claimedTime, ?array $shift, ?Attendance $attendance, string $employeeId = ''): array
     {
         if ($shift === null) {
             return ['error' => 'You were not scheduled to work on that date, so there are no hours to correct.'];
@@ -106,7 +111,10 @@ class AttendanceAdjustmentService
 
             $clockIn = Carbon::parse($dateKey.' '.$attendance->clock_in, $timezone);
 
-            return ['hours' => self::paidHours($clockIn, $claimed), 'overtime' => round($afterShift / 60, 2), 'shift' => $shift];
+            return self::verified(
+                ['hours' => self::paidHours($clockIn, $claimed, $shiftStart), 'overtime' => round($afterShift / 60, 2), 'shift' => $shift],
+                $type, $dateKey, $claimedTime, $attendance, $employeeId
+            );
         }
 
         if ($type === AttendanceAdjustment::TYPE_KIOSK_CLOCK_IN) {
@@ -121,8 +129,18 @@ class AttendanceAdjustmentService
                 return ['error' => 'A clock-in was already recorded for that day.'];
             }
 
-            // A missing clock-in is worth the rest of a normal day from the time given, minus the unpaid lunch.
-            return ['hours' => self::paidHours($claimed, $shiftEnd), 'overtime' => 0.0, 'shift' => $shift];
+            // Nearly always this is filed while the employee is still standing at the entrance, so the day has only just
+            // begun. Nothing is counted until they clock out, so quoting the whole finished day here would promise hours
+            // the record never holds. What is being recorded now is the clock-in; the hours follow the clock-out.
+            if (Carbon::now($timezone)->lt($shiftEnd)) {
+                return self::verified(['hours' => 0.0, 'overtime' => 0.0, 'open' => true, 'shift' => $shift], $type, $dateKey, $claimedTime, $attendance, $employeeId);
+            }
+
+            // A day that is already over is worth the rest of a normal day from the time given, minus the unpaid lunch.
+            return self::verified(
+                ['hours' => self::paidHours($claimed, $shiftEnd, $shiftStart), 'overtime' => 0.0, 'shift' => $shift],
+                $type, $dateKey, $claimedTime, $attendance, $employeeId
+            );
         }
 
         if ($type === AttendanceAdjustment::TYPE_KIOSK_CLOCK_OUT) {
@@ -141,15 +159,50 @@ class AttendanceAdjustmentService
                 return ['error' => 'That is past the end of your shift. Choose "I worked past my shift" instead.'];
             }
 
-            return ['hours' => self::paidHours($clockIn, $claimed), 'overtime' => 0.0, 'shift' => $shift];
+            return self::verified(
+                ['hours' => self::paidHours($clockIn, $claimed, $shiftStart), 'overtime' => 0.0, 'shift' => $shift],
+                $type, $dateKey, $claimedTime, $attendance, $employeeId
+            );
         }
 
         return ['error' => 'That kind of correction is not recognised.'];
     }
 
-    /** Paid hours between two moments: the elapsed time minus the unpaid lunch the break policy takes off. */
-    private static function paidHours(Carbon $from, Carbon $to): float
+    /**
+     * The one place a claim meets the machine record.
+     *
+     * A single contradicted claim is refused here rather than in the three branches above, so the rule
+     * cannot be forgotten by a branch added later. Both entry points - the employee filing and the admin
+     * approving - go through derive(), so both are covered by the one check.
+     *
+     * @param  array{hours: float, overtime: float, open?: bool, shift: array{start: string, end: string}}  $result
+     * @return array{hours: float, overtime: float, open?: bool, shift: array{start: string, end: string}, checks: list<array{state: string, label: string, detail: string}>}|array{error: string, checks: list<array{state: string, label: string, detail: string}>}
+     */
+    private static function verified(array $result, string $type, string $dateKey, ?string $claimedTime, ?Attendance $attendance, string $employeeId): array
     {
+        $checks = CorrectionCorroboration::forClaim($type, $dateKey, $claimedTime, $attendance, $employeeId);
+
+        // Only a contradiction blocks. Missing corroboration is not a reason to refuse someone pay.
+        if ($failure = CorrectionCorroboration::firstFailure($checks)) {
+            return ['error' => $failure['detail'], 'checks' => $checks];
+        }
+
+        return $result + ['checks' => $checks];
+    }
+
+    /**
+     * Paid hours between two moments: the elapsed time minus the unpaid lunch the break policy takes off.
+     *
+     * Paid time never starts before the shift itself does - the same rule ShiftHours::count() applies to a live punch.
+     * Without this, someone who tapped in early was quoted more (from the tap) than the correction actually records
+     * (from the shift start), and the number on the request would not match the day it landed on.
+     */
+    private static function paidHours(Carbon $from, Carbon $to, ?Carbon $paidFrom = null): float
+    {
+        if ($paidFrom && $from->lt($paidFrom)) {
+            $from = $paidFrom->copy();
+        }
+
         $elapsed = max(0, (int) $from->diffInMinutes($to, false));
         $lunch = (int) min(app(BreakPolicy::class)->deductionFor($elapsed), $elapsed);
 
@@ -160,7 +213,7 @@ class AttendanceAdjustmentService
      * What the admin's entry would do to the day, for the review screen: the same derivation with the time the admin
      * typed, plus the day as it stands now.
      *
-     * @return array{hours: float, overtime: float, shift: array{start: string, end: string}}|array{error: string}
+     * @return array{hours: float, overtime: float, shift: array{start: string, end: string}, checks?: list<array{state: string, label: string, detail: string}>}|array{error: string, checks?: list<array{state: string, label: string, detail: string}>}
      */
     public static function preview(AttendanceAdjustment $adjustment, ?string $time = null): array
     {
@@ -170,7 +223,7 @@ class AttendanceAdjustmentService
             ? ['start' => substr($adjustment->shift_start, 0, 5), 'end' => substr($adjustment->shift_end, 0, 5)]
             : self::shiftFor($adjustment->employee_id, $dateKey);
 
-        return self::derive($adjustment->type, $dateKey, $time ? substr($time, 0, 5) : substr((string) $adjustment->claimed_time, 0, 5), $shift, $attendance);
+        return self::derive($adjustment->type, $dateKey, $time ? substr($time, 0, 5) : substr((string) $adjustment->claimed_time, 0, 5), $shift, $attendance, $adjustment->employee_id);
     }
 
     /** The window rule: corrections are for recent days, not for rebuilding last month. */
