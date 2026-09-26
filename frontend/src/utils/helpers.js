@@ -22,13 +22,21 @@ export function formatTime(timeStr) {
 // start/end and clock-in/out times are wall-clock values in the kiosk
 // timezone, so "now" must be derived the same way everywhere the kiosk
 // compares or stamps times.
+// Building an Intl.DateTimeFormat is expensive and the kiosk asks for "now" every second, so keep one per zone.
+const zoneFormatters = new Map();
+
 export function nowInTimezone(timezone) {
-  const parts = new Intl.DateTimeFormat('en-CA', {
-    timeZone: timezone,
-    year: 'numeric', month: '2-digit', day: '2-digit',
-    hour: '2-digit', minute: '2-digit', second: '2-digit',
-    hourCycle: 'h23',
-  }).formatToParts(new Date());
+  let formatter = zoneFormatters.get(timezone);
+  if (!formatter) {
+    formatter = new Intl.DateTimeFormat('en-CA', {
+      timeZone: timezone,
+      year: 'numeric', month: '2-digit', day: '2-digit',
+      hour: '2-digit', minute: '2-digit', second: '2-digit',
+      hourCycle: 'h23',
+    });
+    zoneFormatters.set(timezone, formatter);
+  }
+  const parts = formatter.formatToParts(new Date());
   const value = (type) => Number(parts.find((p) => p.type === type)?.value ?? 0);
   return new Date(value('year'), value('month') - 1, value('day'), value('hour'), value('minute'), value('second'));
 }

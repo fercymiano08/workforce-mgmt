@@ -103,6 +103,8 @@ const settle = async () => { await page.waitForNetworkIdle({ idleTime: 700, time
 
 // --- log in like a person would
 await page.goto(`${BASE}/login`, { waitUntil: 'domcontentloaded' });
+// The login screen is loaded on demand, so wait for it rather than typing into a page that has not drawn yet.
+await page.waitForSelector('input[type="email"]', { timeout: 20000 });
 await page.type('input[type="email"]', ACCOUNTS[role].email);
 await page.type('input[type="password"]', ACCOUNTS[role].password);
 await Promise.all([page.waitForNavigation({ waitUntil: 'domcontentloaded', timeout: 20000 }).catch(() => {}), page.click('button[type="submit"]')]);

@@ -1,3 +1,4 @@
+import { lazy, Suspense } from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import { AuthProvider, useAuth } from './context/AuthContext';
 import { RoleProvider } from './context/RoleContext';
@@ -9,31 +10,31 @@ import { LanguageProvider } from './context/LanguageContext';
 import { InsightsProvider } from './context/InsightsContext';
 import PrivateLayout from './components/auth/PrivateLayout';
 import EmployeeRoute from './components/auth/EmployeeRoute';
-import Login from './pages/auth/Login';
-import ForgotPassword from './pages/auth/ForgotPassword';
-import ResetPassword from './pages/auth/ResetPassword';
-import AttendanceTerminal from './pages/KIOSK/AttendanceTerminal';
-import KioskSetup from './pages/KIOSK/KioskSetup';
-import Dashboard from './pages/HR_Manager/Dashboard';
-import EmployeeDashboard from './pages/Employee/EmployeeDashboard';
-import Employees from './pages/HR_Manager/Employees';
-import EmployeeRegistration from './pages/HR_Manager/EmployeeRegistration';
-import Attendance from './pages/HR_Manager/Attendance';
-import Shifts from './pages/HR_Manager/Shifts';
-import Timesheets from './pages/HR_Manager/Timesheets';
-import Leave from './pages/Employee/Leave';
-import LeaveManagement from './pages/HR_Manager/LeaveManagement';
-import Analytics from './pages/HR_Manager/Analytics';
-import Reports from './pages/HR_Manager/Reports';
-import HRSettings from './pages/HR_Manager/Settings';
-import EmployeeSettings from './pages/Employee/Settings';
-import MyProfile from './pages/Employee/MyProfile';
-import AIDecisionSupport from './pages/HR_Manager/AIDecisionSupport';
-import MyAttendance from './pages/Employee/MyAttendance';
-import MySchedule from './pages/Employee/MySchedule';
-import MyTimesheet from './pages/Employee/MyTimesheet';
-import AuditLogs from './pages/HR_Manager/AuditLogs';
-import Notifications from './pages/Notifications';
+const Login = lazy(() => import('./pages/auth/Login'));
+const ForgotPassword = lazy(() => import('./pages/auth/ForgotPassword'));
+const ResetPassword = lazy(() => import('./pages/auth/ResetPassword'));
+const AttendanceTerminal = lazy(() => import('./pages/KIOSK/AttendanceTerminal'));
+const KioskSetup = lazy(() => import('./pages/KIOSK/KioskSetup'));
+const Dashboard = lazy(() => import('./pages/HR_Manager/Dashboard'));
+const EmployeeDashboard = lazy(() => import('./pages/Employee/EmployeeDashboard'));
+const Employees = lazy(() => import('./pages/HR_Manager/Employees'));
+const EmployeeRegistration = lazy(() => import('./pages/HR_Manager/EmployeeRegistration'));
+const Attendance = lazy(() => import('./pages/HR_Manager/Attendance'));
+const Shifts = lazy(() => import('./pages/HR_Manager/Shifts'));
+const Timesheets = lazy(() => import('./pages/HR_Manager/Timesheets'));
+const Leave = lazy(() => import('./pages/Employee/Leave'));
+const LeaveManagement = lazy(() => import('./pages/HR_Manager/LeaveManagement'));
+const Analytics = lazy(() => import('./pages/HR_Manager/Analytics'));
+const Reports = lazy(() => import('./pages/HR_Manager/Reports'));
+const HRSettings = lazy(() => import('./pages/HR_Manager/Settings'));
+const EmployeeSettings = lazy(() => import('./pages/Employee/Settings'));
+const MyProfile = lazy(() => import('./pages/Employee/MyProfile'));
+const AIDecisionSupport = lazy(() => import('./pages/HR_Manager/AIDecisionSupport'));
+const MyAttendance = lazy(() => import('./pages/Employee/MyAttendance'));
+const MySchedule = lazy(() => import('./pages/Employee/MySchedule'));
+const MyTimesheet = lazy(() => import('./pages/Employee/MyTimesheet'));
+const AuditLogs = lazy(() => import('./pages/HR_Manager/AuditLogs'));
+const Notifications = lazy(() => import('./pages/Notifications'));
 
 
 // Renders the right dashboard for whoever is logged in, without needing a
@@ -59,10 +60,17 @@ function LeaveRoute() {
   return isAdmin ? <LeaveManagement /> : <Leave />;
 }
 
+// Every screen is fetched only when it is opened, so the kiosk (which never needs the charts, the reports or the
+// admin pages) starts from a small download instead of one bundle holding the whole system.
+function PageFallback() {
+  return <div className="min-h-screen bg-[#0B1F3A]/5" aria-busy="true" />;
+}
+
 function AppRoutes() {
   const { isAuthenticated } = useAuth();
 
   return (
+    <Suspense fallback={<PageFallback />}>
     <Routes>
       <Route path="/login" element={isAuthenticated ? <Navigate to="/" replace /> : <Login />} />
       <Route path="/forgot-password" element={isAuthenticated ? <Navigate to="/" replace /> : <ForgotPassword />} />
@@ -93,6 +101,7 @@ function AppRoutes() {
 
       <Route path="*" element={<Navigate to="/" replace />} />
     </Routes>
+    </Suspense>
   );
 }
 

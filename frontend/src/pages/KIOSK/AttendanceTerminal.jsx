@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { lazy, Suspense, useEffect, useMemo, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import clsx from 'clsx';
 import {
@@ -9,11 +9,9 @@ import {
 import Button from '../../components/ui/Button';
 import Badge from '../../components/ui/Badge';
 import Avatar from '../../components/ui/Avatar';
-import FaceRecognitionModal from '../../components/attendance/FaceRecognitionModal';
 import KioskPinModal from '../../components/kiosk/KioskPinModal';
 import { kioskService } from '../../services/kioskService';
 import { KIOSK_LOCKED_EVENT } from '../../services/http';
-import { loadModels } from '../../services/faceMatchService';
 import { useToast } from '../../context/ToastContext';
 import { formatDate, formatTime, nowInTimezone } from '../../utils/helpers';
 import {
@@ -23,6 +21,10 @@ import {
   calculateAttendanceStatus,
 } from '../../services/attendanceService';
 import { ATTENDANCE_CONFIG } from '../../utils/attendanceConfig';
+
+// The face reader (face-api + TensorFlow, the heaviest part of the app) is fetched once the PIN is entered,
+// not while the keypad is still on screen.
+const FaceRecognitionModal = lazy(() => import('../../components/attendance/FaceRecognitionModal'));
 
 const RESET_DELAY_MS = 2000;
 const TAP_WINDOW_MS = 2500;
@@ -66,6 +68,27 @@ function BrandHeader({ subtitle }) {
   );
 }
 
+// The clock ticks in its own component: re-rendering the whole terminal (and the camera modal inside it) every
+// second is what made the screen stutter while a face was being scanned.
+function LiveClock({ timezone }) {
+  const [tzNow, setTzNow] = useState(() => nowInTimezone(timezone));
+  useEffect(() => {
+    const clock = setInterval(() => setTzNow(nowInTimezone(timezone)), 1000);
+    return () => clearInterval(clock);
+  }, [timezone]);
+
+  return (
+    <div className="text-center px-4">
+      <p className="text-5xl sm:text-6xl font-bold text-white tabular-nums tracking-tight drop-shadow-lg">
+        {tzNow.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', second: '2-digit' })}
+      </p>
+      <p className="text-blue-200/70 text-base sm:text-lg mt-2 font-medium">
+        {tzNow.toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric', year: 'numeric' })}
+      </p>
+    </div>
+  );
+}
+
 export default function AttendanceTerminal() {
   const navigate = useNavigate();
   const { toast } = useToast();
@@ -75,11 +98,6 @@ export default function AttendanceTerminal() {
   const [unlocked, setUnlocked] = useState(() => kioskService.isUnlocked());
 
   const timezone = settings?.timezone || 'Asia/Manila';
-  const timezoneRef = useRef(timezone);
-  useEffect(() => {
-    timezoneRef.current = timezone;
-  }, [timezone]);
-
   const [phase, setPhase] = useState('mode');
   const [action, setAction] = useState(null);
   const [query, setQuery] = useState('');
@@ -108,8 +126,8 @@ export default function AttendanceTerminal() {
   const [showUnlock, setShowUnlock] = useState(false);
   const [unlockError, setUnlockError] = useState(null);
   const [unlockSubmitting, setUnlockSubmitting] = useState(false);
+  // Only the face-reader cooldown needs a ticking value; it runs while that screen is showing.
   const [now, setNow] = useState(() => new Date());
-  const [tzNow, setTzNow] = useState(() => nowInTimezone(timezone));
 
   const [directory, setDirectory] = useState([]);
   const resetTimer = useRef(null);
@@ -145,15 +163,10 @@ export default function AttendanceTerminal() {
   }, [sessionEndsAt]);
 
   useEffect(() => {
-    const clock = setInterval(() => {
-      setNow(new Date());
-      setTzNow(nowInTimezone(timezoneRef.current));
-    }, 1000);
     kioskService.load().then((next) => {
       setSettings(next);
       setUnlocked(kioskService.isUnlocked());
       if (next.active) {
-        loadModels().catch(() => {});
         // The employee directory needs the device token, so only ask for it once unlocked
         // (handleLockSubmit fetches it right after a successful PIN).
         if (kioskService.isUnlocked()) {
@@ -164,10 +177,23 @@ export default function AttendanceTerminal() {
       }
     });
     return () => {
-      clearInterval(clock);
       if (resetTimer.current) clearTimeout(resetTimer.current);
     };
   }, []);
+
+  // The face models (~7 MB plus the shader warm-up, which blocks the page for a moment) are only needed once
+  // someone is past the PIN screen, so they load then, when the browser is idle, instead of competing with the
+  // first paint and the PIN keypad.
+  useEffect(() => {
+    if (enabled && unlocked) import('../../services/faceMatchService').then((m) => m.preloadFaceModels());
+  }, [enabled, unlocked]);
+
+  useEffect(() => {
+    if (phase !== 'locked') return undefined;
+    const first = setTimeout(() => setNow(new Date()), 0);
+    const tick = setInterval(() => setNow(new Date()), 1000);
+    return () => { clearTimeout(first); clearInterval(tick); };
+  }, [phase]);
 
   useEffect(() => {
     if (!enabled) return;
@@ -764,8 +790,6 @@ export default function AttendanceTerminal() {
     }
   };
 
-  const timeString = tzNow.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
-  const dateString = tzNow.toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric', year: 'numeric' });
   const lockSecondsLeft = faceLockUntil ? Math.max(0, Math.ceil((faceLockUntil - now.getTime()) / 1000)) : 0;
 
   // What the success screen shows depends on how the clock-in went: on-time
@@ -894,10 +918,7 @@ export default function AttendanceTerminal() {
       <div className="min-h-screen bg-gradient-to-br from-[#0B1F3A] via-[#0E2747] to-[#0B1F3A] flex flex-col">
         <BrandHeader subtitle={`Attendance Terminal · ${settings.deviceName}`} />
 
-        <div className="text-center px-4">
-          <p className="text-5xl sm:text-6xl font-bold text-white tabular-nums tracking-tight drop-shadow-lg">{timeString}</p>
-          <p className="text-blue-200/70 text-base sm:text-lg mt-2 font-medium">{dateString}</p>
-        </div>
+        <LiveClock timezone={timezone} />
 
         <main className="flex-1 flex items-center justify-center px-4 py-10">
           <div className="w-full max-w-sm">
@@ -990,10 +1011,7 @@ export default function AttendanceTerminal() {
         </span>
       </header>
 
-      <div className="text-center px-4">
-        <p className="text-5xl sm:text-6xl font-bold text-white tabular-nums tracking-tight drop-shadow-lg">{timeString}</p>
-        <p className="text-blue-200/70 text-base sm:text-lg mt-2 font-medium">{dateString}</p>
-      </div>
+      <LiveClock timezone={timezone} />
 
       <main className="flex-1 flex items-start sm:items-center justify-center px-4 py-10">
         <div className="w-full max-w-2xl">
@@ -1452,14 +1470,16 @@ export default function AttendanceTerminal() {
         </p>
       </footer>
 
-      <FaceRecognitionModal
-        isOpen={phase === 'verify'}
-        employeeName={employee ? `${employee.firstName} ${employee.lastName}` : ''}
-        employeeId={employee ? employee.id : ''}
-        onComplete={handleFaceComplete}
-        onClose={handleFaceClose}
-        onMismatch={handleFaceMismatch}
-      />
+      <Suspense fallback={null}>
+        <FaceRecognitionModal
+          isOpen={phase === 'verify'}
+          employeeName={employee ? `${employee.firstName} ${employee.lastName}` : ''}
+          employeeId={employee ? employee.id : ''}
+          onComplete={handleFaceComplete}
+          onClose={handleFaceClose}
+          onMismatch={handleFaceMismatch}
+        />
+      </Suspense>
 
       <KioskPinModal
         isOpen={showUnlock}
