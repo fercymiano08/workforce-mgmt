@@ -124,6 +124,11 @@ export const adjustmentService = {
     const { data } = await http.get('/attendance/adjustments/mine');
     return data;
   },
+  // One of the employee's own requests, with its photos
+  mineOne: async (id) => {
+    const { data } = await http.get(`/attendance/adjustments/mine/${id}`);
+    return data;
+  },
   // photos: [{ name, dataUrl, caption }] - already shrunk by the browser
   create: async (payload) => {
     const { data } = await http.post('/attendance/adjustments', payload);

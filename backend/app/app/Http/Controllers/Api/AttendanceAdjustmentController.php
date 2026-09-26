@@ -141,7 +141,22 @@ class AttendanceAdjustmentController extends Controller
 
         $rows = AttendanceAdjustment::where('employee_id', $employeeId)->orderByDesc('created_at')->get();
 
-        return response()->json(['data' => $rows->map(fn (AttendanceAdjustment $a) => $this->summary($a))->all()]);
+        return response()->json(['data' => $rows->map(fn (AttendanceAdjustment $a) => $this->forEmployee($a))->all()]);
+    }
+
+    /** One of the employee's own requests, photos included, so they can open it and see where it stands. */
+    public function showMine(Request $request, string $id): JsonResponse
+    {
+        $adjustment = AttendanceAdjustment::where('id', $id)
+            ->where('employee_id', $this->actorEmployeeId($request))->first();
+        if (! $adjustment) {
+            return response()->json(['message' => 'Request not found.'], 404);
+        }
+
+        $out = $this->forEmployee($adjustment);
+        $out['proof'] = $adjustment->proof ?? [];
+
+        return response()->json(['data' => $out]);
     }
 
     /** The admin's list: pending first, then the rest, newest first. */
@@ -284,6 +299,15 @@ class AttendanceAdjustmentController extends Controller
     }
 
     // --- helpers -------------------------------------------------------------
+
+    /** The request as its owner sees it: the admin's working notes (the evidence checks, the pattern flag) stay with the admin. */
+    private function forEmployee(AttendanceAdjustment $a): array
+    {
+        $out = $this->summary($a);
+        unset($out['checks'], $out['isPattern'], $out['recentClaimCount']);
+
+        return $out;
+    }
 
     /** The request as the lists show it: everything except the photos themselves (they are heavy; show() has them). */
     private function summary(AttendanceAdjustment $a): array

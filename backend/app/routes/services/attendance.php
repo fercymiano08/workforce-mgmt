@@ -22,6 +22,7 @@ Route::middleware('auth:sanctum')->group(function () {
     // themselves with photo proof; only the Workforce Admin decides and makes the manual entry.
     Route::prefix('attendance/adjustments')->group(function () {
         Route::get('/mine', [AttendanceAdjustmentController::class, 'mine']);
+        Route::get('/mine/{id}', [AttendanceAdjustmentController::class, 'showMine']);
         Route::post('/', [AttendanceAdjustmentController::class, 'store']);
         Route::post('/{id}/cancel', [AttendanceAdjustmentController::class, 'cancel']);
 

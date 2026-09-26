@@ -497,6 +497,21 @@ class AttendanceAdjustmentTest extends TestCase
         $this->assertSame('Cancelled', AttendanceAdjustment::find($mine)->status);
     }
 
+    public function test_an_employee_can_open_their_own_request_with_its_photos_but_not_anyone_elses_or_the_admins_notes(): void
+    {
+        $this->workedLate();
+        $this->at('21:00');
+        $mine = $this->submit()->json('data.id');
+
+        $own = $this->actingAs($this->employeeAccount())->getJson("/api/attendance/adjustments/mine/{$mine}")->assertOk()->json('data');
+        $this->assertNotEmpty($own['proof']);
+        $this->assertArrayNotHasKey('checks', $own);
+        $this->assertArrayNotHasKey('isPattern', $own);
+        $this->assertArrayNotHasKey('checks', $this->actingAs($this->employeeAccount())->getJson('/api/attendance/adjustments/mine')->json('data.0'));
+
+        $this->actingAs($this->employeeAccount(self::OTHER))->getJson("/api/attendance/adjustments/mine/{$mine}")->assertNotFound();
+    }
+
     public function test_the_admin_sees_the_photos_and_the_day_as_it_stands_but_the_list_does_not_carry_them(): void
     {
         $this->workedLate();

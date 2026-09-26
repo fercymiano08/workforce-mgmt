@@ -2,7 +2,7 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import {
   CheckCircle, AlertTriangle, TrendingUp,
-  CalendarDays, MapPin, Filter, Clock, Plus, XCircle, Pencil, LogOut, Printer, ShieldAlert,
+  CalendarDays, MapPin, Filter, Clock, Plus, XCircle, Pencil, LogOut, Printer,
 } from 'lucide-react';
 import Badge from '../../components/ui/Badge';
 import Button from '../../components/ui/Button';
@@ -284,9 +284,6 @@ export default function MyAttendance() {
             <span className="font-medium">{formatDate(new Date().toISOString())}</span>
           </div>
           <LiveClock />
-          <Button variant="outline" size="md" icon={ShieldAlert} onClick={() => setActiveTab('corrections')}>
-            Report a problem
-          </Button>
           <Button variant="outline" size="md" icon={Printer} onClick={handlePrint}>Print / PDF</Button>
         </div>
       </div>
