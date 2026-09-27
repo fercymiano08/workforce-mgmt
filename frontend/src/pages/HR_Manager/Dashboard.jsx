@@ -26,7 +26,6 @@ import { toDateKey } from '../../services/attendanceService';
 import { kioskService } from '../../services/kioskService';
 import { didAttend, isPresentGroup } from '../../utils/constants';
 import { formatDate } from '../../utils/helpers';
-import { thisWeek } from '../../utils/today';
 
 const COLORS = {
   blue: '#3B82F6', emerald: '#10B981', amber: '#F59E0B',
@@ -179,14 +178,21 @@ export default function Dashboard() {
     };
   }, [employees, todaysAttendance]);
 
-  // "This Week" = Monday to Sunday (ISO 8601) of the current week; days still ahead show as empty
+  // "Last 30 Days" = the 30 calendar days ending today, walked backwards from today in the
+  // kiosk's time zone. A rolling window rather than Monday-to-Sunday on purpose: the current
+  // calendar week starts empty every Monday until people clock in, which left this card blank
+  // for most of the week and hid the attendance history that is actually on record.
+  const OVERVIEW_DAYS = 30;
   const attendanceOverviewData = useMemo(() => {
     const days = [];
-    for (const key of thisWeek().days) {
-      const label = new Date(`${key}T12:00:00`).toLocaleDateString('en-US', { weekday: 'short' });
+    const cursor = kioskService.now();
+    for (let i = OVERVIEW_DAYS - 1; i >= 0; i -= 1) {
+      const day = new Date(cursor);
+      day.setDate(day.getDate() - i);
+      const key = toDateKey(day);
       const rows = attendance.filter((a) => a.date === key);
       days.push({
-        day: label,
+        day: day.toLocaleDateString('en-US', { month: 'short', day: 'numeric' }),
         onTime: rows.filter((a) => a.status === 'Present').length,
         late: rows.filter((a) => a.status === 'Late').length,
         earlyLeave: rows.filter((a) => a.status === 'Early Leave').length,
@@ -339,7 +345,7 @@ export default function Dashboard() {
 
       {/* Row 2: Charts - Attendance Overview + Leave Statistics */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        <ChartCard title={t('dashboard.attendanceOverview')} badge={t('dashboard.thisWeek')} badgeVariant="primary">
+        <ChartCard title={t('dashboard.attendanceOverview')} badge={t('dashboard.last30Days')} badgeVariant="primary">
           <div className="h-[320px]">
             {!hasAttendanceData ? (
               <EmptyState message={t('dashboard.noData')} />
