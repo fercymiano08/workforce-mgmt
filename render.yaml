@@ -15,7 +15,9 @@ databases:
   - name: workforce-db
     plan: free
     databaseName: workforce_mgnt
-    user: postgres
+    # Render reserves the name "postgres" for its own superuser, so this has to be something else.
+    # The API does not care: DB_USERNAME is read from this field (see the fromDatabase bindings).
+    user: workforce
     # Any supported version works: the migrations use plain schema builder calls, nothing that
     # needs 17 or 18. Bump this if your panel offers a newer one.
     postgresMajorVersion: "16"
