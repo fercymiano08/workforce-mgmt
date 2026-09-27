@@ -46,6 +46,20 @@ export function AuthProvider({ children }) {
         setAuthError(message);
         return { success: false, message, lockout: true, retryAfter: wait };
       }
+      // No response at all means the request never got an answer: the free host is asleep and
+      // still waking up, the request timed out, or the connection dropped. Saying "invalid email
+      // or password" here is simply wrong - it sends people hunting for a typo that is not there,
+      // and burns their five attempts on an outage. The other failures still read as credentials.
+      if (!error.response) {
+        const message = 'Cannot reach the server right now. It may be waking up - please try again in a moment.';
+        setAuthError(message);
+        return { success: false, message, offline: true };
+      }
+      if (error.response.status >= 500) {
+        const message = 'The server had a problem. Please try again in a moment.';
+        setAuthError(message);
+        return { success: false, message };
+      }
       const message = error.response?.data?.errors?.email?.[0]
         || 'Invalid email or password. Please try again.';
       setAuthError(message);
