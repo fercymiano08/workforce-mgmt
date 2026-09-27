@@ -1,12 +1,7 @@
 # Render Blueprint - the whole public demo in one file.
 #   Render dashboard -> New -> Blueprint -> connect this GitHub repo -> Apply.
-# Render then builds the API from docker/backend.Dockerfile, builds the React app, creates the
-# Postgres database and runs the scheduler inside the API container, all from this file. Nothing to
-# configure by hand.
-#
-# The two *.onrender.com hostnames below are the names Render will use if they are still free.
-# If Render says a name is taken, pick another one here AND in the two places that repeat it
-# (APP_URL / FRONTEND_URL on the api, VITE_API_URL on the frontend), then push again.
+# Render then builds the API from docker/backend.Dockerfile, builds the React app and creates the
+# Postgres database. Three values still have to be typed into the dashboard by hand - see below.
 #
 # !!! The free Postgres is DELETED 30 days after it is created. See DEPLOY.md ("Before the 30 days
 # run out") - it is a 10 minute move to a free Neon database that never expires.
@@ -16,24 +11,22 @@ databases:
     plan: free
     databaseName: workforce_mgnt
     # Render reserves the name "postgres" for its own superuser, so this has to be something else.
-    # The API does not care: DB_USERNAME is read from this field (see the fromDatabase bindings).
+    # The API does not care: it is handed a single DB_URL (see the note below).
     user: workforce
     # Any supported version works: the migrations use plain schema builder calls, nothing that
     # needs 17 or 18. Bump this if your panel offers a newer one.
     postgresMajorVersion: "16"
 
-# Asked for once, during Apply, and handed to every service that references the group.
-# Secrets are therefore never written into this file.
-envVarGroups:
-  - name: app-secrets
-    envVars:
-      # Generate with:  php artisan key:generate --show   (copy the whole "base64:...." line)
-      - key: APP_KEY
-        sync: false
-      # Free key from https://aistudio.google.com. Leave it blank and the AI Decision Support
-      # module falls back to its rule-based logic, so the demo still works.
-      - key: GEMINI_API_KEY
-        sync: false
+# Three values cannot live in this file and are typed into the Render dashboard by hand, on
+# workforce-api -> Environment (Render keeps any variable that is not declared here):
+#   APP_KEY          php artisan key:generate --show   (the whole base64:... line)
+#   DB_URL           workforce-db -> "Internal Database URL" on its dashboard
+#   GEMINI_API_KEY   optional, from https://aistudio.google.com - blank falls back to rule-based AI
+# This is deliberate: fromDatabase/envVarGroup bindings were silently dropped when this Blueprint
+# was first applied, which left the API running with no database and no migrations.
+#
+# Hostnames below are the real ones Render assigned. If a service ever gets a new suffix, change it
+# in APP_URL, FRONTEND_URL and VITE_API_URL, plus the ping in .github/workflows/keep-awake.yml.
 
 services:
   # ---------------------------------------------------------------- API (Laravel 13 / PHP 8.4)
@@ -51,7 +44,6 @@ services:
     # sh -c "... & ... && ..." arrives as one (nonexistent) command name and the deploy dies 127.
     dockerCommand: /usr/local/bin/backend-start
     envVars:
-      - fromGroup: app-secrets
       - key: APP_NAME
         value: WorkForce Pro
       - key: APP_ENV
@@ -59,7 +51,7 @@ services:
       - key: APP_DEBUG
         value: "false"
       - key: APP_URL
-        value: https://workforce-api.onrender.com
+        value: https://workforce-api-nm7v.onrender.com
       # Used for the link inside the "reset your password" email only.
       - key: FRONTEND_URL
         value: https://workforce-frontend.onrender.com
@@ -98,26 +90,9 @@ services:
         value: WorkForce Pro
       - key: DB_CONNECTION
         value: pgsql
-      - key: DB_HOST
-        fromDatabase:
-          name: workforce-db
-          property: host
-      - key: DB_PORT
-        fromDatabase:
-          name: workforce-db
-          property: port
-      - key: DB_DATABASE
-        fromDatabase:
-          name: workforce-db
-          property: database
-      - key: DB_USERNAME
-        fromDatabase:
-          name: workforce-db
-          property: user
-      - key: DB_PASSWORD
-        fromDatabase:
-          name: workforce-db
-          property: password
+      # DB_URL is set by hand on the service's Environment tab (see the note at the top of this
+      # file). It is the "Internal Database URL" from the workforce-db page, and Laravel's pgsql
+      # config reads it directly, so it replaces DB_HOST/DB_PORT/DB_DATABASE/DB_USERNAME/DB_PASSWORD.
 
   # ------------------------------------------------------- Frontend (React 19 / Vite, static files)
   - type: web
@@ -136,4 +111,4 @@ services:
         value: "22"
       # Read at BUILD time by frontend/src/services/http.js, so changing it needs a redeploy.
       - key: VITE_API_URL
-        value: https://workforce-api.onrender.com
+        value: https://workforce-api-nm7v.onrender.com

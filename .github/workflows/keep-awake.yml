@@ -17,4 +17,4 @@ jobs:
         # continue-on-error: a cold start or a deploy in progress shows a red X on a run that did
         # not actually fail. The next ping is 5 minutes away either way.
         continue-on-error: true
-        run: curl -sSf --max-time 180 https://workforce-api.onrender.com/up && echo "API is awake."
+        run: curl -sSf --max-time 180 https://workforce-api-nm7v.onrender.com/up && echo "API is awake."

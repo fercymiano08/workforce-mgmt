@@ -57,20 +57,38 @@ fallback instead, so nothing breaks.
 6. Press **Apply**.
 
 That is the whole "boom". Render now builds the API image, builds the React app, creates the
-database and starts the cron job. The first build takes about 5-8 minutes; the
-**Events** tab shows each step.
+database. The first build takes about 5-8 minutes; the **Events** tab shows each step.
+
+7. **Set the three values by hand** - this part is not optional, and skipping it is the one thing
+   that will leave you with a deployed app that 500s on every screen:
+
+   | Key | Where to get it |
+   |---|---|
+   | `APP_KEY` | the `base64:...` line from step 1b |
+   | `DB_URL` | open **workforce-db** -> its dashboard -> **Internal Database URL** -> copy |
+   | `GEMINI_API_KEY` | optional, from <https://aistudio.google.com>; blank is fine |
+
+   Go to **workforce-api -> Environment -> Add Environment Variable**, add each one, then hit
+   **Save Changes** and **Restart Service** (or just redeploy). The entrypoint runs all 51
+   migrations and the demo seed on boot, so the app comes up fully populated.
+
+   These three live in the dashboard rather than in `render.yaml` on purpose. Render's
+   `fromDatabase` and environment-group bindings were dropped without warning when this Blueprint
+   was first applied, which left the API running with no database, no `APP_KEY` and no migrations -
+   a service that looked perfectly healthy and failed every request. A value typed into the
+   dashboard cannot be lost that way.
 
 7. When it finishes, open the `workforce-frontend` service -> the link at the top of the page
    (`https://workforce-frontend.onrender.com`) **is your public app.** That is the URL for your
    slides, your QR code and your panel.
 
-### If a name is already taken
+### If a service name gets a suffix
 
-Render appends a suffix (e.g. `workforce-api-xyz`). Then the three hardcoded hostnames in
-`render.yaml` are wrong. Fix them, push again, and the deploy re-runs:
-
-- `APP_URL` and `FRONTEND_URL` on the `api` service
-- `VITE_API_URL` on the `frontend` service
+Render appends a suffix when a name is taken (`workforce-api` became `workforce-api-nm7v`). If
+either of your services ends up suffixed, the hostnames baked into the build are wrong and nothing
+will load. Change the real host in all three places in `render.yaml` - `APP_URL`, `FRONTEND_URL` and
+`VITE_API_URL` - plus the ping in `.github/workflows/keep-awake.yml`, then push. `VITE_API_URL` is
+read while the frontend builds, so the push has to rebuild it.
 
 ---
 
