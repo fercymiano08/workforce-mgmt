@@ -46,8 +46,10 @@ services:
     healthCheckPath: /up
     # The scheduler (routes/console.php) runs in this same container, in the background, instead of
     # as a separate Render cron job: Render charges a minimum of $1/month per cron job, and one
-    # instance only ever runs one scheduler anyway.
-    dockerCommand: 'sh -c "php artisan schedule:work & cd public && exec env PHP_CLI_SERVER_WORKERS=4 php -S 0.0.0.0:${PORT} ../vendor/laravel/framework/src/Illuminate/Foundation/resources/server.php"'
+    # instance only ever runs one scheduler anyway. It has to be a script inside the image - Render
+    # hands dockerCommand straight to the container without parsing quotes, so an inline
+    # sh -c "... & ... && ..." arrives as one (nonexistent) command name and the deploy dies 127.
+    dockerCommand: /usr/local/bin/backend-start
     envVars:
       - fromGroup: app-secrets
       - key: APP_NAME

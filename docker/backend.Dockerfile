@@ -26,7 +26,10 @@ RUN composer dump-autoload --optimize --no-dev --no-interaction \
     && chmod -R u+rwX,g+rwX storage bootstrap/cache
 
 COPY docker/backend-entrypoint.sh /usr/local/bin/backend-entrypoint
-RUN sed -i 's/\r$//' /usr/local/bin/backend-entrypoint && chmod +x /usr/local/bin/backend-entrypoint
+# The hosted deployment's start script: scheduler in the background, API in the foreground.
+COPY docker/backend-start.sh /usr/local/bin/backend-start
+RUN sed -i 's/\r$//' /usr/local/bin/backend-entrypoint /usr/local/bin/backend-start \
+    && chmod +x /usr/local/bin/backend-entrypoint /usr/local/bin/backend-start
 
 USER www-data
 ENTRYPOINT ["backend-entrypoint"]
