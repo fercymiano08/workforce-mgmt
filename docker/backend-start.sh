@@ -32,10 +32,17 @@ cd /var/www/html
 
 if ! is_off "${RUN_MIGRATIONS:-true}"; then
     echo "==> Running database migrations"
+    # A failed migration means the schema does not match the code, so this stays fatal: a red
+    # build is a far better outcome than a live API serving queries the tables cannot answer.
     php artisan migrate --force --no-interaction
+
     if ! is_off "${RUN_SEED:-true}"; then
         echo "==> Seeding the admin account and demo data"
-        php artisan db:seed --force --no-interaction
+        # Seeding is deliberately NOT fatal. The demo data already in the database stays valid
+        # whether or not this run completes, so refusing to boot over a duplicate demo row would
+        # turn every push into a failed deploy - and a failed deploy takes the API offline, which
+        # is a far worse outcome than one stale record. A real problem is still printed in full.
+        php artisan db:seed --force --no-interaction || echo "==> Seeding reported a problem; starting anyway (the data already in the database is still valid)"
     fi
 fi
 

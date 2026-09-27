@@ -17,6 +17,7 @@ use App\Models\Timesheet;
 use App\Models\User;
 use DateTime;
 use Illuminate\Database\Seeder;
+use Illuminate\Database\UniqueConstraintViolationException;
 use Illuminate\Support\Facades\Hash;
 
 class DatabaseSeeder extends Seeder
@@ -256,7 +257,7 @@ class DatabaseSeeder extends Seeder
             ShiftDefinition::updateOrCreate(['id' => $row['id']], ShiftDefinition::apiFillable($row));
         }
         foreach ($data['shiftSchedules'] ?? [] as $row) {
-            ShiftSchedule::updateOrCreate(['id' => $row['id']], ShiftSchedule::apiFillable($row));
+            $this->upsert(ShiftSchedule::class, ['id' => $row['id']], ShiftSchedule::apiFillable($row));
         }
     }
 
@@ -280,7 +281,7 @@ class DatabaseSeeder extends Seeder
     {
         $data = $this->shiftedMock('attendance', fn ($row) => $row['date'] ?? null);
         foreach ($data['attendance'] ?? [] as $row) {
-            Attendance::updateOrCreate(['id' => $row['id']], Attendance::apiFillable($row));
+            $this->upsert(Attendance::class, ['id' => $row['id']], Attendance::apiFillable($row));
         }
     }
 
@@ -353,6 +354,37 @@ class DatabaseSeeder extends Seeder
         }
 
         Setting::updateOrCreate(['id' => 1], $fields);
+    }
+
+    /**
+     * Seeds one row, stepping aside if it would break a unique index.
+     *
+     * shift_schedules and attendance both forbid two rows for the same (employee_id, date), and
+     * the scheduler fills those dates in on its own. The mock dates are also shifted forward in
+     * whole weeks so the demo always ends "today" (see shiftedMock), while the rows stay keyed by
+     * a fixed id - so a second seeding run can try to move a row onto a date that is already
+     * taken. Letting that exception escape killed the container, and with it the deploy, so a
+     * demo dataset could not be refreshed without taking the API offline. Skipping the one row
+     * costs a single record; the rest of the seed still lands.
+     */
+    private function upsert(string $model, array $key, array $values): void
+    {
+        try {
+            $model::updateOrCreate($key, $values);
+        } catch (UniqueConstraintViolationException $e) {
+            fwrite(STDERR, sprintf(
+                "    seed: skipped %s %s - %s\n",
+                class_basename($model),
+                json_encode($key),
+                $this->constraintName($e)
+            ));
+        }
+    }
+
+    /** The index that rejected the row, so the log says which one and not just "duplicate key". */
+    private function constraintName(UniqueConstraintViolationException $e): string
+    {
+        return preg_match('/constraint "([^"]+)"/', $e->getMessage(), $m) === 1 ? $m[1] : 'unique constraint';
     }
 
     private function mock(string $file): array
