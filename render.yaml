@@ -124,6 +124,7 @@ services:
     # React Router: a deep link such as /attendance must serve index.html, not 404.
     routes:
       - type: rewrite
+        source: /*
         destination: /index.html
     envVars:
       # Vite 8 needs Node 20.19+ / 22.12+, and Render would otherwise pick its own default.
