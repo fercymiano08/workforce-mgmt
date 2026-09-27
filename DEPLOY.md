@@ -90,6 +90,10 @@ will load. Change the real host in all three places in `render.yaml` - `APP_URL`
 `VITE_API_URL` - plus the ping in `.github/workflows/keep-awake.yml`, then push. `VITE_API_URL` is
 read while the frontend builds, so the push has to rebuild it.
 
+Note the difference between the three: `APP_URL` is the API's own root (`https://<api-host>`), while
+`VITE_API_URL` is the base every browser call is appended to and therefore needs the API prefix
+(`https://<api-host>/api`). `FRONTEND_URL` is the frontend host with no prefix.
+
 ---
 
 ## 3. First things to check
@@ -194,7 +198,8 @@ notices when it is out of date, so you do not have to tell anyone to hard-refres
 | Symptom | Cause and fix |
 |---|---|
 | First load of the day takes ~1 minute, then it is fast | The free API was asleep. `.github/workflows/keep-awake.yml` pings it every 5 minutes to prevent this; check that the workflow exists under the **Actions** tab (scheduled workflows only run from the default branch). |
-| Login says `Unauthenticated` or the network tab shows a CORS error | `VITE_API_URL` and the API hostname disagree. They must be the exact hostname Render gave the `api` service. |
+| Login says `Unauthenticated` or the console shows `blocked by CORS policy ... No 'Access-Control-Allow-Origin' header` | `VITE_API_URL` is wrong. It must be the API hostname Render gave the `api` service **including the trailing `/api`** (e.g. `https://<api-host>/api`). Dropping the `/api` makes the app request `/auth/login` instead of `/api/auth/login`; that 404 is returned without CORS headers, so the browser blames CORS and login never works. |
+| Login says `Unauthenticated` but the request URL in the Network tab is correct | The token was rejected, not lost. The API is running an older build than the frontend - redeploy the API and sign in again. |
 | API log: `No application encryption key` | `APP_KEY` was pasted wrong. It must be the full `base64:...` line, with the prefix. |
 | API log: `could not translate host name` or connection refused | The database is not ready yet, or `DB_HOST` is not Render's internal host. A second deploy fixes a race during the very first apply. |
 | Kiosk photo upload fails or the page hangs | The free instance has 512 MB. A 20 MB base64 photo is a lot for it. Take a smaller photo, or use an employee whose face is already registered. |

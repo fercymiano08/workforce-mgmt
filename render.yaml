@@ -110,5 +110,8 @@ services:
       - key: NODE_VERSION
         value: "22"
       # Read at BUILD time by frontend/src/services/http.js, so changing it needs a redeploy.
+      # The trailing /api is required: every call is made as baseURL + '/employees', and Laravel
+      # serves the API under /api. Without it the app asks for /auth/login, gets a 404 with no CORS
+      # headers, and the browser reports it as a CORS error.
       - key: VITE_API_URL
-        value: https://workforce-api-nm7v.onrender.com
+        value: https://workforce-api-nm7v.onrender.com/api
