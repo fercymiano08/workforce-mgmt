@@ -24,6 +24,31 @@ class DatabaseSeeder extends Seeder
 {
     public function run(): void
     {
+        // This runs on EVERY deploy (see docker/backend-start.sh), so it has to be safe to re-run
+        // against a database that is no longer empty. Seeding into a database that already holds
+        // real employees would overwrite their attendance and schedules with demo rows that share
+        // the same ids, so once real data is present the demo half is skipped entirely.
+        // The admin account is still created: that is the one row a fresh deploy must always have.
+        if ($this->holdsRealData()) {
+            if (filter_var(env('SEED_DEMO_DATA', true), FILTER_VALIDATE_BOOLEAN)) {
+                User::firstOrCreate(
+                    ['email' => 'admin@workforcepro.com'],
+                    [
+                        'employee_id' => null,
+                        'name' => 'John Delgado',
+                        'password' => Hash::make('Admin@123'),
+                        'role' => 'Administrator',
+                        'role_label' => 'Workforce Admin',
+                        'avatar_seed' => 'John',
+                    ],
+                );
+            }
+
+            $this->command?->info('Database already holds real employee data - demo seed skipped.');
+
+            return;
+        }
+
         // SEED_DEMO_DATA=false seeds only the fixed admin account plus the
         // department/role structure (used by the Docker bootstrap). Default is
         // unchanged: everything, including the demo users and employees.
@@ -54,6 +79,34 @@ class DatabaseSeeder extends Seeder
         // (see demo:refresh) so they read like people who really used it.
         if ($demo) {
             \Illuminate\Support\Facades\Artisan::call('demo:refresh');
+        }
+    }
+
+    /**
+     * True once the database contains employees that this seeder did not create.
+     *
+     * The demo rows all come from database/mock/employees.json, so the reliable test is not an id
+     * pattern (every id looks alike: EMP2026 followed by four digits, real ones included) but a
+     * comparison against the file's own ids. A row that is not in the file was added through the
+     * application by a person, which means this is a real database and the demo half must be left
+     * alone - otherwise a deploy overwrites real attendance, shifts and timesheets.
+     */
+    private function holdsRealData(): bool
+    {
+        try {
+            $seeded = array_column($this->mock('employees')['employees'] ?? [], 'id');
+
+            if ($seeded === []) {
+                return false;
+            }
+
+            return \App\Models\Employee::query()
+                ->whereNotIn('id', $seeded)
+                ->exists();
+        } catch (\Throwable) {
+            // Before the first migration the table does not exist yet - that is an empty database,
+            // not a reason to skip seeding.
+            return false;
         }
     }
 
