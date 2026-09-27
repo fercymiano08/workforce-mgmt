@@ -54,7 +54,7 @@ services:
         value: https://workforce-api-nm7v.onrender.com
       # Used for the link inside the "reset your password" email only.
       - key: FRONTEND_URL
-        value: https://workforce-frontend.onrender.com
+        value: https://workforce-frontend-00zn.onrender.com
       - key: LOG_CHANNEL
         value: stderr
       - key: LOG_LEVEL

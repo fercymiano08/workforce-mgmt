@@ -38,14 +38,48 @@ const http = axios.create({
   timeout: 45000,
 });
 
+const baseAdapter = axios.getAdapter(axios.defaults.adapter);
+
+// Render's free web services sleep after ~15 minutes without a request, and a
+// redeploy (a push, a manual restart) leaves the port unbound for a minute or
+// two. The browser sees a refused connection - never an error page - and a
+// refusal comes back in milliseconds, so retrying it is almost free. That turns
+// a cold or restarting service into a slightly slower first click instead of a
+// false "cannot reach the server".
+//
+// The budget is wall-clock rather than a count of attempts on purpose: a
+// connection that genuinely hung has already spent the full 45s timeout and is
+// past the budget, so it fails honestly instead of looping. And anything the
+// server actually answered (4xx/5xx) is a real answer - never retried, so a
+// wrong password still comes back straight away.
+const COLD_START_BUDGET_MS = 20000;
+const RETRY_DELAY_MS = 1500;
+
+const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
+
+// No response at all means the request never reached the service. Cancellations
+// are excluded so an aborted request or a logout is never retried.
+const neverReachedServer = (error) => !error.response && !axios.isCancel(error);
+
+const send = (config) => {
+  const deadline = Date.now() + COLD_START_BUDGET_MS;
+  const attempt = () =>
+    baseAdapter(config).catch((error) => {
+      if (config.signal || !neverReachedServer(error) || Date.now() + RETRY_DELAY_MS >= deadline) {
+        return Promise.reject(error);
+      }
+      return sleep(RETRY_DELAY_MS).then(attempt);
+    });
+  return attempt();
+};
+
 // System-wide duplicate guard (the backstop behind the shared <Button> lock).
 // While an identical create/update/delete request (same method, URL and body) is
 // still in flight, a second copy is NOT sent - the caller simply receives the
 // first request's response. So a double click, an Enter-key repeat or a slow
 // server can never create two records, whichever screen or control triggered it.
-// Reads (GET) are never touched; requests carrying an abort signal or a non-JSON
-// body (file uploads) are left alone.
-const baseAdapter = axios.getAdapter(axios.defaults.adapter);
+// Reads (GET) are never deduplicated, so a cold start can never serve one screen
+// stale data while a parallel request is still waking the service.
 const inFlightWrites = new Map();
 
 http.defaults.adapter = (config) => {
@@ -53,14 +87,16 @@ http.defaults.adapter = (config) => {
   // No body (e.g. DELETE) is fine; a body that is not a JSON string (FormData / file) is skipped.
   const hasOpaqueBody = config.data != null && typeof config.data !== 'string';
   if (method === 'get' || method === 'head' || config.signal || hasOpaqueBody) {
-    return baseAdapter(config);
+    return send(config);
   }
 
   const key = `${method} ${config.baseURL || ''}${config.url} ${config.data ?? ''}`;
   const pending = inFlightWrites.get(key);
   if (pending) return pending;
 
-  const request = baseAdapter(config).finally(() => inFlightWrites.delete(key));
+  // Retries live inside this one promise, so a duplicate click still receives the
+  // same eventual answer rather than starting a second wake-up.
+  const request = send(config).finally(() => inFlightWrites.delete(key));
   inFlightWrites.set(key, request);
   return request;
 };
