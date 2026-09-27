@@ -94,7 +94,12 @@ class DatabaseSeeder extends Seeder
     private function holdsRealData(): bool
     {
         try {
-            $seeded = array_column($this->mock('employees')['employees'] ?? [], 'id');
+            // Both demo sources count as "ours": database/mock/employees.json and the core demo file
+            // DemoSeeder loads. Anything outside them was added through the application by a person.
+            $seeded = array_merge(
+                array_column($this->mock('employees')['employees'] ?? [], 'id'),
+                array_column($this->demoCore()['employees'] ?? [], 'id'),
+            );
 
             if ($seeded === []) {
                 return false;
@@ -108,6 +113,17 @@ class DatabaseSeeder extends Seeder
             // not a reason to skip seeding.
             return false;
         }
+    }
+
+    /** The core demo file DemoSeeder reads; absent in a slim image, hence the guard. */
+    private function demoCore(): array
+    {
+        $path = database_path('demo/core.json');
+        if (! file_exists($path)) {
+            return [];
+        }
+
+        return json_decode(file_get_contents($path), true) ?: [];
     }
 
     private function seedUsers(bool $demo = true): void
