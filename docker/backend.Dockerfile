@@ -31,6 +31,13 @@ COPY docker/backend-start.sh /usr/local/bin/backend-start
 RUN sed -i 's/\r$//' /usr/local/bin/backend-entrypoint /usr/local/bin/backend-start \
     && chmod +x /usr/local/bin/backend-entrypoint /usr/local/bin/backend-start
 
+# A single notice or deprecation printed into a response body tells PHP the headers have already
+# been sent, and Symfony then fails to send them - a 500 with no useful message. The official php
+# image has display_errors on, so turn it off and send errors to stderr, which is what the host
+# collects as the service log.
+RUN printf 'display_errors=0\ndisplay_startup_errors=0\nlog_errors=1\nerror_log=/proc/self/fd/2\n' \
+    > /usr/local/etc/php/conf.d/zz-production.ini
+
 USER www-data
 ENTRYPOINT ["backend-entrypoint"]
 # Default = the HTTP API. Schedulers override this with "php artisan schedule:work".

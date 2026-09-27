@@ -10,7 +10,9 @@
 # service-to-service calls need. PORT is set by the host.
 set -e
 
-php artisan schedule:work &
+# The scheduler talks to stdout, which is the same stream as the API's. Keep it quiet so its
+# output can never end up in the middle of a response.
+php artisan schedule:work >/dev/null 2>&1 &
 
 cd public
 exec env PHP_CLI_SERVER_WORKERS="${PHP_CLI_SERVER_WORKERS:-4}" \
