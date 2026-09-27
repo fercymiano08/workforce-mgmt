@@ -1,7 +1,8 @@
 # Render Blueprint - the whole public demo in one file.
 #   Render dashboard -> New -> Blueprint -> connect this GitHub repo -> Apply.
 # Render then builds the API from docker/backend.Dockerfile, builds the React app, creates the
-# Postgres database and starts the scheduler, all from this file. Nothing to configure by hand.
+# Postgres database and runs the scheduler inside the API container, all from this file. Nothing to
+# configure by hand.
 #
 # The two *.onrender.com hostnames below are the names Render will use if they are still free.
 # If Render says a name is taken, pick another one here AND in the two places that repeat it
@@ -41,9 +42,10 @@ services:
     dockerContext: .
     dockerfilePath: ./docker/backend.Dockerfile
     healthCheckPath: /up
-    # No dockerCommand: the image's own CMD already starts "php -S 0.0.0.0:$PORT" (Render sets PORT).
-    # The entrypoint migrates and seeds before the server starts answering, so the first request to
-    # /up already proves the database is there.
+    # The scheduler (routes/console.php) runs in this same container, in the background, instead of
+    # as a separate Render cron job: Render charges a minimum of $1/month per cron job, and one
+    # instance only ever runs one scheduler anyway.
+    dockerCommand: 'sh -c "php artisan schedule:work & cd public && exec env PHP_CLI_SERVER_WORKERS=4 php -S 0.0.0.0:${PORT} ../vendor/laravel/framework/src/Illuminate/Foundation/resources/server.php"'
     envVars:
       - fromGroup: app-secrets
       - key: APP_NAME
@@ -117,7 +119,6 @@ services:
   - type: web
     name: workforce-frontend
     runtime: static
-    plan: free
     buildCommand: cd frontend && npm ci && npm run build
     staticPublishPath: ./frontend/dist
     # React Router: a deep link such as /attendance must serve index.html, not 404.
@@ -131,48 +132,3 @@ services:
       # Read at BUILD time by frontend/src/services/http.js, so changing it needs a redeploy.
       - key: VITE_API_URL
         value: https://workforce-api.onrender.com
-
-  # ------------------------------------------------------ Scheduler (routes/console.php)
-  # Same image as the API, but runs the background jobs every 5 minutes instead of serving HTTP:
-  # recount hours, attendance alerts, timesheet submit/remind/refresh, mark absences, expire
-  # early-out certificates. The API is the only service that migrates.
-  - type: cron
-    name: workforce-scheduler
-    runtime: docker
-    plan: free
-    dockerContext: .
-    dockerfilePath: ./docker/backend.Dockerfile
-    schedule: "*/5 * * * *"
-    dockerCommand: php artisan schedule:run
-    envVars:
-      - fromGroup: app-secrets
-      - key: APP_ENV
-        value: production
-      - key: APP_DEBUG
-        value: "false"
-      - key: LOG_CHANNEL
-        value: stderr
-      - key: LOG_LEVEL
-        value: warning
-      - key: DB_CONNECTION
-        value: pgsql
-      - key: DB_HOST
-        fromDatabase:
-          name: workforce-db
-          property: host
-      - key: DB_PORT
-        fromDatabase:
-          name: workforce-db
-          property: port
-      - key: DB_DATABASE
-        fromDatabase:
-          name: workforce-db
-          property: database
-      - key: DB_USERNAME
-        fromDatabase:
-          name: workforce-db
-          property: user
-      - key: DB_PASSWORD
-        fromDatabase:
-          name: workforce-db
-          property: password

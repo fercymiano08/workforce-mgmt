@@ -8,8 +8,8 @@ Everything Render needs is declared in `render.yaml`, so there is no dashboard c
 |---|---|---|
 | React frontend | Render static site | free, never sleeps |
 | Laravel API | Render web service (Docker) | free tier |
+| Scheduler | inside the API container, `schedule:work` | free |
 | PostgreSQL | Render's built-in Postgres | free **for 30 days** - see below |
-| Scheduler | Render cron job, every 5 min | free |
 | Keep-awake ping | GitHub Actions, every 5 min | free |
 
 ---
@@ -45,14 +45,13 @@ fallback instead, so nothing breaks.
 1. Sign up or log in at <https://render.com> (GitHub login is fine).
 2. In the dashboard click **New -> Blueprint**.
 3. Connect this repository (`fercymiano08/workforce-mgmt`) and pick the `main` branch.
-4. Render reads `render.yaml` and shows you the four resources it will create:
+4. Render reads `render.yaml` and shows you the three resources it will create:
 
    | Name | What it is |
    |---|---|
-   | `workforce-api` | the Laravel API |
+   | `workforce-api` | the Laravel API, with the scheduler running inside it |
    | `workforce-frontend` | the React app |
    | `workforce-db` | the PostgreSQL database |
-   | `workforce-scheduler` | the background jobs |
 
 5. Fill in the two boxes it asks for: **APP_KEY** (from step 1b) and **GEMINI_API_KEY** (optional).
 6. Press **Apply**.
@@ -111,7 +110,10 @@ the defense are also reset by a redeploy - so do not redeploy while you are pres
 
 ## 5. The 30-day database cliff (read this part)
 
-Render's free PostgreSQL is **deleted 30 days after it is created, along with everything in it.**
+Render's free PostgreSQL has a fixed 1 GB of storage and **expires 30 days after it is created.**
+An expired database is inaccessible until you upgrade it to a paid plan, and you then have a
+14-day grace period before Render deletes it and everything in it. (One free database per account,
+which is all this needs.)
 
 For the defense itself this does not matter. It matters if the panel, your school or a future
 employer looks at the link more than a month from now. Fix it once, in about 10 minutes:
