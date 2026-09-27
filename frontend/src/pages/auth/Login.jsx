@@ -7,15 +7,6 @@ import { useToast } from '../../context/ToastContext';
 import Button from '../../components/ui/Button';
 import Input from '../../components/ui/Input';
 
-// Seeded by DatabaseSeeder. The admin sees everything; an employee is scoped to their own records
-// and is signed out after 3 idle minutes, which is what the kiosk/attendance flow is built around.
-const DEMO_ACCOUNTS = [
-  { label: 'Workforce Admin', role: 'Admin', email: 'admin@workforcepro.com', password: 'Admin@123' },
-  { label: 'Fercy Miano', role: 'Employee', email: 'fercy.miano84@gmail.com', password: 'Employee@123' },
-  { label: 'Juan Dela Cruz', role: 'Employee', email: 'employee@workforcepro.com', password: 'Employee@123' },
-  { label: 'Randy Capalar', role: 'Employee', email: 'randycapalar@gmail.com', password: 'Employee@123' },
-];
-
 export default function Login() {
   const { login } = useAuth();
   const { toast } = useToast();
@@ -183,37 +174,6 @@ export default function Login() {
               {lockout > 0 ? `Try again in ${lockout}s` : 'Sign In'}
             </Button>
           </form>
-
-          {/* The seeded accounts are the only way in, and guessing an address costs a rate-limit
-              attempt (5 tries, then a 60s lockout) that is easy to spend before a demo even starts. */}
-          <div className="mt-7 rounded-xl border border-slate-200 bg-slate-50 p-4">
-            <p className="text-[11px] font-semibold uppercase tracking-wider text-slate-500 mb-2.5">
-              Demo accounts
-            </p>
-            <div className="space-y-1.5">
-              {DEMO_ACCOUNTS.map((account) => (
-                <button
-                  key={account.email}
-                  type="button"
-                  onClick={() => {
-                    setEmail(account.email);
-                    setPassword(account.password);
-                    setError('');
-                  }}
-                  className="w-full flex items-center justify-between gap-3 rounded-lg px-2.5 py-2 text-left hover:bg-white hover:shadow-sm transition-all duration-150"
-                >
-                  <span className="min-w-0">
-                    <span className="block text-[13px] font-medium text-slate-700 truncate">{account.label}</span>
-                    <span className="block text-[11px] text-slate-500 font-mono truncate">{account.email}</span>
-                  </span>
-                  <span className="shrink-0 text-[10px] font-semibold uppercase tracking-wide text-slate-400">
-                    {account.role}
-                  </span>
-                </button>
-              ))}
-            </div>
-            <p className="text-[11px] text-slate-400 mt-2.5">Select one to fill the form.</p>
-          </div>
         </div>
       </div>
     </div>
