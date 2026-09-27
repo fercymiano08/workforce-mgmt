@@ -1,0 +1,178 @@
+# Render Blueprint - the whole public demo in one file.
+#   Render dashboard -> New -> Blueprint -> connect this GitHub repo -> Apply.
+# Render then builds the API from docker/backend.Dockerfile, builds the React app, creates the
+# Postgres database and starts the scheduler, all from this file. Nothing to configure by hand.
+#
+# The two *.onrender.com hostnames below are the names Render will use if they are still free.
+# If Render says a name is taken, pick another one here AND in the two places that repeat it
+# (APP_URL / FRONTEND_URL on the api, VITE_API_URL on the frontend), then push again.
+#
+# !!! The free Postgres is DELETED 30 days after it is created. See DEPLOY.md ("Before the 30 days
+# run out") - it is a 10 minute move to a free Neon database that never expires.
+
+databases:
+  - name: workforce-db
+    plan: free
+    databaseName: workforce_mgnt
+    user: postgres
+    # Any supported version works: the migrations use plain schema builder calls, nothing that
+    # needs 17 or 18. Bump this if your panel offers a newer one.
+    postgresMajorVersion: "16"
+
+# Asked for once, during Apply, and handed to every service that references the group.
+# Secrets are therefore never written into this file.
+envVarGroups:
+  - name: app-secrets
+    envVars:
+      # Generate with:  php artisan key:generate --show   (copy the whole "base64:...." line)
+      - key: APP_KEY
+        sync: false
+      # Free key from https://aistudio.google.com. Leave it blank and the AI Decision Support
+      # module falls back to its rule-based logic, so the demo still works.
+      - key: GEMINI_API_KEY
+        sync: false
+
+services:
+  # ---------------------------------------------------------------- API (Laravel 13 / PHP 8.4)
+  - type: web
+    name: workforce-api
+    runtime: docker
+    plan: free
+    dockerContext: .
+    dockerfilePath: ./docker/backend.Dockerfile
+    healthCheckPath: /up
+    # No dockerCommand: the image's own CMD already starts "php -S 0.0.0.0:$PORT" (Render sets PORT).
+    # The entrypoint migrates and seeds before the server starts answering, so the first request to
+    # /up already proves the database is there.
+    envVars:
+      - fromGroup: app-secrets
+      - key: APP_NAME
+        value: WorkForce Pro
+      - key: APP_ENV
+        value: production
+      - key: APP_DEBUG
+        value: "false"
+      - key: APP_URL
+        value: https://workforce-api.onrender.com
+      # Used for the link inside the "reset your password" email only.
+      - key: FRONTEND_URL
+        value: https://workforce-frontend.onrender.com
+      - key: LOG_CHANNEL
+        value: stderr
+      - key: LOG_LEVEL
+        value: info
+      - key: BCRYPT_ROUNDS
+        value: "12"
+      - key: SESSION_DRIVER
+        value: database
+      - key: CACHE_STORE
+        value: database
+      - key: QUEUE_CONNECTION
+        value: database
+      # docker/backend-entrypoint.sh: migrate on boot, then seed (both are idempotent).
+      - key: RUN_MIGRATIONS
+        value: "true"
+      - key: RUN_SEED
+        value: "true"
+      # The rich demo dataset - employees, schedules, attendance, timesheets. Set to "false" to keep
+      # only the admin account and the department/role structure.
+      - key: SEED_DEMO_DATA
+        value: "true"
+      - key: GEMINI_MODEL
+        value: gemini-3.1-flash-lite
+      - key: GEMINI_TIMEOUT
+        value: "15"
+      # "log" writes emails to the service log instead of sending them (Dashboard -> Logs). Swap for
+      # a real mailer later, see DEPLOY.md ("Sending real emails").
+      - key: MAIL_MAILER
+        value: log
+      - key: MAIL_FROM_ADDRESS
+        value: no-reply@workforcepro.com
+      - key: MAIL_FROM_NAME
+        value: WorkForce Pro
+      - key: DB_CONNECTION
+        value: pgsql
+      - key: DB_HOST
+        fromDatabase:
+          name: workforce-db
+          property: host
+      - key: DB_PORT
+        fromDatabase:
+          name: workforce-db
+          property: port
+      - key: DB_DATABASE
+        fromDatabase:
+          name: workforce-db
+          property: database
+      - key: DB_USERNAME
+        fromDatabase:
+          name: workforce-db
+          property: user
+      - key: DB_PASSWORD
+        fromDatabase:
+          name: workforce-db
+          property: password
+
+  # ------------------------------------------------------- Frontend (React 19 / Vite, static files)
+  - type: web
+    name: workforce-frontend
+    runtime: static
+    plan: free
+    buildCommand: cd frontend && npm ci && npm run build
+    staticPublishPath: ./frontend/dist
+    # React Router: a deep link such as /attendance must serve index.html, not 404.
+    routes:
+      - type: rewrite
+        destination: /index.html
+    envVars:
+      # Vite 8 needs Node 20.19+ / 22.12+, and Render would otherwise pick its own default.
+      - key: NODE_VERSION
+        value: "22"
+      # Read at BUILD time by frontend/src/services/http.js, so changing it needs a redeploy.
+      - key: VITE_API_URL
+        value: https://workforce-api.onrender.com
+
+  # ------------------------------------------------------ Scheduler (routes/console.php)
+  # Same image as the API, but runs the background jobs every 5 minutes instead of serving HTTP:
+  # recount hours, attendance alerts, timesheet submit/remind/refresh, mark absences, expire
+  # early-out certificates. The API is the only service that migrates.
+  - type: cron
+    name: workforce-scheduler
+    runtime: docker
+    plan: free
+    dockerContext: .
+    dockerfilePath: ./docker/backend.Dockerfile
+    schedule: "*/5 * * * *"
+    dockerCommand: php artisan schedule:run
+    envVars:
+      - fromGroup: app-secrets
+      - key: APP_ENV
+        value: production
+      - key: APP_DEBUG
+        value: "false"
+      - key: LOG_CHANNEL
+        value: stderr
+      - key: LOG_LEVEL
+        value: warning
+      - key: DB_CONNECTION
+        value: pgsql
+      - key: DB_HOST
+        fromDatabase:
+          name: workforce-db
+          property: host
+      - key: DB_PORT
+        fromDatabase:
+          name: workforce-db
+          property: port
+      - key: DB_DATABASE
+        fromDatabase:
+          name: workforce-db
+          property: database
+      - key: DB_USERNAME
+        fromDatabase:
+          name: workforce-db
+          property: user
+      - key: DB_PASSWORD
+        fromDatabase:
+          name: workforce-db
+          property: password

@@ -31,7 +31,9 @@ const remove = (key) => {
 // triggers when a service is truly unresponsive - callers then get an
 // ECONNABORTED error to show instead of an endless spinner.
 const http = axios.create({
-  baseURL: '/api',
+  // '/api' is the same-origin path used by docker/nginx.conf and the Vite dev proxy. When the built
+  // app is hosted somewhere else (a public static host) VITE_API_URL points it at the API instead.
+  baseURL: import.meta.env.VITE_API_URL || '/api',
   headers: { 'Content-Type': 'application/json' },
   timeout: 45000,
 });

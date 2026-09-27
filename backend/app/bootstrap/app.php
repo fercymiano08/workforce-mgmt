@@ -16,6 +16,9 @@ return Application::configure(basePath: dirname(__DIR__))
         health: '/up',
     )
     ->withMiddleware(function (Middleware $middleware): void {
+        // Behind a public host (Render, nginx, Caddy) the request arrives over plain HTTP from the
+        // proxy and the real scheme is in X-Forwarded-Proto. Without this, Laravel builds http:// URLs.
+        $middleware->trustProxies(at: '*');
         $middleware->redirectGuestsTo(fn (Request $request) => response()->json(['message' => 'Unauthenticated.'], 401));
         $middleware->alias([
             'admin' => EnsureUserIsAdministrator::class,

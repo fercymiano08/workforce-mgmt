@@ -1,5 +1,7 @@
 # One image recipe for all 8 Laravel microservices.
 # Build context = project root.  Pick the service with:  --build-arg SERVICE=<folder under backend/>
+# SERVICE defaults to "app" (the only service that exists today) so a host that cannot pass build
+# args - Render, Koyeb, Railway building straight from this file - still gets a working image.
 FROM php:8.4-cli-bookworm
 
 COPY --from=ghcr.io/mlocati/php-extension-installer /usr/bin/install-php-extensions /usr/local/bin/
@@ -10,7 +12,7 @@ RUN apt-get update \
     && rm -rf /var/lib/apt/lists/* \
     && install-php-extensions pdo_pgsql pgsql bcmath pcntl zip opcache
 
-ARG SERVICE
+ARG SERVICE=app
 WORKDIR /var/www/html
 
 # Dependencies first so this layer stays cached until composer.lock changes.
