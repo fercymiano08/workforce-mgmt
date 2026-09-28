@@ -127,7 +127,7 @@ export default function Topbar({ onMenuToggle }) {
             onClick={() => setShowProfile(!showProfile)}
             className="flex items-center gap-2.5 pl-2 pr-3 py-1.5 rounded-xl hover:bg-gray-50 transition-colors"
           >
-            <Avatar firstName={user?.firstName} lastName={user?.lastName} size="sm" online={isOnline} />
+            <Avatar src={user?.avatar} firstName={user?.firstName} lastName={user?.lastName} size="sm" online={isOnline} />
             <div className="text-left hidden md:block">
               <p className="text-[13px] font-semibold text-gray-900 leading-tight">{user?.firstName} {user?.lastName}</p>
               <p className="text-[11px] text-gray-500">{user?.roleLabel}</p>

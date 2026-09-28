@@ -1,4 +1,5 @@
 import clsx from 'clsx';
+import { useEffect, useState } from 'react';
 
 const sizeMap = {
   xs: 'w-6 h-6 text-[10px]',
@@ -28,10 +29,16 @@ export default function Avatar({ src, firstName = '', lastName = '', size = 'md'
     : first.slice(0, 2).toUpperCase();
   const colorIndex = (first.charCodeAt(0) || 0) % colors.length;
 
+  // An unreadable or half-migrated picture must degrade to the initials, not to a broken image
+  // icon. Cleared when src changes so a corrected upload shows again without a remount.
+  const [failed, setFailed] = useState(false);
+  useEffect(() => { setFailed(false); }, [src]);
+  const showImage = Boolean(src) && !failed;
+
   return (
     <div className={clsx('relative inline-flex items-center justify-center rounded-full flex-shrink-0', sizeMap[size], className)}>
-      {src ? (
-        <img src={src} alt={`${first} ${last}`} className="w-full h-full rounded-full object-cover" />
+      {showImage ? (
+        <img src={src} alt={`${first} ${last}`} onError={() => setFailed(true)} className="w-full h-full rounded-full object-cover" />
       ) : (
         <div className={clsx('w-full h-full rounded-full flex items-center justify-center text-white font-semibold', colors[colorIndex])}>
           {initials}

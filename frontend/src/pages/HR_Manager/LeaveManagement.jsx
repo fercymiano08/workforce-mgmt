@@ -92,6 +92,12 @@ export default function LeaveManagement() {
     (employees || []).filter((e) => e.status !== 'Inactive').forEach((e) => { map[e.department] = (map[e.department] || 0) + 1; });
     return map;
   }, [employees]);
+  // Requests only carry an employee name, so match the picture by employee id
+  const avatarOf = useMemo(() => {
+    const map = {};
+    (employees || []).forEach((e) => { map[e.id] = e.avatar; });
+    return map;
+  }, [employees]);
 
   // Colleagues of the same department who are off (approved) or waiting (pending) on any of the same days
   const teamImpact = useCallback((leave) => {
@@ -305,6 +311,7 @@ export default function LeaveManagement() {
                         <Avatar
                           firstName={(leave.employeeName || '').split(' ')[0]}
                           lastName={(leave.employeeName || '').split(' ').slice(1).join(' ')}
+                          src={avatarOf[leave.employeeId]}
                           size="sm"
                         />
                         <div>
@@ -367,6 +374,7 @@ export default function LeaveManagement() {
               <Avatar
                 firstName={(selectedLeave.employeeName || '').split(' ')[0]}
                 lastName={(selectedLeave.employeeName || '').split(' ').slice(1).join(' ')}
+                src={avatarOf[selectedLeave.employeeId]}
                 size="xl"
               />
               <div>

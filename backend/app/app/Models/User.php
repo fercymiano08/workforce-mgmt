@@ -35,7 +35,11 @@ class User extends Authenticatable
 
     /**
      * Shape the user exactly like the frontend AuthContext demo account:
-     * { id, firstName, lastName, email, role, roleLabel, avatarSeed }.
+     * { id, firstName, lastName, email, role, roleLabel, avatarSeed, avatar }.
+     *
+     * `avatar` is the uploaded profile picture, which lives on the employee record rather than on
+     * the login, so the topbar and the employee dashboard can show the real face instead of
+     * falling back to coloured initials. Null for accounts with no employee record (admins).
      */
     public function toApiArray(): array
     {
@@ -49,8 +53,22 @@ class User extends Authenticatable
             'role' => $this->role,
             'roleLabel' => $this->role_label,
             'avatarSeed' => $this->avatar_seed,
+            'avatar' => $this->linkedEmployee()?->avatar,
             'permissions' => $this->permissions(),
         ];
+    }
+
+    /**
+     * The employee this login belongs to, when it is tied to one. Deliberately NOT named
+     * `employee()`: Eloquent would treat that as a relationship and reject a plain model.
+     */
+    public function linkedEmployee(): ?Employee
+    {
+        if (! $this->employee_id) {
+            return null;
+        }
+
+        return Employee::find($this->employee_id);
     }
 
     /**

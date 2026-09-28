@@ -352,6 +352,7 @@ export default function Shifts() {
                             key={s.id}
                             firstName={emp?.firstName || s.employeeName?.split(' ')[0] || '?'}
                             lastName={emp?.lastName || s.employeeName?.split(' ')[1] || ''}
+                            src={emp?.avatar}
                             size="xs"
                             className="ring-2 ring-white"
                           />
@@ -391,7 +392,7 @@ export default function Shifts() {
                   const name = emp ? `${emp.firstName} ${emp.lastName}` : s.employeeName;
                   return (
                     <div key={s.id} className="flex items-center gap-3 px-4 py-3">
-                      <Avatar firstName={emp?.firstName || name.split(' ')[0] || '?'} lastName={emp?.lastName || name.split(' ')[1] || ''} size="sm" />
+                      <Avatar firstName={emp?.firstName || name.split(' ')[0] || '?'} lastName={emp?.lastName || name.split(' ')[1] || ''} src={emp?.avatar} size="sm" />
                       <div className="min-w-0 flex-1">
                         <p className="text-sm font-medium text-gray-900 truncate">{name}</p>
                         <p className="text-xs text-gray-500 truncate">{emp?.department || '—'}{def ? ` · ${formatTime(def.startTime)}–${formatTime(def.endTime)}` : ''}</p>

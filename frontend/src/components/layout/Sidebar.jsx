@@ -166,7 +166,7 @@ export default function Sidebar({ isOpen, onClose }) {
         {/* User Profile - Fixed at bottom */}
         <div className="px-4 py-4 flex-shrink-0 border-t border-white/[0.06]">
           <div className="flex items-center gap-3 px-3 py-2.5 rounded-xl hover:bg-white/[0.06] transition-colors cursor-pointer">
-            <Avatar firstName={user?.firstName} lastName={user?.lastName} size="sm" online />
+            <Avatar src={user?.avatar} firstName={user?.firstName} lastName={user?.lastName} size="sm" online />
             <div className="flex-1 min-w-0">
               <p className="text-[13px] font-medium text-white truncate">{user?.firstName} {user?.lastName}</p>
               <p className="text-[11px] text-slate-500 truncate">{user?.roleLabel || currentRole}</p>

@@ -234,13 +234,15 @@ export default function Dashboard() {
         .filter((l) => l.status === 'Pending')
         .map((l) => ({
           id: l.id,
+          employeeId: l.employeeId,
+          avatar: (employees || []).find((e) => e.id === l.employeeId)?.avatar,
           name: l.employeeName,
           type: l.leaveType,
           dates: `${formatDate(l.startDate)} - ${formatDate(l.endDate)}`,
           days: l.days != null ? Number(l.days) : countDays(l.startDate, l.endDate),
           reason: l.reason,
         })),
-    [leaves]
+    [leaves, employees]
   );
 
   const handleLeaveDecision = async (requestId, status) => {
@@ -483,7 +485,7 @@ export default function Dashboard() {
                 <div key={request.id} className="px-6 py-4 hover:bg-gray-50 transition-colors">
                   <div className="flex items-start justify-between gap-3">
                     <div className="flex items-start gap-3 min-w-0">
-                      <Avatar firstName={(request.name || '').split(' ')[0]} lastName={(request.name || '').split(' ')[1]} size="sm" className="mt-0.5" />
+                      <Avatar firstName={(request.name || '').split(' ')[0]} lastName={(request.name || '').split(' ')[1]} src={request.avatar} size="sm" className="mt-0.5" />
                       <div className="min-w-0">
                         <p className="text-[15px] font-semibold text-gray-900 truncate">{request.name}</p>
                         <div className="flex items-center gap-2 mt-1">
