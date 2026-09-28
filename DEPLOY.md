@@ -162,18 +162,30 @@ Do this after the defense, not before it.
 
 ## 6. Sending real emails (optional)
 
-Out of the box `MAIL_MAILER=log`, so a "reset your password" email is written to the API log
-instead of being sent. That is enough to demo the flow (open the **Logs** tab and show it), but if
-you want a real inbox, add these to the `api` service environment:
+A "reset your password" email is sent through the mailer set in `render.yaml`. The defaults there
+are already a working Brevo relay, so the only two values you have to type into the `api` service
+**Environment** tab are the account and the key from https://app.brevo.com -> SMTP & API -> SMTP:
 
 | Key | Value |
 |---|---|
-| `MAIL_MAILER` | `smtp` |
-| `MAIL_HOST` | `smtp-relay.brevo.com` (or `smtp.gmail.com` with an app password) |
-| `MAIL_PORT` | `587` |
-| `MAIL_USERNAME` / `MAIL_PASSWORD` | your Brevo or Gmail credentials |
+| `MAIL_MAILER` | `smtp` (set in `render.yaml`) |
+| `MAIL_HOST` | `smtp-relay.brevo.com` (set in `render.yaml`) |
+| `MAIL_PORT` | `2525` (set in `render.yaml`) |
+| `MAIL_USERNAME` | your Brevo login email - type it in by hand |
+| `MAIL_PASSWORD` | your Brevo SMTP key (`xsmtpsib-...`) - type it in by hand |
 
-Brevo's free tier sends 300 emails a day, Gmail's app password works too. Then redeploy.
+Two things that are not obvious:
+
+- **The port is 2525, not 587.** Render's free web service plan blocks outbound SMTP on 25, 465 and
+  587, so `smtp.gmail.com` cannot work on the free plan no matter how it is configured. Brevo's 2525
+  is the port that stays open. If you are on a paid plan, 587 works and so does Gmail.
+- **Turn off Brevo's "Block unknown IPs" security setting.** With it on, a new Render egress IP is
+  rejected with `525 5.7.1 Unauthorized IP address` and the message never leaves Laravel.
+
+Brevo's free tier sends 300 emails a day. Verify the sender at
+https://app.brevo.com/settings/keys/senders before the first send - an unverified sender is silently
+dropped. Sending from a freemail address (Gmail, Yahoo) works but hurts deliverability; authenticate
+your own domain with SPF/DKIM in Brevo when you have DNS control. Then redeploy.
 
 ---
 

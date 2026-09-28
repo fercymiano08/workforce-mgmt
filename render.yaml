@@ -54,7 +54,7 @@ services:
         value: https://workforce-api-nm7v.onrender.com
       # Used for the link inside the "reset your password" email only.
       - key: FRONTEND_URL
-        value: https://workforce-frontend-00zn.onrender.com
+        value: https://workforce-management.onrender.com
       - key: LOG_CHANNEL
         value: stderr
       - key: LOG_LEVEL
@@ -80,12 +80,23 @@ services:
         value: gemini-3.1-flash-lite
       - key: GEMINI_TIMEOUT
         value: "15"
-      # "log" writes emails to the service log instead of sending them (Dashboard -> Logs). Swap for
-      # a real mailer later, see DEPLOY.md ("Sending real emails").
+      # Real email via Brevo. Port 2525 is the point: Render's free web service plan blocks the
+      # usual SMTP ports (25, 465, 587), so Gmail is impossible here and 2525 is the one Brevo port
+      # that stays open. See DEPLOY.md ("Sending real emails").
       - key: MAIL_MAILER
-        value: log
+        value: smtp
+      - key: MAIL_HOST
+        value: smtp-relay.brevo.com
+      - key: MAIL_PORT
+        value: "2525"
+      # sync:false keeps the account and the SMTP key out of git. Type them once on the service's
+      # Environment tab; a Blueprint sync will not remove them, only this file would.
+      - key: MAIL_USERNAME
+        sync: false
+      - key: MAIL_PASSWORD
+        sync: false
       - key: MAIL_FROM_ADDRESS
-        value: no-reply@workforcepro.com
+        value: fercy.miano84@gmail.com
       - key: MAIL_FROM_NAME
         value: WorkForce Pro
       - key: DB_CONNECTION
@@ -96,7 +107,11 @@ services:
 
   # ------------------------------------------------------- Frontend (React 19 / Vite, static files)
   - type: web
-    name: workforce-frontend
+    # Render derives the public hostname from this name, so it produces
+    # https://workforce-management.onrender.com. Renaming an existing live service does NOT rename
+    # it in Render - do it once in the dashboard (Settings -> Name) so the hostname is freed and the
+    # old one redirected, and let this file keep matching afterwards.
+    name: workforce-management
     runtime: static
     buildCommand: cd frontend && npm ci && npm run build
     staticPublishPath: ./frontend/dist
