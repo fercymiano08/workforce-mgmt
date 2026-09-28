@@ -16,6 +16,7 @@ import { employeeService, shiftService } from '../../services/api';
 import { formatDate, formatTime } from '../../utils/helpers';
 import { useToast } from '../../context/ToastContext';
 import useApiData from '../../hooks/useApiData';
+import useUrlSearch from '../../hooks/useUrlSearch';
 import { SkeletonPage } from '../../components/ui/LoadingSkeleton';
 
 const shiftIcons = { SHIFT004: Zap, SHIFT005: Flame };
@@ -45,7 +46,7 @@ export default function Shifts() {
   const [editingSchedule, setEditingSchedule] = useState(null);
   const [formData, setFormData] = useState({ employeeId: '', shiftId: '', date: '', notes: '' });
   const [formErrors, setFormErrors] = useState({});
-  const [searchQuery, setSearchQuery] = useState('');
+  const [searchQuery, setSearchQuery] = useUrlSearch();
   const [departmentFilter, setDepartmentFilter] = useState('');
   const [dateFilter, setDateFilter] = useState('');
   const [statusFilter, setStatusFilter] = useState('');

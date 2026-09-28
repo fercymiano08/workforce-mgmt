@@ -106,7 +106,10 @@ await page.goto(`${BASE}/login`, { waitUntil: 'domcontentloaded' });
 // The login screen is loaded on demand, so wait for it rather than typing into a page that has not drawn yet.
 await page.waitForSelector('input[type="email"]', { timeout: 20000 });
 await page.type('input[type="email"]', ACCOUNTS[role].email);
-await page.type('input[type="password"]', ACCOUNTS[role].password);
+// Selected by name, not by type: PasswordInput renders type="text" with CSS masking wherever
+// -webkit-text-security is supported (so Chrome does not draw a second reveal eye), and falls back
+// to a real type="password" elsewhere. A type selector breaks on one platform or the other.
+await page.type('input[name="password"]', ACCOUNTS[role].password);
 await Promise.all([page.waitForNavigation({ waitUntil: 'domcontentloaded', timeout: 20000 }).catch(() => {}), page.click('button[type="submit"]')]);
 await settle();
 if (page.url().includes('/login')) {

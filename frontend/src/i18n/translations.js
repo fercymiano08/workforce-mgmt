@@ -1,4 +1,4 @@
-const translations = {
+﻿const translations = {
   en: {
     // Sidebar
     'nav.dashboard': 'Dashboard',
@@ -31,6 +31,21 @@ const translations = {
     'topbar.settings': 'Settings',
     'topbar.help': 'Help',
     'topbar.signOut': 'Sign Out',
+
+    // Global search
+    'search.people': 'People',
+    'search.goTo': 'Go to',
+    'search.myAttendance': 'My attendance',
+    'search.myLeaves': 'My leave requests',
+    'search.myShifts': 'My shifts',
+    'search.myTimesheets': 'My timesheets',
+    'search.noResults': 'No matches',
+    'search.unavailable': 'Search is unavailable right now',
+    'search.typeMore': 'Type at least 2 characters',
+    'search.searching': 'Searching...',
+    'search.navigate': 'to navigate',
+    'search.open': 'to open',
+    'search.close': 'to close',
 
     // Dashboard
     'dashboard.title': 'Dashboard',
@@ -114,6 +129,7 @@ const translations = {
     'nav.employees': 'Mga empleyado',
     'nav.employeeRegistration': 'Pagrehistro ng Empleyado',
     'nav.attendance': 'Oras at Presensya',
+    'nav.myAttendance': 'Aking Presensya',
     'nav.mySchedule': 'Aking Iskedyul',
     'nav.shifts': 'Istasyon at Iskedyul',
     'nav.timesheets': 'Pamamahala ng Timesheet',
@@ -138,6 +154,21 @@ const translations = {
     'topbar.settings': 'Mga Setting',
     'topbar.help': 'Tulong',
     'topbar.signOut': 'Mag-sign Out',
+
+    // Global search
+    'search.people': 'Mga Tao',
+    'search.goTo': 'Pumunta sa',
+    'search.myAttendance': 'Aking attendance',
+    'search.myLeaves': 'Aking mga kahilingan ng leave',
+    'search.myShifts': 'Aking mga shift',
+    'search.myTimesheets': 'Aking mga timesheet',
+    'search.noResults': 'Walang katugmang resulta',
+    'search.unavailable': 'Hindi available ngayon ang paghahanap',
+    'search.typeMore': 'Mag-type ng hindi bababa sa 2 titik',
+    'search.searching': 'Hinahanap...',
+    'search.navigate': 'para mag-navigate',
+    'search.open': 'para buksan',
+    'search.close': 'para isara',
 
     'dashboard.title': 'Dashboard',
     'dashboard.subtitle': 'Maligayang pagdating! Narito ang iyong buod ng workforce.',
@@ -206,6 +237,7 @@ const translations = {
     'nav.employees': '従業員',
     'nav.employeeRegistration': '従業員登録',
     'nav.attendance': '時間と勤怠',
+    'nav.myAttendance': '自分の出勤記録',
     'nav.mySchedule': 'マイスケジュール',
     'nav.shifts': 'シフトとスケジュール',
     'nav.timesheets': 'タイムシート管理',
@@ -230,6 +262,21 @@ const translations = {
     'topbar.settings': '設定',
     'topbar.help': 'ヘルプ',
     'topbar.signOut': 'サインアウト',
+
+    // Global search
+    'search.people': '社員',
+    'search.goTo': '移動先',
+    'search.myAttendance': '自分の出勤',
+    'search.myLeaves': '自分の休暇申請',
+    'search.myShifts': '自分のシフト',
+    'search.myTimesheets': '自分のタイムシート',
+    'search.noResults': '一致するものがありません',
+    'search.unavailable': '現在検索を使用できません',
+    'search.typeMore': '2文字以上入力してください',
+    'search.searching': '検索中...',
+    'search.navigate': 'で移動',
+    'search.open': 'で開く',
+    'search.close': 'で閉じる',
 
     'dashboard.title': 'ダッシュボード',
     'dashboard.subtitle': 'おかえりなさい！従業員の概要はこちらです。',
@@ -298,6 +345,7 @@ const translations = {
     'nav.employees': '员工',
     'nav.employeeRegistration': '员工注册',
     'nav.attendance': '时间与考勤',
+    'nav.myAttendance': '我的出勤',
     'nav.mySchedule': '我的排班',
     'nav.shifts': '班次与排班',
     'nav.timesheets': '工时管理',
@@ -322,6 +370,21 @@ const translations = {
     'topbar.settings': '设置',
     'topbar.help': '帮助',
     'topbar.signOut': '退出登录',
+
+    // Global search
+    'search.people': '员工',
+    'search.goTo': '前往',
+    'search.myAttendance': '我的出勤',
+    'search.myLeaves': '我的请假申请',
+    'search.myShifts': '我的班次',
+    'search.myTimesheets': '我的工时表',
+    'search.noResults': '没有匹配结果',
+    'search.unavailable': '搜索暂时不可用',
+    'search.typeMore': '请至少输入 2 个字符',
+    'search.searching': '搜索中...',
+    'search.navigate': '切换',
+    'search.open': '打开',
+    'search.close': '关闭',
 
     'dashboard.title': '仪表板',
     'dashboard.subtitle': '欢迎回来！这是您的员工概况。',
@@ -390,6 +453,7 @@ const translations = {
     'nav.employees': 'Empleados',
     'nav.employeeRegistration': 'Registro de Empleados',
     'nav.attendance': 'Horario y Asistencia',
+    'nav.myAttendance': 'Mi Asistencia',
     'nav.mySchedule': 'Mi Horario',
     'nav.shifts': 'Turnos y Horarios',
     'nav.timesheets': 'Gestión de Horas',
@@ -414,6 +478,21 @@ const translations = {
     'topbar.settings': 'Configuración',
     'topbar.help': 'Ayuda',
     'topbar.signOut': 'Cerrar Sesión',
+
+    // Global search
+    'search.people': 'Personas',
+    'search.goTo': 'Ir a',
+    'search.myAttendance': 'Mi asistencia',
+    'search.myLeaves': 'Mis solicitudes de permiso',
+    'search.myShifts': 'Mis turnos',
+    'search.myTimesheets': 'Mis hojas de tiempo',
+    'search.noResults': 'Sin coincidencias',
+    'search.unavailable': 'La búsqueda no está disponible ahora',
+    'search.typeMore': 'Escribe al menos 2 caracteres',
+    'search.searching': 'Buscando...',
+    'search.navigate': 'para navegar',
+    'search.open': 'para abrir',
+    'search.close': 'para cerrar',
 
     'dashboard.title': 'Panel',
     'dashboard.subtitle': '¡Bienvenido de vuelta! Aquí está tu resumen del personal.',

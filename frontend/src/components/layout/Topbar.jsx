@@ -1,7 +1,7 @@
 import { useState, useRef, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
-  Search, Bell, ChevronDown,
+  Bell, ChevronDown,
   LogOut, User, Settings, HelpCircle, Menu,
   Sun, Moon, AlertTriangle, WifiOff, Wifi
 } from 'lucide-react';
@@ -13,6 +13,7 @@ import Avatar from '../ui/Avatar';
 import Modal from '../ui/Modal';
 import Button from '../ui/Button';
 import NotificationDropdown from '../common/NotificationDropdown';
+import GlobalSearch from '../common/GlobalSearch';
 import { useNotifications } from '../../context/NotificationContext';
 
 export default function Topbar({ onMenuToggle }) {
@@ -25,7 +26,6 @@ export default function Topbar({ onMenuToggle }) {
   const [showProfile, setShowProfile] = useState(false);
   const [showNotifications, setShowNotifications] = useState(false);
   const [showLogoutModal, setShowLogoutModal] = useState(false);
-  const [searchValue, setSearchValue] = useState('');
   const profileRef = useRef(null);
   const notifRef = useRef(null);
 
@@ -60,15 +60,8 @@ export default function Topbar({ onMenuToggle }) {
         >
           <Menu className="w-5 h-5" />
         </button>
-        <div className="relative w-full max-w-md hidden sm:block">
-          <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
-          <input
-            type="text"
-            value={searchValue}
-            onChange={(e) => setSearchValue(e.target.value)}
-            placeholder={t('topbar.search')}
-            className="w-full pl-10 pr-4 py-2.5 text-sm rounded-xl bg-gray-50 border border-gray-100 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-400 focus:bg-white transition-all duration-200 placeholder:text-gray-400"
-          />
+        <div className="hidden sm:block flex-1 min-w-0">
+          <GlobalSearch />
         </div>
       </div>
 

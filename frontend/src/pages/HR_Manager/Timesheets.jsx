@@ -24,6 +24,7 @@ import { thisWeek } from '../../utils/today';
 import { toDateKey } from '../../services/attendanceService';
 import { attendanceService } from '../../services/api';
 import useApiData from '../../hooks/useApiData';
+import useUrlSearch from '../../hooks/useUrlSearch';
 import KpiCard from '../../components/dashboard/KpiCard';
 import { downloadCSV } from '../../utils/export';
 import { useAuth } from '../../context/AuthContext';
@@ -294,7 +295,7 @@ function AdminTimesheetsView() {
   const { toast } = useToast();
   const reviewer = user ? `${user.firstName} ${user.lastName}` : 'HR Admin';
 
-  const [search, setSearch] = useState('');
+  const [search, setSearch] = useUrlSearch();
   const [statusFilter, setStatusFilter] = useState('Submitted');
   const [deptFilter, setDeptFilter] = useState('All');
   const [period, setPeriod] = useState('all');

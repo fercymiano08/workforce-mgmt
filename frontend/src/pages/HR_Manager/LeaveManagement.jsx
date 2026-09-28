@@ -16,6 +16,7 @@ import { formatDate } from '../../utils/helpers';
 import { useToast } from '../../context/ToastContext';
 import { useAuth } from '../../context/AuthContext';
 import useApiData from '../../hooks/useApiData';
+import useUrlSearch from '../../hooks/useUrlSearch';
 import { SkeletonPage } from '../../components/ui/LoadingSkeleton';
 
 const statusVariant = {
@@ -60,7 +61,7 @@ export default function LeaveManagement() {
 
   const [activeTab, setActiveTab] = useState('Pending Approvals');
   const [selectedIds, setSelectedIds] = useState([]);
-  const [search, setSearch] = useState('');
+  const [search, setSearch] = useUrlSearch();
   const [statusFilter, setStatusFilter] = useState('All');
   const [typeFilter, setTypeFilter] = useState('All');
   const [currentPage, setCurrentPage] = useState(1);

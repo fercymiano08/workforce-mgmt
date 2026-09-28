@@ -148,8 +148,9 @@ export default function Login() {
                   Forgot password?
                 </Link>
               </div>
-              <PasswordInput
-                value={password}
+<PasswordInput
+          name="password"
+          value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 placeholder="Enter your password"
                 autoComplete="current-password"

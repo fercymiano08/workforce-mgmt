@@ -17,6 +17,7 @@ import { formatDate } from '../../utils/helpers';
 import { useToast } from '../../context/ToastContext';
 import { useAuth } from '../../context/AuthContext';
 import useApiData from '../../hooks/useApiData';
+import useUrlSearch from '../../hooks/useUrlSearch';
 
 const statusVariant = {
   Pending: 'warning',
@@ -100,7 +101,7 @@ export default function Leave() {
     loadBalances();
   }, [loadBalances]);
 
-  const [search, setSearch] = useState('');
+  const [search, setSearch] = useUrlSearch();
   const [statusFilter, setStatusFilter] = useState('All');
   const [typeFilter, setTypeFilter] = useState('All');
   const [currentPage, setCurrentPage] = useState(1);

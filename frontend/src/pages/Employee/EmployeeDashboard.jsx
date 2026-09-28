@@ -11,7 +11,7 @@ import {
 } from 'recharts';
 import { useAuth } from '../../context/AuthContext';
 import TodayBadge from '../../components/common/TodayBadge';
-import { todayKey, todayRowClass, coversToday, thisWeek } from '../../utils/today';
+import { todayKey, todayRowClass, coversToday, thisWeek, weekWithRecords, dayTick, weekRangeLabel } from '../../utils/today';
 import Badge from '../../components/ui/Badge';
 import Avatar from '../../components/ui/Avatar';
 import Button from '../../components/ui/Button';
@@ -32,11 +32,6 @@ const leaveTypeBadge = (type) => {
 const statusBadge = (status) => {
   const map = { Approved: 'success', Pending: 'warning', Rejected: 'danger' };
   return map[status] || 'default';
-};
-
-const dayLabel = (dateStr) => {
-  const d = new Date(dateStr);
-  return d.toLocaleDateString('en-US', { weekday: 'short' });
 };
 
 const EmptyChart = ({ message }) => (
@@ -139,13 +134,37 @@ export default function EmployeeDashboard() {
     [timesheetRecords, employeeId]
   );
 
-  // Last 10 working days -> hours per day, for the chart
+  // One Monday-to-Sunday week, the same week the admin overview draws, with a fixed bar size.
+  // The chart used to be built from the last 10 records instead, which meant an employee who had
+  // only clocked in once or twice got a chart with one or two categories: recharts then stretches
+  // each bar to fill its slot, so the card filled with a couple of giant blocks. Seven real days
+  // and a fixed bar width mean the shape is identical for everyone, whatever the record count.
+  const attendanceWeek = useMemo(
+    () => weekWithRecords(myAttendance.map((a) => a.date)),
+    [myAttendance]
+  );
+
   const chartData = useMemo(() => {
-    return myAttendance.slice(-10).map((a) => {
-      const hours = a.clockIn && a.clockOut ? a.totalHours || 0 : 0;
-      return { day: dayLabel(a.date), hours: Math.round(hours * 10) / 10, status: a.status };
+    const byDate = new Map();
+    myAttendance.forEach((a) => {
+      if (!byDate.has(a.date)) byDate.set(a.date, []);
+      byDate.get(a.date).push(a);
     });
-  }, [myAttendance]);
+    return attendanceWeek.days.map((date) => {
+      const rows = byDate.get(date) || [];
+      const hours = rows.reduce((sum, a) => sum + (a.clockIn && a.clockOut ? a.totalHours || 0 : 0), 0);
+      const row = rows[0];
+      return {
+        date,
+        day: dayTick(date),
+        hours: Math.round(hours * 10) / 10,
+        status: row ? row.status : null,
+      };
+    });
+  }, [attendanceWeek, myAttendance]);
+
+  const isCurrentAttendanceWeek = attendanceWeek.weeksBack === 0;
+  const attendanceRangeLabel = weekRangeLabel(attendanceWeek.start, attendanceWeek.end);
 
   const hasChartData = chartData.some((d) => d.hours > 0);
 
@@ -274,13 +293,15 @@ export default function EmployeeDashboard() {
 
       {/* Attendance chart + My Schedule */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        <ChartCard title="My Attendance" badge="Last 10 days" badgeVariant="primary" className="lg:col-span-2">
+        <ChartCard title="My Attendance" badge={isCurrentAttendanceWeek ? 'This Week' : attendanceRangeLabel} badgeVariant="primary" className="lg:col-span-2">
           <div className="h-[240px]">
             {!hasChartData ? (
               <EmptyChart message="Your hours chart fills in as you clock in and out from the attendance terminal." />
             ) : (
               <ResponsiveContainer width="100%" height="100%">
-                <BarChart data={chartData} barGap={3} barCategoryGap="22%" margin={{ top: 8, right: 8, left: -12, bottom: 0 }}>
+                {/* barSize is the whole point: without it recharts divides the plot by the number of bars,
+                    so one record becomes a single block as wide as the card. */}
+                <BarChart data={chartData} barSize={32} barGap={3} barCategoryGap="18%" margin={{ top: 8, right: 8, left: -12, bottom: 0 }}>
                   <CartesianGrid strokeDasharray="3 3" stroke="#F1F5F9" vertical={false} />
                   <XAxis dataKey="day" axisLine={false} tickLine={false} tick={{ fontSize: 12, fill: '#64748B' }} />
                   <YAxis axisLine={false} tickLine={false} tick={{ fontSize: 12, fill: '#64748B' }} />

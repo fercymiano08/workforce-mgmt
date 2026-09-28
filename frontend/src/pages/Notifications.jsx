@@ -10,6 +10,7 @@ import { Pagination } from '../components/ui/Table';
 import { useNotifications } from '../context/NotificationContext';
 import { notificationTypeConfig, notificationPriorityColors } from '../constants/notificationTypes';
 import { getRelativeTime, formatDate } from '../utils/helpers';
+import useUrlSearch from '../hooks/useUrlSearch';
 import { toDateKey } from '../services/attendanceService';
 
 const PER_PAGE = 12;
@@ -20,7 +21,7 @@ export default function Notifications() {
   const { notifications, unreadCount, markAsRead, markAllAsRead, deleteNotification } = useNotifications();
   const navigate = useNavigate();
   const [tab, setTab] = useState('all');
-  const [search, setSearch] = useState('');
+  const [search, setSearch] = useUrlSearch();
   const [page, setPage] = useState(1);
 
   const filtered = useMemo(() => {

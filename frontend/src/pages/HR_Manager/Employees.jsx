@@ -21,6 +21,7 @@ import { SkeletonPage } from '../../components/ui/LoadingSkeleton';
 import FaceCaptureModal from '../../components/employees/FaceCaptureModal';
 import { departmentService, employeeService, roleService, shiftService } from '../../services/api';
 import { formatDate, formatTime } from '../../utils/helpers';
+import useUrlSearch from '../../hooks/useUrlSearch';
 import { todayKey } from '../../utils/today';
 import { useToast } from '../../context/ToastContext';
 
@@ -115,7 +116,7 @@ export default function Employees() {
   const { toast } = useToast();
   const [employeesData, setEmployeesData] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [search, setSearch] = useState('');
+  const [search, setSearch] = useUrlSearch();
   const [deptFilter, setDeptFilter] = useState('All');
   const [statusFilter, setStatusFilter] = useState('All');
   const [typeFilter, setTypeFilter] = useState('All');

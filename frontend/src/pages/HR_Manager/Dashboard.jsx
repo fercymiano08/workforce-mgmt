@@ -26,6 +26,7 @@ import {
 import { toDateKey } from '../../services/attendanceService';
 import { kioskService } from '../../services/kioskService';
 import { didAttend, isPresentGroup } from '../../utils/constants';
+import { weekWithRecords, dayTick, weekRangeLabel } from '../../utils/today';
 import { formatDate } from '../../utils/helpers';
 
 const COLORS = {
@@ -183,55 +184,30 @@ export default function Dashboard() {
   // to the most recent week that does. Anchoring on today alone left the card completely empty
   // whenever today happened to have no attendance yet, which is the whole card, not a column.
   // The badge then names the week it fell back to instead of claiming "This Week".
-  const OVERVIEW_DAYS = 7;
   const attendanceOverview = useMemo(() => {
-    const recorded = new Set(attendance.map((a) => a.date));
+    // weekWithRecords picks the current Monday-Sunday week when it holds a record, otherwise the most
+    // recent one that does, so the overview is never an empty card. It is the same helper the
+    // employee's own chart uses, which is what keeps the two cards identical in shape.
+    const week = weekWithRecords(attendance.map((a) => a.date));
+    const rowsByDate = new Map();
+    attendance.forEach((a) => {
+      if (!rowsByDate.has(a.date)) rowsByDate.set(a.date, []);
+      rowsByDate.get(a.date).push(a);
+    });
 
-    // getDay() is 0=Sunday, so this lands on the Monday on or before the given date.
-    const mondayOf = (date) => {
-      const m = new Date(date);
-      m.setDate(m.getDate() - ((m.getDay() + 6) % 7));
-      return m;
-    };
+    const days = week.days.map((key) => {
+      const rows = rowsByDate.get(key) || [];
+      return {
+        key,
+        day: dayTick(key),
+        onTime: rows.filter((a) => a.status === 'Present').length,
+        late: rows.filter((a) => a.status === 'Late').length,
+        earlyLeave: rows.filter((a) => a.status === 'Early Leave').length,
+        absent: rows.filter((a) => a.status === 'Absent').length,
+      };
+    });
 
-    const buildWeek = (monday) => {
-      const days = [];
-      for (let i = 0; i < OVERVIEW_DAYS; i += 1) {
-        const day = new Date(monday);
-        day.setDate(monday.getDate() + i);
-        const key = toDateKey(day);
-        const rows = attendance.filter((a) => a.date === key);
-        days.push({
-          key,
-          // Weekday plus date, so a week that is not the current one still says which week it is.
-          day: `${day.toLocaleDateString('en-US', { weekday: 'short' })} ${day.getDate()}`,
-          onTime: rows.filter((a) => a.status === 'Present').length,
-          late: rows.filter((a) => a.status === 'Late').length,
-          earlyLeave: rows.filter((a) => a.status === 'Early Leave').length,
-          absent: rows.filter((a) => a.status === 'Absent').length,
-        });
-      }
-      return days;
-    };
-
-    const startOfWeek = mondayOf(kioskService.now());
-    let weeksBack = 0;
-    let monday = startOfWeek;
-    let days = buildWeek(monday);
-    // Twelve weeks is well past the oldest record in a normal deployment, and it stops the loop
-    // rather than spinning if attendance somehow arrives with no dates at all.
-    while (weeksBack < 12 && !days.some((d) => recorded.has(d.key))) {
-      weeksBack += 1;
-      monday = new Date(startOfWeek);
-      monday.setDate(startOfWeek.getDate() - 7 * weeksBack);
-      days = buildWeek(monday);
-    }
-
-    const sunday = new Date(monday);
-    sunday.setDate(monday.getDate() + OVERVIEW_DAYS - 1);
-    const short = (d) => d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
-
-    return { days, isCurrentWeek: weeksBack === 0, rangeLabel: `${short(monday)} – ${short(sunday)}` };
+    return { days, isCurrentWeek: week.weeksBack === 0, rangeLabel: weekRangeLabel(week.start, week.end) };
   }, [attendance]);
 
   const attendanceOverviewData = attendanceOverview.days;
