@@ -315,7 +315,7 @@ export default function KioskSetup() {
           <h3 className="text-sm font-bold text-gray-900">Maintenance tools</h3>
           {[
             { icon: ListChecks, tone: 'bg-blue-50 text-blue-600', title: 'View activity', text: 'Inspect all kiosk events and security attempts', onClick: () => setTab('activity') },
-            { icon: RefreshCw, tone: 'bg-purple-50 text-purple-600', title: 'Check for updates', text: 'Verify the kiosk is running the latest software', onClick: () => toast.info('Up to date', 'WorkForce Pro Kiosk is running the latest version (v1.0.0).') },
+            { icon: RefreshCw, tone: 'bg-purple-50 text-purple-600', title: 'Check for updates', text: 'Verify the kiosk is running the latest software', onClick: () => toast.info('Up to date', 'Workforce Management Kiosk is running the latest version (v1.0.0).') },
             { icon: RotateCcw, tone: 'bg-amber-50 text-amber-600', title: 'Reboot kiosk', text: 'Restart the kiosk on this device', onClick: () => setConfirmReboot(true) },
           ].map(({ icon: Icon, tone, title, text, onClick }) => (
             <button key={title} onClick={onClick} className="flex w-full items-center gap-4 rounded-2xl border border-gray-100 p-4 text-left transition-colors hover:bg-gray-50">

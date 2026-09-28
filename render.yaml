@@ -45,7 +45,7 @@ services:
     dockerCommand: /usr/local/bin/backend-start
     envVars:
       - key: APP_NAME
-        value: WorkForce Pro
+        value: Workforce Management
       - key: APP_ENV
         value: production
       - key: APP_DEBUG
@@ -98,7 +98,7 @@ services:
       - key: MAIL_FROM_ADDRESS
         value: fercy.miano84@gmail.com
       - key: MAIL_FROM_NAME
-        value: WorkForce Pro
+        value: Workforce Management
       - key: DB_CONNECTION
         value: pgsql
       # DB_URL is set by hand on the service's Environment tab (see the note at the top of this

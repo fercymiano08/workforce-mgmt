@@ -22,7 +22,7 @@ export default function ResetPassword() {
           <h2 className="text-white text-3xl font-bold leading-tight tracking-tight mb-4">Password reset<br/>has changed.</h2>
           <p className="text-slate-400 text-[15px] leading-relaxed max-w-md">Password resets now use a 6-digit code sent to your email.</p>
         </div>
-        <p className="relative text-slate-500 text-xs">&copy; {new Date().getFullYear()} WorkForce Pro Management. All rights reserved.</p>
+        <p className="relative text-slate-500 text-xs">&copy; {new Date().getFullYear()} Workforce Management. All rights reserved.</p>
       </div>
 
       <div className="flex-1 flex items-center justify-center p-6 sm:p-10">

@@ -142,7 +142,7 @@ export default function ForgotPassword() {
               : 'Your password has been updated. You can now sign back in.'}
           </p>
         </div>
-        <p className="relative text-slate-500 text-xs">&copy; {new Date().getFullYear()} WorkForce Pro Management. All rights reserved.</p>
+        <p className="relative text-slate-500 text-xs">&copy; {new Date().getFullYear()} Workforce Management. All rights reserved.</p>
       </div>
 
       {/* Right form panel */}

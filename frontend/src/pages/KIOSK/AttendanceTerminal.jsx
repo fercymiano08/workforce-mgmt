@@ -60,7 +60,7 @@ function BrandHeader({ subtitle }) {
           <Briefcase className="w-5 h-5 text-white" />
         </div>
         <div>
-          <h1 className="text-white font-bold text-[15px] leading-tight tracking-tight">WorkForce Pro</h1>
+          <h1 className="text-white font-bold text-[15px] leading-tight tracking-tight">Workforce Management</h1>
           <p className="text-blue-300/60 text-[11px] font-medium">{subtitle}</p>
         </div>
       </div>
@@ -1001,7 +1001,7 @@ export default function AttendanceTerminal() {
             <Briefcase className="w-5 h-5 text-white" />
           </div>
           <div>
-            <h1 className="text-white font-bold text-[15px] leading-tight tracking-tight">WorkForce Pro</h1>
+            <h1 className="text-white font-bold text-[15px] leading-tight tracking-tight">Workforce Management</h1>
             <p className="text-blue-300/60 text-[11px] font-medium">Attendance Terminal · {settings.deviceName}</p>
           </div>
         </div>

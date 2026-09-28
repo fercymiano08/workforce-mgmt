@@ -46,7 +46,7 @@ export default class ErrorBoundary extends Component {
             <h2 className="text-xl font-bold text-gray-900 mt-4">{this.state.updating ? 'Loading the new version…' : 'Something went wrong'}</h2>
             <p className="text-sm text-gray-500 mt-1.5">
               {this.state.updating
-                ? 'WorkForce Pro was updated while this page was open.'
+                ? 'Workforce Management was updated while this page was open.'
                 : 'The application hit an unexpected error. Reload to continue. If the system was just updated, reloading loads the new version.'}
             </p>
             {!this.state.updating && (

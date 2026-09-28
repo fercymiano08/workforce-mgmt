@@ -26,7 +26,7 @@ export default function KioskPreview({ deviceName, location, timezone }) {
       <p className="mb-2 text-xs font-semibold uppercase tracking-wider text-gray-400">Live preview</p>
       <div className="overflow-hidden rounded-2xl bg-gradient-to-br from-[#0B1F3A] via-[#0E2747] to-[#0B1F3A] p-5 text-center shadow-lg ring-1 ring-black/5">
         <p className="truncate text-[11px] font-medium text-blue-200/70">
-          WorkForce Pro Attendance Terminal · {deviceName || 'Device name'}
+          Workforce Management Attendance Terminal · {deviceName || 'Device name'}
         </p>
         <p className="mt-4 text-4xl font-bold tabular-nums tracking-tight text-white">{time}</p>
         <p className="mt-1 text-xs text-blue-200/70">{timezone}</p>
