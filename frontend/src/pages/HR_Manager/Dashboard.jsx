@@ -175,31 +175,66 @@ export default function Dashboard() {
     };
   }, [employees, todaysAttendance]);
 
-  // "This Week" = the seven days of the current calendar week, Monday through Sunday, in the
-  // kiosk's time zone. Walking back to Monday from the current weekday (getDay() is 0=Sunday) and
-  // then adding six keeps the axis in real week order rather than ending on today, so the same
-  // column means the same day all week instead of shifting as the days pass.
+  // Seven days exactly, Monday through Sunday, in the kiosk's time zone - never more, so the bars
+  // stay wide enough to read instead of collapsing into sticks.
+  //
+  // The current week is used whenever it holds a single record. If it holds none - the week has not
+  // started yet, or the last clock-in was the previous Saturday - it walks back one week at a time
+  // to the most recent week that does. Anchoring on today alone left the card completely empty
+  // whenever today happened to have no attendance yet, which is the whole card, not a column.
+  // The badge then names the week it fell back to instead of claiming "This Week".
   const OVERVIEW_DAYS = 7;
-  const attendanceOverviewData = useMemo(() => {
-    const days = [];
-    const cursor = kioskService.now();
-    const monday = new Date(cursor);
-    monday.setDate(monday.getDate() - ((monday.getDay() + 6) % 7));
-    for (let i = 0; i < OVERVIEW_DAYS; i += 1) {
-      const day = new Date(monday);
-      day.setDate(monday.getDate() + i);
-      const key = toDateKey(day);
-      const rows = attendance.filter((a) => a.date === key);
-      days.push({
-        day: day.toLocaleDateString('en-US', { weekday: 'short' }),
-        onTime: rows.filter((a) => a.status === 'Present').length,
-        late: rows.filter((a) => a.status === 'Late').length,
-        earlyLeave: rows.filter((a) => a.status === 'Early Leave').length,
-        absent: rows.filter((a) => a.status === 'Absent').length,
-      });
+  const attendanceOverview = useMemo(() => {
+    const recorded = new Set(attendance.map((a) => a.date));
+
+    // getDay() is 0=Sunday, so this lands on the Monday on or before the given date.
+    const mondayOf = (date) => {
+      const m = new Date(date);
+      m.setDate(m.getDate() - ((m.getDay() + 6) % 7));
+      return m;
+    };
+
+    const buildWeek = (monday) => {
+      const days = [];
+      for (let i = 0; i < OVERVIEW_DAYS; i += 1) {
+        const day = new Date(monday);
+        day.setDate(monday.getDate() + i);
+        const key = toDateKey(day);
+        const rows = attendance.filter((a) => a.date === key);
+        days.push({
+          key,
+          // Weekday plus date, so a week that is not the current one still says which week it is.
+          day: `${day.toLocaleDateString('en-US', { weekday: 'short' })} ${day.getDate()}`,
+          onTime: rows.filter((a) => a.status === 'Present').length,
+          late: rows.filter((a) => a.status === 'Late').length,
+          earlyLeave: rows.filter((a) => a.status === 'Early Leave').length,
+          absent: rows.filter((a) => a.status === 'Absent').length,
+        });
+      }
+      return days;
+    };
+
+    const startOfWeek = mondayOf(kioskService.now());
+    let weeksBack = 0;
+    let monday = startOfWeek;
+    let days = buildWeek(monday);
+    // Twelve weeks is well past the oldest record in a normal deployment, and it stops the loop
+    // rather than spinning if attendance somehow arrives with no dates at all.
+    while (weeksBack < 12 && !days.some((d) => recorded.has(d.key))) {
+      weeksBack += 1;
+      monday = new Date(startOfWeek);
+      monday.setDate(startOfWeek.getDate() - 7 * weeksBack);
+      days = buildWeek(monday);
     }
-    return days;
+
+    const sunday = new Date(monday);
+    sunday.setDate(monday.getDate() + OVERVIEW_DAYS - 1);
+    const short = (d) => d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+
+    return { days, isCurrentWeek: weeksBack === 0, rangeLabel: `${short(monday)} – ${short(sunday)}` };
   }, [attendance]);
+
+  const attendanceOverviewData = attendanceOverview.days;
 
   const hasAttendanceData = attendanceOverviewData.some(
     (d) => d.onTime || d.late || d.earlyLeave || d.absent
@@ -348,7 +383,7 @@ export default function Dashboard() {
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         <ChartCard
           title={t('dashboard.attendanceOverview')}
-          badge={t('dashboard.thisWeek')}
+          badge={attendanceOverview.isCurrentWeek ? t('dashboard.thisWeek') : attendanceOverview.rangeLabel}
           badgeVariant="primary"
           className="lg:col-span-2"
         >
@@ -359,9 +394,9 @@ export default function Dashboard() {
               <ResponsiveContainer width="100%" height="100%">
                 <BarChart
                   data={attendanceOverviewData}
-                  barSize={30}
+                  barSize={32}
                   barGap={2}
-                  barCategoryGap="20%"
+                  barCategoryGap="18%"
                   margin={{ top: 8, right: 8, left: -12, bottom: 0 }}
                 >
                   <CartesianGrid strokeDasharray="3 3" stroke="#F1F5F9" vertical={false} />
