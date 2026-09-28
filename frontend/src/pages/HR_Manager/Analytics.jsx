@@ -7,23 +7,17 @@ import {
   Clock, Percent, TrendingUp, Trophy, AlertTriangle, Gauge
 } from 'lucide-react';
 import Card, { CardHeader, CardTitle, CardDescription } from '../../components/ui/Card';
+import {
+  lowercaseLeaveTypeColors, lowercaseLeaveTypeLabels,
+} from '../../constants/leaveTypes';
 import { analyticsService } from '../../services/api';
 import useApiData from '../../hooks/useApiData';
 import { SkeletonPage } from '../../components/ui/LoadingSkeleton';
 
-// One fixed color per entity, reused everywhere that entity appears (leave types
-// already carry these exact colors on the Leave and Leave Management pages) -
-// except 'special', bumped from purple to rose: purple sits too close to
-// funeral's indigo once they're adjacent chart segments (validated: ΔE 6.3,
-// below the legibility floor of 15), which never happens on the badge-only pages.
-const LEAVE_TYPE_COLORS = {
-  vacation: '#3B82F6', sick: '#EF4444', emergency: '#F59E0B',
-  special: '#F43F5E', funeral: '#6366F1', unpaid: '#14B8A6',
-};
-const LEAVE_TYPE_LABELS = {
-  vacation: 'Vacation', sick: 'Sick', emergency: 'Emergency',
-  special: 'Special', funeral: 'Funeral', unpaid: 'Unpaid',
-};
+// Re-keyed from the shared palette rather than hand-written here, so this page, the dashboard
+// pie and the leave badges cannot drift apart. The API returns these types as lowercase keys.
+const LEAVE_TYPE_COLORS = lowercaseLeaveTypeColors();
+const LEAVE_TYPE_LABELS = lowercaseLeaveTypeLabels();
 
 const kpiColors = {
   blue: { icon: 'bg-blue-50 text-blue-600', fill: 'bg-blue-500', track: 'bg-blue-100' },

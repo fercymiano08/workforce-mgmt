@@ -14,6 +14,7 @@ import Badge from '../../components/ui/Badge';
 import Button from '../../components/ui/Button';
 import KpiCard from '../../components/dashboard/KpiCard';
 import ChartCard from '../../components/dashboard/ChartCard';
+import { leaveTypeChartColor } from '../../constants/leaveTypes';
 import { SkeletonPage } from '../../components/ui/LoadingSkeleton';
 import { useLanguage } from '../../context/LanguageContext';
 import { useAuth } from '../../context/AuthContext';
@@ -44,16 +45,12 @@ const departmentColors = {
   Legal: COLORS.rose,
 };
 
-const leaveTypeColors = {
-  Vacation: COLORS.blue,
-  Sick: COLORS.emerald,
-  Emergency: COLORS.amber,
-  'Half Day': COLORS.teal,
-  Special: COLORS.purple,
-};
-
 const leaveTypeBadge = (type) => {
-  const map = { Vacation: 'primary', Sick: 'success', Emergency: 'warning', Special: 'purple' };
+  // Same variants as leaveTypeVariant in pages/Employee/Leave.jsx, which the badge-only pages use.
+  const map = {
+    Vacation: 'primary', Sick: 'danger', Emergency: 'warning',
+    Special: 'purple', Funeral: 'indigo', Unpaid: 'teal',
+  };
   return map[type] || 'default';
 };
 
@@ -178,21 +175,23 @@ export default function Dashboard() {
     };
   }, [employees, todaysAttendance]);
 
-  // "Last 30 Days" = the 30 calendar days ending today, walked backwards from today in the
-  // kiosk's time zone. A rolling window rather than Monday-to-Sunday on purpose: the current
-  // calendar week starts empty every Monday until people clock in, which left this card blank
-  // for most of the week and hid the attendance history that is actually on record.
-  const OVERVIEW_DAYS = 30;
+  // "This Week" = the seven days of the current calendar week, Monday through Sunday, in the
+  // kiosk's time zone. Walking back to Monday from the current weekday (getDay() is 0=Sunday) and
+  // then adding six keeps the axis in real week order rather than ending on today, so the same
+  // column means the same day all week instead of shifting as the days pass.
+  const OVERVIEW_DAYS = 7;
   const attendanceOverviewData = useMemo(() => {
     const days = [];
     const cursor = kioskService.now();
-    for (let i = OVERVIEW_DAYS - 1; i >= 0; i -= 1) {
-      const day = new Date(cursor);
-      day.setDate(day.getDate() - i);
+    const monday = new Date(cursor);
+    monday.setDate(monday.getDate() - ((monday.getDay() + 6) % 7));
+    for (let i = 0; i < OVERVIEW_DAYS; i += 1) {
+      const day = new Date(monday);
+      day.setDate(monday.getDate() + i);
       const key = toDateKey(day);
       const rows = attendance.filter((a) => a.date === key);
       days.push({
-        day: day.toLocaleDateString('en-US', { month: 'short', day: 'numeric' }),
+        day: day.toLocaleDateString('en-US', { weekday: 'short' }),
         onTime: rows.filter((a) => a.status === 'Present').length,
         late: rows.filter((a) => a.status === 'Late').length,
         earlyLeave: rows.filter((a) => a.status === 'Early Leave').length,
@@ -214,7 +213,7 @@ export default function Dashboard() {
     return Object.entries(byType).map(([name, value]) => ({
       name,
       value,
-      color: leaveTypeColors[name] || COLORS.purple,
+      color: leaveTypeChartColor(name),
     }));
   }, [leaves]);
 
@@ -349,7 +348,7 @@ export default function Dashboard() {
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         <ChartCard
           title={t('dashboard.attendanceOverview')}
-          badge={t('dashboard.last30Days')}
+          badge={t('dashboard.thisWeek')}
           badgeVariant="primary"
           className="lg:col-span-2"
         >
@@ -358,7 +357,14 @@ export default function Dashboard() {
               <EmptyState message={t('dashboard.noData')} />
             ) : (
               <ResponsiveContainer width="100%" height="100%">
-                <BarChart data={attendanceOverviewData} barGap={3} barCategoryGap="22%" margin={{ top: 8, right: 8, left: -12, bottom: 0 }}>                  <CartesianGrid strokeDasharray="3 3" stroke="#F1F5F9" vertical={false} />
+                <BarChart
+                  data={attendanceOverviewData}
+                  barSize={30}
+                  barGap={2}
+                  barCategoryGap="20%"
+                  margin={{ top: 8, right: 8, left: -12, bottom: 0 }}
+                >
+                  <CartesianGrid strokeDasharray="3 3" stroke="#F1F5F9" vertical={false} />
                   <XAxis dataKey="day" axisLine={false} tickLine={false} tick={{ fontSize: 12, fill: '#64748B' }} />
                   <YAxis axisLine={false} tickLine={false} tick={{ fontSize: 12, fill: '#64748B' }} />
                   <Tooltip content={<CustomTooltip />} />
@@ -387,7 +393,9 @@ export default function Dashboard() {
                     cy="45%"
                     innerRadius={70}
                     outerRadius={105}
-                    paddingAngle={3}
+                    paddingAngle={2}
+                    stroke="#FFFFFF"
+                    strokeWidth={2}
                     dataKey="value"
                   >
                     {leaveStatisticsData.map((entry, index) => (
