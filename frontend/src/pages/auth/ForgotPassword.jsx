@@ -1,40 +1,10 @@
 import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { Briefcase, Mail, ArrowLeft, CheckCircle2, AlertCircle, Lock, Eye, EyeOff } from 'lucide-react';
+import { Briefcase, Mail, ArrowLeft, CheckCircle2, AlertCircle } from 'lucide-react';
 import Button from '../../components/ui/Button';
 import Input from '../../components/ui/Input';
+import PasswordInput from '../../components/ui/PasswordInput';
 import { authService } from '../../services/api';
-
-function PasswordField({ label, value, onChange, autoComplete }) {
-  const [show, setShow] = useState(false);
-  return (
-    <div>
-      <label className="text-[13px] font-medium text-gray-700 mb-1.5 block">{label}</label>
-      <div className="relative">
-        <Lock className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
-        <input
-          type={show ? 'text' : 'password'}
-          value={value}
-          onChange={onChange}
-          placeholder="••••••••"
-          autoComplete={autoComplete}
-          required
-          minLength={8}
-          className="w-full pl-10 pr-10 py-2.5 text-sm rounded-xl border border-gray-200 bg-white transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-blue-500/15 focus:border-blue-500 placeholder:text-gray-400 hover:border-gray-300"
-        />
-        <button
-          type="button"
-          onClick={() => setShow((v) => !v)}
-          className="absolute right-2.5 top-1/2 -translate-y-1/2 p-1 rounded-md text-gray-400 hover:text-gray-600 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-blue-500/30"
-          aria-label={show ? 'Hide password' : 'Show password'}
-          aria-pressed={show}
-        >
-          {show ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
-        </button>
-      </div>
-    </div>
-  );
-}
 
 // The server is the authority on how long the code lives (auth.password_reset_code.ttl); this is only
 // the fallback used before the first response arrives.
@@ -215,8 +185,8 @@ export default function ForgotPassword() {
                 For <span className="font-medium text-gray-700">{email}</span>. When your password is ready, we email a 6-digit code to confirm it is really you.
               </p>
               <form onSubmit={handleNewPassword} className="space-y-4">
-                <PasswordField label="New Password" value={password} onChange={(e) => setPassword(e.target.value)} autoComplete="new-password" />
-                <PasswordField label="Confirm New Password" value={confirmPassword} onChange={(e) => setConfirmPassword(e.target.value)} autoComplete="new-password" />
+                <PasswordInput label="New Password" value={password} onChange={(e) => setPassword(e.target.value)} autoComplete="new-password" minLength={8} />
+                <PasswordInput label="Confirm New Password" value={confirmPassword} onChange={(e) => setConfirmPassword(e.target.value)} autoComplete="new-password" minLength={8} />
                 <p className="text-xs text-gray-400 mt-1">
                   Password must be at least 8 characters long and include an uppercase letter, a lowercase letter, and a number.
                 </p>

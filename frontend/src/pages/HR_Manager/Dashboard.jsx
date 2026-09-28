@@ -345,10 +345,15 @@ export default function Dashboard() {
         </div>
       </div>
 
-      {/* Row 2: Charts - Attendance Overview + Leave Statistics */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        <ChartCard title={t('dashboard.attendanceOverview')} badge={t('dashboard.last30Days')} badgeVariant="primary">
-          <div className="h-[320px]">
+      {/* Row 2: Charts - Attendance Overview (2/3, the wide one) + Leave Statistics */}
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        <ChartCard
+          title={t('dashboard.attendanceOverview')}
+          badge={t('dashboard.last30Days')}
+          badgeVariant="primary"
+          className="lg:col-span-2"
+        >
+          <div className="h-[340px]">
             {!hasAttendanceData ? (
               <EmptyState message={t('dashboard.noData')} />
             ) : (
@@ -370,7 +375,7 @@ export default function Dashboard() {
         </ChartCard>
 
         <ChartCard title={t('dashboard.leaveStatistics')} badge={t('dashboard.allTypes')} badgeVariant="info">
-          <div className="h-[320px]">
+          <div className="h-[340px]">
             {leaveStatisticsData.length === 0 ? (
               <EmptyState message={t('dashboard.noData')} />
             ) : (

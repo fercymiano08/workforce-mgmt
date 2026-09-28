@@ -275,7 +275,7 @@ export default function EmployeeDashboard() {
       {/* Attendance chart + My Schedule */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         <ChartCard title="My Attendance" badge="Last 10 days" badgeVariant="primary" className="lg:col-span-2">
-          <div className="h-[320px]">
+          <div className="h-[240px]">
             {!hasChartData ? (
               <EmptyChart message="Your hours chart fills in as you clock in and out from the attendance terminal." />
             ) : (
@@ -293,8 +293,9 @@ export default function EmployeeDashboard() {
           </div>
         </ChartCard>
 
-        {/* My Schedule - fixed height, scrollable list */}
-        <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden flex flex-col h-[416px]">
+        {/* My Schedule - fixed height, scrollable list. 336px matches the My Attendance card beside
+            it (240px chart + header + padding) so the two cards line up on the row. */}
+        <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden flex flex-col h-[336px]">
           <div className="flex items-center justify-between gap-3 px-6 pt-6 pb-3 flex-shrink-0">
             <h3 className="text-base font-semibold text-gray-900 tracking-tight">My Shift</h3>
             <Badge variant="primary" size="sm">{mySchedule.length} shifts</Badge>
