@@ -515,8 +515,12 @@ class KioskController extends Controller
     {
         $employee = Employee::find($employeeId);
 
-        if (! $employee && preg_match('/^\d+$/', (string) $employeeId)) {
-            $employee = Employee::where('id', 'like', '%'.$employeeId)->first();
+        if (! $employee && preg_match('/^\d{8,}$/', (string) $employeeId)) {
+            // A bare number plate (the digits of EMP20260001) is accepted, but only as the whole
+            // number, anchored to the EMP prefix. A shorter fragment used to suffix-match, so "2"
+            // resolved to whichever employee happened to finish their ID with a 2 - at a kiosk the
+            // next tap is a clock-in, so a wrong face on the wrong record is the whole failure.
+            $employee = Employee::where('id', 'like', 'EMP%'.$employeeId)->first();
         }
 
         if (! $employee) {

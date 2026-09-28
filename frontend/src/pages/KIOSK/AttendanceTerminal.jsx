@@ -89,6 +89,23 @@ function LiveClock({ timezone }) {
   );
 }
 
+// Employee ID entry rules. Employee IDs are a fixed code (EMP + 8 digits), and a fragment must
+// never resolve to a person: this used to accept any employee whose ID *ended with* the digits typed
+// so far, so a single keystroke like 2 jumped straight to whoever happened to finish their ID with 2.
+// At a kiosk the next tap is a clock-in, so that is a wrong-face-on-the-wrong-record failure. Accept
+// the whole code, or the whole number part of it, and nothing shorter. Partial input is only ever
+// used to say how much is still missing, never to choose someone.
+const normalizeId = (value) => String(value ?? '').trim().toUpperCase();
+
+// Every complete form an ID can be typed as: the full code, and the digits on their own.
+const idForms = (id) => {
+  const full = normalizeId(id);
+  const digits = full.replace(/\D/g, '');
+  return digits && digits !== full ? [full, digits] : [full];
+};
+
+const matchesFullId = (id, typed) => idForms(id).includes(normalizeId(typed));
+
 export default function AttendanceTerminal() {
   const navigate = useNavigate();
   const { toast } = useToast();
@@ -297,36 +314,50 @@ export default function AttendanceTerminal() {
   }, [enabled, unlocked, lockPin]);
 
   // --- Employee ID entry: exact full-ID match only (no partial search) ----
-  // Local directory first; if it was never loaded (a one-shot fetch that can
-  // fail silently) the server-side fallbacks below keep ID entry working.
+  // Employee IDs are a fixed code (EMP + 8 digits). A fragment must never resolve to a person.
+  // This used to accept any employee whose ID *ended with* the digits typed so far, so a single
+  // keystroke like 2 jumped straight to whoever happened to finish their ID with 2 - a real risk at
+  // a kiosk, where the next tap is a clock-in. Accept the whole code, or the whole number part of
+  // it, and nothing shorter. Partial input is only ever used to say how much is still missing.
+  // The local directory is consulted first; if it was never loaded (a one-shot fetch that can fail
+  // silently) the server-side fallbacks below keep ID entry working.
+
+  // Shortest number part across the directory, used to decide when input is long enough to be worth
+  // asking the server about. Falls back to 8 (the current number-part width) before the directory
+  // has loaded.
+  const minIdLength = useMemo(() => {
+    const lengths = directory
+      .map((e) => idForms(e.id)[1].length)
+      .filter((n) => Number.isFinite(n) && n > 0);
+    return lengths.length ? Math.min(...lengths) : 8;
+  }, [directory]);
 
   const entryInfo = useMemo(() => {
     if (phase !== 'entry') return null;
-    const trimmed = query.trim().toLowerCase();
-    if (!trimmed) return null;
-    const matches = directory.filter((e) => {
-      const id = String(e.id).toLowerCase();
-      return id.startsWith(trimmed) || (/^\d+$/.test(trimmed) && id.endsWith(trimmed));
-    });
-    if (matches.length === 0) {
-      return trimmed.length >= 4 ? { type: 'none' } : null;
-    }
-    const exact = matches.find((e) => String(e.id).toLowerCase() === trimmed);
-    if (exact) return { type: 'match' };
-    if (matches.length === 1) {
-      return { type: 'more', remaining: matches[0].id.length - trimmed.length };
-    }
+    const typed = normalizeId(query);
+    if (!typed) return null;
+    if (directory.some((e) => matchesFullId(e.id, typed))) return { type: 'match' };
+
+    // How much is still missing, counting only complete IDs this could still become. Never used to
+    // choose an employee.
+    const remaining = directory
+      .map((e) => idForms(e.id))
+      .flat()
+      .filter((form) => form.length > typed.length && form.startsWith(typed))
+      .map((form) => form.length - typed.length);
+    if (remaining.length) return { type: 'more', remaining: Math.min(...remaining) };
+
+    // Only call it unknown once there is enough typed to be a whole ID that simply is not in the
+    // directory; before that the employee is still mid-code.
+    if (typed.length >= minIdLength) return { type: 'none' };
     return { type: 'keep' };
-  }, [query, phase, directory]);
+  }, [query, phase, directory, minIdLength]);
 
   const exactMatch = useMemo(() => {
     if (phase !== 'entry') return null;
-    const trimmed = query.trim().toLowerCase();
-    if (!trimmed) return null;
-    return directory.find((e) => {
-      const id = String(e.id).toLowerCase();
-      return id === trimmed || (/^\d+$/.test(trimmed) && id.endsWith(trimmed));
-    }) || null;
+    const typed = normalizeId(query);
+    if (!typed) return null;
+    return directory.find((e) => matchesFullId(e.id, typed)) || null;
   }, [query, phase, directory]);
 
   // Self-heal: if the one-shot directory fetch failed at mount, retry it the
@@ -339,22 +370,19 @@ export default function AttendanceTerminal() {
     }
   }, [phase, directory.length]);
 
-  // Server-side fallback: when the local directory has no match, ask the
-  // backend directly so a valid full ID (or numeric suffix) still resolves.
+  // Server-side fallback: when the local directory has no match, ask the backend directly so a
+  // valid full ID still resolves. Gated on the input being at least a whole number long, for the
+  // same reason the local match is: a short fragment must never be sent as if it were a person.
   useEffect(() => {
-    const trimmed = query.trim().toLowerCase();
-    if (phase !== 'entry' || trimmed.length < 6) return;
-    const local = directory.find((e) => {
-      const id = String(e.id).toLowerCase();
-      return id === trimmed || (/^\d+$/.test(trimmed) && id.endsWith(trimmed));
-    });
-    if (local) return;
+    const typed = normalizeId(query);
+    if (phase !== 'entry' || typed.length < minIdLength) return;
+    if (directory.some((e) => matchesFullId(e.id, typed))) return;
 
     let cancelled = false;
     const timer = setTimeout(async () => {
       setServerCheckPending(true);
       try {
-        const found = await kioskService.getEmployee(trimmed.toUpperCase());
+        const found = await kioskService.getEmployee(typed);
         if (!cancelled && found) {
           setCandidate(found);
           setPhase('confirm');
@@ -371,7 +399,7 @@ export default function AttendanceTerminal() {
       clearTimeout(timer);
       setServerCheckPending(false);
     };
-  }, [query, phase, directory]);
+  }, [query, phase, directory, minIdLength]);
 
   if (exactMatch && !candidate) {
     setCandidate(exactMatch);
