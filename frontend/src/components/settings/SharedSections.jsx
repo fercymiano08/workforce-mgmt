@@ -1,6 +1,7 @@
 import { useState } from 'react';
-import { Lock, Eye, EyeOff, Key, Info, Check, Circle, Mail } from 'lucide-react';
+import { Lock, Key, Info, Check, Circle, Mail } from 'lucide-react';
 import Card, { CardHeader, CardTitle, CardDescription } from '../ui/Card';
+import PasswordInput from '../ui/PasswordInput';
 import Button from '../ui/Button';
 import { authService } from '../../services/api';
 import { useToast } from '../../context/ToastContext';
@@ -24,9 +25,6 @@ export function InfoNote({ children }) {
 export function AccountSection() {
   const { toast } = useToast();
   const { user } = useAuth();
-  const [showCurrentPass, setShowCurrentPass] = useState(false);
-  const [showNewPass, setShowNewPass] = useState(false);
-  const [showConfirmPass, setShowConfirmPass] = useState(false);
   const [passwords, setPasswords] = useState({ current: '', newPass: '', confirm: '' });
   const [saving, setSaving] = useState(false);
 
@@ -78,27 +76,18 @@ export function AccountSection() {
     { label: 'Matches the confirmation', ok: passwords.newPass.length > 0 && passwords.newPass === passwords.confirm },
   ];
 
-  const passwordField = (label, field, show, setShow, icon) => (
-    <div className="flex flex-col gap-1.5">
-      <label className="text-sm font-medium text-gray-700">{label}</label>
-      <div className="relative">
-        <div className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400">{icon}</div>
-        <input
-          type={show ? 'text' : 'password'}
-          value={passwords[field]}
-          onChange={(e) => handlePassChange(field, e.target.value)}
-          className="w-full px-3.5 py-2.5 pl-10 pr-10 text-sm rounded-xl border border-gray-200 bg-white transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 placeholder:text-gray-400"
-          placeholder={label}
-        />
-        <button
-          type="button"
-          onClick={() => setShow((s) => !s)}
-          className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
-        >
-          {show ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
-        </button>
-      </div>
-    </div>
+  // PasswordInput owns the reveal toggle, so a hand-rolled type={show ? 'text' : 'password'} here
+  // would put Chrome's own reveal button on top of ours again - the duplicated eye.
+  const passwordField = (label, field, icon) => (
+    <PasswordInput
+      label={label}
+      value={passwords[field]}
+      onChange={(e) => handlePassChange(field, e.target.value)}
+      placeholder={label}
+      autoComplete="new-password"
+      minLength={8}
+      icon={icon}
+    />
   );
 
   return (
@@ -119,9 +108,9 @@ export function AccountSection() {
         )}
 
         <div className="space-y-4 max-w-md">
-          {passwordField('Current Password', 'current', showCurrentPass, setShowCurrentPass, <Lock className="w-4 h-4" />)}
-          {passwordField('New Password', 'newPass', showNewPass, setShowNewPass, <Key className="w-4 h-4" />)}
-          {passwordField('Confirm New Password', 'confirm', showConfirmPass, setShowConfirmPass, <Key className="w-4 h-4" />)}
+          {passwordField('Current Password', 'current', Lock)}
+          {passwordField('New Password', 'newPass', Key)}
+          {passwordField('Confirm New Password', 'confirm', Key)}
           <ul className="grid grid-cols-1 sm:grid-cols-2 gap-x-4 gap-y-1.5 pt-1">
             {requirements.map((r) => (
               <li key={r.label} className={`flex items-center gap-1.5 text-xs ${r.ok ? 'text-emerald-600' : 'text-gray-400'}`}>

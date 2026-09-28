@@ -1,11 +1,12 @@
 import { useState, useEffect, useCallback } from 'react';
 import { preloadFaceModels } from '../../services/faceMatchService';
 import { useNavigate } from 'react-router-dom';
-import { UserPlus, ArrowLeft, ScanFace, CheckCircle2, RefreshCw, Camera, Eye, EyeOff, User, Phone, Briefcase, KeyRound } from 'lucide-react';
+import { UserPlus, ArrowLeft, ScanFace, CheckCircle2, RefreshCw, Camera, User, Phone, Briefcase, KeyRound } from 'lucide-react';
 import Card from '../../components/ui/Card';
 import Button from '../../components/ui/Button';
 import Badge from '../../components/ui/Badge';
 import Input, { Select, Textarea } from '../../components/ui/Input';
+import PasswordInput from '../../components/ui/PasswordInput';
 import PhoneInput from '../../components/ui/PhoneInput';
 import FaceCaptureModal from '../../components/employees/FaceCaptureModal';
 import { departmentService, employeeService, roleService } from '../../services/api';
@@ -98,8 +99,6 @@ export default function EmployeeRegistration() {
   // while the admin is still filling in the form, so the scan itself is fast.
   useEffect(() => { preloadFaceModels(); }, []);
   const [isFaceModalOpen, setIsFaceModalOpen] = useState(false);
-  const [showPassword, setShowPassword] = useState(false);
-  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [createdEmployee, setCreatedEmployee] = useState(null);
 
   const setField = (field, value) => {
@@ -500,45 +499,25 @@ export default function EmployeeRegistration() {
               subtitle="Credentials the employee will use to sign in."
             />
             <div className="mt-5 grid grid-cols-1 md:grid-cols-2 gap-4">
-              <Input
+              <PasswordInput
                 label="Account Password"
-                type={showPassword ? 'text' : 'password'}
                 required
                 value={formData.password}
                 onChange={(e) => setField('password', e.target.value)}
                 error={formErrors.password}
                 placeholder="At least 8 characters"
-                rightElement={
-                  <button
-                    type="button"
-                    tabIndex={-1}
-                    onClick={() => setShowPassword((s) => !s)}
-                    className="p-1 pointer-coarse:p-2 text-gray-400 hover:text-gray-600 transition-colors"
-                    aria-label={showPassword ? 'Hide password' : 'Show password'}
-                  >
-                    {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
-                  </button>
-                }
+                autoComplete="new-password"
+                minLength={8}
               />
-              <Input
+              <PasswordInput
                 label="Confirm Password"
-                type={showConfirmPassword ? 'text' : 'password'}
                 required
                 value={formData.confirmPassword}
                 onChange={(e) => setField('confirmPassword', e.target.value)}
                 error={formErrors.confirmPassword}
                 placeholder="Re-enter password"
-                rightElement={
-                  <button
-                    type="button"
-                    tabIndex={-1}
-                    onClick={() => setShowConfirmPassword((s) => !s)}
-                    className="p-1 pointer-coarse:p-2 text-gray-400 hover:text-gray-600 transition-colors"
-                    aria-label={showConfirmPassword ? 'Hide password' : 'Show password'}
-                  >
-                    {showConfirmPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
-                  </button>
-                }
+                autoComplete="new-password"
+                minLength={8}
               />
             </div>
             <div className="mt-3 flex items-start gap-2 rounded-xl bg-gray-50 border border-gray-100 px-4 py-3">

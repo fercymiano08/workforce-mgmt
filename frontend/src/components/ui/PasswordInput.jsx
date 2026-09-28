@@ -21,6 +21,8 @@ export default function PasswordInput({
   autoComplete = 'current-password',
   minLength,
   required = true,
+  error,
+  icon: Icon = Lock,
   className,
 }) {
   const [visible, setVisible] = useState(false);
@@ -37,7 +39,7 @@ export default function PasswordInput({
         </label>
       )}
       <div className="relative">
-        <Lock className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 pointer-events-none" />
+        <Icon className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 pointer-events-none" />
         <input
           type={inputType}
           value={value}
@@ -50,7 +52,10 @@ export default function PasswordInput({
           autoCapitalize="none"
           autoCorrect="off"
           style={maskStyle}
-          className="w-full pl-10 pr-10 py-2.5 text-sm rounded-xl border border-gray-200 bg-white transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-blue-500/15 focus:border-blue-500 placeholder:text-gray-400 hover:border-gray-300"
+          className={clsx(
+            'w-full pl-10 pr-10 py-2.5 text-sm rounded-xl border border-gray-200 bg-white transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-blue-500/15 focus:border-blue-500 placeholder:text-gray-400 hover:border-gray-300',
+            error && 'border-red-300 focus:ring-red-500/15 focus:border-red-500'
+          )}
         />
         <button
           type="button"
@@ -62,6 +67,7 @@ export default function PasswordInput({
           {visible ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
         </button>
       </div>
+      {error && <p className="text-xs text-red-500 font-medium">{error}</p>}
     </div>
   );
 }
