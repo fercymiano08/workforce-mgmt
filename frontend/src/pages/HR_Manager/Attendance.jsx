@@ -8,6 +8,7 @@ import Badge from '../../components/ui/Badge';
 import Avatar from '../../components/ui/Avatar';
 import SearchBar from '../../components/ui/SearchBar';
 import Modal from '../../components/ui/Modal';
+import TableShell from '../../components/ui/TableShell';
 import Input, { Select, Textarea } from '../../components/ui/Input';
 import { Pagination } from '../../components/ui/Table';
 import { SkeletonTable } from '../../components/ui/LoadingSkeleton';
@@ -73,6 +74,7 @@ export default function Attendance() {
   const [overtimeStatusFilter, setOvertimeStatusFilter] = useState('All');
   const [, setOvertimePage] = useState(1);
   const [selectedOvertime, setSelectedOvertime] = useState(null);
+  const [deciding, setDeciding] = useState(false);
   const [approveHours, setApproveHours] = useState('');
   const [approveComment, setApproveComment] = useState('');
   const [selectedOtIds, setSelectedOtIds] = useState(new Set());
@@ -123,6 +125,7 @@ export default function Attendance() {
   const openOvertime = (req) => {
     setApproveHours(req.expectedHours ? String(req.expectedHours) : '');
     setApproveComment(req.comments || '');
+    setDeciding(false);
     setSelectedOvertime(req);
   };
 
@@ -237,6 +240,12 @@ export default function Attendance() {
 
   const handleOvertimeDecision = async (status) => {
     if (!selectedOvertime) return;
+    // <Button> already locks itself when the click returns a promise, so a second tap on Approve
+    // cannot double up. Approve and Reject are two separate buttons, though, and one of each is two
+    // different decisions on the same request - the second would land last and quietly win. This is
+    // what makes the pair a decision rather than two.
+    if (deciding) return;
+    setDeciding(true);
     const approvedBy = user ? `${user.firstName} ${user.lastName}` : 'HR Admin';
     const approvedHours = status === 'Approved' && approveHours !== '' ? Number(approveHours) : undefined;
     const comments = approveComment.trim() || undefined;
@@ -250,6 +259,8 @@ export default function Attendance() {
       );
     } catch {
       toast.error('Error', `Failed to ${status === 'Approved' ? 'approve' : status === 'Pending' ? 'reopen' : 'reject'} overtime request.`);
+    } finally {
+      setDeciding(false);
     }
   };
 
@@ -405,7 +416,7 @@ export default function Attendance() {
           </div>
         </div>
 
-        <div className="overflow-x-auto">
+        <TableShell minWidth="min-w-[760px]">
           <table className="w-full">
             <thead>
               <tr className="border-b border-gray-100 bg-gray-50/50">
@@ -461,7 +472,7 @@ export default function Attendance() {
               )}
             </tbody>
           </table>
-        </div>
+        </TableShell>
 
         {totalPages > 1 && (
           <div className="px-4 border-t border-gray-100">
@@ -551,7 +562,7 @@ export default function Attendance() {
                     )}
                   </div>
                   {!collapsed && (
-                    <div className="overflow-x-auto">
+                    <TableShell minWidth="min-w-[560px]">
                       <table className="w-full">
                         <thead>
                           <tr className="border-b border-gray-100 bg-gray-50/30">
@@ -592,13 +603,20 @@ export default function Attendance() {
                               <td className="px-4 py-3.5 text-sm text-gray-600 max-w-xs truncate">{r.reason}</td>
                               <td className="px-4 py-3.5"><Badge variant={overtimeStatusVariant[r.status] || 'default'} dot size="xs">{r.status}</Badge></td>
                               <td className="px-4 py-3.5">
-                                <button onClick={() => openOvertime(r)} className="text-xs font-semibold text-blue-600 hover:text-blue-700 transition-colors">View</button>
+                                {/* The only way into an overtime decision, so it cannot be a bare word
+                                    with no padding around it - on a phone that is not a tap target. */}
+                                <button
+                                  onClick={() => openOvertime(r)}
+                                  className="-m-1.5 px-1.5 py-1.5 pointer-coarse:px-2.5 pointer-coarse:py-2.5 rounded-lg text-xs font-semibold text-blue-600 hover:text-blue-700 hover:bg-blue-50 transition-colors"
+                                >
+                                  View
+                                </button>
                               </td>
                             </tr>
                           ))}
                         </tbody>
                       </table>
-                    </div>
+                    </TableShell>
                   )}
                 </div>
               );
@@ -682,7 +700,7 @@ export default function Attendance() {
         ) : filteredEarly.length === 0 ? (
           <div className="px-4 py-12 text-center text-gray-400 text-sm">No early clock-outs to review</div>
         ) : (
-          <div className="overflow-x-auto">
+          <TableShell minWidth="min-w-[760px]">
             <table className="w-full">
               <thead>
                 <tr className="border-b border-gray-100 bg-gray-50/30">
@@ -737,7 +755,7 @@ export default function Attendance() {
                 })}
               </tbody>
             </table>
-          </div>
+          </TableShell>
         )}
       </Card>
       </>
@@ -854,8 +872,8 @@ export default function Attendance() {
                   rows={2}
                 />
                 <div className="flex justify-end gap-3 pt-4 border-t border-gray-100">
-                  <Button variant="dangerOutline" icon={X} onClick={() => handleOvertimeDecision('Rejected')}>Reject</Button>
-                  <Button variant="success" icon={Check} onClick={() => handleOvertimeDecision('Approved')}>Approve</Button>
+                  <Button variant="dangerOutline" icon={X} disabled={deciding} onClick={() => handleOvertimeDecision('Rejected')}>Reject</Button>
+                  <Button variant="success" icon={Check} loading={deciding} onClick={() => handleOvertimeDecision('Approved')}>Approve</Button>
                 </div>
               </>
             )}

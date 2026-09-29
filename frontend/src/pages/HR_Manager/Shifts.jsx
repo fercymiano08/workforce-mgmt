@@ -451,7 +451,7 @@ export default function Shifts() {
         </div>
 
         <div className="flex-1 overflow-y-auto overflow-x-auto">
-          <table className="w-full">
+          <table className="w-full min-w-[720px]">
             <thead>
               <tr>
                 {['Employee', 'Department', 'Shift', 'Date', 'Start', 'End', 'Status', ''].map(h => (

@@ -11,6 +11,7 @@ import SearchBar from '../../components/ui/SearchBar';
 import { Select, Textarea } from '../../components/ui/Input';
 import Modal from '../../components/ui/Modal';
 import { Pagination } from '../../components/ui/Table';
+import TableShell from '../../components/ui/TableShell';
 import { leaveService, employeeService } from '../../services/api';
 import { formatDate } from '../../utils/helpers';
 import { useToast } from '../../context/ToastContext';
@@ -268,7 +269,7 @@ export default function LeaveManagement() {
 
       {/* Table */}
       <Card padding={false}>
-        <div className="overflow-x-auto">
+        <TableShell minWidth="min-w-[720px]">
           <table className="w-full">
             <thead>
               <tr className="border-b border-gray-100 bg-gray-50/50">
@@ -358,7 +359,7 @@ export default function LeaveManagement() {
               )}
             </tbody>
           </table>
-        </div>
+        </TableShell>
 
         {totalPages > 1 && (
           <div className="px-4 border-t border-gray-100">

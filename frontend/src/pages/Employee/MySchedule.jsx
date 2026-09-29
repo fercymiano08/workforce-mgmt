@@ -261,7 +261,7 @@ export default function MySchedule() {
             </div>
 
             <div className="flex-1 overflow-y-auto overflow-x-auto">
-              <table className="w-full">
+              <table className="w-full min-w-[720px]">
                 <thead>
                   <tr>
                     {['Date', 'Day', 'Shift Type', 'Start Time', 'End Time', 'Status', 'Work Location'].map((h) => (

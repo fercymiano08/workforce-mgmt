@@ -34,7 +34,10 @@ const balanceStyle = {
 };
 const fallbackBalanceStyle = { bar: 'bg-gray-500', track: 'bg-gray-100', text: 'text-gray-600' };
 
-const statusVariant = { Active: 'success', Inactive: 'default', 'On Leave': 'warning', Terminated: 'danger' };
+// Same map HR sees, so a person and their administrator are never told two different things about
+// the same account. "Inactive" is red here because it is the state an administrator acts on, and a
+// grey badge on one screen and a red one on the other is how a status quietly stops being trusted.
+const statusVariant = { Active: 'success', 'On Leave': 'warning', Inactive: 'danger', Terminated: 'danger' };
 
 function tenure(hireDate) {
   if (!hireDate) return null;

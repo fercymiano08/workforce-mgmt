@@ -16,6 +16,7 @@ import PhoneInput from '../../components/ui/PhoneInput';
 import SearchBar from '../../components/ui/SearchBar';
 import Modal from '../../components/ui/Modal';
 import { Pagination } from '../../components/ui/Table';
+import TableShell from '../../components/ui/TableShell';
 import EmptyState from '../../components/ui/EmptyState';
 import { SkeletonPage } from '../../components/ui/LoadingSkeleton';
 import FaceCaptureModal from '../../components/employees/FaceCaptureModal';
@@ -26,7 +27,9 @@ import useUrlFilter from '../../hooks/useUrlFilter';
 import { todayKey } from '../../utils/today';
 import { useToast } from '../../context/ToastContext';
 
-const statusVariant = { Active: 'success', 'On Leave': 'warning', Inactive: 'danger' };
+// One status vocabulary for the whole app. A status missing from here falls back to the neutral
+// badge rather than breaking, but it should be added here so every screen reads the same.
+const statusVariant = { Active: 'success', 'On Leave': 'warning', Inactive: 'danger', Terminated: 'danger' };
 
 const genders = ['Male', 'Female'];
 const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
@@ -542,7 +545,7 @@ export default function Employees() {
             </div>
           </div>
         ) : (
-          <div className="overflow-x-auto">
+          <TableShell minWidth="min-w-[860px]">
             <table className="w-full">
               <thead>
                 <tr className="border-b border-gray-100 bg-gray-50/50">
@@ -580,7 +583,7 @@ export default function Employees() {
                 ))}
               </tbody>
             </table>
-          </div>
+          </TableShell>
         )}
 
         {totalPages > 1 && !loading && (

@@ -10,6 +10,7 @@ import { kioskService } from '../../services/kioskService';
 import Badge from '../../components/ui/Badge';
 import Button from '../../components/ui/Button';
 import Modal from '../../components/ui/Modal';
+import TableShell from '../../components/ui/TableShell';
 import KpiCard from '../../components/dashboard/KpiCard';
 import EmptyState from '../../components/ui/EmptyState';
 import { SkeletonCard, SkeletonTable } from '../../components/ui/LoadingSkeleton';
@@ -312,8 +313,9 @@ export default function MyTimesheet() {
       <div>
         <h2 className="text-sm font-semibold text-gray-900 uppercase tracking-wide mb-3">Timesheet History</h2>
         {records.length ? (
-          <div className="overflow-hidden rounded-xl border border-gray-100">
-            <table className="w-full text-sm">
+          <div className="rounded-xl border border-gray-100 overflow-hidden">
+            <TableShell minWidth="min-w-[560px]">
+              <table className="w-full text-sm">
               <thead>
                 <tr className="bg-gray-50 text-left text-[11px] uppercase tracking-wide text-gray-400">
                   <th className="py-2.5 px-4 font-semibold">Week</th>
@@ -352,6 +354,7 @@ export default function MyTimesheet() {
                 ))}
               </tbody>
             </table>
+            </TableShell>
           </div>
         ) : (
           <EmptyState
@@ -420,8 +423,9 @@ export default function MyTimesheet() {
             {/* Daily Timesheet List */}
             <div>
               <p className="text-sm font-semibold text-gray-900 mb-3">Daily Timesheet</p>
-              <div className="overflow-hidden rounded-xl border border-gray-100">
-                <table className="w-full text-sm">
+                <div className="rounded-xl border border-gray-100 overflow-hidden">
+                  <TableShell minWidth="min-w-[560px]">
+                    <table className="w-full text-sm">
                   <thead>
                     <tr className="bg-gray-50 text-left text-[11px] uppercase tracking-wide text-gray-400">
                       <th className="py-2.5 px-4 font-semibold">Date</th>
@@ -490,6 +494,7 @@ export default function MyTimesheet() {
                     </tr>
                   </tfoot>
                 </table>
+                </TableShell>
               </div>
             </div>
 

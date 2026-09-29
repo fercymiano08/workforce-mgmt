@@ -7,6 +7,7 @@ import {
 import Badge from '../../components/ui/Badge';
 import Button from '../../components/ui/Button';
 import Modal from '../../components/ui/Modal';
+import TableShell from '../../components/ui/TableShell';
 import Input, { Select, Textarea } from '../../components/ui/Input';
 import { SkeletonTable } from '../../components/ui/LoadingSkeleton';
 import KpiCard from '../../components/dashboard/KpiCard';
@@ -359,7 +360,7 @@ export default function MyAttendance() {
             <p className="text-sm text-gray-400">No overtime requests yet.</p>
           </div>
         ) : (
-          <div className="overflow-x-auto">
+          <TableShell minWidth="min-w-[760px]">
             <table className="w-full">
               <thead>
                 <tr className="border-t border-b border-gray-100">
@@ -413,7 +414,7 @@ export default function MyAttendance() {
                 ))}
               </tbody>
             </table>
-          </div>
+          </TableShell>
         )}
       </div>
         </>
@@ -437,7 +438,7 @@ export default function MyAttendance() {
                 <h3 className="text-[15px] font-semibold text-gray-900">My Early Clock Outs</h3>
                 <p className="text-xs text-gray-500 mt-0.5">Each early punch is recorded immediately; HR classifies the shortfall after the fact</p>
               </div>
-              <div className="overflow-x-auto">
+              <TableShell minWidth="min-w-[560px]">
                 <table className="w-full">
                   <thead>
                     <tr className="border-b border-gray-100 bg-gray-50/50">
@@ -496,7 +497,7 @@ export default function MyAttendance() {
                     })}
                   </tbody>
                 </table>
-              </div>
+              </TableShell>
             </div>
           )}
         </>
@@ -528,8 +529,9 @@ export default function MyAttendance() {
           </div>
         </div>
 
-        <div className="flex-1 overflow-auto">
-          <table className="w-full">
+        <div className="flex-1 min-h-0 overflow-y-auto">
+          <TableShell minWidth="min-w-[760px]" bleed={false}>
+            <table className="w-full">
             <thead>
               <tr className="border-b border-gray-100">
                 {['Date', 'Day', 'Clock In', 'Clock Out', 'Regular Hours', 'Overtime', 'Total Hours', 'Status', 'Location'].map((h) => (
@@ -613,6 +615,7 @@ export default function MyAttendance() {
               )}
             </tbody>
           </table>
+          </TableShell>
         </div>
       </div>
         </>

@@ -58,7 +58,10 @@ export default function Modal({ isOpen, onClose, title, children, size = 'md', c
           <h2 className="text-lg font-semibold text-gray-900">{title}</h2>
           <button
             onClick={onClose}
-            className="p-2 rounded-xl hover:bg-gray-100 transition-colors text-gray-400 hover:text-gray-600"
+            aria-label="Close"
+            // A dismiss control is the one button nobody aims carefully - it gets hit in a hurry,
+            // often one-handed, so on a touch screen it gets the full 44px rather than a 36px box.
+            className="p-2 pointer-coarse:p-3 -m-1 pointer-coarse:-m-0.5 rounded-xl hover:bg-gray-100 transition-colors text-gray-400 hover:text-gray-600"
           >
             <X className="w-5 h-5" />
           </button>

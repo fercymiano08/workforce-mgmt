@@ -47,6 +47,10 @@ const leaveBalanceStyle = {
 
 const leaveTypes = ['Vacation', 'Sick', 'Emergency', 'Special', 'Funeral', 'Unpaid'];
 
+// A leave type the server adds later still has to render as a real row rather than a blank space,
+// so both the phone list and the card grid fall back to the same neutral styling.
+const fallbackBalanceStyle = { text: 'text-indigo-600', barBg: 'bg-indigo-100', color: 'bg-indigo-500', icon: Calendar, iconBg: 'bg-gray-50' };
+
 // Days a leave costs: the server's working-day count when it has one, else the inclusive calendar count.
 const countDays = (start, end, counted) => {
   if (counted != null) return Number(counted);
@@ -280,42 +284,93 @@ export default function Leave() {
       {/* Leave Balances */}
       <div>
         <h2 className="text-sm font-semibold text-gray-900 uppercase tracking-wide mb-3">Leave Balances</h2>
-        <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
-          {balancesLoading && leaveBalances.length === 0 ? (
-            // Loading placeholders instead of rendering nothing - an empty
-            // grid here is what made the section look like it was
-            // disappearing and reappearing on every visit to this page.
-            Array.from({ length: 4 }).map((_, i) => (
-              <Card key={i} className="overflow-hidden">
-                <div className="skeleton w-10 h-10 rounded-xl mb-3" />
-                <div className="skeleton h-3 w-20 rounded" />
-                <div className="skeleton h-7 w-16 rounded mt-2" />
-                <div className="skeleton h-1.5 w-full rounded-full mt-3" />
-                <div className="skeleton h-3 w-24 rounded mt-1.5" />
-              </Card>
-            ))
-          ) : leaveBalances.map((b) => {
-            const style = leaveBalanceStyle[b.type] || { text: 'text-indigo-600', barBg: 'bg-indigo-100', color: 'bg-indigo-500', icon: Calendar, iconBg: 'bg-indigo-50' };
-            const pct = b.total > 0 ? Math.max((b.remaining / b.total) * 100, 0) : 0;
-            return (
-              <Card key={b.type} className="overflow-hidden" hover>
-                <div className={`w-10 h-10 rounded-xl flex items-center justify-center mb-3 ${style.iconBg || 'bg-gray-50'}`}>
-                  {style.icon && <style.icon className={`w-5 h-5 ${style.text}`} />}
-                </div>
-                <p className={`text-xs font-semibold uppercase tracking-wide ${style.text}`}>{b.type} Leave</p>
-                <p className="text-2xl font-bold text-gray-900 mt-2">
-                  {b.remaining} <span className="text-sm font-normal text-gray-400">/ {b.total}</span>
-                </p>
-                <div className={`w-full h-1.5 rounded-full mt-3 ${style.barBg}`}>
-                  <div className={`h-1.5 rounded-full transition-all duration-500 ${style.color}`} style={{ width: `${pct}%` }} />
-                </div>
-                <p className="text-xs text-gray-500 mt-1.5">{b.remaining === 0 ? 'All used' : `${b.remaining} days remaining`}</p>
-              </Card>
-            );
-          })}
-        </div>
-      </div>
 
+        {/* Two shapes on purpose. Six tall cards is a whole screen of balances and nothing else,
+            which pushed the requests people actually came to read below the fold on a phone. The
+            phone gets one dense row per leave type; from sm up it is the same grid of cards. */}
+        {balancesLoading && leaveBalances.length === 0 ? (
+          <>
+            {/* Loading placeholders instead of rendering nothing - an empty
+                grid here is what made the section look like it was
+                disappearing and reappearing on every visit to this page. */}
+            <div className="sm:hidden rounded-2xl border border-gray-100 bg-white divide-y divide-gray-100 overflow-hidden">
+              {Array.from({ length: 6 }).map((_, i) => (
+                <div key={i} className="flex items-center gap-3 px-3.5 py-3">
+                  <div className="skeleton w-9 h-9 rounded-lg flex-shrink-0" />
+                  <div className="flex-1 space-y-1.5">
+                    <div className="skeleton h-3 w-20 rounded" />
+                    <div className="skeleton h-1.5 w-full rounded-full" />
+                  </div>
+                </div>
+              ))}
+            </div>
+            <div className="hidden sm:grid grid-cols-2 sm:grid-cols-4 gap-4">
+              {Array.from({ length: 4 }).map((_, i) => (
+                <Card key={i} className="overflow-hidden">
+                  <div className="skeleton w-10 h-10 rounded-xl mb-3" />
+                  <div className="skeleton h-3 w-20 rounded" />
+                  <div className="skeleton h-7 w-16 rounded mt-2" />
+                  <div className="skeleton h-1.5 w-full rounded-full mt-3" />
+                  <div className="skeleton h-3 w-24 rounded mt-1.5" />
+                </Card>
+              ))}
+            </div>
+          </>
+        ) : (
+          <>
+            <div className="sm:hidden rounded-2xl border border-gray-100 bg-white divide-y divide-gray-100 overflow-hidden">
+              {leaveBalances.map((b) => {
+                const style = leaveBalanceStyle[b.type] || fallbackBalanceStyle;
+                const pct = b.total > 0 ? Math.max((b.remaining / b.total) * 100, 0) : 0;
+                return (
+                  <div key={b.type} className="flex items-center gap-3 px-3.5 py-3">
+                    <div className={`w-9 h-9 rounded-lg flex items-center justify-center flex-shrink-0 ${style.iconBg}`}>
+                      <style.icon className={`w-4 h-4 ${style.text}`} />
+                    </div>
+                    <div className="min-w-0 flex-1">
+                      <div className="flex items-baseline justify-between gap-3">
+                        <p className={`text-[13px] font-semibold truncate ${style.text}`}>{b.type}</p>
+                        <p className="text-base font-bold text-gray-900 whitespace-nowrap">
+                          {b.remaining}
+                          <span className="text-xs font-normal text-gray-400"> / {b.total}</span>
+                        </p>
+                      </div>
+                      <div className={`w-full h-1.5 rounded-full mt-1.5 ${style.barBg}`}>
+                        <div className={`h-1.5 rounded-full transition-all duration-500 ${style.color}`} style={{ width: `${pct}%` }} />
+                      </div>
+                      {/* The bar and the number both say what is left; this is the half nobody could
+                          see - what it was actually spent on. */}
+                      <p className="text-[11px] text-gray-500 mt-1">{b.used} of {b.total} days used</p>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+
+            <div className="hidden sm:grid grid-cols-2 sm:grid-cols-4 gap-4">
+              {leaveBalances.map((b) => {
+                const style = leaveBalanceStyle[b.type] || fallbackBalanceStyle;
+                const pct = b.total > 0 ? Math.max((b.remaining / b.total) * 100, 0) : 0;
+                return (
+                  <Card key={b.type} className="overflow-hidden" hover>
+                    <div className={`w-10 h-10 rounded-xl flex items-center justify-center mb-3 ${style.iconBg || 'bg-gray-50'}`}>
+                      {style.icon && <style.icon className={`w-5 h-5 ${style.text}`} />}
+                    </div>
+                    <p className={`text-xs font-semibold uppercase tracking-wide ${style.text}`}>{b.type} Leave</p>
+                    <p className="text-2xl font-bold text-gray-900 mt-2">
+                      {b.remaining} <span className="text-sm font-normal text-gray-400">/ {b.total}</span>
+                    </p>
+                    <div className={`w-full h-1.5 rounded-full mt-3 ${style.barBg}`}>
+                      <div className={`h-1.5 rounded-full transition-all duration-500 ${style.color}`} style={{ width: `${pct}%` }} />
+                    </div>
+                    <p className="text-xs text-gray-500 mt-1.5">{b.remaining === 0 ? 'All used' : `${b.remaining} days remaining`}</p>
+                  </Card>
+                );
+              })}
+            </div>
+          </>
+        )}
+      </div>
       {/* My Requests */}
       <div>
         <h2 className="text-sm font-semibold text-gray-900 uppercase tracking-wide mb-3">My Requests</h2>

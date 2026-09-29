@@ -1,12 +1,21 @@
 import clsx from 'clsx';
-import { forwardRef } from 'react';
+import { forwardRef, useId } from 'react';
 import { ChevronDown } from 'lucide-react';
 
+// py-2.5 with text-sm gives a 40px field, which is a little under the 44px a fingertip reliably
+// lands on. A touch device gets 2px more vertical padding, and a mouse keeps the tighter box - the
+// difference is invisible on a desktop and the difference between a miss and a hit on a phone.
+const FIELD = 'w-full px-3.5 py-2.5 pointer-coarse:py-3 text-sm rounded-xl border border-gray-200 bg-white transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-blue-500/15 focus:border-blue-500 placeholder:text-gray-400 hover:border-gray-300';
+
 const Input = forwardRef(({ label, error, icon: Icon, rightElement, className, containerClass, ...props }, ref) => {
+  // A label wired to its field is a second, much larger tap target for the same focus, which is
+  // what a phone actually needs. Anything passing its own id keeps it.
+  const generated = useId();
+  const fieldId = props.id || generated;
   return (
     <div className={clsx('flex flex-col gap-1.5', containerClass)}>
       {label && (
-        <label className="text-[13px] font-medium text-gray-700">
+        <label htmlFor={fieldId} className="text-[13px] font-medium text-gray-700">
           {label}
           {props.required && <span className="text-red-500 ml-0.5">*</span>}
         </label>
@@ -19,8 +28,9 @@ const Input = forwardRef(({ label, error, icon: Icon, rightElement, className, c
         )}
         <input
           ref={ref}
+          id={fieldId}
           className={clsx(
-            'w-full px-3.5 py-2.5 text-sm rounded-xl border border-gray-200 bg-white transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-blue-500/15 focus:border-blue-500 placeholder:text-gray-400 hover:border-gray-300',
+            FIELD,
             Icon && 'pl-10',
             rightElement && 'pr-10',
             error && 'border-red-300 focus:ring-red-500/15 focus:border-red-500',
@@ -43,18 +53,22 @@ Input.displayName = 'Input';
 export default Input;
 
 export function Select({ label, error, children, className, containerClass, ...props }) {
+  const generated = useId();
+  const fieldId = props.id || generated;
   return (
     <div className={clsx('flex flex-col gap-1.5', containerClass)}>
       {label && (
-        <label className="text-[13px] font-medium text-gray-700">
+        <label htmlFor={fieldId} className="text-[13px] font-medium text-gray-700">
           {label}
           {props.required && <span className="text-red-500 ml-0.5">*</span>}
         </label>
       )}
       <div className="relative">
         <select
+          id={fieldId}
           className={clsx(
-            'w-full px-3.5 py-2.5 pr-10 text-sm rounded-xl border border-gray-200 bg-white transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-blue-500/15 focus:border-blue-500 appearance-none hover:border-gray-300',
+            FIELD,
+            'pr-10 appearance-none',
             error && 'border-red-300 focus:ring-red-500/15 focus:border-red-500',
             className
           )}
@@ -70,17 +84,21 @@ export function Select({ label, error, children, className, containerClass, ...p
 }
 
 export function Textarea({ label, error, className, containerClass, ...props }) {
+  const generated = useId();
+  const fieldId = props.id || generated;
   return (
     <div className={clsx('flex flex-col gap-1.5', containerClass)}>
       {label && (
-        <label className="text-[13px] font-medium text-gray-700">
+        <label htmlFor={fieldId} className="text-[13px] font-medium text-gray-700">
           {label}
           {props.required && <span className="text-red-500 ml-0.5">*</span>}
         </label>
       )}
       <textarea
+        id={fieldId}
         className={clsx(
-          'w-full px-3.5 py-2.5 text-sm rounded-xl border border-gray-200 bg-white transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-blue-500/15 focus:border-blue-500 placeholder:text-gray-400 resize-none hover:border-gray-300',
+          FIELD,
+          'resize-none',
           error && 'border-red-300 focus:ring-red-500/15 focus:border-red-500',
           className
         )}

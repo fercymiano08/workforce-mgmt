@@ -13,6 +13,7 @@ import SearchBar from '../../components/ui/SearchBar';
 import { Select } from '../../components/ui/Input';
 import Modal from '../../components/ui/Modal';
 import { Pagination } from '../../components/ui/Table';
+import TableShell from '../../components/ui/TableShell';
 import {
   useTimesheets, useTimesheetsLoaded, approveTimesheet, rejectTimesheet, reopenTimesheet, exportTimesheetsForPayroll,
   refreshTimesheets,
@@ -531,7 +532,7 @@ function AdminTimesheetsView() {
           </div>
         </div>
 
-        <div className="overflow-x-auto">
+        <TableShell minWidth="min-w-[720px]">
           <table className="w-full">
             <thead>
               <tr className="border-b border-gray-100 bg-gray-50/60">
@@ -618,7 +619,7 @@ function AdminTimesheetsView() {
               })}
             </tbody>
           </table>
-        </div>
+        </TableShell>
 
         <div className="flex items-center justify-between gap-3 flex-wrap px-4 py-3 border-t border-gray-100 bg-gray-50/50">
           <div className="flex items-center gap-3">
