@@ -15,7 +15,7 @@ import Button from '../../components/ui/Button';
 import KpiCard from '../../components/dashboard/KpiCard';
 import ChartCard from '../../components/dashboard/ChartCard';
 import { leaveTypeChartColor } from '../../constants/leaveTypes';
-import { SkeletonPage } from '../../components/ui/LoadingSkeleton';
+import { SkeletonLine, SkeletonPage } from '../../components/ui/LoadingSkeleton';
 import { useLanguage } from '../../context/LanguageContext';
 import { useAuth } from '../../context/AuthContext';
 import { useToast } from '../../context/ToastContext';
@@ -98,43 +98,77 @@ export default function Dashboard() {
   const [shiftDefs, setShiftDefs] = useState([]);
   const [analytics, setAnalytics] = useState(null);
   // Things waiting for a decision from the administrator, other than leave (which is already loaded)
-  const [waiting, setWaiting] = useState({ overtime: 0, early: 0, timesheets: 0 });
+  // These arrive on their own now, so they start as null - "unknown" - rather than 0. Saying zero when
+  // the answer has not loaded yet would tell the administrator they are all caught up when they are not.
+  const [waiting, setWaiting] = useState({ overtime: null, early: null, timesheets: null });
+  const [pendingReady, setPendingReady] = useState(false);
 
   useEffect(() => {
     let active = true;
-    Promise.all([
-      employeeService.getAll(),
-      // The dashboard only shows today and the last 7 days.
+
+    // Every endpoint now loads on its own instead of inside one Promise.all. They used to be all or
+    // nothing: the page drew nothing until the slowest of nine requests came back, so one slow call
+    // held a skeleton over data that had already arrived. Each result paints the moment it lands.
+    const load = (request, apply, fallback) => {
+      request
+        .then((res) => { if (active) apply(res); })
+        .catch(() => { if (active && fallback !== undefined) apply(fallback); });
+    };
+
+    // The five number cards and the week chart are all worked out from these two, so they are what
+    // decides when the skeleton lifts. Everything else fills in behind them.
+    let criticalLeft = 2;
+    const criticalDone = () => {
+      criticalLeft -= 1;
+      if (active && criticalLeft === 0) setLoading(false);
+    };
+
+    // The "needs your attention" counts are shown together, so they are held back until all four are
+    // known. Showing a half-filled panel that quietly claims there is nothing to do is worse than a
+    // brief placeholder.
+    let pendingLeft = 4;
+    const pendingDone = () => {
+      pendingLeft -= 1;
+      if (active && pendingLeft === 0) setPendingReady(true);
+    };
+
+    load(employeeService.getAll(), (res) => { setEmployees(res); criticalDone(); }, []);
+    // The dashboard only shows today and the last 7 days.
+    load(
       attendanceService.getAll({ from: (() => { const d = kioskService.now(); d.setDate(d.getDate() - 35); return toDateKey(d); })() }),
-      leaveService.getAll(),
-      shiftService.getSchedules(),
-      shiftService.getAllShifts(),
-      analyticsService.getAll().catch(() => null),
-      overtimeService.getAll().catch(() => []),
-      attendanceService.getEarlyClockOutsPending().catch(() => []),
-      timesheetService.getAll().catch(() => []),
-    ])
-      .then(([emps, att, lvs, scheds, defs, an, ot, early, sheets]) => {
-        if (!active) return;
-        setEmployees(emps);
-        setAttendance(att);
-        setLeaves(lvs);
-        setSchedules(scheds);
-        setShiftDefs(defs);
-        setAnalytics(an);
-        setWaiting({
-          overtime: (ot || []).filter((r) => r.status === 'Pending').length,
-          // /attendance/early-outs/pending returns an object of the form { pending: N }
-          early: Number(early && typeof early === 'object' ? early.pending ?? 0 : 0) || 0,
-          timesheets: (sheets || []).filter((s) => s.status === 'Submitted').length,
-        });
-      })
-      .catch(() => {
-        // leave states empty; empty states will render
-      })
-      .finally(() => {
-        if (active) setLoading(false);
-      });
+      (res) => { setAttendance(res); criticalDone(); },
+      []
+    );
+    load(leaveService.getAll(), (res) => { setLeaves(res); pendingDone(); }, []);
+    load(shiftService.getSchedules(), setSchedules, []);
+    load(shiftService.getAllShifts(), setShiftDefs, []);
+
+    load(analyticsService.getAll(), setAnalytics, null);
+    load(
+      overtimeService.getAll(),
+      (ot) => {
+        setWaiting((w) => ({ ...w, overtime: (ot || []).filter((r) => r.status === 'Pending').length }));
+        pendingDone();
+      },
+      () => pendingDone()
+    );
+    // /attendance/early-outs/pending returns an object of the form { pending: N }
+    load(
+      attendanceService.getEarlyClockOutsPending(),
+      (early) => {
+        setWaiting((w) => ({ ...w, early: Number(early && typeof early === 'object' ? early.pending ?? 0 : 0) || 0 }));
+        pendingDone();
+      },
+      () => pendingDone()
+    );
+    load(
+      timesheetService.getAll(),
+      (sheets) => {
+        setWaiting((w) => ({ ...w, timesheets: (sheets || []).filter((s) => s.status === 'Submitted').length }));
+        pendingDone();
+      },
+      () => pendingDone()
+    );
 
     // Fire-and-forget: checks for no-shows, un-closed-out attendance, and
     // staffing shortage risk, and creates notifications for any found. Never
@@ -286,7 +320,7 @@ export default function Dashboard() {
 
   const kpiCards = [
     { labelKey: 'dashboard.totalEmployees', value: kpi.totalEmployees, icon: Users, change: null, accent: 'blue' },
-    { labelKey: 'dashboard.presentToday', value: kpi.presentToday, icon: CheckCircle, change: null, accent: 'emerald', subtext: `${kpi.onTimeToday} on time · ${kpi.lateToday} late` },
+    { labelKey: 'dashboard.presentToday', value: kpi.presentToday, icon: CheckCircle, change: null, accent: 'emerald', subtext: `${kpi.onTimeToday} on time Â· ${kpi.lateToday} late` },
     { labelKey: 'dashboard.inactive', value: kpi.inactive, icon: UserX, change: null, accent: 'amber' },
     { labelKey: 'dashboard.lateEmployees', value: kpi.lateToday, icon: Clock, change: null, accent: 'red' },
     { labelKey: 'dashboard.attendanceRate', value: `${kpi.attendanceRate}%`, icon: TrendingUp, change: null, accent: 'purple' },
@@ -331,27 +365,39 @@ export default function Dashboard() {
       <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-5">
         <div className="flex items-center justify-between mb-3">
           <h2 className="text-base font-semibold text-gray-900">Needs your attention</h2>
-          {attention.every((a) => a.count === 0) && (
+          {pendingReady && attention.every((a) => a.count === 0) && (
             <span className="flex items-center gap-1.5 text-sm text-emerald-600 font-medium"><CheckCircle2 className="w-4 h-4" /> Nothing is waiting for you</span>
           )}
         </div>
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
-          {attention.map((a) => (
+          {attention.map((a) => {
+            const unknown = !pendingReady;
+            return (
             <Link
               key={a.label}
               to={a.to}
-              className={`group flex items-center gap-3 rounded-xl border px-4 py-3 transition-colors ${a.count > 0 ? 'border-amber-200 bg-amber-50/60 hover:bg-amber-50' : 'border-gray-100 bg-gray-50/50 hover:bg-gray-50'}`}
+              className={`group flex items-center gap-3 rounded-xl border px-4 py-3 transition-colors ${unknown ? 'border-gray-100 bg-gray-50/50' : a.count > 0 ? 'border-amber-200 bg-amber-50/60 hover:bg-amber-50' : 'border-gray-100 bg-gray-50/50 hover:bg-gray-50'}`}
             >
-              <div className={`w-10 h-10 rounded-xl flex items-center justify-center shrink-0 ${a.count > 0 ? 'bg-amber-100 text-amber-700' : 'bg-gray-100 text-gray-400'}`}>
+              <div className={`w-10 h-10 rounded-xl flex items-center justify-center shrink-0 ${!unknown && a.count > 0 ? 'bg-amber-100 text-amber-700' : 'bg-gray-100 text-gray-400'}`}>
                 <a.icon className="w-5 h-5" />
               </div>
               <div className="min-w-0">
-                <p className={`text-2xl font-bold leading-none ${a.count > 0 ? 'text-gray-900' : 'text-gray-400'}`}>{a.count}</p>
-                <p className="text-xs text-gray-500 mt-1 truncate">{a.label}</p>
+                {unknown ? (
+                  <>
+                    <SkeletonLine className="h-6 w-8" />
+                    <SkeletonLine className="h-3 w-24 mt-2" />
+                  </>
+                ) : (
+                  <>
+                    <p className={`text-2xl font-bold leading-none ${a.count > 0 ? 'text-gray-900' : 'text-gray-400'}`}>{a.count}</p>
+                    <p className="text-xs text-gray-500 mt-1 truncate">{a.label}</p>
+                  </>
+                )}
               </div>
               <ArrowRight className="w-4 h-4 ml-auto text-gray-300 group-hover:text-blue-500 transition-colors" />
             </Link>
-          ))}
+            );
+          })}
         </div>
       </div>
 

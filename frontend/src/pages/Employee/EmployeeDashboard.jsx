@@ -17,7 +17,7 @@ import Avatar from '../../components/ui/Avatar';
 import Button from '../../components/ui/Button';
 import KpiCard from '../../components/dashboard/KpiCard';
 import ChartCard from '../../components/dashboard/ChartCard';
-import { SkeletonPage } from '../../components/ui/LoadingSkeleton';
+import { SkeletonList, SkeletonPage } from '../../components/ui/LoadingSkeleton';
 import useApiData from '../../hooks/useApiData';
 import { attendanceService, leaveService, shiftService, timesheetService } from '../../services/api';
 import { formatDate, formatTime } from '../../utils/helpers';
@@ -100,13 +100,17 @@ export default function EmployeeDashboard() {
     () => leaveService.getBalances(employeeId),
     [employeeId]
   );
-  const { data: earlyOuts, loading: loadingEarlyOuts } = useApiData(
+  const { data: earlyOuts } = useApiData(
     () => attendanceService.getEarlyClockOutsByEmployee(employeeId),
     [employeeId]
   );
 
-  const dashboardLoading =
-    loadingAttendance || loadingLeaves || loadingSchedules || loadingShiftDefs || loadingTimesheets || loadingBalances || loadingEarlyOuts;
+  // Only the two requests the numbers are actually worked out from hold the page. The rest of the
+  // sections below draw themselves as their own data lands, instead of the whole screen waiting on
+  // whichever of the seven requests happened to be slowest.
+  const dashboardLoading = loadingAttendance || loadingBalances;
+  const scheduleLoading = loadingSchedules || loadingShiftDefs;
+  const leaveListLoading = loadingLeaves;
 
   const myAttendance = useMemo(
     () => (attendanceRecords || [])
@@ -285,7 +289,9 @@ export default function EmployeeDashboard() {
         <KpiCard label="Hours This Week" value={`${hoursThisWeek.toFixed(1)}h`} icon={Hourglass} accent="blue" />
         <KpiCard label="Leave Balance" value={`${leaveBalance} days`} icon={CalendarCheck} accent="emerald" />
         <KpiCard label="Attendance Rate" value={`${attendanceRate}%`} icon={CalendarDays} accent="purple" />
-        <KpiCard label="Pending Requests" value={pendingCount} icon={Clock} accent="amber" />
+        {/* The count is worked out from leave and timesheet requests, so it stays a dash until both
+            have answered rather than briefly claiming there is nothing pending. */}
+        <KpiCard label="Pending Requests" value={loadingLeaves || loadingTimesheets ? '—' : pendingCount} icon={Clock} accent="amber" />
       </div>
 
       {/* Early Leave Today */}
@@ -322,6 +328,10 @@ export default function EmployeeDashboard() {
             <Badge variant="primary" size="sm">{mySchedule.length} shifts</Badge>
           </div>
           <div className="divide-y divide-gray-100/70 flex-1 overflow-y-auto overflow-x-hidden">
+            {scheduleLoading ? (
+              <div className="px-6 py-4"><SkeletonList rows={3} /></div>
+            ) : (
+              <>
             {mySchedule.length === 0 && (
               <p className="px-6 py-6 text-sm text-gray-400 text-center">No upcoming shifts scheduled.</p>
             )}
@@ -339,9 +349,11 @@ export default function EmployeeDashboard() {
                   <Badge variant={entry.status === 'Completed' ? 'success' : 'primary'} size="xs">
                     {entry.status}
                   </Badge>
-                </div>
-              );
+              </div>
+            );
             })}
+              </>
+            )}
           </div>
         </div>
       </div>
@@ -399,6 +411,10 @@ export default function EmployeeDashboard() {
             </div>
           </div>
           <div className="divide-y divide-gray-100/70 flex-1 overflow-y-auto overflow-x-hidden">
+            {leaveListLoading ? (
+              <div className="px-6 py-4"><SkeletonList rows={4} /></div>
+            ) : (
+              <>
             {myLeaves.length === 0 && (
               <p className="px-6 py-6 text-sm text-gray-400 text-center">You haven't filed any leave requests yet.</p>
             )}
@@ -417,6 +433,8 @@ export default function EmployeeDashboard() {
                 <Badge variant={statusBadge(leave.status)} size="sm" className="shrink-0">{leave.status}</Badge>
               </div>
             ))}
+              </>
+            )}
           </div>
         </div>
 

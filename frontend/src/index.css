@@ -130,9 +130,12 @@
   50% { opacity: 0.7; }
 }
 
+/* The highlight is a separate layer moved with transform, never a repaint of the box itself.
+   The old version animated background-position, which forces a repaint of every skeleton element on
+   every frame - and a loading page can show ~50 of them at once, which made phones stutter badly. */
 @keyframes shimmer {
-  0% { background-position: 200% 0; }
-  100% { background-position: -200% 0; }
+  0% { transform: translateX(-100%); }
+  100% { transform: translateX(100%); }
 }
 
 @keyframes scanline {
@@ -202,15 +205,36 @@
 /* Component layer: reusable component classes */
 @layer components {
   .skeleton {
-    background: linear-gradient(90deg, #e2e8f0 25%, #f1f5f9 50%, #e2e8f0 75%);
-    background-size: 200% 100%;
-    animation: shimmer 1.5s ease-in-out infinite;
+    position: relative;
+    overflow: hidden;
+    background: #e2e8f0;
     border-radius: 8px;
   }
 
+  .skeleton::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    transform: translateX(-100%);
+    background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.7) 50%, transparent);
+    animation: shimmer 1.5s ease-in-out infinite;
+    will-change: transform;
+  }
+
   .dark .skeleton {
-    background: linear-gradient(90deg, #1e293b 25%, #273449 50%, #1e293b 75%);
-    background-size: 200% 100%;
+    background: #1e293b;
+  }
+
+  .dark .skeleton::after {
+    background: linear-gradient(90deg, transparent, rgba(148, 163, 184, 0.16) 50%, transparent);
+  }
+
+  /* Someone who has asked their phone not to animate things gets a plain grey block instead. */
+  @media (prefers-reduced-motion: reduce) {
+    .skeleton::after {
+      animation: none;
+      transform: none;
+    }
   }
 }
 
