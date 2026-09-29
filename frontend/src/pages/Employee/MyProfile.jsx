@@ -4,6 +4,7 @@ import { Link } from 'react-router-dom';
 import {
   User, Camera, Save, Smartphone, MapPin, Phone, Briefcase, IdCard, CalendarDays,
   ScanFace, CheckCircle2, AlertCircle, ChevronRight, Trash2, Heart, GraduationCap, Sparkles,
+  ShieldCheck,
 } from 'lucide-react';
 import Card, { CardHeader, CardTitle, CardDescription } from '../../components/ui/Card';
 import Button from '../../components/ui/Button';
@@ -11,9 +12,11 @@ import Badge from '../../components/ui/Badge';
 import Input from '../../components/ui/Input';
 import PhoneInput from '../../components/ui/PhoneInput';
 import Avatar from '../../components/ui/Avatar';
+import Modal from '../../components/ui/Modal';
 import { leaveService, profileService } from '../../services/api';
 import { formatDate } from '../../utils/helpers';
 import { useToast } from '../../context/ToastContext';
+import { useAuth } from '../../context/AuthContext';
 import useApiData from '../../hooks/useApiData';
 
 // Must match the server's rule (EmployeeController::updateMyProfile): digits with an optional
@@ -97,6 +100,53 @@ export default function MyProfile() {
   const [errors, setErrors] = useState({});
   const [photoError, setPhotoError] = useState('');
   const [saving, setSaving] = useState(false);
+
+  // Sign-in verification. The flag lives on the account rather than the employee record, so it is
+  // read from the session user the auth context already holds - no extra request on page load.
+  const { user, setTwoFactor } = useAuth();
+  const twoFactorEnabled = !!user?.twoFactorEnabled;
+  const [twoFactorSaving, setTwoFactorSaving] = useState(false);
+  const [twoFactorOffOpen, setTwoFactorOffOpen] = useState(false);
+  const [twoFactorPassword, setTwoFactorPassword] = useState('');
+  const [twoFactorError, setTwoFactorError] = useState('');
+
+  const turnTwoFactorOn = async () => {
+    setTwoFactorSaving(true);
+    try {
+      await setTwoFactor(true);
+      toast.success('Sign-in verification is on', 'You will be emailed a code the next time you sign in.');
+    } catch (err) {
+      toast.error('Could not turn that on', err.response?.data?.message || 'Please try again in a moment.');
+    } finally {
+      setTwoFactorSaving(false);
+    }
+  };
+
+  const openTwoFactorOff = () => {
+    setTwoFactorPassword('');
+    setTwoFactorError('');
+    setTwoFactorOffOpen(true);
+  };
+
+  const turnTwoFactorOff = async () => {
+    if (!twoFactorPassword) {
+      setTwoFactorError('Please enter your password.');
+      return;
+    }
+    setTwoFactorSaving(true);
+    setTwoFactorError('');
+    try {
+      await setTwoFactor(false, twoFactorPassword);
+      setTwoFactorOffOpen(false);
+      setTwoFactorPassword('');
+      toast.success('Sign-in verification is off', 'Your password alone will sign you in again.');
+    } catch (err) {
+      // The server answers a wrong password with a plain message, so it can be shown as-is.
+      setTwoFactorError(err.response?.data?.message || 'That did not work. Please try again.');
+    } finally {
+      setTwoFactorSaving(false);
+    }
+  };
 
   const original = useMemo(() => ({
     phone: employee?.phone || '',
@@ -423,6 +473,48 @@ export default function MyProfile() {
           )}
         </Card>
 
+        {/* Two-factor sign-in */}
+        <Card>
+          <CardHeader>
+            <div className="flex items-start gap-3">
+              <ShieldCheck className="w-5 h-5 text-gray-400 mt-0.5" />
+              <div>
+                <CardTitle>Sign-In Verification</CardTitle>
+                <CardDescription>Ask for a code by email when you sign in</CardDescription>
+              </div>
+            </div>
+          </CardHeader>
+
+          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+            <div className="min-w-0">
+              <p className="text-sm font-semibold text-gray-900">
+                {twoFactorEnabled ? 'On' : 'Off'}
+              </p>
+              <p className="text-xs text-gray-500 mt-1">
+                {twoFactorEnabled
+                  ? 'After your password, we email you a six digit code to confirm it is you.'
+                  : 'Your password alone signs you in. Turning this on means a stolen password is not enough on its own.'}
+              </p>
+            </div>
+            <Button
+              type="button"
+              variant={twoFactorEnabled ? 'outline' : 'primary'}
+              size="sm"
+              className="shrink-0 self-start sm:self-auto"
+              loading={twoFactorSaving}
+              onClick={() => (twoFactorEnabled ? openTwoFactorOff() : turnTwoFactorOn(true))}
+            >
+              {twoFactorEnabled ? 'Turn off' : 'Turn on'}
+            </Button>
+          </div>
+
+          {twoFactorEnabled && (
+            <p className="text-xs text-amber-700 bg-amber-50 border border-amber-100 rounded-xl px-3.5 py-2.5 mt-4">
+              Turning this off asks for your password, so nobody using an already signed-in browser can quietly remove it.
+            </p>
+          )}
+        </Card>
+
         {/* Face registration */}
         <Card>
           <CardHeader>
@@ -439,10 +531,10 @@ export default function MyProfile() {
               <CheckCircle2 className="w-5 h-5 text-emerald-600 mt-0.5 shrink-0" />
               <div>
                 <p className="text-sm font-semibold text-emerald-800">Your face is registered</p>
-                <p className="text-xs text-emerald-700 mt-0.5">
-                  {employee.faceRegisteredAt ? `Registered on ${formatDate(employee.faceRegisteredAt)}. ` : ''}
-                  If the kiosk stops recognizing you, ask the Workforce Admin to register your face again.
-                </p>
+                    <p className="text-xs text-emerald-700 mt-0.5">
+                      {employee.faceRegisteredAt ? `Registered on ${formatDate(employee.faceRegisteredAt)}. ` : ''}
+                      If the kiosk stops recognizing you, ask the Workforce Admin to register your face again.
+                    </p>
               </div>
             </div>
           ) : (
@@ -491,6 +583,35 @@ export default function MyProfile() {
       <p className="text-xs text-gray-400 text-center">
         Looking for your password or display options? They're in <Link to="/settings" className="font-semibold text-blue-600 hover:text-blue-700">Settings</Link>.
       </p>
+
+      {/* Turning the second step off needs the current password: whoever is asking is already holding a
+          session, and this is exactly the setting a borrowed browser should not be able to change. */}
+      <Modal isOpen={twoFactorOffOpen} onClose={() => setTwoFactorOffOpen(false)} title="Turn off sign-in verification" size="sm">
+        <p className="text-sm text-gray-600">
+          Your password alone will sign you in again. Enter it to confirm.
+        </p>
+
+        <div className="mt-4">
+          <Input
+            label="Current password"
+            type="password"
+            autoComplete="current-password"
+            value={twoFactorPassword}
+            onChange={(e) => { setTwoFactorPassword(e.target.value); setTwoFactorError(''); }}
+            error={twoFactorError}
+            autoFocus
+          />
+        </div>
+
+        <div className="flex justify-end gap-2 mt-5">
+          <Button type="button" variant="outline" size="sm" onClick={() => setTwoFactorOffOpen(false)} disabled={twoFactorSaving}>
+            Keep it on
+          </Button>
+          <Button type="button" variant="danger" size="sm" onClick={turnTwoFactorOff} loading={twoFactorSaving}>
+            Turn off
+          </Button>
+        </div>
+      </Modal>
 
       {/* Unsaved-changes bar */}
       {dirty && createPortal(

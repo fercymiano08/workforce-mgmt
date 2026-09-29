@@ -21,6 +21,16 @@ class User extends Authenticatable
     ];
 
     /**
+     * Two-factor sign-in is written through its own endpoint rather than being fillable, on purpose.
+     * `$fillable` is what a request's input is filtered through, and this flag decides whether a
+     * sign-in needs a second step - if it were fillable, any endpoint that saves a user from request
+     * input could switch it off. The dedicated handler below is the only thing that may change it.
+     */
+    protected $attributes = [
+        'two_factor_enabled' => false,
+    ];
+
+    /**
      * Get the attributes that should be cast.
      *
      * @return array<string, string>
@@ -55,6 +65,9 @@ class User extends Authenticatable
             'avatarSeed' => $this->avatar_seed,
             'avatar' => $this->linkedEmployee()?->avatar,
             'permissions' => $this->permissions(),
+            // So the profile can show the real current state of the switch on first paint, rather
+            // than a default that is only corrected once a request comes back.
+            'twoFactorEnabled' => (bool) $this->two_factor_enabled,
         ];
     }
 

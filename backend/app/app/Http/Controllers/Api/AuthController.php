@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
 use App\Jobs\SendPasswordResetCode;
+use App\Jobs\SendTwoFactorCode;
 use App\Models\User;
 use App\Services\AuditLogger;
 use Illuminate\Http\JsonResponse;
@@ -38,6 +39,13 @@ class AuthController extends Controller
     private const MAX_LOGIN_ATTEMPTS = 5;
 
     private const LOGIN_LOCKOUT_SECONDS = 60;
+
+    /**
+     * Guesses allowed against a single sign-in code. A six digit code is a million possibilities, so
+     * this is not about stopping a determined attacker with the challenge id - it is about making an
+     * unbounded online guess impractical before the code expires on its own.
+     */
+    private const TWO_FACTOR_MAX_ATTEMPTS = 5;
 
     public function login(Request $request): JsonResponse
     {
@@ -81,6 +89,33 @@ class AuthController extends Controller
         RateLimiter::clear($lockoutKey);
         $this->audit('auth.login', (string) $user->id, $user, ['ip' => $request->ip()]);
 
+        // An account with two-factor sign-in stops here. The password was right, but no token is
+        // issued yet: the browser is told a code is on its way and comes back with it. Creating the
+        // token before the code is proven would mean the second step is decorative.
+        if ($user->two_factor_enabled) {
+            return $this->beginTwoFactorChallenge($request, $user);
+        }
+
+        return $this->issueSession($request, $user);
+    }
+
+    /**
+     * How long a sign-in code stays valid, in seconds. Shorter than a password reset on purpose: this
+     * code completes a sign-in that has already passed the password check, so it is worth less time
+     * on the wire than a code that also lets someone choose a new password.
+     */
+    private function twoFactorTtl(): int
+    {
+        return max(60, (int) config('auth.two_factor.ttl', 180));
+    }
+
+    /**
+     * Issues the token, with the same idle timeout rule as an ordinary sign-in. Everything after a
+     * successful password check funnels through here, so the timeout and the response shape cannot
+     * drift apart between the two-factor path and the ordinary one.
+     */
+    private function issueSession(Request $request, User $user): JsonResponse
+    {
         // Employees get a login that runs out after EMPLOYEE_IDLE_SECONDS without activity; the server enforces it,
         // so closing the laptop lid or leaving the tab open cannot leave a session alive.
         $timeout = $user->role === 'Employee' ? self::EMPLOYEE_IDLE_SECONDS : null;
@@ -91,6 +126,149 @@ class AuthController extends Controller
             'user' => $user->toApiArray(),
             'token' => $token,
             'sessionTimeoutSeconds' => $timeout,
+        ]);
+    }
+
+    /**
+     * Writes the sign-in challenge and mails the code.
+     *
+     * The row is written before the response, and the mail is dispatched after it, for the same
+     * reason the password-reset flow does it that way: the code has to exist before the browser is
+     * told to wait for one, and the slow part (SMTP) has no business happening in front of the
+     * countdown.
+     *
+     * Any previous challenge for the account is replaced, so a code that arrives after the person has
+     * already retried cannot be used to complete the attempt they abandoned.
+     */
+    private function beginTwoFactorChallenge(Request $request, User $user): JsonResponse
+    {
+        $ttl = $this->twoFactorTtl();
+        $otp = str_pad((string) random_int(0, 999999), 6, '0', STR_PAD_LEFT);
+
+        DB::table('two_factor_challenges')->where('user_id', $user->id)->delete();
+        DB::table('two_factor_challenges')->insert([
+            'user_id' => $user->id,
+            'code' => Hash::make($otp),
+            'attempts' => 0,
+            'expires_at' => now()->addSeconds($ttl),
+            'created_at' => now(),
+            'updated_at' => now(),
+        ]);
+
+        $this->audit('auth.two_factor_challenge_issued', (string) $user->id, $user, ['ip' => $request->ip()]);
+
+        SendTwoFactorCode::dispatchAfterResponse(
+            $user->email,
+            $user->firstName ?? $user->name ?? 'there',
+            $otp,
+            max(1, (int) round($ttl / 60)),
+        );
+
+        return response()->json([
+            'success' => true,
+            'requiresTwoFactor' => true,
+            // Which account is being finished. It is the address that was just successfully
+            // authenticated, so echoing it back leaks nothing an attacker did not already have.
+            'email' => $user->email,
+            'expiresIn' => $ttl,
+        ]);
+    }
+
+    /**
+     * The second step: finish a sign-in with the emailed code.
+     *
+     * Every failure - no challenge, expired, wrong code, too many guesses - returns the same message.
+     * Distinguishing them would tell an attacker holding only a challenge id whether the code they
+     * guessed was close, or whether the challenge had simply run out.
+     */
+    public function verifyTwoFactor(Request $request): JsonResponse
+    {
+        $request->validate([
+            'email' => 'required|email',
+            'otp' => 'required|string',
+        ]);
+
+        $ttl = $this->twoFactorTtl();
+        $invalid = ValidationException::withMessages([
+            'otp' => ['This code is invalid or has expired. Please sign in again.'],
+        ]);
+
+        $user = User::where('email', $request->email)->first();
+        if (! $user || ! $user->two_factor_enabled) {
+            throw $invalid;
+        }
+
+        $challenge = DB::table('two_factor_challenges')->where('user_id', $user->id)->first();
+
+        if (! $challenge || \Illuminate\Support\Carbon::parse($challenge->expires_at)->lt(now())) {
+            DB::table('two_factor_challenges')->where('user_id', $user->id)->delete();
+
+            throw $invalid;
+        }
+
+        // A leaked challenge is not enough on its own: the code is only good for a handful of guesses
+        // per challenge, and the route is rate limited as well. Both, deliberately.
+        if ((int) $challenge->attempts >= self::TWO_FACTOR_MAX_ATTEMPTS) {
+            DB::table('two_factor_challenges')->where('user_id', $user->id)->delete();
+
+            throw $invalid;
+        }
+
+        if (! Hash::check((string) $request->otp, $challenge->code)) {
+            DB::table('two_factor_challenges')->where('user_id', $user->id)->update([
+                'attempts' => (int) $challenge->attempts + 1,
+                'updated_at' => now(),
+            ]);
+
+            $this->audit('auth.two_factor_failed', (string) $user->id, $user, ['ip' => $request->ip()]);
+
+            throw $invalid;
+        }
+
+        // Single use: the code is spent the moment it works, whatever happens next.
+        DB::table('two_factor_challenges')->where('user_id', $user->id)->delete();
+
+        $this->audit('auth.two_factor_verified', (string) $user->id, $user, ['ip' => $request->ip()]);
+
+        return $this->issueSession($request, $user);
+    }
+
+    /**
+     * Turns the second sign-in step on or off for the account making the request.
+     *
+     * Turning it OFF asks for the current password, because the person asking is by definition
+     * already holding a session - and a stolen session token is exactly the thing this feature is
+     * meant to limit the damage of. Without that check, anyone who could borrow a logged-in browser
+     * could quietly turn the protection off and stay.
+     *
+     * Turning it ON deliberately does not ask for a password: you are already signed in, and this is
+     * the step that makes the next sign-in require a code.
+     */
+    public function setTwoFactor(Request $request): JsonResponse
+    {
+        $user = $request->user();
+
+        $request->validate(['enabled' => 'required|boolean']);
+
+        $enabled = (bool) $request->input('enabled');
+
+        if ($enabled) {
+            $user->forceFill(['two_factor_enabled' => true])->save();
+        } else {
+            $request->validate(['password' => 'required|string']);
+            abort_unless(Hash::check((string) $request->input('password'), $user->password), 422, 'That password is not correct.');
+            $user->forceFill(['two_factor_enabled' => false])->save();
+        }
+
+        // Any half-finished sign-in is void the moment the setting changes, or turning the feature
+        // off would leave a usable code in flight.
+        DB::table('two_factor_challenges')->where('user_id', $user->id)->delete();
+
+        $this->audit($enabled ? 'auth.two_factor_enabled' : 'auth.two_factor_disabled', (string) $user->id, $user, ['ip' => $request->ip()]);
+
+        return response()->json([
+            'success' => true,
+            'twoFactorEnabled' => $enabled,
         ]);
     }
 

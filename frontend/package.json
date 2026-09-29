@@ -9,6 +9,7 @@
     "lint": "eslint .",
     "preview": "vite preview",
     "smoke": "node scripts/smoke.mjs",
+    "smoke:2fa": "node scripts/smoke-2fa.mjs",
     "smoke:setup": "npx -y @puppeteer/browsers install chrome-headless-shell@stable --path .smoke-browser"
   },
   "dependencies": {

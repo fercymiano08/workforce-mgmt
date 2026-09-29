@@ -23,21 +23,41 @@ function getInitialUser() {
 export function AuthProvider({ children }) {
   const [user, setUser] = useState(getInitialUser);
   const [authError, setAuthError] = useState(null);
+  // Set when a password was accepted but the account also has two-factor sign-in on, so the login
+  // screen knows which account is waiting for a code. Deliberately not persisted: a half-finished
+  // sign-in should not survive a reload, and re-entering the password is the honest way back.
+  const [pendingTwoFactor, setPendingTwoFactor] = useState(null);
+
+  // Both the ordinary sign-in and the one that finishes with a code end here, so the stored user and
+  // the token can never end up out of step with each other.
+  const completeSignIn = useCallback((response) => {
+    // An employee's login carries a timeout (seconds of inactivity); the idle guard reads it from the user.
+    const sessionUser = { ...response.user, sessionTimeoutSeconds: response.sessionTimeoutSeconds ?? null };
+    setToken(response.token);
+    setUser(sessionUser);
+    setAuthError(null);
+    setPendingTwoFactor(null);
+    try {
+      store()?.setItem(STORAGE_KEY, JSON.stringify(sessionUser));
+    } catch {
+      // ignore write errors (private browsing, etc.)
+    }
+    return { success: true, user: sessionUser };
+  }, []);
 
   const login = useCallback(async (email, password) => {
     try {
       const response = await http.post('/auth/login', { email, password });
-      // An employee's login carries a timeout (seconds of inactivity); the idle guard reads it from the user.
-      const sessionUser = { ...response.user, sessionTimeoutSeconds: response.sessionTimeoutSeconds ?? null };
-      setToken(response.token);
-      setUser(sessionUser);
-      setAuthError(null);
-      try {
-        store()?.setItem(STORAGE_KEY, JSON.stringify(sessionUser));
-      } catch {
-        // ignore write errors (private browsing, etc.)
+
+      // The password was right, but this account needs a code as well. No token was issued, so there
+      // is nothing to store yet - hand the screen back and let it ask for the code.
+      if (response?.requiresTwoFactor) {
+        setAuthError(null);
+        setPendingTwoFactor({ email: response.email || email, expiresIn: response.expiresIn ?? 180 });
+        return { success: false, requiresTwoFactor: true, email: response.email || email, expiresIn: response.expiresIn ?? 180 };
       }
-      return { success: true, user: sessionUser };
+
+      return completeSignIn(response);
     } catch (error) {
       if (error.response?.status === 429) {
         const wait = error.response?.data?.retry_after ?? 60;
@@ -65,6 +85,62 @@ export function AuthProvider({ children }) {
       setAuthError(message);
       return { success: false, message };
     }
+  }, [completeSignIn]);
+
+  /**
+   * The second sign-in step. Same error handling as login, because from the person's side it is the
+   * same event: the code is simply another thing that can be wrong, expired, or unreachable.
+   */
+  const verifyTwoFactor = useCallback(async (otp) => {
+    if (!pendingTwoFactor?.email) {
+      const message = 'Your sign-in expired. Please enter your password again.';
+      setAuthError(message);
+      return { success: false, message };
+    }
+    try {
+      const response = await http.post('/auth/two-factor/verify', { email: pendingTwoFactor.email, otp });
+      return completeSignIn(response);
+    } catch (error) {
+      if (!error.response) {
+        const message = 'Cannot reach the server right now. Please try again in a moment.';
+        setAuthError(message);
+        return { success: false, message, offline: true };
+      }
+      if (error.response.status === 429) {
+        const wait = error.response?.data?.retry_after ?? 60;
+        const message = 'Too many attempts. Please sign in again in a moment.';
+        setAuthError(message);
+        return { success: false, message, lockout: true, retryAfter: wait };
+      }
+      const message = error.response?.data?.errors?.otp?.[0]
+        || 'That code is not right. Please try again.';
+      setAuthError(message);
+      return { success: false, message };
+    }
+  }, [pendingTwoFactor, completeSignIn]);
+
+  /** Throw away a half-finished sign-in, e.g. from "use a different account". */
+  const cancelTwoFactor = useCallback(() => {
+    setPendingTwoFactor(null);
+    setAuthError(null);
+  }, []);
+
+  /** Turns the second sign-in step on or off. Turning it off must supply the current password. */
+  const setTwoFactor = useCallback(async (enabled, password) => {
+    const response = await http.post('/auth/two-factor', { enabled, password });
+    // The flag is part of the session user, so keep it in step or the profile switch would snap
+    // back to its old position on the next render.
+    setUser((prev) => (prev ? { ...prev, twoFactorEnabled: !!enabled } : prev));
+    try {
+      const stored = store()?.getItem(STORAGE_KEY);
+      if (stored) {
+        const parsed = JSON.parse(stored);
+        store()?.setItem(STORAGE_KEY, JSON.stringify({ ...parsed, twoFactorEnabled: !!enabled }));
+      }
+    } catch {
+      // ignore write errors
+    }
+    return response;
   }, []);
 
   const logout = useCallback(async () => {
@@ -108,10 +184,14 @@ export function AuthProvider({ children }) {
     isAdmin: user?.role === 'Administrator',
     isEmployee: user?.role === 'Employee',
     login,
+    verifyTwoFactor,
+    cancelTwoFactor,
+    pendingTwoFactor,
+    setTwoFactor,
     logout,
     authError,
     clearAuthError,
-  }), [user, login, logout, authError, clearAuthError]);
+  }), [user, login, verifyTwoFactor, cancelTwoFactor, pendingTwoFactor, setTwoFactor, logout, authError, clearAuthError]);
 
   return (
     <AuthContext.Provider value={value}>
