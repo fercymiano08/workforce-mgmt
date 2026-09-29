@@ -13,7 +13,6 @@ import KpiCard from '../../components/dashboard/KpiCard';
 import { SkeletonTable } from '../../components/ui/LoadingSkeleton';
 import useApiData from '../../hooks/useApiData';
 import { auditService } from '../../services/api';
-import { useConfirmPassword } from '../../hooks/useConfirmPassword';
 import { downloadCsv } from '../../utils/export';
 import { formatDate, formatTime } from '../../utils/helpers';
 import { toDateKey } from '../../services/attendanceService';
@@ -263,13 +262,15 @@ export default function AuditLogs() {
     return `${formatDate(toDateKey(d))} ${timeOf(d)}`;
   };
 
-  const { askPassword, passwordModal } = useConfirmPassword();
+  // Exports straight away. This used to ask for the password again on every export, which bought
+  // nothing here: the audit log is already restricted to administrators, and the export only
+  // re-reads rows they are already allowed to see.
   const requestExport = () => {
     if (!logs.length) {
       toast.error('Nothing to export', 'No matching audit events.');
       return;
     }
-    askPassword('Export audit log', handleExport);
+    handleExport();
   };
 
   const handleExport = () => {
@@ -562,7 +563,6 @@ export default function AuditLogs() {
         </div>,
         document.body,
       )}
-      {passwordModal}
     </div>
   );
 }
