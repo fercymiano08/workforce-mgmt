@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import {
   Users, CheckCircle, CalendarOff, Clock, TrendingUp,
-  Calendar, Briefcase, Check, X, ArrowRight, Inbox, FileText, LogOut, CheckCircle2, UserX,
+  Calendar, Briefcase, Check, X, ArrowRight, Inbox, FileText, LogOut, CheckCircle2, UserX, Download,
 } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import {
@@ -28,6 +28,16 @@ import { kioskService } from '../../services/kioskService';
 import { didAttend, isPresentGroup } from '../../utils/constants';
 import { weekWithRecords, dayTick, weekRangeLabel } from '../../utils/today';
 import { formatDate } from '../../utils/helpers';
+import { downloadCsv } from '../../utils/export';
+
+// How far back the export reaches. Every option is inside the 35 days of attendance this page
+// already loads (see the fetch below), so choosing one re-reads what is already in memory instead
+// of asking the server again - the range costs no request and no wait.
+const RANGE_OPTIONS = [
+  { days: 7, label: '7 days' },
+  { days: 14, label: '14 days' },
+  { days: 30, label: '30 days' },
+];
 
 const COLORS = {
   blue: '#3B82F6', emerald: '#10B981', amber: '#F59E0B',
@@ -97,6 +107,9 @@ export default function Dashboard() {
   const [schedules, setSchedules] = useState([]);
   const [shiftDefs, setShiftDefs] = useState([]);
   const [analytics, setAnalytics] = useState(null);
+  // How far back the trend card and the CSV reach. 30 days is the default because that is the span
+  // the page has always been showing, so opening the dashboard looks the same as it did yesterday.
+  const [rangeDays, setRangeDays] = useState(30);
   // Things waiting for a decision from the administrator, other than leave (which is already loaded)
   // These arrive on their own now, so they start as null - "unknown" - rather than 0. Saying zero when
   // the answer has not loaded yet would tell the administrator they are all caught up when they are not.
@@ -188,6 +201,87 @@ export default function Dashboard() {
     () => attendance.filter((a) => a.date === today),
     [attendance, today]
   );
+
+  // Every day inside the chosen range, counted the way the overview card counts them, so the CSV and
+  // the card cannot disagree about a number. Days with no record at all still appear, as zeros -
+  // a day missing from a report reads as "we never looked", which is the one thing it must not say.
+  const dailyRange = useMemo(() => {
+    const start = new Date(today);
+    start.setDate(start.getDate() - (rangeDays - 1));
+
+    const byDate = new Map();
+    attendance.forEach((a) => {
+      if (a.date < toDateKey(start) || a.date > today) return;
+      if (!byDate.has(a.date)) byDate.set(a.date, []);
+      byDate.get(a.date).push(a);
+    });
+
+    const rows = [];
+    for (let i = 0; i < rangeDays; i++) {
+      const d = new Date(start);
+      d.setDate(start.getDate() + i);
+      const key = toDateKey(d);
+      const records = byDate.get(key) || [];
+      const onTime = records.filter((a) => a.status === 'Present').length;
+      const late = records.filter((a) => a.status === 'Late').length;
+      const earlyLeave = records.filter((a) => a.status === 'Early Leave').length;
+      const absent = records.filter((a) => a.status === 'Absent').length;
+      const onLeave = records.filter((a) => a.status === 'On Leave').length;
+      const attended = records.filter((a) => didAttend(a.status)).length;
+      rows.push({
+        key,
+        onTime,
+        late,
+        earlyLeave,
+        absent,
+        onLeave,
+        attended,
+        records: records.length,
+        rate: records.length ? Math.round((attended / records.length) * 1000) / 10 : 0,
+      });
+    }
+    return rows;
+  }, [attendance, today, rangeDays]);
+
+  const exportRange = () => {
+    // The daily rows, plus a total row: a spreadsheet of 30 lines with no bottom line makes someone
+    // add it up by hand, and get it subtly wrong.
+    const rows = dailyRange.map((r) => ({
+      Date: r.key,
+      Records: r.records,
+      'On time': r.onTime,
+      Late: r.late,
+      'Early leave': r.earlyLeave,
+      Absent: r.absent,
+      'On leave': r.onLeave,
+      'Attendance rate %': r.rate,
+    }));
+    const total = dailyRange.reduce(
+      (acc, r) => ({
+        records: acc.records + r.records,
+        onTime: acc.onTime + r.onTime,
+        late: acc.late + r.late,
+        earlyLeave: acc.earlyLeave + r.earlyLeave,
+        absent: acc.absent + r.absent,
+        onLeave: acc.onLeave + r.onLeave,
+        attended: acc.attended + r.attended,
+      }),
+      { records: 0, onTime: 0, late: 0, earlyLeave: 0, absent: 0, onLeave: 0, attended: 0 }
+    );
+    rows.push({
+      Date: 'Total',
+      Records: total.records,
+      'On time': total.onTime,
+      Late: total.late,
+      'Early leave': total.earlyLeave,
+      Absent: total.absent,
+      'On leave': total.onLeave,
+      'Attendance rate %': total.records ? Math.round((total.attended / total.records) * 1000) / 10 : 0,
+    });
+
+    downloadCsv(`attendance-${rangeDays}d-${today}.csv`, rows);
+    toast.success('Export ready', `Attendance for the last ${rangeDays} days has been downloaded.`);
+  };
 
   const kpi = useMemo(() => {
     // Present = everyone who came in, split into On Time and Late. Early Leave is counted on its own.
@@ -322,7 +416,7 @@ export default function Dashboard() {
   // same tap. The inactive count carries its own filter because "inactive" on its own is not a view.
   const kpiCards = [
     { labelKey: 'dashboard.totalEmployees', value: kpi.totalEmployees, icon: Users, change: null, accent: 'blue', to: '/employees' },
-    { labelKey: 'dashboard.presentToday', value: kpi.presentToday, icon: CheckCircle, change: null, accent: 'emerald', subtext: `${kpi.onTimeToday} on time Â· ${kpi.lateToday} late`, to: '/attendance' },
+    { labelKey: 'dashboard.presentToday', value: kpi.presentToday, icon: CheckCircle, change: null, accent: 'emerald', subtext: `${kpi.onTimeToday} on time · ${kpi.lateToday} late`, to: '/attendance' },
     { labelKey: 'dashboard.inactive', value: kpi.inactive, icon: UserX, change: null, accent: 'amber', to: '/employees?status=Inactive' },
     { labelKey: 'dashboard.lateEmployees', value: kpi.lateToday, icon: Clock, change: null, accent: 'red', to: '/attendance?status=Late' },
     { labelKey: 'dashboard.attendanceRate', value: `${kpi.attendanceRate}%`, icon: TrendingUp, change: null, accent: 'purple', to: '/reports' },
@@ -350,9 +444,31 @@ export default function Dashboard() {
           <h1 className="text-3xl font-bold text-gray-900 tracking-tight">{t('dashboard.title')}</h1>
           <p className="text-sm text-gray-400 mt-1.5">{t('dashboard.subtitle')}</p>
         </div>
-        <div className="flex items-center gap-2 text-sm text-gray-500 bg-white px-4 py-2.5 rounded-xl border border-gray-100 shadow-sm">
-          <Calendar className="w-4 h-4 text-gray-400" />
-          <span className="font-medium">{formatDate(today)}</span>
+        <div className="flex flex-wrap items-center gap-2">
+          <div className="flex items-center gap-2 text-sm text-gray-500 bg-white px-4 py-2.5 rounded-xl border border-gray-100 shadow-sm">
+            <Calendar className="w-4 h-4 text-gray-400" />
+            <span className="font-medium">{formatDate(today)}</span>
+          </div>
+          {/* The presets and the button belong together: this range is what the export covers, and
+              the button says so on its face rather than leaving a control that quietly changes
+              something. The weekly-trend card below is fed by the analytics endpoint over its own
+              window, so it is deliberately left alone rather than made to disagree with its own data. */}
+          <div className="flex items-center gap-1 bg-white p-1 rounded-xl border border-gray-100 shadow-sm">
+            {RANGE_OPTIONS.map((o) => (
+              <button
+                key={o.days}
+                onClick={() => setRangeDays(o.days)}
+                className={`px-3 py-1.5 pointer-coarse:py-2.5 rounded-lg text-xs font-medium transition-colors ${
+                  rangeDays === o.days ? 'bg-blue-50 text-blue-700' : 'text-gray-500 hover:bg-gray-50'
+                }`}
+              >
+                {o.label}
+              </button>
+            ))}
+          </div>
+          <Button variant="outline" size="md" icon={Download} onClick={exportRange}>
+            Export CSV ({rangeDays} days)
+          </Button>
         </div>
       </div>
 
