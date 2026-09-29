@@ -2,6 +2,7 @@ import { useState, useRef, useLayoutEffect, useEffect } from 'react';
 import { useLocation } from 'react-router-dom';
 import Sidebar from './Sidebar';
 import Topbar from './Topbar';
+import MobileTabBar from './MobileTabBar';
 import Breadcrumbs from './Breadcrumb';
 import NotificationToasts from '../common/NotificationToasts';
 import { settingsService } from '../../services/api';
@@ -43,11 +44,12 @@ export default function MainLayout({ children }) {
       <Sidebar isOpen={sidebarOpen} onClose={() => setSidebarOpen(false)} />
       <div className="flex-1 flex flex-col min-w-0 lg:ml-[260px]">
         <Topbar onMenuToggle={() => setSidebarOpen(!sidebarOpen)} />
-        <main ref={mainRef} className="flex-1 overflow-y-auto p-4 sm:p-6 lg:p-8" style={{ overflowAnchor: 'none' }}>
+        <main ref={mainRef} className="flex-1 overflow-y-auto p-4 sm:p-6 lg:p-8 lg:pb-8 pb-24" style={{ overflowAnchor: 'none' }}>
           <Breadcrumbs />
           {children}
         </main>
       </div>
+      <MobileTabBar />
       <NotificationToasts />
     </div>
   );

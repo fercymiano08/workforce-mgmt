@@ -23,6 +23,10 @@
     'nav.group.leave': 'LEAVE',
     'nav.group.analytics': 'ANALYTICS & INTELLIGENCE',
     'nav.group.system': 'SYSTEM',
+    'nav.more': 'More',
+    'nav.signOut': 'Sign Out',
+    'nav.signOutConfirm': 'Are you sure you want to sign out?',
+    'common.cancel': 'Cancel',
 
     // Topbar
     'topbar.search': 'Search employees, reports...',
@@ -147,6 +151,10 @@
     'nav.group.leave': 'LEAVE',
     'nav.group.analytics': 'ANALYTICS AT INTELIHENSYA',
     'nav.group.system': 'SYSTEM',
+    'nav.more': 'Iba Pa',
+    'nav.signOut': 'Mag-sign out',
+    'nav.signOutConfirm': 'Sigurado ka bang mag-sign out?',
+    'common.cancel': 'Kanselahin',
 
     'topbar.search': 'Maghanap ng empleyado, ulat...',
     'topbar.switchRole': 'Palitan ang Tungkulin',
@@ -255,6 +263,10 @@
     'nav.group.leave': '休暇',
     'nav.group.analytics': '分析とインテリジェンス',
     'nav.group.system': 'システム',
+    'nav.more': 'その他',
+    'nav.signOut': 'サインアウト',
+    'nav.signOutConfirm': 'サインアウトしてもよろしいですか？',
+    'common.cancel': 'キャンセル',
 
     'topbar.search': '従業員、レポートを検索...',
     'topbar.switchRole': '役割を切替',
@@ -363,6 +375,10 @@
     'nav.group.leave': '休假',
     'nav.group.analytics': '分析与智能',
     'nav.group.system': '系统',
+    'nav.more': '更多',
+    'nav.signOut': '退出登录',
+    'nav.signOutConfirm': '确定要退出登录吗？',
+    'common.cancel': '取消',
 
     'topbar.search': '搜索员工、报告...',
     'topbar.switchRole': '切换角色',
@@ -471,6 +487,10 @@
     'nav.group.leave': 'PERMISOS',
     'nav.group.analytics': 'ANALISIS E INTELIGENCIA',
     'nav.group.system': 'SISTEMA',
+    'nav.more': 'Más',
+    'nav.signOut': 'Cerrar sesión',
+    'nav.signOutConfirm': '¿Seguro que quieres cerrar sesión?',
+    'common.cancel': 'Cancelar',
 
     'topbar.search': 'Buscar empleados, informes...',
     'topbar.switchRole': 'Cambiar Rol',
