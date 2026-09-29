@@ -28,22 +28,28 @@ export function AuthProvider({ children }) {
   // sign-in should not survive a reload, and re-entering the password is the honest way back.
   const [pendingTwoFactor, setPendingTwoFactor] = useState(null);
 
+  // The one place the stored copy of the user is written, so what React holds and what a reload will
+  // read can never drift apart.
+  const applyUser = useCallback((next) => {
+    setUser(next);
+    try {
+      store()?.setItem(STORAGE_KEY, JSON.stringify(next));
+    } catch {
+      // ignore write errors (private browsing, etc.)
+    }
+  }, []);
+
   // Both the ordinary sign-in and the one that finishes with a code end here, so the stored user and
   // the token can never end up out of step with each other.
   const completeSignIn = useCallback((response) => {
     // An employee's login carries a timeout (seconds of inactivity); the idle guard reads it from the user.
     const sessionUser = { ...response.user, sessionTimeoutSeconds: response.sessionTimeoutSeconds ?? null };
     setToken(response.token);
-    setUser(sessionUser);
+    applyUser(sessionUser);
     setAuthError(null);
     setPendingTwoFactor(null);
-    try {
-      store()?.setItem(STORAGE_KEY, JSON.stringify(sessionUser));
-    } catch {
-      // ignore write errors (private browsing, etc.)
-    }
     return { success: true, user: sessionUser };
-  }, []);
+  }, [applyUser]);
 
   const login = useCallback(async (email, password) => {
     try {
@@ -129,17 +135,18 @@ export function AuthProvider({ children }) {
   const setTwoFactor = useCallback(async (enabled, password) => {
     const response = await http.post('/auth/two-factor', { enabled, password });
     // The flag is part of the session user, so keep it in step or the profile switch would snap
-    // back to its old position on the next render.
-    setUser((prev) => (prev ? { ...prev, twoFactorEnabled: !!enabled } : prev));
-    try {
-      const stored = store()?.getItem(STORAGE_KEY);
-      if (stored) {
-        const parsed = JSON.parse(stored);
-        store()?.setItem(STORAGE_KEY, JSON.stringify({ ...parsed, twoFactorEnabled: !!enabled }));
+    // back to its old position on the next render. Written from the same value React ends up
+    // holding, rather than re-read from storage, so nothing written in between is clobbered.
+    setUser((prev) => {
+      if (!prev) return prev;
+      const next = { ...prev, twoFactorEnabled: !!enabled };
+      try {
+        store()?.setItem(STORAGE_KEY, JSON.stringify(next));
+      } catch {
+        // ignore write errors
       }
-    } catch {
-      // ignore write errors
-    }
+      return next;
+    });
     return response;
   }, []);
 
@@ -171,6 +178,38 @@ export function AuthProvider({ children }) {
     };
     window.addEventListener(SESSION_ENDED_EVENT, onEnded);
     return () => window.removeEventListener(SESSION_ENDED_EVENT, onEnded);
+  }, []);
+
+  // The stored user is a photograph taken at sign-in. Anything the server has changed since - a role,
+  // a permission, or the two-factor switch flipped in another session - stays invisible in it until
+  // the next sign-in, which is the one moment nobody is looking for stale data. Ask the server who
+  // this token belongs to once on load, so a reloaded tab shows today's account, not the one from
+  // whenever it was first opened. A genuine expired session is already handled: the http layer turns
+  // a 401 into SESSION_ENDED_EVENT, which signs the person out above. Anything else (offline, a cold
+  // service, a 500) leaves the stored user alone rather than throwing someone out over a bad network.
+  useEffect(() => {
+    if (!getToken()) return undefined;
+    let cancelled = false;
+    http.get('/auth/me')
+      .then((response) => {
+        if (cancelled || !response?.user) return;
+        setUser((prev) => {
+          if (!prev) return prev;
+          // /auth/me describes the account; the idle timeout belongs to the session, so it is kept.
+          const next = { ...prev, ...response.user, sessionTimeoutSeconds: prev.sessionTimeoutSeconds ?? null };
+          // An unchanged account must not produce a new object: every useAuth() consumer in the app
+          // re-renders on it, and that is a lot of work for a value that did not move.
+          if (JSON.stringify(next) === JSON.stringify(prev)) return prev;
+          try {
+            store()?.setItem(STORAGE_KEY, JSON.stringify(next));
+          } catch {
+            // ignore write errors
+          }
+          return next;
+        });
+      })
+      .catch(() => { /* keep the session we have; only a real 401 ends it, and that is handled above */ });
+    return () => { cancelled = true; };
   }, []);
 
   // Without this, a brand-new object is passed to the Provider on every
