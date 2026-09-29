@@ -67,6 +67,25 @@ class RefreshDemoData extends Command
         $now = Carbon::now($tz);
         $today = $now->toDateString();
         $from = $now->copy()->startOfWeek(Carbon::MONDAY)->subWeeks(max(1, (int) $this->option('weeks')))->toDateString();
+
+        // Say out loud what is about to be overwritten, and how much of it there is. --weeks only
+        // controls what gets rebuilt, not what gets replaced: everything up to today goes, so a run
+        // meant to add a week silently discards months on the same accounts. Someone reading the
+        // output afterwards has no way to know that; someone reading it first can still stop.
+        $this->info(sprintf(
+            'Rebuilding %d demo employee(s) from %s. This REPLACES their whole attendance, early clock-out, timesheet and schedule history up to %s (not just the %d week(s) being rebuilt). Employees registered through the system are not touched.',
+            count($ids),
+            $from,
+            $today,
+            max(1, (int) $this->option('weeks'))
+        ));
+        $this->line(sprintf(
+            '  replacing %d attendance, %d timesheet, %d early clock-out and %d shift rows',
+            Attendance::whereIn('employee_id', $ids)->count(),
+            Timesheet::whereIn('employee_id', $ids)->count(),
+            EarlyClockOut::whereIn('employee_id', $ids)->count(),
+            ShiftSchedule::whereIn('employee_id', $ids)->where('date', '<=', $today)->count()
+        ));
         // The demo is an office day on the standard shift. Don't take "whichever id sorts
         // first": a fresh seed re-creates Morning/Afternoon/Night before Standard, which
         // would silently move the whole demo onto a different shift than a live database.
@@ -93,12 +112,46 @@ class RefreshDemoData extends Command
             // both their own and the admins' ones naming them. Leave, overtime and schedule notices stay true.
             $rebuilt = fn ($q) => $q->where('type', 'like', 'attendance%')->orWhere('type', 'like', 'timesheet%')->orWhere('type', 'like', 'early%');
             Notification::whereIn('employee_id', $ids)->where($rebuilt)->delete();
+
+            // The admin inbox stores one row per notice with no employee_id, so the only handle on who a
+            // notice is about is its own text. Deciding that on the name alone is how a real employee's
+            // notice gets deleted: "Dela Cruz" appears in a demo person's name, and it also appears in
+            // the notice about the different person who happens to share the surname.
+            //
+            // So an employee id in the text decides it on its own - ids are unique, and a notice that
+            // names one is about exactly that person. Only a notice carrying no id at all (the older
+            // ones were written with just a name) falls back to the name, and then it has to match the
+            // whole name, not a fragment of it.
             $names = Employee::whereIn('id', $ids)->get()->map(fn ($e) => trim($e->first_name.' '.$e->last_name))->all();
-            $aboutDemo = fn (string $message) => collect($ids)->contains(fn ($id) => str_contains($message, $id))
-                || collect($names)->contains(fn ($name) => str_contains($message, $name));
-            Notification::whereNull('employee_id')->where($rebuilt)->get()
-                ->filter(fn ($n) => $aboutDemo((string) $n->message))
-                ->each->delete();
+            $demoIds = array_map('strtoupper', $ids);
+            $aboutDemo = function (string $message) use ($demoIds, $names): bool {
+                if (preg_match_all('/\bEMP\d+\b/i', $message, $found)) {
+                    foreach ($found[0] as $id) {
+                        if (in_array(strtoupper($id), $demoIds, true)) {
+                            return true;
+                        }
+                    }
+
+                    return false;
+                }
+
+                foreach ($names as $name) {
+                    if ($name === '') {
+                        continue;
+                    }
+                    // Whole word on both sides, so a shared surname or a name that is a prefix of
+                    // another one cannot stand in for a person it has nothing to do with.
+                    if (preg_match('/(?<![\p{L}\p{N}])'.preg_quote($name, '/').'(?![\p{L}\p{N}])/u', $message)) {
+                        return true;
+                    }
+                }
+
+                return false;
+            };
+            $staleAdminNotices = Notification::whereNull('employee_id')->where($rebuilt)->get()
+                ->filter(fn ($n) => $aboutDemo((string) $n->message));
+            $removedAdminNotices = $staleAdminNotices->count();
+            $staleAdminNotices->each->delete();
 
             // Start clean: their whole attendance history, early clock-outs, timesheets, and shifts up to today
             EarlyClockOut::whereIn('employee_id', $ids)->delete();

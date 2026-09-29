@@ -138,6 +138,22 @@ class DemoRefreshTest extends TestCase
         }
     }
 
+    public function test_a_real_employee_who_shares_a_demo_name_keeps_their_notice(): void
+    {
+        // A different person who happens to have the same name as a demo employee - which is exactly
+        // what a company of any size eventually has. Their admin notices carry their own id, and that
+        // id is the only thing that can tell the two apart. Deciding it on the name instead deleted
+        // this person's notice every time the demo was refreshed.
+        Employee::create(['id' => 'EMP20264846', 'first_name' => 'Juan', 'last_name' => 'Dela Cruz', 'email' => 'juan2@x.com', 'department' => 'Ops', 'status' => 'Active']);
+        Notification::create(['id' => 'N7', 'type' => 'early_clock_out', 'title' => 't', 'priority' => 'low', 'read' => false, 'employee_id' => null, 'timestamp' => now(),
+            'message' => 'Juan Dela Cruz (EMP20264846) needs a medical certificate for the SICK early clock-out on Jan 13, 2030.']);
+
+        $this->artisan('demo:refresh')->assertSuccessful();
+
+        $this->assertTrue(Notification::where('id', 'N7')->exists(),
+            'a real employee must not lose an admin notice just because a demo employee shares their name');
+    }
+
     public function test_today_is_open_by_default_and_closed_with_the_flag(): void
     {
         $this->artisan('demo:refresh')->assertSuccessful();
