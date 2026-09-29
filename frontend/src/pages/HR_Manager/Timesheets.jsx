@@ -30,6 +30,7 @@ import { downloadCSV } from '../../utils/export';
 import { useAuth } from '../../context/AuthContext';
 import { useToast } from '../../context/ToastContext';
 import { SkeletonPage } from '../../components/ui/LoadingSkeleton';
+import useUrlFilter from '../../hooks/useUrlFilter';
 
 const statusVariant = {
   Draft: 'default',
@@ -296,7 +297,8 @@ function AdminTimesheetsView() {
   const reviewer = user ? `${user.firstName} ${user.lastName}` : 'HR Admin';
 
   const [search, setSearch] = useUrlSearch();
-  const [statusFilter, setStatusFilter] = useState('Submitted');
+  // In the URL so the dashboard's cards can link straight to one bucket, e.g. ?status=Approved.
+  const [statusFilter, setStatusFilter] = useUrlFilter('status', 'Submitted');
   const [deptFilter, setDeptFilter] = useState('All');
   const [period, setPeriod] = useState('all');
   const [flag, setFlag] = useState('');
@@ -471,8 +473,8 @@ function AdminTimesheetsView() {
       </div>
 
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-        <KpiCard label="Waiting for review" value={submitted.length} icon={Clock} accent="amber" noBar subtext={`${hoursText(submitted.reduce((s, t) => s + (t.totalHours || 0), 0))} to approve`} />
-        <KpiCard label="Approved" value={count('Approved')} icon={CheckCircle} accent="emerald" noBar subtext={`of ${base.length} timesheet${base.length === 1 ? '' : 's'}`} />
+        <KpiCard label="Waiting for review" value={submitted.length} icon={Clock} accent="amber" noBar subtext={`${hoursText(submitted.reduce((s, t) => s + (t.totalHours || 0), 0))} to approve`} to="/timesheets?status=Submitted" />
+        <KpiCard label="Approved" value={count('Approved')} icon={CheckCircle} accent="emerald" noBar subtext={`of ${base.length} timesheet${base.length === 1 ? '' : 's'}`} to="/timesheets?status=Approved" />
         <KpiCard label="Hours counted" value={hoursText(totalHours)} icon={Timer} accent="blue" noBar subtext={`${hoursText(regularHours)} regular · ${hoursText(overtimeHours)} overtime`} />
         <KpiCard label="Overtime paid" value={hoursText(paidOt)} icon={TrendingUp} accent="purple" noBar subtext={`${base.filter((t) => (t.paidOtHours || 0) > 0).length} employee-week(s)`} />
       </div>

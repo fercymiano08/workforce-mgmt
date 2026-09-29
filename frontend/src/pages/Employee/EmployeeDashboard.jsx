@@ -286,12 +286,12 @@ export default function EmployeeDashboard() {
 
       {/* KPI Row */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
-        <KpiCard label="Hours This Week" value={`${hoursThisWeek.toFixed(1)}h`} icon={Hourglass} accent="blue" />
-        <KpiCard label="Leave Balance" value={`${leaveBalance} days`} icon={CalendarCheck} accent="emerald" />
-        <KpiCard label="Attendance Rate" value={`${attendanceRate}%`} icon={CalendarDays} accent="purple" />
+        <KpiCard label="Hours This Week" value={`${hoursThisWeek.toFixed(1)}h`} icon={Hourglass} accent="blue" to="/my-attendance" />
+        <KpiCard label="Leave Balance" value={`${leaveBalance} days`} icon={CalendarCheck} accent="emerald" to="/leave" />
+        <KpiCard label="Attendance Rate" value={`${attendanceRate}%`} icon={CalendarDays} accent="purple" to="/my-attendance" />
         {/* The count is worked out from leave and timesheet requests, so it stays a dash until both
             have answered rather than briefly claiming there is nothing pending. */}
-        <KpiCard label="Pending Requests" value={loadingLeaves || loadingTimesheets ? '—' : pendingCount} icon={Clock} accent="amber" />
+        <KpiCard label="Pending Requests" value={loadingLeaves || loadingTimesheets ? '—' : pendingCount} icon={Clock} accent="amber" to="/leave" />
       </div>
 
       {/* Early Leave Today */}

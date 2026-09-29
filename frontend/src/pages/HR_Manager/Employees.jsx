@@ -22,6 +22,7 @@ import FaceCaptureModal from '../../components/employees/FaceCaptureModal';
 import { departmentService, employeeService, roleService, shiftService } from '../../services/api';
 import { formatDate, formatTime } from '../../utils/helpers';
 import useUrlSearch from '../../hooks/useUrlSearch';
+import useUrlFilter from '../../hooks/useUrlFilter';
 import { todayKey } from '../../utils/today';
 import { useToast } from '../../context/ToastContext';
 
@@ -118,7 +119,8 @@ export default function Employees() {
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useUrlSearch();
   const [deptFilter, setDeptFilter] = useState('All');
-  const [statusFilter, setStatusFilter] = useState('All');
+  // In the URL, so the dashboard's "inactive" card can link here already filtered.
+  const [statusFilter, setStatusFilter] = useUrlFilter('status', 'All');
   const [typeFilter, setTypeFilter] = useState('All');
   const [roleFilter, setRoleFilter] = useState('All');      // only the roles of the chosen department
   const [faceMissingOnly, setFaceMissingOnly] = useState(false);

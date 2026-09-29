@@ -318,12 +318,14 @@ export default function Dashboard() {
       });
   }, [schedules, shiftDefs, today]);
 
+  // Each card links to the screen the number describes, so the figure and the next action are the
+  // same tap. The inactive count carries its own filter because "inactive" on its own is not a view.
   const kpiCards = [
-    { labelKey: 'dashboard.totalEmployees', value: kpi.totalEmployees, icon: Users, change: null, accent: 'blue' },
-    { labelKey: 'dashboard.presentToday', value: kpi.presentToday, icon: CheckCircle, change: null, accent: 'emerald', subtext: `${kpi.onTimeToday} on time Â· ${kpi.lateToday} late` },
-    { labelKey: 'dashboard.inactive', value: kpi.inactive, icon: UserX, change: null, accent: 'amber' },
-    { labelKey: 'dashboard.lateEmployees', value: kpi.lateToday, icon: Clock, change: null, accent: 'red' },
-    { labelKey: 'dashboard.attendanceRate', value: `${kpi.attendanceRate}%`, icon: TrendingUp, change: null, accent: 'purple' },
+    { labelKey: 'dashboard.totalEmployees', value: kpi.totalEmployees, icon: Users, change: null, accent: 'blue', to: '/employees' },
+    { labelKey: 'dashboard.presentToday', value: kpi.presentToday, icon: CheckCircle, change: null, accent: 'emerald', subtext: `${kpi.onTimeToday} on time Â· ${kpi.lateToday} late`, to: '/attendance' },
+    { labelKey: 'dashboard.inactive', value: kpi.inactive, icon: UserX, change: null, accent: 'amber', to: '/employees?status=Inactive' },
+    { labelKey: 'dashboard.lateEmployees', value: kpi.lateToday, icon: Clock, change: null, accent: 'red', to: '/attendance?status=Late' },
+    { labelKey: 'dashboard.attendanceRate', value: `${kpi.attendanceRate}%`, icon: TrendingUp, change: null, accent: 'purple', to: '/reports' },
   ];
 
   const attention = [
