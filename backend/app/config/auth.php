@@ -123,6 +123,24 @@ return [
 
     /*
     |--------------------------------------------------------------------------
+    | Two-Factor Sign-In
+    |--------------------------------------------------------------------------
+    |
+    | How long a sign-in code stays usable, in seconds. The code is also replaced the moment it is
+    | verified, so this is the window for a mistyped code, not a window in which an old code keeps
+    | working. The floor is 60 seconds: below that the code expires while it is still being typed.
+    |
+    | Three minutes is the default. Long enough to find the email on a phone that is not in your
+    | hand, short enough that a code left in an inbox has almost no value to anyone who finds it.
+    |
+    */
+
+    'two_factor' => [
+        'ttl' => (int) env('AUTH_TWO_FACTOR_TTL', 180),
+    ],
+
+    /*
+    |--------------------------------------------------------------------------
     | Password Confirmation Timeout
     |--------------------------------------------------------------------------
     |
