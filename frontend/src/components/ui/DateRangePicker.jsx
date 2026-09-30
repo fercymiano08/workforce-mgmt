@@ -215,7 +215,8 @@ export default function DateRangePicker({ value, onChange, className, allTimeLab
 
       {open && (
         <div
-          className="absolute z-50 mt-2 left-0 w-[min(21rem,calc(100vw-2rem))] rounded-2xl border border-gray-200 bg-white p-3 shadow-xl animate-fadeIn"
+          className="absolute z-50 mt-2 left-0 w-80 rounded-2xl border border-gray-200 bg-white p-3 shadow-xl animate-fadeIn"
+          style={{ maxWidth: 'calc(100vw - 2rem)' }}
           role="dialog"
           aria-label="Choose a date range"
         >
