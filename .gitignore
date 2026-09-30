@@ -24,3 +24,4 @@ Thumbs.db
 ~$*
 *.tmp
 frontend/scripts/smoke-output/
+frontend/scripts/dark-output/
