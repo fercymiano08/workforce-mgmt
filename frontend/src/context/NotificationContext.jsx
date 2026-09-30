@@ -10,6 +10,7 @@ const TOAST_LIFETIME = 6000;
 export function NotificationProvider({ children }) {
   const { user } = useAuth();
   const [notifications, setNotifications] = useState([]);
+  const [unreadCount, setUnreadCount] = useState(0);
   const [toasts, setToasts] = useState([]);
 
   // Tracks which notification ids have already been seen so that only
@@ -19,10 +20,28 @@ export function NotificationProvider({ children }) {
   const initializedRef = useRef(false);
   const toastSeqRef = useRef(0);
 
+  // The red badge is the server's count of EVERY unread row, not a local count
+  // over the fetched list - that list is the newest 200 only, so beyond that it
+  // undercounts, and it lags a just-arrived item between polls. The server count
+  // is the same source the badge claims to show, so it can never disagree with
+  // itself.
+  const refreshUnread = useCallback(async () => {
+    if (!user) {
+      setUnreadCount(0);
+      return;
+    }
+    try {
+      setUnreadCount(await notificationService.getUnreadCount());
+    } catch {
+      // A failed fetch keeps the last known number rather than pretending it is zero.
+    }
+  }, [user]);
+
   const refresh = useCallback(async () => {
     try {
       if (!user) {
         setNotifications([]);
+        setUnreadCount(0);
         return;
       }
       const isEmployee = user.role === 'Employee';
@@ -49,8 +68,10 @@ export function NotificationProvider({ children }) {
       }
     } catch {
       // A failed poll (server busy, brief network drop) keeps the list already on screen instead of emptying the bell.
+    } finally {
+      refreshUnread();
     }
-  }, [user]);
+  }, [user, refreshUnread]);
 
   useEffect(() => {
     seenIdsRef.current = new Set();
@@ -89,35 +110,40 @@ export function NotificationProvider({ children }) {
     setToasts((prev) => prev.filter((t) => t.key !== key));
   }, []);
 
-  const unreadCount = notifications.filter(n => !n.read).length;
-
   const markAsRead = useCallback(async (id) => {
     try {
-      const updated = await notificationService.markAsRead(id);
-      setNotifications(prev => prev.map(n => n.id === id ? { ...n, ...updated } : n));
-    } catch {
+      await notificationService.markAsRead(id);
       setNotifications(prev => prev.map(n => n.id === id ? { ...n, read: true } : n));
+    } catch {
+      // Do NOT pretend a failed write succeeded: the server still has it unread,
+      // and the next poll would silently bring it back - the "I read it, but after
+      // a refresh the same number is back" effect. Keep it unread on screen too.
+    } finally {
+      refreshUnread();
     }
-  }, []);
+  }, [refreshUnread]);
 
   const markAllAsRead = useCallback(async () => {
     try {
       await notificationService.markAllAsRead();
       setNotifications(prev => prev.map(n => ({ ...n, read: true })));
     } catch {
-      setNotifications(prev => prev.map(n => ({ ...n, read: true })));
+      // Same honesty rule as markAsRead: leave the list and the badge alone.
+    } finally {
+      refreshUnread();
     }
-  }, []);
+  }, [refreshUnread]);
 
   const addNotification = useCallback(async (notification) => {
     try {
       const created = await notificationService.create(notification);
       setNotifications(prev => [created, ...prev]);
+      refreshUnread();
       return created;
     } catch {
       return null;
     }
-  }, []);
+  }, [refreshUnread]);
 
   const deleteNotification = useCallback(async (id) => {
     setNotifications(prev => prev.filter(n => n.id !== id));
@@ -125,8 +151,10 @@ export function NotificationProvider({ children }) {
       await notificationService.remove(id);
     } catch {
       /* optimistic removal already applied */
+    } finally {
+      refreshUnread();
     }
-  }, []);
+  }, [refreshUnread]);
 
   // Memoized so every useNotifications() consumer app-wide (not just the
   // bell icon) doesn't re-render on every 30-second poll unless something

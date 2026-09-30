@@ -33,5 +33,9 @@ Schedule::command('timesheets:remind')->hourly()->withoutOverlapping();
 // checked every minute so each appears about a minute after it happens, not only when someone opens the dashboard.
 Schedule::command('attendance:check-alerts')->everyMinute()->withoutOverlapping();
 
+// The bell is for what needs acting on now, not an archive: without a cleanup the unread badge only ever grew,
+// counting every resolved week-ago alert forever. Drop whatever is older than the month window nightly.
+Schedule::command('notifications:prune')->dailyAt('02:00')->timezone('Asia/Manila')->withoutOverlapping();
+
 // Rebuild recent timesheets right after a punch or overtime approval changes the figures behind them.
 Schedule::command('timesheets:refresh')->everyMinute()->withoutOverlapping();

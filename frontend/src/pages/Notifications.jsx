@@ -61,7 +61,7 @@ export default function Notifications() {
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
         <div>
           <h1 className="text-xl font-bold text-gray-900">Notifications</h1>
-          <p className="text-sm text-gray-500">{unreadCount > 0 ? `${unreadCount} unread` : 'You are all caught up'} · {notifications.length} in total</p>
+          <p className="text-sm text-gray-500">{unreadCount > 0 ? `${unreadCount} unread` : 'You are all caught up'} · showing the latest {notifications.length}</p>
         </div>
         {unreadCount > 0 && (
           <Button variant="outline" icon={CheckCheck} onClick={markAllAsRead}>Mark all as read</Button>
