@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+﻿import { useEffect, useMemo, useState } from 'react';
 import {
   Users, CheckCircle, CalendarOff, Clock, TrendingUp,
   Calendar, Briefcase, Check, X, ArrowRight, Inbox, FileText, LogOut, CheckCircle2, Download,
@@ -14,10 +14,12 @@ import Badge from '../../components/ui/Badge';
 import Button from '../../components/ui/Button';
 import KpiCard from '../../components/dashboard/KpiCard';
 import ChartCard from '../../components/dashboard/ChartCard';
-import { leaveTypeChartColor } from '../../constants/leaveTypes';
+import { leaveTypeChartColorIn } from '../../constants/leaveTypes';
 import { SkeletonLine, SkeletonPage } from '../../components/ui/LoadingSkeleton';
 import { useLanguage } from '../../context/LanguageContext';
 import { useAuth } from '../../context/AuthContext';
+import { useTheme } from '../../context/ThemeContext';
+import { chartTheme } from '../../constants/chartTheme';
 import { useToast } from '../../context/ToastContext';
 import { useNotifications } from '../../context/NotificationContext';
 import {
@@ -39,22 +41,19 @@ const RANGE_OPTIONS = [
   { days: 30, label: '30 days' },
 ];
 
-const COLORS = {
-  blue: '#3B82F6', emerald: '#10B981', amber: '#F59E0B',
-  red: '#EF4444', purple: '#8B5CF6', sky: '#0EA5E9',
-  indigo: '#6366F1', rose: '#F43F5E', teal: '#14B8A6',
-};
-
-const departmentColors = {
-  Engineering: COLORS.blue,
-  Marketing: COLORS.purple,
-  Finance: COLORS.emerald,
-  HR: COLORS.sky,
-  Sales: COLORS.amber,
-  Operations: COLORS.teal,
-  IT: COLORS.indigo,
-  Legal: COLORS.rose,
-};
+// Recharts takes literal colour values, so it cannot be themed by the utility classes
+// that invert the rest of the app - the series palette is chosen per theme instead
+// (see constants/chartTheme.js), or a dark screen keeps the light theme's neon bars.
+const departmentPalette = (colors) => ({
+  Engineering: colors.blue,
+  Marketing: colors.purple,
+  Finance: colors.emerald,
+  HR: colors.sky,
+  Sales: colors.amber,
+  Operations: colors.teal,
+  IT: colors.indigo,
+  Legal: colors.rose,
+});
 
 const leaveTypeBadge = (type) => {
   // Same variants as leaveTypeVariant in pages/Employee/Leave.jsx, which the badge-only pages use.
@@ -99,6 +98,10 @@ export default function Dashboard() {
   const { user } = useAuth();
   const { toast } = useToast();
   const { refresh: refreshNotifications } = useNotifications();
+  const { isDark } = useTheme();
+  const chart = chartTheme(isDark);
+  const COLORS = chart.colors;
+  const departmentColors = departmentPalette(chart.colors);
 
   const [loading, setLoading] = useState(true);
   const [employees, setEmployees] = useState([]);
@@ -350,9 +353,9 @@ export default function Dashboard() {
     return Object.entries(byType).map(([name, value]) => ({
       name,
       value,
-      color: leaveTypeChartColor(name),
+      color: leaveTypeChartColorIn(name, isDark),
     }));
-  }, [leaves]);
+  }, [leaves, isDark]);
 
   const weeklyAttendanceData = useMemo(() => {
     const trend = analytics?.attendanceTrend || [];
@@ -413,7 +416,7 @@ export default function Dashboard() {
   // Each card links to the screen the number describes, so the figure and the next action are the
   const kpiCards = [
     { labelKey: 'dashboard.totalEmployees', value: kpi.totalEmployees, icon: Users, change: null, accent: 'blue', to: '/employees' },
-    { labelKey: 'dashboard.presentToday', value: kpi.presentToday, icon: CheckCircle, change: null, accent: 'emerald', subtext: `${kpi.onTimeToday} on time · ${kpi.lateToday} late`, to: '/attendance' },
+    { labelKey: 'dashboard.presentToday', value: kpi.presentToday, icon: CheckCircle, change: null, accent: 'emerald', subtext: `${kpi.onTimeToday} on time Â· ${kpi.lateToday} late`, to: '/attendance' },
     { labelKey: 'dashboard.lateEmployees', value: kpi.lateToday, icon: Clock, change: null, accent: 'red', to: '/attendance?status=Late' },
     { labelKey: 'dashboard.attendanceRate', value: `${kpi.attendanceRate}%`, icon: TrendingUp, change: null, accent: 'purple', to: '/reports' },
   ];
@@ -535,9 +538,9 @@ export default function Dashboard() {
                   barCategoryGap="18%"
                   margin={{ top: 8, right: 8, left: -12, bottom: 0 }}
                 >
-                  <CartesianGrid strokeDasharray="3 3" stroke="#F1F5F9" vertical={false} />
-                  <XAxis dataKey="day" axisLine={false} tickLine={false} tick={{ fontSize: 12, fill: '#64748B' }} />
-                  <YAxis axisLine={false} tickLine={false} tick={{ fontSize: 12, fill: '#64748B' }} />
+                  <CartesianGrid strokeDasharray="3 3" stroke={chart.grid} vertical={false} />
+                  <XAxis dataKey="day" axisLine={false} tickLine={false} tick={{ fontSize: 12, fill: chart.axis }} />
+                  <YAxis axisLine={false} tickLine={false} tick={{ fontSize: 12, fill: chart.axis }} />
                   <Tooltip content={<CustomTooltip />} />
                   <Legend iconType="square" iconSize={8} wrapperStyle={{ paddingTop: 16, fontSize: 12 }} />
                   {/* One Present bar, split into On Time and Late */}
@@ -565,7 +568,7 @@ export default function Dashboard() {
                     innerRadius={70}
                     outerRadius={105}
                     paddingAngle={2}
-                    stroke="#FFFFFF"
+                    stroke={chart.sliceBorder}
                     strokeWidth={2}
                     dataKey="value"
                   >
@@ -608,9 +611,9 @@ export default function Dashboard() {
             ) : (
               <ResponsiveContainer width="100%" height="100%">
                 <BarChart data={weeklyAttendanceData} barSize={28} margin={{ top: 8, right: 8, left: -12, bottom: 0 }}>
-                  <CartesianGrid strokeDasharray="3 3" stroke="#F1F5F9" vertical={false} />
-                  <XAxis dataKey="week" axisLine={false} tickLine={false} tick={{ fontSize: 12, fill: '#64748B' }} />
-                  <YAxis domain={[0, 100]} axisLine={false} tickLine={false} tick={{ fontSize: 12, fill: '#64748B' }} />
+                  <CartesianGrid strokeDasharray="3 3" stroke={chart.grid} vertical={false} />
+                  <XAxis dataKey="week" axisLine={false} tickLine={false} tick={{ fontSize: 12, fill: chart.axis }} />
+                  <YAxis domain={[0, 100]} axisLine={false} tickLine={false} tick={{ fontSize: 12, fill: chart.axis }} />
                   <Tooltip content={<CustomTooltip />} cursor={{ fill: '#F1F5F9' }} />
                   <Bar dataKey="percentage" name="percentage" fill={COLORS.blue} radius={[6, 6, 0, 0]} />
                 </BarChart>
@@ -626,10 +629,10 @@ export default function Dashboard() {
             ) : (
               <ResponsiveContainer width="100%" height="100%">
                 <BarChart data={productivityData} layout="vertical" barSize={16} barCategoryGap={10} margin={{ top: 8, right: 12, left: 0, bottom: 0 }}>
-                  <CartesianGrid strokeDasharray="3 3" stroke="#F1F5F9" horizontal={false} />
-                  <XAxis type="number" domain={[0, 100]} axisLine={false} tickLine={false} tick={{ fontSize: 12, fill: '#64748B' }} />
+                  <CartesianGrid strokeDasharray="3 3" stroke={chart.grid} horizontal={false} />
+                  <XAxis type="number" domain={[0, 100]} axisLine={false} tickLine={false} tick={{ fontSize: 12, fill: chart.axis }} />
                   <YAxis type="category" dataKey="department" axisLine={false} tickLine={false} tick={{ fontSize: 12, fill: '#475569' }} width={110} />
-                  <Tooltip content={<CustomTooltip />} cursor={{ fill: '#F8FAFC' }} />
+                  <Tooltip content={<CustomTooltip />} cursor={{ fill: chart.cursor }} />
                   <Bar dataKey="score" name="score" radius={[0, 6, 6, 0]}>
                     {productivityData.map((entry, index) => (
                       <Cell key={`cell-${index}`} fill={departmentColors[entry.department] || COLORS.blue} />

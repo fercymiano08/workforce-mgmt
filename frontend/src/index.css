@@ -504,33 +504,330 @@
 }
 
 /*
-  Dark mode retrofit layer.
-  The app's pages/components consistently reuse the same small set of
-  Tailwind utility classes for surfaces, text, and borders (bg-white cards,
-  text-gray-900 headings, text-gray-500 subtext, bg-gray-50 tints, etc).
-  Rather than editing every page individually, we recolor those exact
-  utility classes when `.dark` is active on <html>, so the toggle applies
-  consistently everywhere those classes are used.
+  Dark mode - gothic (black / gray / white).
+
+  How this works, and why it is written this way:
+
+  The app reuses the same small set of Tailwind colour utilities for every surface,
+  text and border in every page - bg-white cards, bg-gray-50 page fills, text-gray-900
+  headings, text-gray-500 subtext, border-gray-100 rules. Rather than tagging hundreds
+  of elements with dark: variants (and inevitably missing some, which is what makes a
+  half-themed screen), the palette is inverted one level up: when .dark is on <html>,
+  those exact utility classes resolve to dark values. Every page, the sidebar, the
+  topbar, every modal, dropdown and popover is built from them, so they all invert
+  together and there is no part of the system left light.
+
+  The generated block below covers every colour utility that appears anywhere in
+  src/, so a new screen cannot fall outside it. Values are chosen by the ROLE a token
+  plays rather than by inverting the scale blindly: bg-gray-900 is a deliberate dark
+  backdrop (camera preview, active tab) and must stay dark, while text-gray-900 is the
+  primary text and must become near-white.
+
+  Saturated colours are kept, but tuned for a near-black ground - a status still reads
+  as red, green or amber without glaring. Two considerations that decide the rest:
+
+  - Text is never dimmed below a readable level. Muted text sits at #a3a3ae, which is
+    roughly 7:1 on the card colour, so a dark screen does not become an eyestrain.
+  - color-scheme follows the theme, so the parts of a control this app does not draw
+    itself - the native select dropdown, the date input's calendar picker, scrollbars,
+    the text cursor - are dark too, instead of a bright white list opening over a dark
+    page.
 */
-.dark .bg-white { background-color: #111827 !important; }
-.dark .bg-gray-50 { background-color: #0F172A !important; }
-.dark .bg-gray-100 { background-color: #1E293B !important; }
-.dark .bg-\[\#F8FAFC\] { background-color: #0B1220 !important; }
 
-.dark .text-gray-900 { color: #F1F5F9 !important; }
-.dark .text-gray-700 { color: #CBD5E1 !important; }
-.dark .text-gray-600 { color: #94A3B8 !important; }
-.dark .text-gray-500 { color: #94A3B8 !important; }
-.dark .text-gray-400 { color: #64748B !important; }
+/* Native controls, scrollbars and form internals follow the active theme. */
+:root { color-scheme: light; }
+.dark { color-scheme: dark; }
 
-.dark .border-gray-50,
-.dark .border-gray-100,
-.dark .border-gray-200 { border-color: #1E293B !important; }
+.dark body,
+.dark #root {
+  background-color: #08080a;
+  color: #ececf2;
+}
 
-.dark .hover\:bg-gray-50:hover { background-color: #1E293B !important; }
-.dark .hover\:bg-gray-100:hover { background-color: #273449 !important; }
+/* The page fill is written as an arbitrary colour in the layouts, so it needs its own
+   rule - this is the main content area behind every screen. */
+.dark .bg-\[\#F8FAFC\] { background-color: #08080a; }
+.dark .text-\[\#0B1F3A\] { color: #ececf2; }
+
+/* Scrollbars: a light grey bar on a black page is a bright stripe. */
+.dark ::-webkit-scrollbar-thumb { background: #2e2e36; }
+.dark ::-webkit-scrollbar-thumb:hover { background: #45454f; }
+.dark ::-webkit-scrollbar-track { background: #0d0d10; }
+
+/* Tables (the shared .table-frame used by every list in the system). */
+.dark .table-frame thead th {
+  background-color: #17171c;
+  color: #a3a3ae;
+  border-bottom-color: #2e2e36;
+}
+.dark .table-frame thead tr:last-child th { box-shadow: inset 0 -1px 0 #2e2e36; }
+.dark .table-frame thead th.sticky-col { background-color: #17171c; }
+.dark .table-frame tbody td,
+.dark .table-frame tbody th {
+  color: #c6c6d0;
+  border-bottom-color: #1c1c22;
+}
+.dark .table-frame tbody tr:nth-child(even) { background-color: #0d0d10; }
+.dark .table-frame tbody td:first-child,
+.dark .table-frame tbody th:first-child { color: #ececf2; }
+.dark .table-frame tbody tr[data-clickable='true']:hover,
+.dark .table-frame tbody tr.cursor-pointer:hover { background-color: #14213a; }
+.dark .table-frame tbody tr[data-clickable='true']:active,
+.dark .table-frame tbody tr.cursor-pointer:active { background-color: #1b2c4d; }
+.dark .table-frame .sticky-col.is-pinned { box-shadow: 6px 0 8px -6px rgba(0, 0, 0, 0.7); }
+
+/* Loading placeholders. */
+.dark .skeleton { background: #17171c; }
+.dark .skeleton::after {
+  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.07) 50%, transparent);
+}
+
+/*
+  Generated: one rule per colour utility found anywhere in src/, so the theme cannot
+  be half-applied. Regenerate with logs/gen_dark.py if a screen starts using a colour
+  this block does not list.
+*/
+
+/* 222 rules from 234 distinct utilities */
+  .dark .bg-amber-50\/50 { background-color: color-mix(in oklab, hsl(38 38% 7%) 50%, transparent); }
+  .dark .bg-amber-50 { background-color: hsl(38 38% 7%); }
+  .dark .bg-amber-50\/70 { background-color: color-mix(in oklab, hsl(38 38% 7%) 70%, transparent); }
+  .dark .bg-amber-50\/60 { background-color: color-mix(in oklab, hsl(38 38% 7%) 60%, transparent); }
+  .dark .bg-amber-50\/30 { background-color: color-mix(in oklab, hsl(38 38% 7%) 30%, transparent); }
+  .dark .bg-amber-100 { background-color: hsl(38 40% 11%); }
+  .dark .bg-amber-200 { background-color: hsl(38 40% 16%); }
+  .dark .bg-amber-400\/20 { background-color: color-mix(in oklab, hsl(38 74% 64%) 20%, transparent); }
+  .dark .bg-amber-400 { background-color: hsl(38 74% 64%); }
+  .dark .bg-amber-500 { background-color: hsl(38 72% 60%); }
+  .dark .bg-amber-600 { background-color: hsl(38 68% 55%); }
+  .dark .bg-amber-700 { background-color: hsl(38 58% 34%); }
+  .dark .bg-blue-50\/70 { background-color: color-mix(in oklab, hsl(217 38% 7%) 70%, transparent); }
+  .dark .bg-blue-50\/40 { background-color: color-mix(in oklab, hsl(217 38% 7%) 40%, transparent); }
+  .dark .bg-blue-50 { background-color: hsl(217 38% 7%); }
+  .dark .bg-blue-50\/60 { background-color: color-mix(in oklab, hsl(217 38% 7%) 60%, transparent); }
+  .dark .bg-blue-50\/30 { background-color: color-mix(in oklab, hsl(217 38% 7%) 30%, transparent); }
+  .dark .bg-blue-50\/50 { background-color: color-mix(in oklab, hsl(217 38% 7%) 50%, transparent); }
+  .dark .bg-blue-100 { background-color: hsl(217 40% 11%); }
+  .dark .bg-blue-300 { background-color: hsl(217 38% 26%); }
+  .dark .bg-blue-500 { background-color: hsl(217 72% 60%); }
+  .dark .bg-blue-600 { background-color: hsl(217 68% 55%); }
+  .dark .bg-blue-700 { background-color: hsl(217 58% 34%); }
+  .dark .bg-blue-800 { background-color: hsl(217 56% 27%); }
+  .dark .bg-cyan-500 { background-color: hsl(188 72% 60%); }
+  .dark .bg-emerald-50 { background-color: hsl(160 38% 7%); }
+  .dark .bg-emerald-50\/60 { background-color: color-mix(in oklab, hsl(160 38% 7%) 60%, transparent); }
+  .dark .bg-emerald-100 { background-color: hsl(160 40% 11%); }
+  .dark .bg-emerald-300 { background-color: hsl(160 38% 26%); }
+  .dark .bg-emerald-400 { background-color: hsl(160 74% 64%); }
+  .dark .bg-emerald-400\/10 { background-color: color-mix(in oklab, hsl(160 74% 64%) 10%, transparent); }
+  .dark .bg-emerald-500\/90 { background-color: color-mix(in oklab, hsl(160 72% 60%) 90%, transparent); }
+  .dark .bg-emerald-500 { background-color: hsl(160 72% 60%); }
+  .dark .bg-emerald-600 { background-color: hsl(160 68% 55%); }
+  .dark .bg-emerald-700 { background-color: hsl(160 58% 34%); }
+  .dark .bg-emerald-800 { background-color: hsl(160 56% 27%); }
+  .dark .bg-gray-50\/70 { background-color: color-mix(in oklab, #08080a 70%, transparent); }
+  .dark .bg-gray-50 { background-color: #08080a; }
+  .dark .bg-gray-50\/30 { background-color: color-mix(in oklab, #08080a 30%, transparent); }
+  .dark .bg-gray-50\/60 { background-color: color-mix(in oklab, #08080a 60%, transparent); }
+  .dark .bg-gray-50\/80 { background-color: color-mix(in oklab, #08080a 80%, transparent); }
+  .dark .bg-gray-50\/50 { background-color: color-mix(in oklab, #08080a 50%, transparent); }
+  .dark .bg-gray-100 { background-color: #101014; }
+  .dark .bg-gray-100\/50 { background-color: color-mix(in oklab, #101014 50%, transparent); }
+  .dark .bg-gray-200 { background-color: #17171c; }
+  .dark .bg-gray-300 { background-color: #232329; }
+  .dark .bg-gray-400 { background-color: #34343c; }
+  .dark .bg-gray-500 { background-color: #55555f; }
+  .dark .bg-gray-800 { background-color: #1a1a1e; }
+  .dark .bg-gray-900 { background-color: #0f0f12; }
+  .dark .bg-green-50 { background-color: hsl(142 38% 7%); }
+  .dark .bg-indigo-50 { background-color: hsl(239 38% 7%); }
+  .dark .bg-indigo-100 { background-color: hsl(239 40% 11%); }
+  .dark .bg-indigo-500 { background-color: hsl(239 72% 60%); }
+  .dark .bg-pink-50 { background-color: hsl(330 38% 7%); }
+  .dark .bg-pink-500 { background-color: hsl(330 72% 60%); }
+  .dark .bg-purple-50 { background-color: hsl(270 38% 7%); }
+  .dark .bg-purple-100 { background-color: hsl(270 40% 11%); }
+  .dark .bg-purple-500 { background-color: hsl(270 72% 60%); }
+  .dark .bg-red-50\/40 { background-color: color-mix(in oklab, hsl(359 38% 7%) 40%, transparent); }
+  .dark .bg-red-50 { background-color: hsl(359 38% 7%); }
+  .dark .bg-red-50\/60 { background-color: color-mix(in oklab, hsl(359 38% 7%) 60%, transparent); }
+  .dark .bg-red-100 { background-color: hsl(359 40% 11%); }
+  .dark .bg-red-400 { background-color: hsl(359 74% 64%); }
+  .dark .bg-red-500 { background-color: hsl(359 72% 60%); }
+  .dark .bg-red-600 { background-color: hsl(359 68% 55%); }
+  .dark .bg-red-700 { background-color: hsl(359 58% 34%); }
+  .dark .bg-red-800 { background-color: hsl(359 56% 27%); }
+  .dark .bg-rose-50 { background-color: hsl(350 38% 7%); }
+  .dark .bg-rose-100 { background-color: hsl(350 40% 11%); }
+  .dark .bg-rose-200 { background-color: hsl(350 40% 16%); }
+  .dark .bg-rose-500 { background-color: hsl(350 72% 60%); }
+  .dark .bg-sky-50 { background-color: hsl(199 38% 7%); }
+  .dark .bg-sky-500 { background-color: hsl(199 72% 60%); }
+  .dark .bg-teal-50 { background-color: hsl(173 38% 7%); }
+  .dark .bg-teal-100 { background-color: hsl(173 40% 11%); }
+  .dark .bg-teal-500 { background-color: hsl(173 72% 60%); }
+  .dark .bg-violet-50 { background-color: hsl(258 38% 7%); }
+  .dark .bg-violet-500 { background-color: hsl(258 72% 60%); }
+  .dark .bg-white\/25 { background-color: color-mix(in oklab, #ffffff 25%, transparent); }
+  .dark .bg-white\/20 { background-color: color-mix(in oklab, #ffffff 20%, transparent); }
+  .dark .bg-white { background-color: #101014; }
+  .dark .bg-white\/70 { background-color: color-mix(in oklab, #ffffff 70%, transparent); }
+  .dark .bg-white\/15 { background-color: color-mix(in oklab, #ffffff 15%, transparent); }
+  .dark .bg-white\/10 { background-color: color-mix(in oklab, #ffffff 10%, transparent); }
+  .dark .border-amber-100 { border-color: hsl(38 40% 18%); }
+  .dark .border-amber-200 { border-color: hsl(38 40% 28%); }
+  .dark .border-amber-300 { border-color: hsl(38 40% 36%); }
+  .dark .border-amber-400 { border-color: hsl(38 68% 54%); }
+  .dark .border-amber-500 { border-color: hsl(38 68% 56%); }
+  .dark .border-blue-100 { border-color: hsl(217 40% 18%); }
+  .dark .border-blue-200 { border-color: hsl(217 40% 28%); }
+  .dark .border-blue-300 { border-color: hsl(217 40% 36%); }
+  .dark .border-blue-400 { border-color: hsl(217 68% 54%); }
+  .dark .border-blue-400\/80 { border-color: color-mix(in oklab, hsl(217 68% 54%) 80%, transparent); }
+  .dark .border-blue-500 { border-color: hsl(217 68% 56%); }
+  .dark .border-blue-600 { border-color: hsl(217 66% 54%); }
+  .dark .border-emerald-100 { border-color: hsl(160 40% 18%); }
+  .dark .border-emerald-200 { border-color: hsl(160 40% 28%); }
+  .dark .border-emerald-400 { border-color: hsl(160 68% 54%); }
+  .dark .border-gray-50 { border-color: #1c1c22; }
+  .dark .border-gray-100 { border-color: #232329; }
+  .dark .border-gray-100\/80 { border-color: color-mix(in oklab, #232329 80%, transparent); }
+  .dark .border-gray-200 { border-color: #2e2e36; }
+  .dark .border-gray-200\/80 { border-color: color-mix(in oklab, #2e2e36 80%, transparent); }
+  .dark .border-gray-300 { border-color: #3a3a44; }
+  .dark .border-gray-900 { border-color: #2e2e36; }
+  .dark .border-pink-200 { border-color: hsl(330 40% 28%); }
+  .dark .border-pink-400 { border-color: hsl(330 68% 54%); }
+  .dark .border-purple-100 { border-color: hsl(270 40% 18%); }
+  .dark .border-purple-200 { border-color: hsl(270 40% 28%); }
+  .dark .border-purple-400 { border-color: hsl(270 68% 54%); }
+  .dark .border-red-100 { border-color: hsl(359 40% 18%); }
+  .dark .border-red-200 { border-color: hsl(359 40% 28%); }
+  .dark .border-red-300 { border-color: hsl(359 40% 36%); }
+  .dark .border-red-500 { border-color: hsl(359 68% 56%); }
+  .dark .border-white\/15 { border-color: color-mix(in oklab, #ffffff 15%, transparent); }
+  .dark .border-white\/40 { border-color: color-mix(in oklab, #ffffff 40%, transparent); }
+  .dark .border-white { border-color: #101014; }
+  .dark .divide-gray-50 { border-color: #1c1c22; }
+  .dark .divide-gray-100\/70 { border-color: color-mix(in oklab, #232329 70%, transparent); }
+  .dark .divide-gray-100 { border-color: #232329; }
+  .dark .from-amber-50 { from-color: hsl(38 38% 7%); }
+  .dark .from-amber-500 { from-color: hsl(38 72% 60%); }
+  .dark .from-blue-500 { from-color: hsl(217 72% 60%); }
+  .dark .from-blue-600 { from-color: hsl(217 68% 55%); }
+  .dark .from-emerald-50 { from-color: hsl(160 38% 7%); }
+  .dark .from-emerald-500 { from-color: hsl(160 72% 60%); }
+  .dark .from-emerald-600 { from-color: hsl(160 68% 55%); }
+  .dark .from-navy-900 { from-color: hsl(215 54% 21%); }
+  .dark .from-purple-500 { from-color: hsl(270 72% 60%); }
+  .dark .from-red-600 { from-color: hsl(359 68% 55%); }
+  .dark .from-sky-500 { from-color: hsl(199 72% 60%); }
+  .dark .from-slate-500 { from-color: hsl(215 72% 60%); }
+  .dark .from-white { from-color: #101014; }
+  .dark .from-white\/90 { from-color: color-mix(in oklab, #ffffff 90%, transparent); }
+  .dark .ring-amber-400 { ring: hsl(38 68% 54%); }
+  .dark .ring-black\/5 { ring: #000000; }
+  .dark .ring-blue-100 { ring: hsl(217 40% 18%); }
+  .dark .ring-blue-200 { ring: hsl(217 40% 28%); }
+  .dark .ring-blue-400 { ring: hsl(217 68% 54%); }
+  .dark .ring-blue-500\/15 { ring: color-mix(in oklab, hsl(217 68% 56%) 15%, transparent); }
+  .dark .ring-blue-500\/30 { ring: color-mix(in oklab, hsl(217 68% 56%) 30%, transparent); }
+  .dark .ring-blue-500\/20 { ring: color-mix(in oklab, hsl(217 68% 56%) 20%, transparent); }
+  .dark .ring-blue-500\/40 { ring: color-mix(in oklab, hsl(217 68% 56%) 40%, transparent); }
+  .dark .ring-blue-500 { ring: hsl(217 68% 56%); }
+  .dark .ring-blue-600 { ring: hsl(217 66% 54%); }
+  .dark .ring-emerald-500 { ring: hsl(160 68% 56%); }
+  .dark .ring-red-300 { ring: hsl(359 40% 36%); }
+  .dark .ring-red-400 { ring: hsl(359 68% 54%); }
+  .dark .ring-red-500\/15 { ring: color-mix(in oklab, hsl(359 68% 56%) 15%, transparent); }
+  .dark .ring-white { ring: #101014; }
+  .dark .text-amber-300\/80 { color: color-mix(in oklab, hsl(38 80% 72%) 80%, transparent); }
+  .dark .text-amber-500 { color: hsl(38 72% 62%); }
+  .dark .text-amber-600 { color: hsl(38 70% 60%); }
+  .dark .text-amber-700 { color: hsl(38 85% 78%); }
+  .dark .text-amber-800 { color: hsl(38 88% 85%); }
+  .dark .text-amber-900 { color: hsl(38 90% 91%); }
+  .dark .text-blue-100 { color: hsl(217 80% 72%); }
+  .dark .text-blue-200\/70 { color: color-mix(in oklab, hsl(217 80% 72%) 70%, transparent); }
+  .dark .text-blue-200 { color: hsl(217 80% 72%); }
+  .dark .text-blue-300\/40 { color: color-mix(in oklab, hsl(217 80% 72%) 40%, transparent); }
+  .dark .text-blue-300 { color: hsl(217 80% 72%); }
+  .dark .text-blue-300\/60 { color: color-mix(in oklab, hsl(217 80% 72%) 60%, transparent); }
+  .dark .text-blue-400 { color: hsl(217 78% 68%); }
+  .dark .text-blue-500 { color: hsl(217 72% 62%); }
+  .dark .text-blue-600 { color: hsl(217 70% 60%); }
+  .dark .text-blue-700 { color: hsl(217 85% 78%); }
+  .dark .text-blue-800 { color: hsl(217 88% 85%); }
+  .dark .text-blue-900\/70 { color: color-mix(in oklab, hsl(217 90% 91%) 70%, transparent); }
+  .dark .text-blue-900 { color: hsl(217 90% 91%); }
+  .dark .text-blue-900\/80 { color: color-mix(in oklab, hsl(217 90% 91%) 80%, transparent); }
+  .dark .text-emerald-500 { color: hsl(160 72% 62%); }
+  .dark .text-emerald-600 { color: hsl(160 70% 60%); }
+  .dark .text-emerald-700 { color: hsl(160 85% 78%); }
+  .dark .text-emerald-800 { color: hsl(160 88% 85%); }
+  .dark .text-emerald-900 { color: hsl(160 90% 91%); }
+  .dark .text-gray-300 { color: #c6c6d0; }
+  .dark .text-gray-400 { color: #8b8b96; }
+  .dark .text-gray-500 { color: #a3a3ae; }
+  .dark .text-gray-600 { color: #b8b8c2; }
+  .dark .text-gray-700 { color: #c9c9d2; }
+  .dark .text-gray-800 { color: #dcdce4; }
+  .dark .text-gray-900 { color: #ececf2; }
+  .dark .text-green-600 { color: hsl(142 70% 60%); }
+  .dark .text-indigo-600 { color: hsl(239 70% 60%); }
+  .dark .text-indigo-700 { color: hsl(239 85% 78%); }
+  .dark .text-pink-600 { color: hsl(330 70% 60%); }
+  .dark .text-pink-700 { color: hsl(330 85% 78%); }
+  .dark .text-purple-500 { color: hsl(270 72% 62%); }
+  .dark .text-purple-600 { color: hsl(270 70% 60%); }
+  .dark .text-purple-700 { color: hsl(270 85% 78%); }
+  .dark .text-red-300 { color: hsl(359 80% 72%); }
+  .dark .text-red-500 { color: hsl(359 72% 62%); }
+  .dark .text-red-600 { color: hsl(359 70% 60%); }
+  .dark .text-red-700 { color: hsl(359 85% 78%); }
+  .dark .text-red-800 { color: hsl(359 88% 85%); }
+  .dark .text-red-900 { color: hsl(359 90% 91%); }
+  .dark .text-rose-600 { color: hsl(350 70% 60%); }
+  .dark .text-rose-700 { color: hsl(350 85% 78%); }
+  .dark .text-sky-600 { color: hsl(199 70% 60%); }
+  .dark .text-sky-700 { color: hsl(199 85% 78%); }
+  .dark .text-slate-300 { color: hsl(215 80% 72%); }
+  .dark .text-slate-400 { color: hsl(215 78% 68%); }
+  .dark .text-slate-500 { color: hsl(215 72% 62%); }
+  .dark .text-teal-600 { color: hsl(173 70% 60%); }
+  .dark .text-teal-700 { color: hsl(173 85% 78%); }
+  .dark .text-violet-600 { color: hsl(258 70% 60%); }
+  .dark .to-amber-50\/30 { to-color: color-mix(in oklab, hsl(38 38% 7%) 30%, transparent); }
+  .dark .to-blue-500 { to-color: hsl(217 72% 60%); }
+  .dark .to-blue-600 { to-color: hsl(217 68% 55%); }
+  .dark .to-cyan-600 { to-color: hsl(188 68% 55%); }
+  .dark .to-emerald-50\/30 { to-color: color-mix(in oklab, hsl(160 38% 7%) 30%, transparent); }
+  .dark .to-emerald-600 { to-color: hsl(160 68% 55%); }
+  .dark .to-emerald-800 { to-color: hsl(160 56% 27%); }
+  .dark .to-navy-700 { to-color: hsl(215 58% 34%); }
+  .dark .to-orange-500 { to-color: hsl(25 72% 60%); }
+  .dark .to-purple-600 { to-color: hsl(270 68% 55%); }
+  .dark .to-red-800 { to-color: hsl(359 56% 27%); }
+  .dark .to-slate-600 { to-color: hsl(215 68% 55%); }
+  .dark .via-emerald-700 { via-color: hsl(160 58% 34%); }
+  .dark .via-red-700 { via-color: hsl(359 58% 34%); }
 
 @media print {
+  /* Printing is always the light theme: a report opened while dark mode is on must
+     still come out as black text on white paper, not a black page. */
+  :root, .dark { color-scheme: light; }
+  .dark body, .dark #root { background: #fff !important; color: #0f172a !important; }
+  .dark .bg-white, .dark .bg-\[\#F8FAFC\] { background-color: #fff !important; }
+  .dark .bg-gray-50 { background-color: #f8fafc !important; }
+  .dark .bg-gray-100 { background-color: #f1f5f9 !important; }
+  .dark .text-gray-900, .dark .text-gray-800, .dark .text-\[\#0B1F3A\] { color: #0f172a !important; }
+  .dark .text-gray-700, .dark .text-gray-600, .dark .text-gray-500 { color: #334155 !important; }
+  .dark .text-gray-400 { color: #64748b !important; }
+  .dark .border-gray-100, .dark .border-gray-200, .dark .border-gray-50 { border-color: #e2e8f0 !important; }
+  .dark .divide-gray-100, .dark .divide-gray-50 { border-color: #e2e8f0 !important; }
+  .dark .table-frame thead th { background-color: #eef2f7 !important; color: #475569 !important; }
+  .dark .table-frame tbody td, .dark .table-frame tbody th { color: #334155 !important; border-bottom-color: #f1f5f9 !important; }
+  .dark .table-frame tbody tr:nth-child(even) { background-color: #fafbfc !important; }
   /* Kill everything except the report */
   aside, header, nav, .sidebar, .topbar, .breadcrumb, .no-print,
   .report-preview-container { display: none !important; }

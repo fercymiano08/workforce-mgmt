@@ -22,10 +22,26 @@ export const LEAVE_TYPE_CHART_COLORS = {
 // type's color, so an unmapped value lands on a neutral slate.
 export const leaveTypeChartColor = (type) => LEAVE_TYPE_CHART_COLORS[type] ?? '#94A3B8';
 
+// The dark-theme twin of the map above: same hues, saturation and brightness pulled back so a
+// pie or donut belongs to a black screen instead of glowing on top of it. The pairs are chosen
+// to stay as far apart as the light ones do, so two neighbouring slices remain tellable apart.
+const LEAVE_TYPE_CHART_COLORS_DARK = {
+  Vacation: '#5B8FD6',
+  Sick: '#D9646B',
+  Emergency: '#C99A3F',
+  Special: '#D4738A',
+  Funeral: '#6E7BD6',
+  Unpaid: '#3FA0A8',
+};
+
+export const leaveTypeChartColorFor = (isDark) => (isDark ? LEAVE_TYPE_CHART_COLORS_DARK : LEAVE_TYPE_CHART_COLORS);
+
+export const leaveTypeChartColorIn = (type, isDark) => leaveTypeChartColorFor(isDark)[type] ?? (isDark ? '#7d7d88' : '#94A3B8');
+
 // The analytics API returns the leave types as lowercase keys ("vacation"), so that page needs the
 // same palette re-keyed rather than a second hand-written copy of it.
-export const lowercaseLeaveTypeColors = () =>
-  Object.fromEntries(Object.entries(LEAVE_TYPE_CHART_COLORS).map(([type, color]) => [type.toLowerCase(), color]));
+export const lowercaseLeaveTypeColors = (isDark = false) =>
+  Object.fromEntries(Object.entries(leaveTypeChartColorFor(isDark)).map(([type, color]) => [type.toLowerCase(), color]));
 
 export const lowercaseLeaveTypeLabels = () =>
   Object.fromEntries(Object.keys(LEAVE_TYPE_CHART_COLORS).map((type) => [type.toLowerCase(), type]));

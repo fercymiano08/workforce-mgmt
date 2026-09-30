@@ -1,4 +1,4 @@
-import { useState, useMemo } from 'react';
+﻿import { useState, useMemo } from 'react';
 import {
   BarChart, Bar, Cell, PieChart, Pie, LineChart, Line,
   XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend
@@ -13,10 +13,11 @@ import {
 import { analyticsService } from '../../services/api';
 import useApiData from '../../hooks/useApiData';
 import { SkeletonPage } from '../../components/ui/LoadingSkeleton';
+import { useTheme } from '../../context/ThemeContext';
+import { chartTheme } from '../../constants/chartTheme';
 
 // Re-keyed from the shared palette rather than hand-written here, so this page, the dashboard
 // pie and the leave badges cannot drift apart. The API returns these types as lowercase keys.
-const LEAVE_TYPE_COLORS = lowercaseLeaveTypeColors();
 const LEAVE_TYPE_LABELS = lowercaseLeaveTypeLabels();
 
 const kpiColors = {
@@ -25,15 +26,15 @@ const kpiColors = {
   emerald: { icon: 'bg-emerald-50 text-emerald-600', fill: 'bg-emerald-500', track: 'bg-emerald-100' },
 };
 
-const scoreColor = (value) => (value >= 90 ? '#10B981' : value >= 75 ? '#F59E0B' : '#EF4444');
+const scoreColor = (value, colors) => (value >= 90 ? colors.emerald : value >= 75 ? colors.amber : colors.red);
 
 // One fixed color per department, assigned by alphabetical name order so it never
 // shifts with API response order or a re-fetch (identity, not magnitude - the pie's
 // job is "which department", so color follows the department, not the score).
-const DEPARTMENT_COLOR_ORDER = ['#3B82F6', '#10B981', '#F59E0B', '#EF4444', '#8B5CF6', '#0EA5E9', '#6366F1', '#14B8A6'];
-function departmentColorMap(names) {
-  const sorted = [...new Set(names)].sort();
-  return Object.fromEntries(sorted.map((name, i) => [name, DEPARTMENT_COLOR_ORDER[i % DEPARTMENT_COLOR_ORDER.length]]));
+const DEPARTMENT_COLOR_ORDER = ['blue', 'emerald', 'amber', 'red', 'purple', 'sky', 'indigo', 'teal'];
+function departmentColorMap(names, colors) {
+const sorted = [...new Set(names)].sort();
+return Object.fromEntries(sorted.map((name, i) => [name, colors[DEPARTMENT_COLOR_ORDER[i % DEPARTMENT_COLOR_ORDER.length]]]));
 }
 
 // Charts only ever show real recorded activity. Until employees start clocking
@@ -99,6 +100,7 @@ function StatTile({ label, value, icon: Icon, color }) {
 // A ranking is read top-to-bottom, not off an axis: name, a value-proportional
 // bar, and the score - a leaderboard, not another generic bar chart.
 function RankRow({ rank, name, department, score, tone }) {
+  const { isDark } = useTheme();
   return (
     <div className="flex items-center gap-3 py-2">
       <span className={`w-6 h-6 shrink-0 rounded-full flex items-center justify-center text-[11px] font-bold ${tone === 'top' ? 'bg-emerald-100 text-emerald-700' : 'bg-red-100 text-red-700'}`}>
@@ -111,7 +113,7 @@ function RankRow({ rank, name, department, score, tone }) {
         </div>
         <div className="flex items-center gap-2 mt-1">
           <div className="h-1.5 flex-1 rounded-full bg-gray-100">
-            <div className="h-1.5 rounded-full" style={{ width: `${score}%`, backgroundColor: scoreColor(score) }} />
+            <div className="h-1.5 rounded-full" style={{ width: `${score}%`, backgroundColor: scoreColor(score, chartTheme(isDark).colors) }} />
           </div>
           {department && <span className="text-[11px] text-gray-400 shrink-0 max-w-[80px] truncate">{department}</span>}
         </div>
@@ -121,6 +123,9 @@ function RankRow({ rank, name, department, score, tone }) {
 }
 
 export default function Analytics() {
+  const { isDark } = useTheme();
+  const chart = chartTheme(isDark);
+  const LEAVE_TYPE_COLORS = lowercaseLeaveTypeColors(isDark);
   const [range, setRange] = useState('month');
   const { data: analyticsData, loading } = useApiData(
     () => analyticsService.getAll(),
@@ -141,8 +146,8 @@ export default function Analytics() {
     : 0;
 
   const deptColors = useMemo(
-    () => departmentColorMap((analyticsData?.departmentProductivity ?? []).map((d) => d.name)),
-    [analyticsData]
+    () => departmentColorMap((analyticsData?.departmentProductivity ?? []).map((d) => d.name), chart.colors),
+    [analyticsData, chart.colors]
   );
 
   const topPerformers = punctualityScore.slice(0, 5);
@@ -188,20 +193,20 @@ export default function Analytics() {
         <MeterTile
           label="Overall Attendance Rate"
           value={lastRate}
-          displayValue={attendanceTrend.length > 0 ? `${lastRate.toFixed(1)}%` : '—'}
+          displayValue={attendanceTrend.length > 0 ? `${lastRate.toFixed(1)}%` : 'â€”'}
           icon={Percent}
           color="blue"
         />
         <MeterTile
           label="Overall Punctuality"
           value={avgPunctuality}
-          displayValue={punctualityScore.length > 0 ? `${avgPunctuality.toFixed(1)}%` : '—'}
+          displayValue={punctualityScore.length > 0 ? `${avgPunctuality.toFixed(1)}%` : 'â€”'}
           icon={Gauge}
           color="emerald"
         />
         <StatTile
           label="Total Overtime Hours"
-          value={overtimeSummary.length > 0 ? `${overtimeHours.toFixed(0)}h` : '—'}
+          value={overtimeSummary.length > 0 ? `${overtimeHours.toFixed(0)}h` : 'â€”'}
           icon={Clock}
           color="amber"
         />
@@ -220,15 +225,15 @@ export default function Analytics() {
           <div className="h-72">
             <ResponsiveContainer width="100%" height="100%">
               <BarChart data={attendanceTrend}>
-                <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" vertical={false} />
-                <XAxis dataKey="month" tick={{ fontSize: 12 }} stroke="#94a3b8" />
-                <YAxis tick={{ fontSize: 12 }} stroke="#94a3b8" domain={[80, 100]} />
+                <CartesianGrid strokeDasharray="3 3" stroke={chart.grid} vertical={false} />
+                <XAxis dataKey="month" tick={{ fontSize: 12 }} stroke={chart.axisStrong} />
+                <YAxis tick={{ fontSize: 12 }} stroke={chart.axisStrong} domain={[80, 100]} />
                 <Tooltip
-                  cursor={{ fill: '#f1f5f9' }}
-                  contentStyle={{ borderRadius: '12px', border: '1px solid #e2e8f0', boxShadow: '0 4px 6px -1px rgba(0,0,0,0.1)' }}
+                  cursor={{ fill: chart.cursor }}
+                  contentStyle={chart.tooltipStyle}
                   formatter={(value) => [`${value}%`, 'Attendance Rate']}
                 />
-                <Bar dataKey="rate" name="Attendance Rate" fill="#3B82F6" radius={[4, 4, 0, 0]} barSize={24} />
+                <Bar dataKey="rate" name="Attendance Rate" fill={chart.colors.blue} radius={[4, 4, 0, 0]} barSize={24} />
               </BarChart>
             </ResponsiveContainer>
           </div>
@@ -276,7 +281,7 @@ export default function Analytics() {
                   iconType="square"
                   iconSize={8}
                   wrapperStyle={{ fontSize: 11, paddingTop: 12 }}
-                  formatter={(value, entry) => <span className="text-gray-600">{value} · {entry.payload.productivity.toFixed(0)}%</span>}
+                  formatter={(value, entry) => <span className="text-gray-600">{value} Â· {entry.payload.productivity.toFixed(0)}%</span>}
                 />
               </PieChart>
             </ResponsiveContainer>
@@ -298,10 +303,10 @@ export default function Analytics() {
           <div className="h-72">
             <ResponsiveContainer width="100%" height="100%">
               <BarChart data={leaveTrend} layout="vertical" margin={{ left: 8 }}>
-                <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" horizontal={false} />
-                <XAxis type="number" tick={{ fontSize: 12 }} stroke="#94a3b8" allowDecimals={false} />
-                <YAxis type="category" dataKey="month" tick={{ fontSize: 12 }} stroke="#94a3b8" width={64} />
-                <Tooltip cursor={{ fill: '#f1f5f9' }} contentStyle={{ borderRadius: '12px', border: '1px solid #e2e8f0' }} />
+                <CartesianGrid strokeDasharray="3 3" stroke={chart.grid} horizontal={false} />
+                <XAxis type="number" tick={{ fontSize: 12 }} stroke={chart.axisStrong} allowDecimals={false} />
+                <YAxis type="category" dataKey="month" tick={{ fontSize: 12 }} stroke={chart.axisStrong} width={64} />
+                <Tooltip cursor={{ fill: chart.cursor }} contentStyle={chart.tooltipStyle} />
                 <Legend />
                 {Object.keys(LEAVE_TYPE_COLORS).map((type, i, arr) => (
                   <Bar
@@ -331,22 +336,22 @@ export default function Analytics() {
           <div className="h-72">
             <ResponsiveContainer width="100%" height="100%">
               <LineChart data={overtimeSummary} margin={{ top: 16, left: 4, right: 16, bottom: 4 }}>
-                <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" vertical={false} />
-                <XAxis dataKey="department" tick={{ fontSize: 11 }} stroke="#94a3b8" />
-                <YAxis tick={{ fontSize: 12 }} stroke="#94a3b8" domain={[0, (max) => Math.ceil(max * 1.4 * 10) / 10]} />
+                <CartesianGrid strokeDasharray="3 3" stroke={chart.grid} vertical={false} />
+                <XAxis dataKey="department" tick={{ fontSize: 11 }} stroke={chart.axisStrong} />
+                <YAxis tick={{ fontSize: 12 }} stroke={chart.axisStrong} domain={[0, (max) => Math.ceil(max * 1.4 * 10) / 10]} />
                 <Tooltip
-                  cursor={{ stroke: '#e2e8f0' }}
-                  contentStyle={{ borderRadius: '12px', border: '1px solid #e2e8f0' }}
+                  cursor={{ stroke: chart.grid }}
+                  contentStyle={chart.tooltipStyle}
                   formatter={(value) => [`${value}h`, 'Avg Overtime']}
                 />
                 <Line
                   type="linear"
                   dataKey="avgOvertime"
                   name="Avg Overtime"
-                  stroke="#F59E0B"
+                  stroke={chart.colors.amber}
                   strokeWidth={2}
-                  dot={{ r: 4, fill: '#F59E0B', strokeWidth: 2, stroke: '#fff' }}
-                  activeDot={{ r: 6, strokeWidth: 2, stroke: '#fff' }}
+                  dot={{ r: 4, fill: chart.colors.amber, strokeWidth: 2, stroke: chart.sliceBorder }}
+                  activeDot={{ r: 6, strokeWidth: 2, stroke: chart.sliceBorder }}
                 />
               </LineChart>
             </ResponsiveContainer>

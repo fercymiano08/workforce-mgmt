@@ -1,12 +1,16 @@
-import { createContext, useContext, useEffect, useMemo, useState } from 'react';
+import { createContext, useContext, useCallback, useEffect, useMemo, useState } from 'react';
 
-// Font-size scaling only. A dark theme was added once (toggle in the top bar, color-scheme: light dark)
-// with no matching dark styles, which made every native dropdown follow the phone's dark setting and
-// nothing else. It was removed rather than completed: the app is light-only, and the control that
-// "set" a theme no one asked for is gone.
 const ThemeContext = createContext(null);
 
 const FONT_SIZES = { small: '14px', medium: '16px', large: '18px' };
+
+function getInitialTheme() {
+  try {
+    const stored = window.localStorage.getItem('wf-theme');
+    if (stored === 'light' || stored === 'dark' || stored === 'system') return stored;
+  } catch { /* ignore */ }
+  return 'light';
+}
 
 function getInitialFontSize() {
   try {
@@ -16,22 +20,55 @@ function getInitialFontSize() {
   return 'medium';
 }
 
+function applyThemeClass(theme) {
+  const root = document.documentElement;
+  if (theme === 'dark') {
+    root.classList.add('dark');
+  } else if (theme === 'light') {
+    root.classList.remove('dark');
+  } else {
+    const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+    prefersDark ? root.classList.add('dark') : root.classList.remove('dark');
+  }
+}
+
 function applyFontSize(size) {
   document.documentElement.style.fontSize = FONT_SIZES[size] || FONT_SIZES.medium;
 }
 
 export function ThemeProvider({ children }) {
+  const [theme, setTheme] = useState(getInitialTheme);
   const [fontSize, setFontSize] = useState(getInitialFontSize);
 
-  // Apply font size on mount and when font size changes
+  // Apply theme class on mount and when theme changes
+  useEffect(() => {
+    applyThemeClass(theme);
+    try { window.localStorage.setItem('wf-theme', theme); } catch { /* ignore */ }
+  }, [theme]);
+
+  // Apply font size on mount and when fontSize changes
   useEffect(() => {
     applyFontSize(fontSize);
     try { window.localStorage.setItem('wf-font-size', fontSize); } catch { /* ignore */ }
   }, [fontSize]);
 
+  // Listen for OS theme changes when on "system"
+  useEffect(() => {
+    if (theme !== 'system') return;
+    const mq = window.matchMedia('(prefers-color-scheme: dark)');
+    const handler = () => applyThemeClass('system');
+    mq.addEventListener('change', handler);
+    return () => mq.removeEventListener('change', handler);
+  }, [theme]);
+
+  const toggleTheme = useCallback(() => setTheme((prev) => (prev === 'dark' ? 'light' : 'dark')), []);
+
+  // Memoized so every useTheme() consumer app-wide doesn't re-render on
+  // every unrelated render of whatever happens to sit above it in the tree.
   const value = useMemo(() => ({
+    theme, setTheme, toggleTheme, isDark: theme === 'dark',
     fontSize, setFontSize,
-  }), [fontSize]);
+  }), [theme, toggleTheme, fontSize]);
 
   return (
     <ThemeContext.Provider value={value}>

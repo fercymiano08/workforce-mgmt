@@ -1,4 +1,4 @@
-import { useMemo } from 'react';
+﻿import { useMemo } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import {
   Clock, CalendarDays, CalendarCheck, Hourglass,
@@ -21,8 +21,9 @@ import { SkeletonList, SkeletonPage } from '../../components/ui/LoadingSkeleton'
 import useApiData from '../../hooks/useApiData';
 import { attendanceService, leaveService, shiftService, timesheetService } from '../../services/api';
 import { formatDate, formatTime } from '../../utils/helpers';
+import { useTheme } from '../../context/ThemeContext';
+import { chartTheme } from '../../constants/chartTheme';
 
-const COLORS = { emerald: '#10B981', amber: '#F59E0B', red: '#EF4444', blue: '#3B82F6' };
 
 const leaveTypeBadge = (type) => {
   const map = { Vacation: 'primary', Sick: 'success', Emergency: 'warning', Special: 'purple' };
@@ -72,6 +73,9 @@ const CustomTooltip = ({ active, payload, label }) => {
 };
 
 export default function EmployeeDashboard() {
+  const { isDark } = useTheme();
+  const chart = chartTheme(isDark);
+  const COLORS = chart.colors;
   const { user } = useAuth();
   const navigate = useNavigate();
   const employeeId = user?.id || 'EMP001';
@@ -208,11 +212,11 @@ export default function EmployeeDashboard() {
         <p className="text-xs text-amber-700 mt-0.5">
           You clocked out {todayEarly.minutesEarly ? `${todayEarly.minutesEarly} min early` : 'early'} today
           {todayEarly.classification === 'UNPAID'
-            ? ' · classified as Unpaid'
+            ? ' Â· classified as Unpaid'
             : todayEarly.classification === 'PENDING_REVIEW'
-              ? ' · pending HR review'
+              ? ' Â· pending HR review'
               : todayEarly.classification
-                ? ' · excused'
+                ? ' Â· excused'
                 : ''}.
         </p>
       </div>
@@ -291,7 +295,7 @@ export default function EmployeeDashboard() {
         <KpiCard label="Attendance Rate" value={`${attendanceRate}%`} icon={CalendarDays} accent="purple" to="/my-attendance" />
         {/* The count is worked out from leave and timesheet requests, so it stays a dash until both
             have answered rather than briefly claiming there is nothing pending. */}
-        <KpiCard label="Pending Requests" value={loadingLeaves || loadingTimesheets ? '—' : pendingCount} icon={Clock} accent="amber" to="/leave" />
+        <KpiCard label="Pending Requests" value={loadingLeaves || loadingTimesheets ? 'â€”' : pendingCount} icon={Clock} accent="amber" to="/leave" />
       </div>
 
       {/* Early Leave Today */}
@@ -308,9 +312,9 @@ export default function EmployeeDashboard() {
                 {/* barSize is the whole point: without it recharts divides the plot by the number of bars,
                     so one record becomes a single block as wide as the card. */}
                 <BarChart data={chartData} barSize={32} barGap={3} barCategoryGap="18%" margin={{ top: 8, right: 8, left: -12, bottom: 0 }}>
-                  <CartesianGrid strokeDasharray="3 3" stroke="#F1F5F9" vertical={false} />
-                  <XAxis dataKey="day" axisLine={false} tickLine={false} tick={{ fontSize: 12, fill: '#64748B' }} />
-                  <YAxis axisLine={false} tickLine={false} tick={{ fontSize: 12, fill: '#64748B' }} />
+                  <CartesianGrid strokeDasharray="3 3" stroke={chart.grid} vertical={false} />
+                  <XAxis dataKey="day" axisLine={false} tickLine={false} tick={{ fontSize: 12, fill: chart.axis }} />
+                  <YAxis axisLine={false} tickLine={false} tick={{ fontSize: 12, fill: chart.axis }} />
                   <Tooltip content={<CustomTooltip />} />
                   <Legend iconType="square" iconSize={8} wrapperStyle={{ paddingTop: 16, fontSize: 12 }} />
                   <Bar dataKey="hours" name="Hours Worked" fill={COLORS.blue} radius={[6, 6, 0, 0]} />
@@ -370,7 +374,7 @@ export default function EmployeeDashboard() {
                 </Badge>
               </div>
               <p className="text-xs text-gray-400 mt-1">
-                {formatDate(myTimesheet.weekStart)} – {formatDate(myTimesheet.weekEnd)}
+                {formatDate(myTimesheet.weekStart)} â€“ {formatDate(myTimesheet.weekEnd)}
               </p>
             </div>
             <div className="grid grid-cols-3 gap-5 sm:gap-8">
