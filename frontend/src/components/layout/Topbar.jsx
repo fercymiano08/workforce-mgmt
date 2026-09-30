@@ -3,11 +3,10 @@ import { useNavigate } from 'react-router-dom';
 import {
   Bell, ChevronDown,
   LogOut, User, Settings, HelpCircle, Menu,
-  Sun, Moon, AlertTriangle, WifiOff, Wifi
+  AlertTriangle, WifiOff, Wifi
 } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 import { useLanguage } from '../../context/LanguageContext';
-import { useTheme } from '../../context/ThemeContext';
 import useNetworkStatus from '../../hooks/useNetworkStatus';
 import Avatar from '../ui/Avatar';
 import Modal from '../ui/Modal';
@@ -19,7 +18,6 @@ import { useNotifications } from '../../context/NotificationContext';
 export default function Topbar({ onMenuToggle }) {
   const { user, logout } = useAuth();
   const { t } = useLanguage();
-  const { toggleTheme, isDark } = useTheme();
   const navigate = useNavigate();
   const isOnline = useNetworkStatus();
   const { unreadCount } = useNotifications();
@@ -96,17 +94,6 @@ export default function Topbar({ onMenuToggle }) {
             onClose={() => setShowNotifications(false)}
           />
         </div>
-
-        {/* Light / Dark toggle */}
-        <button
-          onClick={toggleTheme}
-          aria-label={isDark ? 'Switch to light mode' : 'Switch to dark mode'}
-          title={isDark ? 'Switch to light mode' : 'Switch to dark mode'}
-          className="relative p-2.5 rounded-xl hover:bg-gray-100 transition-colors text-gray-500 hover:text-gray-700"
-        >
-          <Sun className={`w-5 h-5 transition-all duration-300 ${isDark ? 'scale-0 -rotate-90 absolute' : 'scale-100 rotate-0'}`} />
-          <Moon className={`w-5 h-5 transition-all duration-300 ${isDark ? 'scale-100 rotate-0' : 'scale-0 rotate-90 absolute'}`} />
-        </button>
 
         {/* Network Status */}
         <div
