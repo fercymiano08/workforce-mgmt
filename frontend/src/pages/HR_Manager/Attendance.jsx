@@ -7,6 +7,7 @@ import Button from '../../components/ui/Button';
 import Badge from '../../components/ui/Badge';
 import Avatar from '../../components/ui/Avatar';
 import SearchBar from '../../components/ui/SearchBar';
+import DateRangePicker from '../../components/ui/DateRangePicker';
 import Modal from '../../components/ui/Modal';
 import TableShell from '../../components/ui/TableShell';
 import TableFilters from '../../components/ui/TableFilters';
@@ -18,7 +19,7 @@ import CorrectionsAdmin from '../../components/attendance/CorrectionsAdmin';
 import { kioskService } from '../../services/kioskService';
 import { formatHours, toDateKey } from '../../services/attendanceService';
 import { formatDate, formatTime } from '../../utils/helpers';
-import { weekOf } from '../../utils/today';
+import { weekOf, todayKey } from '../../utils/today';
 import useApiData from '../../hooks/useApiData';
 import { useToast } from '../../context/ToastContext';
 import { useAuth } from '../../context/AuthContext';
@@ -53,7 +54,21 @@ export default function Attendance() {
   // Links from AI Decision Support open this page already filtered (?search=Name&status=Late&period=Today)
   const [search, setSearch] = useState(searchParams.get('search') || '');
   const [statusFilter, setStatusFilter] = useState(searchParams.get('status') || 'All');
-  const [periodFilter, setPeriodFilter] = useState(searchParams.get('period') || 'All');
+  // A date range, picked on a calendar. This was a row of period buckets ("All", "Today", "This Week",
+  // "Last 30 Days"), and the buckets were the only way in - so finding one specific day meant opening the
+  // week it fell in and reading past everything else in it. A range is the question actually being asked.
+  // ?period= is still honoured on arrival so an old bookmark lands on something sensible.
+  const [dateRange, setDateRange] = useState(() => {
+    const period = searchParams.get('period');
+    if (period === 'today') return { from: todayKey(), to: todayKey() };
+    if (period === 'week') {
+      const w = weekOf(todayKey());
+      return { from: w.start, to: todayKey() };
+    }
+    if (period === 'month') return { from: `${todayKey().slice(0, 7)}-01`, to: todayKey() };
+    return { from: null, to: null };
+  });
+
   const [currentPage, setCurrentPage] = useState(1);
   const PAGE_SIZE = 12;
 
@@ -303,20 +318,13 @@ export default function Attendance() {
       const name = `${a.firstName} ${a.lastName}`.toLowerCase();
       const matchSearch = !search || name.includes(search.toLowerCase());
       const matchStatus = statusFilter === 'All' || a.status === statusFilter;
-      let matchPeriod = true;
-      if (periodFilter === 'Today') matchPeriod = a.date === todayStr;
-      else if (periodFilter === 'This Week') {
-        // Monday to Sunday (ISO 8601): from this Monday up to today
-        matchPeriod = a.date >= weekOf(todayStr).start && a.date <= todayStr;
-      } else if (periodFilter === 'Last 30 Days') {
-        // The same 30 days AI Decision Support analyses: today and the 29 days before it
-        const [y, m, d] = todayStr.split('-').map(Number);
-        const from = new Date(Date.UTC(y, m - 1, d - 29)).toISOString().slice(0, 10);
-        matchPeriod = a.date >= from && a.date <= todayStr;
-      }
-      return matchSearch && matchStatus && matchPeriod;
+      // An open-ended range (the calendar's first click) is not a filter yet, so it matches everything
+      // rather than silently showing nothing while the reader is still choosing the end day.
+      const matchRange = !dateRange.from || !dateRange.to
+        || (a.date >= dateRange.from && a.date <= dateRange.to);
+      return matchSearch && matchStatus && matchRange;
     });
-  }, [enriched, search, statusFilter, periodFilter, todayStr]);
+  }, [enriched, search, statusFilter, dateRange.from, dateRange.to]);
 
   const totalPages = Math.ceil(filtered.length / PAGE_SIZE);
   const paginated = filtered.slice((currentPage - 1) * PAGE_SIZE, currentPage * PAGE_SIZE);
@@ -414,12 +422,11 @@ export default function Attendance() {
             <h3 className="font-semibold text-gray-900">Attendance History</h3>
             <div className="flex flex-wrap items-center gap-3">
               <SearchBar value={search} onChange={(v) => { setSearch(v); setCurrentPage(1); }} placeholder="Search employee..." className="w-full sm:w-64" />
-              <Select value={periodFilter} onChange={e => { setPeriodFilter(e.target.value); setCurrentPage(1); }} containerClass="w-full sm:w-36">
-                <option value="All">All Time</option>
-                <option value="Today">Today</option>
-                <option value="This Week">This Week</option>
-                <option value="Last 30 Days">Last 30 Days</option>
-              </Select>
+              <DateRangePicker
+                value={dateRange}
+                onChange={(next) => { setDateRange(next); setCurrentPage(1); }}
+                allTimeLabel="All time"
+              />
               <Select value={statusFilter} onChange={e => { setStatusFilter(e.target.value); setCurrentPage(1); }} containerClass="w-full sm:w-36">
                 <option value="All">All Status</option>
                 <option value="Present">Present</option>
