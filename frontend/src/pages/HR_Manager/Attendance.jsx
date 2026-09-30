@@ -1,7 +1,6 @@
 import { useState, useMemo, useEffect } from 'react';
-import { createPortal } from 'react-dom';
 import { useSearchParams } from 'react-router-dom';
-import { CheckCircle, AlertTriangle, Timer, Coffee, MapPin, Clock, X, Check, CheckCheck, Hand, ClipboardCheck } from 'lucide-react';
+import { CheckCircle, AlertTriangle, Timer, Coffee, MapPin, Clock, X, Check, Hand, ClipboardCheck } from 'lucide-react';
 import Card from '../../components/ui/Card';
 import Button from '../../components/ui/Button';
 import Badge from '../../components/ui/Badge';
@@ -98,8 +97,6 @@ export default function Attendance() {
   const [deciding, setDeciding] = useState(false);
   const [approveHours, setApproveHours] = useState('');
   const [approveComment, setApproveComment] = useState('');
-  const [selectedOtIds, setSelectedOtIds] = useState(new Set());
-  const [bulkLoading, setBulkLoading] = useState(false);
 
   const {
     data: earlyRecords,
@@ -173,32 +170,6 @@ export default function Attendance() {
     setOvertimeStatusFilter('All');
     setOvertimeDeptFilter('All');
     setOvertimePage(1);
-    setSelectedOtIds(new Set());
-  };
-
-  const pendingOtIds = useMemo(
-    () => new Set(filteredOvertime.filter(r => r.status === 'Pending').map(r => r.id)),
-    [filteredOvertime],
-  );
-
-  const isAllPendingSelected = pendingOtIds.size > 0 && [...pendingOtIds].every(id => selectedOtIds.has(id));
-  const anySelected = selectedOtIds.size > 0;
-
-  const toggleSelectAll = (ids) => {
-    setSelectedOtIds(prev => {
-      const next = new Set(prev);
-      const allSelected = ids.every(id => next.has(id));
-      for (const id of ids) { allSelected ? next.delete(id) : next.add(id); }
-      return next;
-    });
-  };
-
-  const toggleSelectOne = (id) => {
-    setSelectedOtIds(prev => {
-      const next = new Set(prev);
-      next.has(id) ? next.delete(id) : next.add(id);
-      return next;
-    });
   };
 
   const enrichedEarly = useMemo(() => {
@@ -244,26 +215,6 @@ export default function Attendance() {
       toast.error('Could not save', err?.response?.data?.message || 'Failed to save the classification.');
     } finally {
       setClassifying(false);
-    }
-  };
-
-  const handleBulkDecision = async (status) => {
-    const ids = [...selectedOtIds].filter(id => pendingOtIds.has(id));
-    if (ids.length === 0) return;
-    setBulkLoading(true);
-    try {
-      const approvedBy = user ? `${user.firstName} ${user.lastName}` : 'HR Admin';
-      await overtimeService.bulkUpdateStatus(ids, status, approvedBy);
-      await refreshOvertime();
-      setSelectedOtIds(new Set());
-      toast.success(
-        status === 'Approved' ? 'Overtime Approved' : 'Overtime Rejected',
-        `${ids.length} overtime request${ids.length === 1 ? '' : 's'} ${status.toLowerCase()}.`,
-      );
-    } catch {
-      toast.error('Error', `Failed to bulk ${status.toLowerCase()} overtime requests.`);
-    } finally {
-      setBulkLoading(false);
     }
   };
 
@@ -537,7 +488,7 @@ export default function Attendance() {
       <div className="space-y-3">
         <TableFilters
           search={overtimeSearch}
-          onSearchChange={(v) => { setOvertimeSearch(v); setOvertimePage(1); setSelectedOtIds(new Set()); }}
+          onSearchChange={(v) => { setOvertimeSearch(v); setOvertimePage(1); }}
           searchPlaceholder="Search employee..."
           onClear={clearOvertimeFilters}
           resultCount={filteredOvertime.length}
@@ -547,14 +498,14 @@ export default function Attendance() {
               key: 'dept',
               label: 'Filter by department',
               value: overtimeDeptFilter,
-              onChange: (v) => { setOvertimeDeptFilter(v); setOvertimePage(1); setSelectedOtIds(new Set()); },
+              onChange: (v) => { setOvertimeDeptFilter(v); setOvertimePage(1); },
               options: [{ value: 'All', label: 'All Departments' }, ...overtimeDeptOptions],
             },
             {
               key: 'status',
               label: 'Filter by status',
               value: overtimeStatusFilter,
-              onChange: (v) => { setOvertimeStatusFilter(v); setOvertimePage(1); setSelectedOtIds(new Set()); },
+              onChange: (v) => { setOvertimeStatusFilter(v); setOvertimePage(1); },
               options: [
                 { value: 'All', label: 'All Status' },
                 { value: 'Pending', label: 'Pending' },
@@ -564,19 +515,7 @@ export default function Attendance() {
               ],
             },
           ]}
-        >
-          {pendingOtIds.size > 0 && (
-            <label className="flex items-center gap-2 text-sm cursor-pointer select-none shrink-0">
-              <input
-                type="checkbox"
-                checked={isAllPendingSelected}
-                onChange={() => toggleSelectAll([...pendingOtIds])}
-                className="w-4 h-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
-              />
-              <span className="text-gray-600 whitespace-nowrap">All pending</span>
-            </label>
-          )}
-        </TableFilters>
+        />
 
         <Card padding={false}>
           {loadingOvertime ? (
@@ -588,7 +527,6 @@ export default function Attendance() {
               <table className="w-full">
                 <thead>
                   <tr className="border-b border-gray-100 bg-gray-50/30">
-                    <th className="w-10 px-4 py-2.5" />
                     {['Employee', 'Department', 'Date', 'Expected Hours', 'Reason', 'Status', ''].map(h => (
                       <th key={h} className="px-4 py-2.5 text-left text-[10px] font-semibold text-gray-400 uppercase tracking-wider">{h}</th>
                     ))}
@@ -596,17 +534,7 @@ export default function Attendance() {
                 </thead>
                 <tbody className="divide-y divide-gray-50">
                   {filteredOvertime.map((r) => (
-                    <tr key={r.id} className={`transition-colors ${selectedOtIds.has(r.id) ? 'bg-blue-50/50' : 'hover:bg-gray-50/50'}`}>
-                      <td className="px-4 py-3">
-                        {r.status === 'Pending' && (
-                          <input
-                            type="checkbox"
-                            checked={selectedOtIds.has(r.id)}
-                            onChange={() => toggleSelectOne(r.id)}
-                            className="w-4 h-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
-                          />
-                        )}
-                      </td>
+                    <tr key={r.id} className="transition-colors hover:bg-gray-50/50">
                       <td className="px-4 py-3.5">
                         <div className="flex items-center gap-3">
                           <Avatar firstName={r.firstName} lastName={r.lastName} size="sm" src={r.avatar} />
@@ -640,22 +568,6 @@ export default function Attendance() {
           )}
         </Card>
       </div>
-
-      {/* Bulk Action Bar */}
-      {anySelected && createPortal(
-        <div className="fixed bottom-6 left-1/2 lg:left-[calc(50%+130px)] -translate-x-1/2 z-40 flex items-center gap-3 bg-gray-900 text-white rounded-2xl shadow-2xl px-6 py-3">
-          <span className="text-sm font-medium">{selectedOtIds.size} selected</span>
-          <div className="w-px h-5 bg-gray-700" />
-          <Button variant="success" size="sm" icon={CheckCheck} loading={bulkLoading} onClick={() => handleBulkDecision('Approved')}>
-            Approve
-          </Button>
-          <Button variant="danger" size="sm" icon={X} loading={bulkLoading} onClick={() => handleBulkDecision('Rejected')}>
-            Reject
-          </Button>
-          <button onClick={() => setSelectedOtIds(new Set())} className="ml-1 text-gray-400 hover:text-white transition-colors text-xs">Clear</button>
-        </div>,
-        document.body
-      )}
       </>
       ) : activeTab === 'corrections' ? (
       <CorrectionsAdmin onChanged={() => { refreshPendingCorrections(); refreshAttendance(); refreshOvertime(); }} />

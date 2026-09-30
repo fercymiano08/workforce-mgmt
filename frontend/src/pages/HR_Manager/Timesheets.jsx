@@ -3,7 +3,7 @@ import { createPortal } from 'react-dom';
 import clsx from 'clsx';
 import {
   FileText, Clock, AlertTriangle, CheckCircle, Calendar, TrendingUp, Timer, Eye, Info,
-  X, XCircle, CheckCheck, ChevronLeft, ChevronRight, RefreshCw, ArrowUpDown, ArrowUp, ArrowDown, RotateCcw, Banknote,
+  X, XCircle, ChevronLeft, ChevronRight, RefreshCw, ArrowUpDown, ArrowUp, ArrowDown, RotateCcw, Banknote,
 } from 'lucide-react';
 import Card from '../../components/ui/Card';
 import Button from '../../components/ui/Button';
@@ -307,7 +307,6 @@ function AdminTimesheetsView() {
   const [pageSize, setPageSize] = useState(10);
   const [currentPage, setCurrentPage] = useState(1);
   const [openId, setOpenId] = useState(null);
-  const [checked, setChecked] = useState(() => new Set());
   const [busy, setBusy] = useState(false);
   const [confirmPayroll, setConfirmPayroll] = useState(false);
 
@@ -369,8 +368,6 @@ function AdminTimesheetsView() {
   const totalPages = Math.max(1, Math.ceil(rows.length / pageSize));
   const page = Math.min(currentPage, totalPages);
   const pageRows = rows.slice((page - 1) * pageSize, page * pageSize);
-  const reviewable = pageRows.filter((t) => t.status === 'Submitted');
-  const allChecked = reviewable.length > 0 && reviewable.every((t) => checked.has(t.id));
   const openIndex = rows.findIndex((t) => t.id === openId);
   const openTs = openIndex >= 0 ? rows[openIndex] : null;
 
@@ -380,9 +377,6 @@ function AdminTimesheetsView() {
 
   const toggleSort = (key) => setSort((s) => (s.key === key ? { key, dir: s.dir === 'asc' ? 'desc' : 'asc' } : { key, dir: key === 'employee' ? 'asc' : 'desc' }));
   const sortIcon = (key) => (sort.key !== key ? <ArrowUpDown className="w-3 h-3 text-gray-300" /> : sort.dir === 'asc' ? <ArrowUp className="w-3 h-3 text-blue-600" /> : <ArrowDown className="w-3 h-3 text-blue-600" />);
-
-  const toggleCheck = (id) => setChecked((prev) => { const next = new Set(prev); if (next.has(id)) next.delete(id); else next.add(id); return next; });
-  const togglePage = () => setChecked((prev) => { const next = new Set(prev); reviewable.forEach((t) => (allChecked ? next.delete(t.id) : next.add(t.id))); return next; });
 
   // action: 'approve' | 'reject' | 'reopen' (reject and reopen need a reason)
   const decide = async (list, action, reason = '') => {
@@ -399,19 +393,9 @@ function AdminTimesheetsView() {
     }
     await refreshTimesheets();
     setBusy(false);
-    setChecked(new Set());
     const verb = { approve: 'approved', reject: 'rejected', reopen: 'reopened' }[action];
     if (done === list.length) toast.success(`Timesheet${list.length === 1 ? '' : 's'} ${verb}`, list.length === 1 ? `${list[0].employeeName}'s timesheet was ${verb}.` : `${done} timesheets were ${verb}.`);
     else toast.error(`Could not ${action} all`, lastError || `${done} of ${list.length} timesheets were ${verb}.`);
-  };
-
-  // Bulk approve only takes the clean ones; anything with a warning has to be opened and looked at.
-  const bulkApprove = () => {
-    const chosen = data.filter((t) => checked.has(t.id));
-    const clean = chosen.filter((t) => flagsOf(t).length === 0);
-    if (clean.length < chosen.length) toast.warning('Some skipped', `${chosen.length - clean.length} timesheet(s) have warnings and were left for you to open.`);
-    if (clean.length === 0) { toast.error('Nothing approved', 'Every selected timesheet has a warning. Open them one by one.'); return; }
-    decide(clean, 'approve');
   };
 
   const csvRows = (list) => list.map((t) => ({
@@ -536,9 +520,6 @@ function AdminTimesheetsView() {
           <table className="w-full">
             <thead>
               <tr className="border-b border-gray-100 bg-gray-50/60">
-                <th className="pl-4 pr-1 py-3 w-8">
-                  <input type="checkbox" checked={allChecked} onChange={togglePage} disabled={reviewable.length === 0} aria-label="Select all submitted timesheets on this page" className="rounded border-gray-300" />
-                </th>
                 {[['employee', 'Employee'], ['week', 'Week'], [null, 'Hours'], ['overtime', 'Overtime paid'], ['total', 'Total'], ['status', 'Status']].map(([key, label]) => (
                   <th key={label} className="px-3 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider whitespace-nowrap">
                     {key ? <button type="button" onClick={() => toggleSort(key)} className="inline-flex items-center gap-1 hover:text-gray-800">{label} {sortIcon(key)}</button> : label}
@@ -549,7 +530,7 @@ function AdminTimesheetsView() {
             </thead>
             <tbody className="divide-y divide-gray-50">
               {pageRows.length === 0 ? (
-                <tr><td colSpan={8} className="px-4 py-14 text-center text-sm text-gray-400">
+                <tr><td colSpan={7} className="px-4 py-14 text-center text-sm text-gray-400">
                   {statusFilter === 'Submitted' && !flag && !search && deptFilter === 'All' && period === 'all'
                     ? 'Nothing is waiting for your review. You are all caught up.'
                     : filtersOn ? 'No timesheets match these filters.' : 'No timesheets yet. They appear once employees clock out.'}
@@ -562,9 +543,6 @@ function AdminTimesheetsView() {
                 const flags = flagsOf(ts);
                 return (
                   <tr key={ts.id} onClick={() => setOpenId(ts.id)} className="hover:bg-blue-50/40 transition-colors cursor-pointer">
-                    <td className="pl-4 pr-1 py-3" onClick={(e) => e.stopPropagation()}>
-                      {ts.status === 'Submitted' && <input type="checkbox" checked={checked.has(ts.id)} onChange={() => toggleCheck(ts.id)} aria-label={`Select ${ts.employeeName}`} className="rounded border-gray-300" />}
-                    </td>
                     <td className="px-3 py-3">
                       <div className="flex items-center gap-3">
                         <Avatar firstName={(ts.employeeName || '').split(' ')[0]} lastName={(ts.employeeName || '').split(' ').slice(1).join(' ')} size="sm" />
@@ -658,16 +636,7 @@ function AdminTimesheetsView() {
         </div>
       </Modal>
 
-      {checked.size > 0 && createPortal(
-        <div className="fixed bottom-6 left-1/2 lg:left-[calc(50%+130px)] -translate-x-1/2 z-40 flex items-center gap-3 bg-gray-900 text-white rounded-2xl shadow-2xl px-5 py-3">
-          <span className="text-sm font-medium">{checked.size} selected</span>
-          <div className="w-px h-5 bg-gray-700" />
-          <Button variant="success" size="sm" icon={CheckCheck} loading={busy} onClick={bulkApprove}>Approve clean ones</Button>
-          <button type="button" onClick={() => setChecked(new Set())} className="ml-1 text-gray-400 hover:text-white text-xs">Clear</button>
-        </div>,
-        document.body,
-      )}
-    </div>
+      </div>
   );
 }
 

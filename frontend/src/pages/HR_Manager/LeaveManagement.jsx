@@ -61,7 +61,6 @@ export default function LeaveManagement() {
   const { data: employees } = useApiData(() => employeeService.getAll(), []);
 
   const [activeTab, setActiveTab] = useState('Pending Approvals');
-  const [selectedIds, setSelectedIds] = useState([]);
   const [search, setSearch] = useUrlSearch();
   const [statusFilter, setStatusFilter] = useState('All');
   const [typeFilter, setTypeFilter] = useState('All');
@@ -121,21 +120,6 @@ export default function LeaveManagement() {
       return matchSearch && matchStatus && matchType;
     });
   }, [leaves, activeTab, search, statusFilter, typeFilter]);
-
-  const pendingOnPage = filtered.filter((l) => l.status === 'Pending');
-  const toggleSelected = (id) => setSelectedIds((ids) => (ids.includes(id) ? ids.filter((x) => x !== id) : [...ids, id]));
-
-  const handleBulk = async (status) => {
-    const approvedBy = user ? `${user.firstName} ${user.lastName}`.trim() : 'HR Admin';
-    const chosen = (leaves || []).filter((l) => selectedIds.includes(l.id) && l.status === 'Pending');
-    const results = await Promise.allSettled(chosen.map((l) => leaveService.updateStatus(l.id, status, approvedBy)));
-    const done = chosen.filter((_, i) => results[i].status === 'fulfilled').map((l) => l.id);
-    setLeaves((prev) => prev.map((l) => (done.includes(l.id) ? { ...l, status, approvedBy } : l)));
-    setSelectedIds([]);
-    const failed = chosen.length - done.length;
-    if (done.length) toast.success(status === 'Approved' ? 'Leave approved' : 'Leave rejected', `${done.length} request${done.length === 1 ? '' : 's'} ${status.toLowerCase()}.`);
-    if (failed) toast.error('Some failed', `${failed} request${failed === 1 ? '' : 's'} could not be updated.`);
-  };
 
   const totalPages = Math.ceil(filtered.length / ROWS_PER_PAGE);
   const paginated = filtered.slice((currentPage - 1) * ROWS_PER_PAGE, currentPage * ROWS_PER_PAGE);
@@ -217,7 +201,7 @@ export default function LeaveManagement() {
           {allTabs.map((tab) => (
             <button
               key={tab}
-              onClick={() => { setActiveTab(tab); setSelectedIds([]); setCurrentPage(1); setSearch(''); setStatusFilter('All'); setTypeFilter('All'); }}
+              onClick={() => { setActiveTab(tab); setCurrentPage(1); setSearch(''); setStatusFilter('All'); setTypeFilter('All'); }}
               className={`px-5 py-3 text-sm font-medium transition-colors relative ${
                 activeTab === tab ? 'text-blue-600' : 'text-gray-500 hover:text-gray-700'
               }`}
@@ -256,33 +240,12 @@ export default function LeaveManagement() {
         </Select>
       </div>
 
-      {selectedIds.length > 0 && (
-        <div className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-blue-200 bg-blue-50 px-4 py-3">
-          <p className="text-sm font-medium text-blue-800">{selectedIds.length} request{selectedIds.length === 1 ? '' : 's'} selected</p>
-          <div className="flex gap-2">
-            <Button variant="outline" size="sm" onClick={() => setSelectedIds([])}>Clear</Button>
-            <Button variant="danger" size="sm" icon={XCircle} onClick={() => handleBulk('Rejected')}>Reject selected</Button>
-            <Button variant="success" size="sm" icon={CheckCircle} onClick={() => handleBulk('Approved')}>Approve selected</Button>
-          </div>
-        </div>
-      )}
-
       {/* Table */}
       <Card padding={false}>
         <TableShell minWidth="min-w-[720px]">
           <table className="w-full">
             <thead>
               <tr className="border-b border-gray-100 bg-gray-50/50">
-                <th className="pl-4 py-3 w-8">
-                  {pendingOnPage.length > 0 && (
-                    <input
-                      type="checkbox"
-                      aria-label="Select all pending requests"
-                      checked={pendingOnPage.every((l) => selectedIds.includes(l.id))}
-                      onChange={(e) => setSelectedIds(e.target.checked ? pendingOnPage.map((l) => l.id) : [])}
-                    />
-                  )}
-                </th>
                 {['Employee', 'Leave Type', 'Duration', 'Reason', 'Status', 'Applied Date', 'Approved By', 'Actions'].map((h) => (
                   <th key={h} className="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">{h}</th>
                 ))}
@@ -291,23 +254,13 @@ export default function LeaveManagement() {
             <tbody className="divide-y divide-gray-50">
               {paginated.length === 0 ? (
                 <tr>
-                  <td colSpan={9} className="px-4 py-12 text-center text-sm text-gray-400">
+                  <td colSpan={8} className="px-4 py-12 text-center text-sm text-gray-400">
                     No leave requests found matching your filters.
                   </td>
                 </tr>
               ) : (
                 paginated.map((leave) => (
                   <tr key={leave.id} className="hover:bg-gray-50/50 transition-colors">
-                    <td className="pl-4 py-3.5 w-8">
-                      {leave.status === 'Pending' && (
-                        <input
-                          type="checkbox"
-                          aria-label={`Select ${leave.employeeName}`}
-                          checked={selectedIds.includes(leave.id)}
-                          onChange={() => toggleSelected(leave.id)}
-                        />
-                      )}
-                    </td>
                     <td className="px-4 py-3.5">
                       <div className="flex items-center gap-3">
                         <Avatar
