@@ -167,7 +167,7 @@ export default function DateRangePicker({ value, onChange, className, allTimeLab
   };
 
   return (
-    <div ref={rootRef} className={clsx('relative', className)}>
+    <div ref={rootRef} className={clsx('relative w-full sm:w-fit', className)}>
       <button
         type="button"
         onClick={() => {
@@ -215,7 +215,7 @@ export default function DateRangePicker({ value, onChange, className, allTimeLab
 
       {open && (
         <div
-          className="absolute z-50 mt-2 right-0 sm:left-0 sm:right-auto w-[min(21rem,calc(100vw-2rem))] rounded-2xl border border-gray-200 bg-white p-3 shadow-xl animate-fadeIn"
+          className="absolute z-50 mt-2 left-0 w-[min(21rem,calc(100vw-2rem))] rounded-2xl border border-gray-200 bg-white p-3 shadow-xl animate-fadeIn"
           role="dialog"
           aria-label="Choose a date range"
         >
