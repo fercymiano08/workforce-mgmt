@@ -98,7 +98,7 @@ class AIDecisionSupportService
      */
     public function approvalQueue(): array
     {
-        $headcount = Employee::where('status', '!=', 'Inactive')->count();
+        $headcount = Employee::where('status', '!=', 'Terminated')->count();
         $today = LocalTime::today()->toDateString();
 
         $leave = Leave::where('status', 'Pending')->orderBy('applied_date')->orderBy('id')->get()->map(function (Leave $l) use ($headcount, $today) {
@@ -186,7 +186,7 @@ class AIDecisionSupportService
             'workforce' => [
                 'active' => Employee::where('status', 'Active')->count(),
                 'on_leave' => Employee::where('status', 'On Leave')->count(),
-                'departments' => Employee::where('status', '!=', 'Inactive')->whereNotNull('department')
+                'departments' => Employee::where('status', '!=', 'Terminated')->whereNotNull('department')
                     ->distinct()->orderBy('department')->pluck('department')->values()->all(),
             ],
         ];
@@ -202,7 +202,7 @@ class AIDecisionSupportService
     private function attendanceFacts(string $from, string $to): array
     {
         $rows = Attendance::join('employees', 'employees.id', '=', 'attendance.employee_id')
-            ->where('employees.status', '!=', 'Inactive')
+            ->where('employees.status', '!=', 'Terminated')
             ->whereBetween('attendance.date', [$from, $to])
             ->orderBy('attendance.date')
             ->get(['attendance.employee_id', 'attendance.date', 'attendance.status', 'attendance.clock_in', 'attendance.overtime',

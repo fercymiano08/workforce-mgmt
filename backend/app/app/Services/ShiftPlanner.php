@@ -96,7 +96,7 @@ class ShiftPlanner
     {
         $hours = $this->paidHours($req['shift']['startTime'], $req['shift']['endTime']);
 
-        $pool = Employee::where('status', '!=', 'Inactive')
+        $pool = Employee::where('status', '!=', 'Terminated')
             ->when($req['department'], fn ($q, $d) => $q->where('department', $d))
             ->when($req['position'], fn ($q, $p) => $q->where('position', $p))
             ->orderBy('id')->get();
@@ -238,7 +238,7 @@ class ShiftPlanner
             $reason = match (true) {
                 isset($seen[$key]) => 'listed twice',
                 ! in_array($a['date'], $days, true) => 'not a working day of this period',
-                ! $employee || $employee->status === 'Inactive' => 'no longer an active employee',
+                ! $employee || $employee->status === 'Terminated' => 'this employee has left the company',
                 $this->onLeave($a['employeeId'], $a['date']) => 'on approved leave that day',
                 ShiftSchedule::where('employee_id', $a['employeeId'])->whereDate('date', $a['date'])->exists() => 'already has a shift that day',
                 default => null,

@@ -51,7 +51,17 @@ export default function Topbar({ onMenuToggle }) {
 
   return (
     <>
-    <header className="sticky top-0 z-30 h-16 bg-white border-b border-gray-100 flex items-center justify-between px-3 sm:px-6 shrink-0">
+      {/*
+        The header grows by the status-bar inset rather than being pushed down. A phone with a notch
+        reports that inset through env(safe-area-inset-top) once viewport-fit=cover is set, and adding
+        it as padding keeps the bar flush with the top of the screen - which is what an installed app
+        looks like - instead of floating a strip of empty page above it. In a browser tab the value
+        is 0 and the bar is the same 64px it always was.
+      */}
+      <header
+        className="sticky top-0 z-30 shrink-0 bg-white border-b border-gray-100 flex items-center justify-between px-3 sm:px-6"
+        style={{ paddingTop: 'env(safe-area-inset-top)', height: 'calc(4rem + env(safe-area-inset-top))' }}
+      >
       {/* Left: Menu toggle + Search */}
       <div className="flex items-center gap-3 flex-1 min-w-0">
         <button

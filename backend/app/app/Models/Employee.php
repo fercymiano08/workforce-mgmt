@@ -18,8 +18,8 @@ class Employee extends Model
     {
         // Someone who no longer works here keeps no upcoming shifts (they would only turn into false no-shows).
         static::saved(function (Employee $employee): void {
-            if ($employee->wasChanged('status') && $employee->status === 'Inactive') {
-                \App\Services\ScheduleCleanup::forInactiveEmployee($employee);
+            if ($employee->wasChanged('status') && $employee->status === 'Terminated') {
+                \App\Services\ScheduleCleanup::forTerminatedEmployee($employee);
             }
         });
     }

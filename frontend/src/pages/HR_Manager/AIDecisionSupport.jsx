@@ -590,7 +590,9 @@ export default function AIDecisionSupport() {
       ) : (
         <>
           <div className="sticky -top-4 -mx-4 sm:-mx-6 lg:-mx-8 px-4 sm:px-6 lg:px-8 pt-4 pb-0 z-20 bg-[#F8FAFC]">
-            <div className="flex items-center gap-1 overflow-x-auto pb-3 -mb-1 border-b border-gray-200">
+            {/* Wraps on a phone instead of becoming a sideways-scrolling strip. A row a finger has
+                to push sideways to reveal its last option is a row most people never find. */}
+            <div className="flex flex-wrap items-center gap-1 pb-3 -mb-1 border-b border-gray-200">
               {tabs.map((tb) => {
                 const Icon = tb.icon;
                 const active = tab === tb.key;

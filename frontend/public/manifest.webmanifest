@@ -1,0 +1,24 @@
+{
+  "name": "Workforce Management",
+  "short_name": "Workforce",
+  "description": "Attendance, scheduling, leave, timesheets and payroll for the workforce.",
+  "id": "/",
+  "start_url": "/",
+  "scope": "/",
+  "display": "standalone",
+  "display_override": ["window-controls-overlay", "standalone", "minimal-ui"],
+  "orientation": "portrait-primary",
+  "background_color": "#0B1F3A",
+  "theme_color": "#0B1F3A",
+  "categories": ["business", "productivity"],
+  "icons": [
+    { "src": "/icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
+    { "src": "/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any" },
+    { "src": "/icon-maskable-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
+  ],
+  "shortcuts": [
+    { "name": "My Attendance", "url": "/my-attendance" },
+    { "name": "My Schedule", "url": "/my-schedule" },
+    { "name": "Leave", "url": "/leave" }
+  ]
+}

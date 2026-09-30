@@ -304,7 +304,7 @@ class RefreshDemoData extends Command
             ->where('start_date', '<=', $to)->where('end_date', '>=', $from)->get();
 
         $rows = [];
-        foreach (Employee::whereIn('id', $ids)->where('status', '!=', 'Inactive')->orderBy('id')->get() as $employee) {
+        foreach (Employee::whereIn('id', $ids)->where('status', '!=', 'Terminated')->orderBy('id')->get() as $employee) {
             for ($day = Carbon::parse($from); $day->toDateString() <= $to; $day->addDay()) {
                 $date = $day->toDateString();
                 if (! in_array($day->isoWeekday(), $workDays, true) || in_array($date, $holidays, true)) {

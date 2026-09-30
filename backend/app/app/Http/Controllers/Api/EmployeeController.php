@@ -264,7 +264,7 @@ class EmployeeController extends Controller
             'department' => 'nullable|string|max:100',
             'position' => 'nullable|string|max:100',
             'employmentType' => 'nullable|string|max:50',
-            'status' => ['nullable', Rule::in(['Active', 'Inactive'])],
+            'status' => ['nullable', Rule::in(['Active', 'On Leave', 'Terminated'])],
             'hireDate' => 'nullable|date|before_or_equal:today',
             'manager' => 'nullable|string|max:20',
             'avatar' => 'nullable|string',

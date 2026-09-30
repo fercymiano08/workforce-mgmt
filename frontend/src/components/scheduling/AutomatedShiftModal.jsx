@@ -62,7 +62,7 @@ function AutomatedShiftFlow({ isOpen, onClose, employees, shiftDefs, onChanged }
   const departments = useMemo(() => [...new Set((employees || []).map((e) => e.department).filter(Boolean))].sort(), [employees]);
   const positions = useMemo(() => [...new Set((employees || []).filter((e) => !form.department || e.department === form.department).map((e) => e.position).filter(Boolean))].sort(), [employees, form.department]);
   const endDate = useMemo(() => iso(plusDays(new Date(`${form.startDate}T00:00:00Z`), form.weeks * 7 - 1)), [form.startDate, form.weeks]);
-  const pool = useMemo(() => (employees || []).filter((e) => e.status !== 'Inactive' && (!form.department || e.department === form.department) && (!form.position || e.position === form.position)), [employees, form.department, form.position]);
+  const pool = useMemo(() => (employees || []).filter((e) => e.status !== 'Terminated' && (!form.department || e.department === form.department) && (!form.position || e.position === form.position)), [employees, form.department, form.position]);
 
   const payload = () => ({
     startDate: form.startDate, weeks: Number(form.weeks), workDays: form.workDays,

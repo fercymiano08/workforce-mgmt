@@ -66,7 +66,7 @@ export default function IdleSessionGuard() {
           <Clock className="w-6 h-6 text-amber-600" />
         </div>
         <h3 className="text-lg font-bold text-gray-900">Are you still there?</h3>
-        <p className="text-sm text-gray-500 mt-2">You have been inactive for a while. For your security you will be signed out in</p>
+        <p className="text-sm text-gray-500 mt-2">You have not used the app for a while. For your security you will be signed out in</p>
         <p className="text-4xl font-bold text-amber-600 tabular-nums mt-3">{secondsLeft}s</p>
         <Button className="w-full mt-5" size="lg" onClick={() => { lastActivity.current = Date.now(); lastKeepAlive.current = Date.now(); authService.keepAlive().catch(() => {}); setSecondsLeft(null); }}>
           Stay signed in

@@ -65,8 +65,6 @@ const EVENT_NAMES = {
   'auth.password_changed': 'Password changed',
   'auth.password_reset_requested': 'Password reset code requested',
   'auth.password_reset': 'Password reset',
-  'auth.export_confirmed': 'Password confirmed for an export',
-  'auth.confirm_failed': 'Wrong password when confirming an export',
 };
 
 const RANGES = [
@@ -169,8 +167,6 @@ const sentenceOf = (e) => {
     case 'auth.password_changed': return 'changed their password';
     case 'auth.password_reset_requested': return 'asked for a password reset code';
     case 'auth.password_reset': return 'reset their password with an emailed code';
-    case 'auth.export_confirmed': return `confirmed their password to: ${e.meta?.purpose || 'export data'}`;
-    case 'auth.confirm_failed': return `typed a wrong password when trying to: ${e.meta?.purpose || 'export data'}`;
     default: return `${eventName(e.event).toLowerCase()}${person ? ` (${person})` : ''}`;
   }
 };
@@ -352,13 +348,16 @@ export default function AuditLogs() {
               className="w-full pl-10 pr-3 py-2.5 text-sm border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500/30"
             />
           </div>
-          <div className="flex items-center gap-2">
+          {/* flex-wrap so the two date boxes drop onto their own line on a phone, and min-w-0 on the
+              search so it can actually shrink - a flex child defaults to min-content width, which
+              is what pushed this row 10px past the screen. */}
+          <div className="flex flex-wrap items-center gap-2">
             <input
               type="date"
               value={filters.from}
               onChange={(e) => setCustomDate('from', e.target.value)}
               title="From date"
-              className="px-3 py-2.5 text-sm border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500/30"
+              className="flex-1 min-w-0 sm:flex-none px-3 py-2.5 pointer-coarse:py-3 text-sm border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500/30"
             />
             <span className="text-gray-400 text-sm">to</span>
             <input
@@ -366,7 +365,7 @@ export default function AuditLogs() {
               value={filters.to}
               onChange={(e) => setCustomDate('to', e.target.value)}
               title="To date"
-              className="px-3 py-2.5 text-sm border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500/30"
+              className="flex-1 min-w-0 sm:flex-none px-3 py-2.5 pointer-coarse:py-3 text-sm border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500/30"
             />
           </div>
         </div>

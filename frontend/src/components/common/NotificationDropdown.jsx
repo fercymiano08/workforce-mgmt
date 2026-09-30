@@ -34,7 +34,15 @@ export default function NotificationDropdown({ isOpen, onClose }) {
   const displayNotifications = filtered.slice(0, 8);
 
   return (
-    <div className="absolute right-0 top-full mt-2 w-[min(420px,calc(100vw-1.5rem))] bg-white rounded-2xl shadow-2xl border border-gray-100 z-50 animate-scaleIn overflow-hidden">
+    // Anchored to the bell on a wide screen, but pinned to the screen itself on a phone. right-0
+    // alone means the panel's right edge is the bell's right edge, so a 420px panel hanging off a
+    // bell near the right edge of a 375px screen runs off the left side and gets clipped. From sm
+    // up there is room and the bell anchor looks right, so it is kept there.
+    <div
+      className="fixed inset-x-3 top-16 z-50 animate-scaleIn overflow-hidden
+                 bg-white rounded-2xl shadow-2xl border border-gray-100
+                 sm:absolute sm:inset-x-auto sm:right-0 sm:top-full sm:mt-2 sm:w-[420px] sm:max-w-[calc(100vw-1.5rem)]"
+    >
       {/* Header */}
       <div className="px-5 py-4 border-b border-gray-100 flex items-center justify-between">
         <div className="flex items-center gap-3">
@@ -77,8 +85,9 @@ export default function NotificationDropdown({ isOpen, onClose }) {
         ))}
       </div>
 
-      {/* Notification List */}
-      <div className="max-h-[400px] overflow-y-auto">
+      {/* Notification List - capped against the space actually left below the topbar, so the list
+          scrolls inside the panel instead of the panel running off the bottom of the phone. */}
+      <div className="max-h-[min(400px,calc(100vh-13rem))] overflow-y-auto">
         {displayNotifications.length === 0 ? (
           <div className="py-8 px-4">
             <EmptyState

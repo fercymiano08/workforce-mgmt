@@ -192,7 +192,7 @@ class KioskDeviceTokenTest extends TestCase
         $this->withHeaders($this->kioskDeviceHeaders(active: false))
             ->postJson('/api/kiosk/attendance', $this->clockInPayload())
             ->assertStatus(423)
-            ->assertJsonPath('code', 'kiosk_inactive');
+            ->assertJsonPath('code', 'kiosk_disabled');
 
         $this->assertSame(0, Attendance::count());
     }

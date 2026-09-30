@@ -399,30 +399,30 @@ export async function buildReport(reportName, dateRange, nameOf) {
 
     case 'Workforce Headcount Report': {
       const employees = await employeeService.getAll();
+      // Someone who has left is not reported as a category, but they are still counted in the
+      // department total - otherwise the columns stop adding up to the total, which is the one
+      // thing a headcount report must never do.
       const byDept = {};
       (employees || []).forEach((e) => {
         const dept = e.department || 'Unassigned';
-        if (!byDept[dept]) byDept[dept] = { active: 0, onLeave: 0, inactive: 0, total: 0 };
+        if (!byDept[dept]) byDept[dept] = { active: 0, onLeave: 0, total: 0 };
         byDept[dept].total++;
         if (e.status === 'Active') byDept[dept].active++;
         else if (e.status === 'On Leave') byDept[dept].onLeave++;
-        else byDept[dept].inactive++;
       });
       const totalActive = (employees || []).filter((e) => e.status === 'Active').length;
       const totalOnLeave = (employees || []).filter((e) => e.status === 'On Leave').length;
-      const totalInactive = (employees || []).filter((e) => e.status !== 'Active' && e.status !== 'On Leave').length;
       const depts = Object.entries(byDept);
 
       const statusPie = [
         { name: 'Active', value: totalActive },
         { name: 'On Leave', value: totalOnLeave },
-        { name: 'Inactive', value: totalInactive },
-      ];
-      const deptBar = depts.map(([dept, s]) => ({ name: dept, Active: s.active, 'On Leave': s.onLeave, Inactive: s.inactive }));
+      ].filter((s) => s.value > 0);
+      const deptBar = depts.map(([dept, s]) => ({ name: dept, Active: s.active, 'On Leave': s.onLeave }));
 
       return {
         title: 'Workforce Headcount Report',
-        subtitle: 'Active, on leave, and inactive headcount per department',
+        subtitle: 'Active and on-leave headcount per department',
         summary: [
           { label: 'Total Headcount', value: String((employees || []).length), color: 'blue' },
           { label: 'Active', value: String(totalActive), color: 'green' },
@@ -430,8 +430,8 @@ export async function buildReport(reportName, dateRange, nameOf) {
           { label: 'Departments', value: String(depts.length), color: 'blue' },
         ],
         charts: [
-          { type: 'pie', title: 'Status Overview', data: statusPie, dataKey: 'value', nameKey: 'name', colors: ['#22c55e', '#f59e0b', '#94a3b8'] },
-          { type: 'bar', title: 'Headcount by Department', data: deptBar, dataKeys: ['Active', 'On Leave', 'Inactive'], colors: ['#22c55e', '#f59e0b', '#94a3b8'] },
+          { type: 'pie', title: 'Status Overview', data: statusPie, dataKey: 'value', nameKey: 'name', colors: ['#22c55e', '#f59e0b'] },
+          { type: 'bar', title: 'Headcount by Department', data: deptBar, dataKeys: ['Active', 'On Leave'], colors: ['#22c55e', '#f59e0b'] },
         ],
         insights: [
           `Total workforce: ${(employees || []).length} employees across ${depts.length} department${depts.length > 1 ? 's' : ''}.`,
@@ -439,11 +439,10 @@ export async function buildReport(reportName, dateRange, nameOf) {
           depts.length > 0 ? `Largest department: ${depts.sort((a, b) => b[1].total - a[1].total)[0]?.[0]} (${depts.sort((a, b) => b[1].total - a[1].total)[0]?.[1].total}).` : null,
         ].filter(Boolean),
         recommendations: [
-          totalInactive > totalActive * 0.2 ? 'Inactive headcount exceeds 20%. Review offboarding and reactivation processes.' : null,
           depts.length > 0 && depts.sort((a, b) => b[1].total - a[1].total)[0]?.[1].total > (employees || []).length * 0.5 ? 'One department holds >50% of headcount. Evaluate organizational balance.' : null,
         ].filter(Boolean),
-        cols: ['Department', 'Active', 'On Leave', 'Inactive', 'Total'],
-        rows: depts.map(([dept, s]) => [dept, String(s.active), String(s.onLeave), String(s.inactive), String(s.total)]),
+        cols: ['Department', 'Active', 'On Leave', 'Total'],
+        rows: depts.map(([dept, s]) => [dept, String(s.active), String(s.onLeave), String(s.total)]),
         period,
       };
     }

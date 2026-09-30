@@ -171,7 +171,7 @@ class AttendanceAlerts
         }
 
         // Staff shortage: today's approved-leave ratio.
-        $activeEmployeeCount = Employee::where('status', '!=', 'Inactive')->count();
+        $activeEmployeeCount = Employee::where('status', '!=', 'Terminated')->count();
         if ($activeEmployeeCount > 0) {
             $onLeaveCount = count($onLeaveToday);
             if (($onLeaveCount / $activeEmployeeCount) > self::SHORTAGE_THRESHOLD

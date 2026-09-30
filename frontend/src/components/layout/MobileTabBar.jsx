@@ -137,10 +137,17 @@ export default function MobileTabBar() {
 
   return (
     <>
-      {/* pb-[env(safe-area-inset-bottom)] keeps the bar clear of the home indicator on iPhones and
-          Android gesture bars, which sit over the bottom of the viewport. */}
+      {/* The insets are the reason this bar can be flush with the bottom of the screen instead of
+          floating above it. pb keeps the tabs clear of the home indicator and the Android gesture
+          bar; the left/right insets keep them clear of a notch when the phone is turned sideways.
+          All three read 0 in an ordinary browser tab, so the browser view is unchanged. */}
       <nav
-        className="lg:hidden fixed bottom-0 left-0 right-0 z-40 bg-white/95 backdrop-blur-md border-t border-gray-200 px-2 pt-1.5 pb-[calc(6px+env(safe-area-inset-bottom))] shadow-[0_-2px_12px_rgba(15,23,42,0.06)]"
+        className="lg:hidden fixed bottom-0 left-0 right-0 z-40 bg-white/95 backdrop-blur-md border-t border-gray-200 px-2 pt-1.5 shadow-[0_-2px_12px_rgba(15,23,42,0.06)]"
+        style={{
+          paddingBottom: 'calc(6px + env(safe-area-inset-bottom))',
+          paddingLeft: 'max(0.5rem, env(safe-area-inset-left))',
+          paddingRight: 'max(0.5rem, env(safe-area-inset-right))',
+        }}
         aria-label={t('nav.more')}
       >
         <div className="flex items-stretch gap-0.5">

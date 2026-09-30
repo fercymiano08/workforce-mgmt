@@ -92,7 +92,7 @@ class AIDecisionSupportAccuracyTest extends TestCase
     public function test_people_who_left_are_not_flagged(): void
     {
         Carbon::setTestNow(Carbon::parse('2030-01-18 12:00:00', 'Asia/Manila'));
-        $this->person('EMP1', 'Inactive');
+        $this->person('EMP1', 'Terminated');
         foreach (['2030-01-14', '2030-01-15', '2030-01-16'] as $d) {
             $this->day('EMP1', $d, 'Late', '09:00:00');
         }

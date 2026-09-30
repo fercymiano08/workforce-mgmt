@@ -194,7 +194,8 @@ export default function KioskSetup() {
       </div>
 
       {/* Tabs */}
-      <div className="flex items-center gap-2 overflow-x-auto pb-1">
+      {/* Wraps rather than scrolling sideways, so every option is visible without pushing. */}
+      <div className="flex flex-wrap items-center gap-2 pb-1">
         {TABS.map((tabItem) => {
           const Icon = tabItem.icon;
           const isActive = tab === tabItem.id;

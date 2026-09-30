@@ -1,11 +1,11 @@
-import { useState, useMemo, useEffect, useCallback, useRef } from 'react';
+import { useState, useMemo, useEffect, useCallback } from 'react';
 import { preloadFaceModels } from '../../services/faceMatchService';
 import { useNavigate } from 'react-router-dom';
 import {
   Grid3X3, List, Mail, Phone, MapPin, User,
   Building, Briefcase, Calendar, Clock, Eye, Edit,
-  Upload, Plus, Users, RefreshCw, Camera, CheckCircle2,
-  CheckCircle, UserX, ScanFace, Trash2, AlertTriangle
+  Plus, Users, RefreshCw, Camera, CheckCircle2,
+  CheckCircle, ScanFace, Trash2, AlertTriangle
 } from 'lucide-react';
 import Card from '../../components/ui/Card';
 import Button from '../../components/ui/Button';
@@ -23,18 +23,19 @@ import FaceCaptureModal from '../../components/employees/FaceCaptureModal';
 import { departmentService, employeeService, roleService, shiftService } from '../../services/api';
 import { formatDate, formatTime } from '../../utils/helpers';
 import useUrlSearch from '../../hooks/useUrlSearch';
-import useUrlFilter from '../../hooks/useUrlFilter';
 import { todayKey } from '../../utils/today';
 import { useToast } from '../../context/ToastContext';
 
 // One status vocabulary for the whole app. A status missing from here falls back to the neutral
 // badge rather than breaking, but it should be added here so every screen reads the same.
-const statusVariant = { Active: 'success', 'On Leave': 'warning', Inactive: 'danger', Terminated: 'danger' };
+// A person who is no longer with the company is not on this list, and there is no control anywhere
+// that brings them back. Their record is still in the database - reports and offboarding need it -
+// but day to day this screen is the people who work here.
+const statusVariant = { Active: 'success', 'On Leave': 'warning', Terminated: 'danger' };
 
 const genders = ['Male', 'Female'];
 const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 const PHONE_REGEX = /^[+\d][\d\s\-()]{6,}$/;
-const DEFAULT_IMPORT_PASSWORD = 'Welcome@2026';
 const TODAY = new Date().toISOString().split('T')[0];
 
 const SECTION_ACCENTS = {
@@ -56,64 +57,6 @@ const SectionHeader = ({ icon: Icon, accent = 'blue', title, subtitle }) => (
   </div>
 );
 
-const parseCSVLine = (line) => {
-  const cells = [];
-  let cur = '';
-  let inQuotes = false;
-  for (let i = 0; i < line.length; i++) {
-    const ch = line[i];
-    if (inQuotes) {
-      if (ch === '"') {
-        if (line[i + 1] === '"') { cur += '"'; i++; }
-        else inQuotes = false;
-      } else cur += ch;
-    } else if (ch === '"') {
-      inQuotes = true;
-    } else if (ch === ',') {
-      cells.push(cur);
-      cur = '';
-    } else {
-      cur += ch;
-    }
-  }
-  cells.push(cur);
-  return cells;
-};
-
-const parseCSV = (text) => {
-  const lines = text.split(/\r?\n/).filter((l) => l.trim().length > 0);
-  if (lines.length < 2) return [];
-  const headers = parseCSVLine(lines[0]).map((h) => h.trim().toLowerCase().replace(/[\s-]+/g, ''));
-  return lines.slice(1).map((line) => {
-    const cells = parseCSVLine(line);
-    const row = {};
-    headers.forEach((h, i) => { row[h] = (cells[i] || '').trim(); });
-    return row;
-  });
-};
-
-const normalizeRecord = (rec) => {
-  const get = (...keys) => {
-    for (const k of keys) {
-      if (rec[k] != null && rec[k] !== '') return rec[k];
-    }
-    return '';
-  };
-  const fullName = String(get('name', 'fullName', 'full_name') || '');
-  const [first, ...rest] = fullName.split(/\s+/);
-  return {
-    firstName: String(get('firstName', 'first_name', 'firstname') || first || ''),
-    lastName: String(get('lastName', 'last_name', 'lastname') || rest.join(' ') || ''),
-    email: String(get('email') || ''),
-    phone: String(get('phone', 'contact', 'mobile', 'contactNumber', 'contact_number') || ''),
-    department: String(get('department', 'dept', 'division') || ''),
-    position: String(get('position', 'role', 'jobTitle', 'job_title') || ''),
-    employmentType: String(get('employmentType', 'employment_type', 'employmenttype', 'type') || 'Full-time'),
-    status: String(get('status', 'employmentStatus', 'employment_status') || 'Active'),
-    hireDate: String(get('hireDate', 'hire_date', 'dateHired', 'date_hired', 'startDate', 'start_date') || ''),
-    address: String(get('address', 'addressLine', 'address_line') || ''),
-  };
-};
 
 export default function Employees() {
   const navigate = useNavigate();
@@ -122,8 +65,6 @@ export default function Employees() {
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useUrlSearch();
   const [deptFilter, setDeptFilter] = useState('All');
-  // In the URL, so the dashboard's "inactive" card can link here already filtered.
-  const [statusFilter, setStatusFilter] = useUrlFilter('status', 'All');
   const [typeFilter, setTypeFilter] = useState('All');
   const [roleFilter, setRoleFilter] = useState('All');      // only the roles of the chosen department
   const [faceMissingOnly, setFaceMissingOnly] = useState(false);
@@ -136,7 +77,6 @@ export default function Employees() {
   const [deleteTarget, setDeleteTarget] = useState(null);
   const [formData, setFormData] = useState({});
   const [formErrors, setFormErrors] = useState({});
-  const fileInputRef = useRef(null);
   const [orgDepartments, setOrgDepartments] = useState([]);
   const [orgRoles, setOrgRoles] = useState([]);
   const [schedules, setSchedules] = useState([]);
@@ -216,9 +156,7 @@ export default function Employees() {
     const pool = deptFilter === 'All' ? employeesData : employeesData.filter(e => e.department === deptFilter);
     return ['All', ...new Set(pool.map(e => e.position).filter(Boolean))].sort((a, b) => (a === 'All' ? -1 : b === 'All' ? 1 : a.localeCompare(b)));
   }, [employeesData, deptFilter]);
-  const faceMissingCount = useMemo(() => employeesData.filter(e => !e.faceRegistered && e.status !== 'Inactive').length, [employeesData]);
   const types = ['All', 'Full-time', 'Part-time', 'Contract'];
-  const statuses = ['All', 'Active', 'Inactive'];
 
   const rolesForDepartment = useCallback(
     (name) => orgRoles.filter((r) => r.departmentName === name),
@@ -239,27 +177,31 @@ export default function Employees() {
     return names;
   }, [rolesForDepartment, formData.department, formData.position]);
 
+  // The roster: everyone currently on the books. Someone who has left is filtered out once, here,
+  // so the list, the counts and the "needs a face registered" figure can never disagree about how
+  // many people work here. The row is still in the database for reports and offboarding.
+  const roster = useMemo(() => employeesData.filter(e => e.status !== 'Terminated'), [employeesData]);
+  const faceMissingCount = useMemo(() => roster.filter(e => !e.faceRegistered).length, [roster]);
+
   const stats = useMemo(() => ({
-    total: employeesData.length,
-    active: employeesData.filter(e => e.status === 'Active').length,
-    faceRegistered: employeesData.filter(e => e.faceRegistered).length,
-    inactive: employeesData.filter(e => e.status === 'Inactive').length,
-  }), [employeesData]);
+    total: roster.length,
+    active: roster.filter(e => e.status === 'Active').length,
+    faceRegistered: roster.filter(e => e.faceRegistered).length,
+  }), [roster]);
 
   const filtered = useMemo(() => {
-    return employeesData.filter(e => {
+    return roster.filter(e => {
       const matchSearch = !search ||
         `${e.firstName} ${e.lastName}`.toLowerCase().includes(search.toLowerCase()) ||
         e.email.toLowerCase().includes(search.toLowerCase()) ||
         e.position.toLowerCase().includes(search.toLowerCase());
       const matchDept = deptFilter === 'All' || e.department === deptFilter;
-      const matchStatus = statusFilter === 'All' || e.status === statusFilter;
       const matchType = typeFilter === 'All' || e.employmentType === typeFilter;
       const matchRole = roleFilter === 'All' || e.position === roleFilter;
       const matchFace = !faceMissingOnly || !e.faceRegistered;
-      return matchSearch && matchDept && matchRole && matchStatus && matchType && matchFace;
+      return matchSearch && matchDept && matchRole && matchType && matchFace;
     });
-  }, [employeesData, search, deptFilter, roleFilter, statusFilter, typeFilter, faceMissingOnly]);
+  }, [roster, search, deptFilter, roleFilter, typeFilter, faceMissingOnly]);
 
   const totalPages = Math.ceil(filtered.length / 12);
   const paginated = filtered.slice((currentPage - 1) * 12, currentPage * 12);
@@ -323,47 +265,6 @@ export default function Employees() {
     }
   };
 
-  const handleImportFile = async (e) => {
-    const file = e.target.files && e.target.files[0];
-    e.target.value = '';
-    if (!file) return;
-    try {
-      const text = await file.text();
-      const raw = file.name.toLowerCase().endsWith('.json') ? JSON.parse(text) : parseCSV(text);
-      const list = Array.isArray(raw) ? raw : raw?.employees;
-      const records = Array.isArray(list) ? list.map(normalizeRecord) : [];
-      if (records.length === 0) {
-        toast.error('Import Failed', 'No employee records found in the file.');
-        return;
-      }
-      let created = 0;
-      let skipped = 0;
-      for (const rec of records) {
-        if (!rec.firstName || !rec.lastName) {
-          skipped++;
-          continue;
-        }
-        try {
-          await employeeService.create({ ...rec, password: DEFAULT_IMPORT_PASSWORD });
-          created++;
-        } catch {
-          skipped++;
-        }
-      }
-      await fetchEmployees();
-      if (created > 0) {
-        toast.success(
-          'Import Complete',
-          `Imported ${created} employee${created === 1 ? '' : 's'}${skipped ? `, skipped ${skipped}` : ''}.`
-        );
-      } else {
-        toast.error('Import Failed', 'No valid employee records could be imported.');
-      }
-    } catch {
-      toast.error('Import Failed', 'Could not read the file. Use a CSV or JSON array of employees.');
-    }
-  };
-
   const validate = () => {
     const errs = {};
 
@@ -411,7 +312,6 @@ export default function Employees() {
     { label: 'Total Employees', value: stats.total, icon: Users, color: 'blue' },
     { label: 'Active', value: stats.active, icon: CheckCircle, color: 'emerald' },
     { label: 'Face Registered', value: stats.faceRegistered, icon: ScanFace, color: 'violet' },
-    { label: 'Inactive', value: stats.inactive, icon: UserX, color: 'red' },
   ];
 
   const colorMap = {
@@ -439,9 +339,19 @@ export default function Employees() {
           <h1 className="text-2xl font-bold text-gray-900">Employee Management</h1>
           <p className="text-[14px] text-gray-500 mt-1">Manage your workforce efficiently</p>
         </div>
+        {/*
+          One way to add a person: the Add Employee form.
+
+          The CSV/JSON import button was removed. It created every account with one shared password
+          ('Welcome@2026'), it was the only path that bypassed the registration form's validation,
+          and it could not be explained in a sentence - which is what made it hard to defend. The
+          form is the honest path and it is the only one left.
+
+          The button, the hidden file input, the CSV parser and the normaliser that existed only to
+          feed it are all gone. The one "Upload" still in this module is the employee's reference
+          photo, which is a different thing entirely and stays.
+        */}
         <div className="flex items-center gap-3">
-          <Button variant="outline" icon={Upload} size="md" onClick={() => fileInputRef.current?.click()}>Import</Button>
-          <input ref={fileInputRef} type="file" accept=".csv,.json" className="hidden" onChange={handleImportFile} />
           <Button icon={Plus} size="md" onClick={() => navigate('/employee-registration')}>Add Employee</Button>
         </div>
       </div>
@@ -474,9 +384,6 @@ export default function Employees() {
             </Select>
             <Select value={roleFilter} onChange={(e) => { setRoleFilter(e.target.value); setCurrentPage(1); }} containerClass="w-44">
               {rolesInFilter.map(r => <option key={r} value={r}>{r === 'All' ? (deptFilter === 'All' ? 'All Roles' : `All ${deptFilter} Roles`) : r}</option>)}
-            </Select>
-            <Select value={statusFilter} onChange={(e) => { setStatusFilter(e.target.value); setCurrentPage(1); }} containerClass="w-36">
-              {statuses.map(s => <option key={s} value={s}>{s === 'All' ? 'All Status' : s}</option>)}
             </Select>
             <Select value={typeFilter} onChange={(e) => { setTypeFilter(e.target.value); setCurrentPage(1); }} containerClass="w-36">
               {types.map(t => <option key={t} value={t}>{t === 'All' ? 'All Types' : t}</option>)}
@@ -642,8 +549,15 @@ export default function Employees() {
               </Select>
               <Input label="Date Hired" type="date" max={TODAY} value={formData.dateHired || formData.hireDate || ''} onChange={e => setFormData({ ...formData, dateHired: e.target.value })} error={formErrors.dateHired} />
               <Select label="Status" value={formData.status || ''} onChange={e => setFormData({ ...formData, status: e.target.value })}>
+                {/*
+                  "Terminated" is the only way to record that someone has left, and it is not
+                  cosmetic: setting it clears their upcoming shifts on the server, so a departed
+                  person does not accumulate a month of false no-shows. There was no way to reach
+                  that state at all before, which left the server-side cleanup unreachable.
+                */}
                 <option value="Active">Active</option>
-                <option value="Inactive">Inactive</option>
+                <option value="On Leave">On Leave</option>
+                <option value="Terminated">Terminated (has left)</option>
               </Select>
             </div>
           </section>

@@ -30,7 +30,7 @@ class AutomatedShiftController extends Controller
         $result = $planner->commit($planner->normalize($data), $data['assignments'], $request->user()?->name ?: 'Workforce Admin');
         if ($result['created'] === 0) {
             return response()->json([
-                'message' => 'Nothing could be saved: every assignment was no longer valid (leave, an existing shift, or an inactive employee).',
+                'message' => 'Nothing could be saved: every assignment was no longer valid (approved leave, an existing shift, or an employee who has left).',
                 'data' => $result,
             ], 422);
         }

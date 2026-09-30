@@ -107,8 +107,8 @@ class KioskController extends Controller
                 'minutesLate' => (int) Carbon::parse($today.' '.$s->shift->start_time, $timezone)->diffInMinutes($now),
             ])->sortByDesc('minutesLate')->values();
 
-        // Everyone who is not Inactive can be at the door (Active and On Leave), the same count the Employees page uses
-        $active = Employee::where('status', '!=', 'Inactive');
+        // Everyone still employed can be at the door. Terminated is excluded - they no longer work here.
+        $active = Employee::where('status', '!=', 'Terminated');
         $readiness = [
             'pinSet' => ! empty($kiosk['pinHash']),
             'kioskActive' => (bool) $kiosk['active'],
@@ -625,8 +625,8 @@ class KioskController extends Controller
 
     public function clockIn(Request $request): JsonResponse
     {
-        if ($inactive = $this->inactiveResponse()) {
-            return $inactive;
+        if ($unavailable = $this->disabledResponse()) {
+            return $unavailable;
         }
 
         $data = Attendance::apiFillable($request->validate([
@@ -751,8 +751,8 @@ class KioskController extends Controller
 
     public function clockOut(Request $request, string $id): JsonResponse
     {
-        if ($inactive = $this->inactiveResponse()) {
-            return $inactive;
+        if ($unavailable = $this->disabledResponse()) {
+            return $unavailable;
         }
 
         $record = Attendance::find($id);
@@ -972,7 +972,7 @@ class KioskController extends Controller
      * for the device all use this.
      */
     /** Clock-ins only work while an Administrator has the kiosk switched on. */
-    private function inactiveResponse(): ?JsonResponse
+    private function disabledResponse(): ?JsonResponse
     {
         if ($this->kiosk()['active']) {
             return null;
@@ -980,7 +980,7 @@ class KioskController extends Controller
 
         return response()->json([
             'message' => 'Clock-ins are currently disabled on this kiosk.',
-            'code' => 'kiosk_inactive',
+            'code' => 'kiosk_disabled',
         ], 423);
     }
 

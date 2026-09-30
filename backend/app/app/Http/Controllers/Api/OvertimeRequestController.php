@@ -5,11 +5,13 @@ namespace App\Http\Controllers\Api;
 use App\Http\Controllers\Api\Concerns\AuthorizesEmployeeScope;
 use App\Http\Controllers\Api\Concerns\GeneratesSequentialIds;
 use App\Http\Controllers\Controller;
+use App\Models\Employee;
 use App\Models\OvertimeRequest;
 use App\Services\AuditLogger;
 use App\Services\NotificationService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 
 class OvertimeRequestController extends Controller
 {
@@ -108,6 +110,101 @@ class OvertimeRequestController extends Controller
         );
 
         return response()->json(['data' => $record->toApiArray()], 201);
+    }
+
+    /**
+     * HR raising overtime for several people at once.
+     *
+     * One person per day is the same rule the single create enforces, and it is the reason this is not
+     * just a loop of store() calls: a group either goes in whole or not at all. Somebody who ticked six
+     * names and got three of them saved would have no way of knowing which three, and the rest would
+     * look like HR had forgotten them.
+     *
+     * Per-person problems (already requested that day, name no longer on the roster) are reported back
+     * by employee id rather than failing the batch, because a group of six where one already has a
+     * request is a normal Tuesday, not a mistake worth making the administrator start over.
+     */
+    public function bulkStore(Request $request): JsonResponse
+    {
+        $this->assertAdmin($request);
+
+        $data = $request->validate([
+            'employeeIds' => ['required', 'array', 'min:1', 'max:100'],
+            'employeeIds.*' => ['required', 'string', 'max:20', 'distinct'],
+            'date' => 'required|date',
+            'expectedHours' => 'nullable|numeric|min:0|max:24',
+            'reason' => 'required|string',
+            'status' => 'required|string|in:Pending,Approved,Rejected',
+        ]);
+
+        $date = \Carbon\Carbon::parse($data['date'])->toDateString();
+        $roster = Employee::whereIn('id', $data['employeeIds'])
+            ->where('status', '!=', 'Terminated')
+            ->get(['id', 'first_name', 'last_name'])
+            ->keyBy('id');
+
+        $skipped = [];
+        $created = [];
+
+        DB::transaction(function () use ($data, $date, $roster, &$skipped, &$created, $request) {
+            foreach ($data['employeeIds'] as $employeeId) {
+                $employee = $roster->get($employeeId);
+                if (! $employee) {
+                    $skipped[] = ['employeeId' => $employeeId, 'reason' => 'not_found'];
+
+                    continue;
+                }
+
+                $duplicate = OvertimeRequest::where('employee_id', $employeeId)
+                    ->whereDate('date', $date)
+                    ->whereIn('status', ['Pending', 'Approved'])
+                    ->first();
+                if ($duplicate) {
+                    $skipped[] = [
+                        'employeeId' => $employeeId,
+                        'reason' => 'duplicate',
+                        'message' => trim($employee->first_name.' '.$employee->last_name).' already has a '.$duplicate->status.' request for that day.',
+                    ];
+
+                    continue;
+                }
+
+                $record = OvertimeRequest::create([
+                    'id' => $this->nextIdFor(OvertimeRequest::class, 'OT'),
+                    'employee_id' => $employeeId,
+                    'employee_name' => trim($employee->first_name.' '.$employee->last_name),
+                    'date' => $date,
+                    'expected_hours' => $data['expected_hours'] ?? null,
+                    'reason' => $data['reason'],
+                    'status' => $data['status'],
+                    'requested_date' => now()->toDateString(),
+                    'approved_by' => $data['status'] === 'Pending' ? null : $request->user()?->name,
+                ]);
+
+                $created[] = $record->toApiArray();
+            }
+        });
+
+        if ($created) {
+            $names = collect($created)->map(fn ($r) => $r['employeeName'])->take(3)->implode(', ');
+            $more = count($created) > 3 ? ' and '.(count($created) - 3).' more' : '';
+            AuditLogger::record('timeoff', 'overtime.bulk_requested', 'OvertimeRequest', 'bulk', actor: $request->user()?->name,
+                actorId: $request->user()?->employee_id, meta: ['count' => count($created), 'date' => $date]);
+            NotificationService::notifyAdmins(
+                'overtime_requested',
+                count($created) > 1 ? count($created).' Overtime Requests' : 'New Overtime Request',
+                $names.$more.' on '.\Carbon\Carbon::parse($date)->format('M d, Y').'.',
+                'medium',
+                '/attendance'
+            );
+        }
+
+        return response()->json([
+            'data' => $created,
+            'skipped' => $skipped,
+            'message' => count($created).' request(s) created'
+                .($skipped ? ', '.count($skipped).' skipped.' : '.'),
+        ], count($created) ? 201 : 422);
     }
 
     public function updateStatus(Request $request, string $id): JsonResponse

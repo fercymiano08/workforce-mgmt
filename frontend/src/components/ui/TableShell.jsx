@@ -22,7 +22,7 @@ import clsx from 'clsx';
   screen where the table already fits, and it trains people to ignore it on the screens where it
   does mean something.
 */
-export default function TableShell({ children, className, minWidth = 'min-w-[640px]', bleed = true }) {
+export default function TableShell({ children, className, minWidth = 'min-w-[640px]' }) {
   const scroller = useRef(null);
   const [edges, setEdges] = useState({ left: false, right: false });
 
@@ -47,24 +47,26 @@ export default function TableShell({ children, className, minWidth = 'min-w-[640
   }, [measure]);
 
   return (
-    <div className={clsx('relative', className)}>
+    <div className={clsx('table-frame relative bg-white rounded-2xl border border-gray-200/80 shadow-sm', className)}>
       <div
         ref={scroller}
         onScroll={measure}
         className={clsx(
-          // Negative margins let the table run to the screen edge on a phone: a table that stops a
-          // finger's width short of the edge just looks like it was cut off. A table that already
-          // lives inside a card of its own opts out, or it would be dragged out past the card.
-          bleed ? '-mx-4 px-4 sm:mx-0 sm:px-0' : '',
-          'overflow-x-auto overscroll-x-contain',
-          // The header row sticks, so the column a value belongs to is still named mid-scroll.
-          '[&_thead_th]:sticky [&_thead_th]:top-0 [&_thead_th]:z-10 [&_thead_th]:bg-gray-50 [&_thead_th]:backdrop-blur-sm'
+          // No negative margins here on purpose. Pulling the table 16px past its card on each side
+          // looked better, but it made the scroller wider than the card, and the page's own content
+          // area then became scrollable sideways - the whole screen sliding under your finger over a
+          // table that was already scrolling perfectly well inside its own box.
+          'overflow-x-auto overscroll-x-contain'
         )}
       >
         {/*
           The minimum width lives on the content, never on the scrolling box. An overflow-x-auto
           element with its own min-width is forced to be wider than the screen, and then it is the
           page that scrolls sideways - the exact failure this is here to prevent.
+
+          .table-frame is what carries the shared design (see index.css). Applying it here rather
+          than per table is what makes every module look the same without fifteen files being
+          rewritten, and what stops the next table someone adds from arriving unstyled.
         */}
         <div className={minWidth}>{children}</div>
       </div>
@@ -72,13 +74,13 @@ export default function TableShell({ children, className, minWidth = 'min-w-[640
       {edges.left && (
         <div
           aria-hidden="true"
-          className="pointer-events-none absolute inset-y-0 left-0 w-8 bg-gradient-to-r from-white to-transparent sm:from-white/90"
+          className="pointer-events-none absolute inset-y-0 left-0 w-8 bg-gradient-to-r from-white to-transparent sm:from-white/90 z-20"
         />
       )}
       {edges.right && (
         <div
           aria-hidden="true"
-          className="pointer-events-none absolute inset-y-0 right-0 w-8 bg-gradient-to-l from-white to-transparent sm:from-white/90"
+          className="pointer-events-none absolute inset-y-0 right-0 w-8 bg-gradient-to-l from-white to-transparent sm:from-white/90 z-20"
         />
       )}
     </div>

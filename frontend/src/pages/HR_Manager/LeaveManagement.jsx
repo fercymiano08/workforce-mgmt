@@ -91,7 +91,7 @@ export default function LeaveManagement() {
   }, [employees]);
   const headcount = useMemo(() => {
     const map = {};
-    (employees || []).filter((e) => e.status !== 'Inactive').forEach((e) => { map[e.department] = (map[e.department] || 0) + 1; });
+    (employees || []).filter((e) => e.status !== 'Terminated').forEach((e) => { map[e.department] = (map[e.department] || 0) + 1; });
     return map;
   }, [employees]);
   // Requests only carry an employee name, so match the picture by employee id

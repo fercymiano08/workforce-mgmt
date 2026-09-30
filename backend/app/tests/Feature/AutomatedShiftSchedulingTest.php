@@ -135,7 +135,7 @@ class AutomatedShiftSchedulingTest extends TestCase
         $this->staff(3, 'Ops', 'Staff', 'A');
         $this->staff(2, 'Ops', 'Lead', 'B');
         $this->staff(2, 'IT', 'Staff', 'C');
-        Employee::create(['id' => 'GONE', 'first_name' => 'X', 'last_name' => 'Y', 'email' => 'g@x.com', 'department' => 'Ops', 'position' => 'Staff', 'status' => 'Inactive']);
+        Employee::create(['id' => 'GONE', 'first_name' => 'X', 'last_name' => 'Y', 'email' => 'g@x.com', 'department' => 'Ops', 'position' => 'Staff', 'status' => 'Terminated']);
 
         $this->assertSame(7, $this->preview()->json('data.eligibleEmployees'));   // everyone active
         $this->assertSame(5, $this->preview(['department' => 'Ops'])->json('data.eligibleEmployees'));

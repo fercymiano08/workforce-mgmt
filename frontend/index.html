@@ -3,7 +3,35 @@
   <head>
     <meta charset="UTF-8" />
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <link rel="apple-touch-icon" href="/icon-192.png" />
+
+    <!--
+      viewport-fit=cover is what makes the app reach the real edges of a phone screen. Without it the
+      browser letterboxes the page away from the notch and the gesture bar, and every
+      env(safe-area-inset-*) value below is reported as 0px - so the bottom tab bar and the top header
+      would sit underneath the phone's own furniture with no padding to keep them clear.
+      interactive-widget keeps the on-screen keyboard from resizing the layout, which is what was
+      making a phone's toolbar jump every time a field was focused.
+    -->
+    <meta
+      name="viewport"
+      content="width=device-width, initial-scale=1.0, viewport-fit=cover, interactive-widget=resizes-content"
+    />
+
+    <!-- Installed on a home screen, the app is drawn by the OS chrome: theme-color paints the Android
+         status bar, and mobile-web-app-capable is what removes the browser's address bar entirely. -->
+    <meta name="theme-color" content="#0B1F3A" />
+    <meta name="mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+    <meta name="apple-mobile-web-app-title" content="Workforce" />
+    <meta name="application-name" content="Workforce" />
+    <meta name="color-scheme" content="light dark" />
+    <meta name="format-detection" content="telephone=no" />
+    <meta name="description" content="Attendance, scheduling, leave, timesheets and payroll for the workforce." />
+
+    <link rel="manifest" href="/manifest.webmanifest" />
+
     <title>Workforce Management - Workforce Admin</title>
   </head>
   <body>

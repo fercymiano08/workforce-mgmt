@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import {
   Users, CheckCircle, CalendarOff, Clock, TrendingUp,
-  Calendar, Briefcase, Check, X, ArrowRight, Inbox, FileText, LogOut, CheckCircle2, UserX, Download,
+  Calendar, Briefcase, Check, X, ArrowRight, Inbox, FileText, LogOut, CheckCircle2, Download,
 } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import {
@@ -289,7 +289,6 @@ export default function Dashboard() {
     const presentToday = todaysAttendance.filter((a) => isPresentGroup(a.status)).length;
     const attendedToday = todaysAttendance.filter((a) => didAttend(a.status)).length;
     const lateToday = todaysAttendance.filter((a) => a.status === 'Late').length;
-    const inactive = employees.filter((e) => e.status === 'Inactive').length;
     const attendanceRate = employees.length
       ? Math.round((attendedToday / employees.length) * 1000) / 10
       : 0;
@@ -299,7 +298,6 @@ export default function Dashboard() {
       presentToday,
       onTimeToday,
       lateToday,
-      inactive,
       attendanceRate,
     };
   }, [employees, todaysAttendance]);
@@ -413,11 +411,9 @@ export default function Dashboard() {
   }, [schedules, shiftDefs, today]);
 
   // Each card links to the screen the number describes, so the figure and the next action are the
-  // same tap. The inactive count carries its own filter because "inactive" on its own is not a view.
   const kpiCards = [
     { labelKey: 'dashboard.totalEmployees', value: kpi.totalEmployees, icon: Users, change: null, accent: 'blue', to: '/employees' },
     { labelKey: 'dashboard.presentToday', value: kpi.presentToday, icon: CheckCircle, change: null, accent: 'emerald', subtext: `${kpi.onTimeToday} on time · ${kpi.lateToday} late`, to: '/attendance' },
-    { labelKey: 'dashboard.inactive', value: kpi.inactive, icon: UserX, change: null, accent: 'amber', to: '/employees?status=Inactive' },
     { labelKey: 'dashboard.lateEmployees', value: kpi.lateToday, icon: Clock, change: null, accent: 'red', to: '/attendance?status=Late' },
     { labelKey: 'dashboard.attendanceRate', value: `${kpi.attendanceRate}%`, icon: TrendingUp, change: null, accent: 'purple', to: '/reports' },
   ];

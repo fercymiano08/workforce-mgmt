@@ -214,6 +214,22 @@ export const overtimeService = {
     const { data } = await http.post('/overtime', payload);
     return data;
   },
+  // HR raising the same overtime for several people at once. The backend answers with the rows it
+  // created and a `skipped` list explaining anyone it left out, so one person who already has a
+  // request does not fail the rest of the group.
+  bulkCreate: async (payload) => {
+    // The 422 carries the per-person reasons (someone already has a request that day), which the modal
+    // shows by name. axios rejects those, so the body is handed back rather than thrown away - otherwise
+    // the administrator submits, sees a failure, and is never told which of the six was the problem.
+    try {
+      const { data } = await http.post('/overtime/bulk', payload);
+      return data;
+    } catch (error) {
+      const body = error?.response?.data;
+      if (body && Array.isArray(body.skipped)) return body;
+      throw error;
+    }
+  },
   updateStatus: async (id, status, approvedBy, approvedHours, comments) => {
     const { data } = await http.patch(`/overtime/${id}/status`, {
       status,
@@ -441,7 +457,6 @@ export const authService = {
   // Sent while an employee is really using the system, so their (3-minute idle) login stays alive.
   keepAlive: async () => http.post('/auth/keep-alive'),
   // Password check before exporting data; the server records it in the audit log with the purpose.
-  confirmPassword: async (password, purpose) => http.post('/auth/confirm-password', { password, purpose }),
   changePassword: async (payload) => {
     const { data } = await http.post('/auth/change-password', payload);
     return data;

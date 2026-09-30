@@ -10,11 +10,12 @@ use App\Support\LocalTime;
 use Illuminate\Support\Collection;
 
 /**
- * Keeps a published schedule true when something changes afterwards. Automated scheduling skips approved
- * leave and inactive people when it builds a draft - this does the same for shifts already saved:
+ * Keeps a published schedule true when something changes afterwards. Automated scheduling skips
+ * approved leave and people who have left when it builds a draft - this does the same for shifts
+ * already saved:
  *
  *   a leave becomes Approved      -> that person's shifts on the leave days go
- *   an employee becomes Inactive  -> their upcoming shifts go
+ *   an employee becomes Terminated -> their upcoming shifts go
  *
  * Only shifts from today on that nobody has clocked in for are removed; a worked day is never rewritten.
  * Called from the Leave and Employee models, so every screen that changes them is covered.
@@ -30,9 +31,9 @@ class ScheduleCleanup
         return self::remove($shifts, 'your '.strtolower((string) $leave->leave_type).' leave was approved', 'leave', $leave->id);
     }
 
-    public static function forInactiveEmployee(Employee $employee): int
+    public static function forTerminatedEmployee(Employee $employee): int
     {
-        return self::remove(ShiftSchedule::where('employee_id', $employee->id)->get(), null, 'inactive', $employee->id);
+        return self::remove(ShiftSchedule::where('employee_id', $employee->id)->get(), null, 'terminated', $employee->id);
     }
 
     /** @param  Collection<int, ShiftSchedule>  $shifts */
@@ -59,7 +60,7 @@ class ScheduleCleanup
             }
         }
 
-        AuditLogger::record('scheduling', 'schedule.cleared', ['leave' => 'Leave', 'inactive' => 'Employee'][$cause], $causeId,
+        AuditLogger::record('scheduling', 'schedule.cleared', ['leave' => 'Leave', 'terminated' => 'Employee'][$cause], $causeId,
             meta: ['removed' => $ids->count(), 'shiftIds' => $ids->values()->all(), 'dates' => $removable->map(fn ($s) => $s->date->toDateString())->unique()->values()->all()]);
 
         return $ids->count();

@@ -299,7 +299,9 @@ export default function MyAttendance() {
       />
 
       {/* Attendance / Overtime tabs */}
-      <div className="flex items-center gap-1 p-1 bg-gray-100 rounded-xl w-fit">
+      {/* Four tabs do not fit across a phone. Given their own scroller so the row slides under a
+          finger; w-fit on its own made the content area wider than the screen. */}
+      <div className="flex items-center gap-1 p-1 bg-gray-100 rounded-xl w-fit max-w-full overflow-x-auto">
         {[
           { key: 'attendance', label: 'Attendance History' },
           { key: 'overtime', label: 'Overtime Requests' },

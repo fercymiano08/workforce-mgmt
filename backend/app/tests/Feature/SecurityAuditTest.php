@@ -28,19 +28,16 @@ class SecurityAuditTest extends TestCase
         $this->assertSame(1, AuditEvent::where('event', 'auth.login')->count());
     }
 
-    public function test_confirming_the_password_before_an_export_is_recorded_with_its_purpose(): void
+    public function test_printing_and_exporting_do_not_ask_for_the_password_again(): void
     {
-        $user = $this->admin();
+        // The re-type-your-password step was removed: it guarded nothing (the person was already
+        // signed in and allowed to see the export) and it made printing feel broken on a phone.
+        // This test exists so it cannot quietly come back.
+        $this->actingAs($this->admin())
+            ->postJson('/api/auth/confirm-password', ['password' => 'Passw0rd!x'])
+            ->assertStatus(404);
 
-        $this->actingAs($user)->postJson('/api/auth/confirm-password', ['password' => 'nope', 'purpose' => 'Export audit log'])
-            ->assertStatus(422)->assertJsonValidationErrors('password');
-        $this->actingAs($user)->postJson('/api/auth/confirm-password', ['password' => 'Passw0rd!x', 'purpose' => 'Export audit log'])
-            ->assertOk();
-
-        $this->assertSame(1, AuditEvent::where('event', 'auth.confirm_failed')->count());
-        $event = AuditEvent::where('event', 'auth.export_confirmed')->first();
-        $this->assertNotNull($event);
-        $this->assertSame('Export audit log', $event->meta['purpose']);
+        $this->assertSame(0, AuditEvent::whereIn('event', ['auth.export_confirmed', 'auth.confirm_failed'])->count());
     }
 
     public function test_changing_the_password_is_recorded(): void

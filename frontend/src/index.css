@@ -54,6 +54,124 @@
 
 /* Base layer: element styles that must not override Tailwind utilities */
 @layer base {
+  /*
+    The phone layer.
+
+    Everything below exists to make a browser tab feel like an installed app rather than a web page
+    that happens to be narrow. None of it changes the desktop layout: each rule is inside a
+    max-width query, or applies to a property the desktop never relied on. The desktop UI is
+    untouched, which was the whole constraint.
+
+    What was actually wrong on a phone, and what fixes it:
+
+    - 100vh on a phone includes the space under the browser's own bars, so the bottom of a page
+      could never be scrolled to. 100dvh is the height the viewport really is right now.
+    - Pulling past the top or bottom edge showed the page's own background streaking (rubber
+      banding), which is the clearest "this is a website" tell there is.
+    - Tapping a button flashed a grey rectangle over it, because mobile browsers highlight tappable
+      elements by default.
+    - Every button, link and row inherited a text cursor and could be long-pressed into a text
+      selection, so a stray thumb dragged a blue highlight across a card.
+    - Tap targets were sized for a mouse. The platform minimum is 44px; a phone makes you pay for
+      anything smaller.
+    - Momentum scrolling on Android only feels right when the scroll container is the one being
+      dragged, so the overscroll chain is contained to it.
+  */
+  @media (max-width: 1023px) {
+    html {
+      /* Real viewport height, not the 100vh lie. */
+      height: 100%;
+      -webkit-text-size-adjust: 100%;
+      text-size-adjust: 100%;
+    }
+
+    body {
+      /* Contains the rubber band to this element instead of the whole document. */
+      overscroll-behavior-y: contain;
+      -webkit-overflow-scrolling: touch;
+      /* Stops the grey tap flash on every control. */
+      -webkit-tap-highlight-color: transparent;
+      /* A long press on a card should not start selecting the words inside it. */
+      -webkit-user-select: none;
+      user-select: none;
+    }
+
+    /* Text people actually need to read or copy keeps its selection. */
+    input,
+    textarea,
+    [contenteditable='true'],
+    .selectable {
+      -webkit-user-select: text;
+      user-select: text;
+    }
+
+    button,
+    a,
+    [role='button'],
+    label,
+    summary {
+      /* No grey flash, no tap delay waiting to see if this becomes a double tap. */
+      touch-action: manipulation;
+      -webkit-tap-highlight-color: transparent;
+    }
+
+    /* A finger is not a cursor. */
+    button,
+    [role='button'],
+    summary,
+    label {
+      cursor: pointer;
+    }
+
+    /* Disabled controls should not invite a press at all. */
+    button:disabled,
+    [aria-disabled='true'] {
+      pointer-events: none;
+    }
+
+    /*
+      The 44px floor. Applied through a custom property rather than by rewriting every component,
+      so it nudges controls that are close without stretching a deliberately compact one (a chip, a
+      checkbox, a pagination arrow that already meets the target).
+    */
+    :where(button, a[role='button'], [role='tab']) {
+      min-height: max(44px, var(--tap-min, 0px));
+    }
+
+    /* Native momentum for anything that scrolls on its own. */
+    :where(main, [class*='overflow-y-auto'], [class*='overflow-x-auto']) {
+      -webkit-overflow-scrolling: touch;
+      overscroll-behavior: contain;
+    }
+
+    /* Modals slide up from the bottom edge, the way a bottom sheet does on Android, instead of
+       fading in place. transform + opacity only, so it stays on the compositor. */
+    @keyframes sheetUp {
+      from { transform: translateY(16px); opacity: 0; }
+      to { transform: none; opacity: 1; }
+    }
+
+    /* Inputs at least 16px, or iOS Safari zooms the whole page in when a field is focused. */
+    input,
+    select,
+    textarea {
+      font-size: max(16px, 1em);
+    }
+  }
+
+  /*
+    Standalone mode only (an installed app, not a browser tab). There is no address bar to pull
+    down, so the page is allowed to paint into the notch area and the safe-area padding becomes the
+    only thing keeping content off the phone's furniture.
+  */
+  @media (display-mode: standalone) {
+    html,
+    body {
+      height: 100%;
+      overflow: hidden;
+    }
+  }
+
   body {
     font-family: 'Poppins', sans-serif;
     background-color: #F8FAFC;
@@ -235,6 +353,153 @@
       animation: none;
       transform: none;
     }
+  }
+
+  /*
+    The one table design, for every module.
+
+    Each module wrote its own <table> markup, and the result was fifteen tables that shared nothing:
+    some had a tinted header, some did not; row heights ranged from a cramped 40px to a loose 64px;
+    the hairline between rows was grey in one module and blue in the next. Reading down a list of
+    modules, the eye had to re-learn the table every time, which is the "bland, no style at all"
+    feeling - not one ugly table, but no consistent one either.
+
+    So the design is written once here and scoped to .table-frame, which is the shared wrapper every
+    module already routes its table through (TableShell). Fifteen files get the new look without
+    being edited, and they cannot drift apart again, because there is only one place to change it.
+
+    The rules are nested under .table-frame rather than applied as a .data-table class on each table
+    on purpose: a class has to be added to every table by hand, and the first table someone adds
+    next year will not have it.
+
+    Specificity is the reason this works at all. A module that styled its own cells inline still
+    wins, because an inline class or style beats a descendant selector. Nothing is overridden that
+    the author meant.
+
+    The parts that carry the design:
+
+    - the header is a real band, not a row of grey text: navy tint, a bottom rule, small uppercase
+      labels with wide tracking. It is the anchor you find the table by.
+    - one row height everywhere. Rhythm is what makes a grid of numbers readable; without it the eye
+      has to re-measure on every line.
+    - hairline separators at full strength, and a zebra tint so a wide row can be followed across
+      the columns without losing it. The two together are subtle on purpose - either alone is worse.
+    - the first column is the subject of the row, so it carries the weight. The rest is data.
+    - numeric columns right-align, because digits compared down a column only line up that way.
+    - hover and active states are a single blue tint, so a clickable row is discoverable.
+  */
+  .table-frame table {
+    width: 100%;
+    border-collapse: separate;
+    border-spacing: 0;
+  }
+
+  .table-frame thead th {
+    position: sticky;
+    top: 0;
+    z-index: 10;
+    background-color: #EEF2F7;
+    color: #475569;
+    font-size: 0.6875rem;
+    font-weight: 700;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    text-align: left;
+    padding: 0.75rem 1rem;
+    border-bottom: 1px solid #CBD5E1;
+  }
+
+  .table-frame thead tr:last-child th {
+    /* A table with a grouped header has two header rows; only the bottom one gets the rule, so the
+       group label above it reads as a band rather than as another line of the same weight. */
+    box-shadow: inset 0 -1px 0 #CBD5E1;
+  }
+
+  .table-frame tbody td,
+  .table-frame tbody th {
+    padding: 0.8125rem 1rem;
+    font-size: 0.875rem;
+    color: #334155;
+    vertical-align: middle;
+    text-align: left;
+    border-bottom: 1px solid #F1F5F9;
+    /* A table on a phone has more columns than the screen has width. Cells stop shrinking to
+       unreadable slivers and the frame scrolls sideways instead (see TableShell). */
+    white-space: nowrap;
+  }
+
+  .table-frame tbody tr {
+    transition: background-color 0.12s ease;
+  }
+
+  .table-frame tbody tr:nth-child(even) {
+    background-color: #FAFBFC;
+  }
+
+  /* A row you can click says so on hover, and says it again while the finger is down - on a phone
+     there is no hover, and the press feedback is the only cue there is.
+     Both selectors are needed: rows that already carry cursor-pointer from the original markup get
+     the treatment without being touched, and data-clickable is available to a row written later. */
+  .table-frame tbody tr[data-clickable='true'],
+  .table-frame tbody tr.cursor-pointer {
+    cursor: pointer;
+  }
+
+  .table-frame tbody tr[data-clickable='true']:hover,
+  .table-frame tbody tr.cursor-pointer:hover {
+    background-color: #EFF6FF;
+  }
+
+  .table-frame tbody tr[data-clickable='true']:active,
+  .table-frame tbody tr.cursor-pointer:active {
+    background-color: #DBEAFE;
+  }
+
+  .table-frame tbody tr:last-child td,
+  .table-frame tbody tr:last-child th {
+    border-bottom: none;
+  }
+
+  /* The subject of the row. */
+  .table-frame tbody td:first-child,
+  .table-frame tbody th:first-child {
+    font-weight: 600;
+    color: #0F172A;
+  }
+
+  /* Digits line up only when they are all on the same edge. Applied per cell by the modules that
+     have real numbers, never automatically: a date or a status is not a number, and centring those
+     would read worse than leaving them left alone. */
+  .table-frame .num {
+    text-align: right;
+    font-variant-numeric: tabular-nums;
+  }
+
+  /* Anything a module marks as a long value - an address, a reason - is allowed to wrap rather than
+     stretching the whole table out of reach. */
+  .table-frame .wrap {
+    white-space: normal;
+    min-width: 14rem;
+  }
+
+  /* A pinned first column. On a wide table scrolled sideways on a phone, losing the name column
+     means every remaining value belongs to nobody. */
+  .table-frame .sticky-col {
+    position: sticky;
+    left: 0;
+    z-index: 5;
+    background-color: inherit;
+  }
+
+  .table-frame thead th.sticky-col {
+    z-index: 15;
+    background-color: #EEF2F7;
+  }
+
+  /* A shadow only on the edge that has more table past it, so a pinned column reads as "there is
+     more this way" instead of as a permanent border. */
+  .table-frame .sticky-col.is-pinned {
+    box-shadow: 6px 0 8px -6px rgba(15, 23, 42, 0.16);
   }
 }
 

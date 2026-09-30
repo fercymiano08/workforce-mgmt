@@ -1,7 +1,7 @@
 import { useState, useMemo, useEffect } from 'react';
 import { createPortal } from 'react-dom';
 import { useSearchParams } from 'react-router-dom';
-import { CheckCircle, AlertTriangle, Timer, Coffee, MapPin, Clock, X, Check, CheckCheck, ChevronDown, ChevronRight, Hand, ClipboardCheck } from 'lucide-react';
+import { CheckCircle, AlertTriangle, Timer, Coffee, MapPin, Clock, X, Check, CheckCheck, ChevronDown, ChevronRight, Hand, ClipboardCheck, Plus } from 'lucide-react';
 import Card from '../../components/ui/Card';
 import Button from '../../components/ui/Button';
 import Badge from '../../components/ui/Badge';
@@ -14,6 +14,7 @@ import { Pagination } from '../../components/ui/Table';
 import { SkeletonTable } from '../../components/ui/LoadingSkeleton';
 import { adjustmentService, attendanceService, employeeService, overtimeService } from '../../services/api';
 import CorrectionsAdmin from '../../components/attendance/CorrectionsAdmin';
+import BulkOvertimeModal from '../../components/attendance/BulkOvertimeModal';
 import { kioskService } from '../../services/kioskService';
 import { formatHours, toDateKey } from '../../services/attendanceService';
 import { formatDate, formatTime } from '../../utils/helpers';
@@ -75,6 +76,7 @@ export default function Attendance() {
   const [, setOvertimePage] = useState(1);
   const [selectedOvertime, setSelectedOvertime] = useState(null);
   const [deciding, setDeciding] = useState(false);
+  const [bulkOvertimeOpen, setBulkOvertimeOpen] = useState(false);
   const [approveHours, setApproveHours] = useState('');
   const [approveComment, setApproveComment] = useState('');
   const [selectedOtIds, setSelectedOtIds] = useState(new Set());
@@ -326,7 +328,10 @@ export default function Attendance() {
       </div>
 
       {/* Tabs */}
-      <div className="flex border border-gray-200 rounded-xl overflow-hidden w-fit">
+      {/* Four tabs do not fit across a phone. Kept on one line and given their own scroller, so the
+          row slides under a finger instead of shoving the whole page sideways; w-fit without a
+          scroller is what made the content area 40px too wide. */}
+      <div className="flex border border-gray-200 rounded-xl overflow-hidden w-fit max-w-full overflow-x-auto">
         {[
           { key: 'attendance', label: 'Attendance Records' },
           { key: 'overtime', label: 'Overtime Requests' },
@@ -523,9 +528,12 @@ export default function Attendance() {
                 <option value="Cancelled">Cancelled</option>
               </Select>
             </div>
-            <div className="flex items-center gap-3">
+            <div className="flex items-center gap-3 flex-wrap">
+              <Button size="sm" variant="primary" icon={Plus} onClick={() => setBulkOvertimeOpen(true)}>
+                Raise overtime
+              </Button>
               {pendingOtIds.size > 0 && (
-                <label className="flex items-center gap-2 text-sm cursor-pointer select-none">
+                <label className="flex items-center gap-2 text-sm cursor-pointer select-none py-2">
                   <input type="checkbox" checked={isAllPendingSelected} onChange={() => toggleSelectAll([...pendingOtIds])} className="w-4 h-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500" />
                   <span className="text-gray-600">Select all pending</span>
                 </label>
@@ -1003,6 +1011,13 @@ export default function Attendance() {
           </div>
         )}
       </Modal>
+
+      <BulkOvertimeModal
+        isOpen={bulkOvertimeOpen}
+        onClose={() => setBulkOvertimeOpen(false)}
+        employees={employees}
+        onCreated={() => { refreshOvertime(); }}
+      />
     </div>
   );
 }

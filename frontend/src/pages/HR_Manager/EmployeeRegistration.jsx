@@ -17,7 +17,9 @@ const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 const PHONE_REGEX = /^[+\d][\d\s\-()]{6,}$/;
 const PASSWORD_REGEX = /^(?=.*[A-Z])(?=.*[a-z])(?=.*\d)[A-Za-z\d@$!%*#?&._-]{8,}$/;
 const genders = ['Male', 'Female'];
-const statuses = ['Active', 'Inactive'];
+
+// No "Terminated" option: someone who has left is not a state this form can put them in.
+const statuses = ['Active'];
 
 const TODAY = new Date().toISOString().split('T')[0];
 

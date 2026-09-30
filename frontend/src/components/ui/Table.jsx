@@ -20,7 +20,7 @@ import { ChevronLeft, ChevronRight, ChevronsLeft, ChevronsRight } from 'lucide-r
 export default function Table({ columns, data, onRowClick, emptyMessage = 'No data available', className }) {
   if (!data || data.length === 0) {
     return (
-      <div className="bg-white rounded-2xl border border-gray-100 p-12 text-center shadow-sm">
+      <div className="bg-white rounded-2xl border border-gray-200/80 p-12 text-center shadow-sm">
         <p className="text-gray-400 text-sm">{emptyMessage}</p>
       </div>
     );
@@ -32,16 +32,15 @@ export default function Table({ columns, data, onRowClick, emptyMessage = 'No da
   );
 
   return (
-    <div className={clsx('bg-white rounded-2xl border border-gray-100 overflow-hidden shadow-sm', className)}>
+    <div className={clsx('table-frame bg-white rounded-2xl border border-gray-200/80 overflow-hidden shadow-sm', className)}>
       {/* Desktop: columns side by side. */}
       <div className="hidden sm:block overflow-x-auto">
-        <table className="w-full">
+        <table>
           <thead>
-            <tr className="border-b border-gray-100 bg-gray-50/80">
+            <tr>
               {columns.map((col, i) => (
                 <th
                   key={i}
-                  className="px-5 py-3.5 text-left text-[11px] font-semibold text-gray-500 uppercase tracking-wider sticky top-0 bg-gray-50/80"
                   style={col.width ? { width: col.width } : {}}
                 >
                   {col.header}
@@ -49,19 +48,19 @@ export default function Table({ columns, data, onRowClick, emptyMessage = 'No da
               ))}
             </tr>
           </thead>
-          <tbody className="divide-y divide-gray-50">
+          <tbody>
             {data.map((row, rowIndex) => (
               <tr
                 key={rowIndex}
                 onClick={() => onRowClick?.(row)}
-                className={clsx(
-                  'transition-colors duration-150',
-                  rowIndex % 2 === 1 && 'bg-gray-50/30',
-                  onRowClick ? 'cursor-pointer hover:bg-blue-50/30' : 'hover:bg-gray-50/60'
-                )}
+                className={onRowClick ? 'cursor-pointer' : undefined}
+                {...(onRowClick ? { 'data-clickable': 'true' } : {})}
               >
                 {columns.map((col, colIndex) => (
-                  <td key={colIndex} className="px-5 py-3.5 text-sm text-gray-700">
+                  <td
+                    key={colIndex}
+                    className={colIndex === primaryIndex ? 'sticky-col' : undefined}
+                  >
                     {col.render ? col.render(row) : row[col.accessor]}
                   </td>
                 ))}
@@ -71,18 +70,28 @@ export default function Table({ columns, data, onRowClick, emptyMessage = 'No da
         </table>
       </div>
 
-      {/* Phone: one card per row, every value on screen, nothing to scroll sideways. */}
+      {/*
+        Phone: one card per row, every value on screen, nothing to scroll sideways.
+
+        The left rule is the design cue. A list of these on a phone is a column of flat white rows,
+        and without a mark on the left edge the eye cannot tell where one record ends and the next
+        begins - which is the same complaint as a bland table, in a different shape. The rule is
+        tinted by the row's own status colour when it has one, so the list can be scanned by state
+        without reading a word.
+      */}
       <ul className="sm:hidden divide-y divide-gray-100">
         {data.map((row, rowIndex) => (
           <li
             key={rowIndex}
             onClick={() => onRowClick?.(row)}
             className={clsx(
-              'px-4 py-3.5 transition-colors',
-              onRowClick && 'active:bg-blue-50/50 min-h-[56px]'
+              'relative py-3.5 pl-4 pr-4 transition-colors',
+              'before:absolute before:left-0 before:top-0 before:bottom-0 before:w-[3px] before:bg-transparent',
+              onRowClick && 'cursor-pointer active:bg-blue-50/60 min-h-[56px]'
             )}
+            {...(onRowClick ? { 'data-clickable': 'true' } : {})}
           >
-            <dl className="space-y-2">
+            <dl className="space-y-1.5">
               {columns.map((col, colIndex) => (
                 <div
                   key={colIndex}

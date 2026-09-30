@@ -2,9 +2,9 @@ import { useCallback, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
 
 // A dropdown filter that lives in the URL, so a card or a notification can send someone straight to
-// "just the inactive ones" instead of to the top of a list they then have to filter themselves.
+// "just the ones you filtered for" instead of to the top of a list they then have to filter themselves.
 //
-// Same reasoning as useUrlSearch: the module keeps its own control, but arriving with ?status=Inactive
+// Same reasoning as useUrlSearch: the module keeps its own control, but arriving with ?status=Terminated
 // arrives already filtered, and the URL always shows what is actually on screen. Writing the param
 // back on every change means a reload keeps the view and the address can be shared or bookmarked.
 //

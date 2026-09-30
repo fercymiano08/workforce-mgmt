@@ -58,7 +58,7 @@ const reportCategories = [
     color: 'pink',
     icon: Users,
     reports: [
-      { name: 'Workforce Headcount Report', desc: 'Active/on-leave/inactive headcount per department', icon: Users },
+      { name: 'Workforce Headcount Report', desc: 'Active and on-leave headcount per department', icon: Users },
       { name: 'Employee Turnover Analysis', desc: 'Hire dates, tenure, and current status for all employees', icon: UserCheck },
     ],
   },
