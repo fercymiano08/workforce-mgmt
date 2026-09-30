@@ -18,6 +18,7 @@ use App\Models\User;
 use DateTime;
 use Illuminate\Database\Seeder;
 use Illuminate\Database\UniqueConstraintViolationException;
+use Illuminate\Support\Facades\Artisan;
 use Illuminate\Support\Facades\Hash;
 
 class DatabaseSeeder extends Seeder
@@ -42,6 +43,23 @@ class DatabaseSeeder extends Seeder
                         'avatar_seed' => 'John',
                     ],
                 );
+
+                /*
+                  Keep the demo employees' own history moving even though this database is real.
+
+                  Skipping the demo half wholesale was right for the *fixtures* - re-running them over a
+                  live database is what the guard is for. But it also stopped the one part that is safe and
+                  necessary: the demo employees cannot use the kiosk, so nothing else ever writes their
+                  attendance. Their schedules kept being created (the seed ships them weeks ahead) while
+                  their attendance stopped, and attendance:mark-absent then faithfully recorded every one
+                  of those scheduled days as Absent with no clock-in and no clock-out.
+
+                  That is what turned 28 and 29 September into 20 "Absent" rows each on a site whose
+                  dashboard said those people worked. The command cannot cause the harm the guard guards
+                  against: demo:refresh resolves its employee list from the two demo files and touches
+                  nothing outside it, so anyone who registered through the application is left alone.
+                */
+                Artisan::call('demo:refresh', ['--close-today' => true]);
             }
 
             $this->command?->info('Database already holds real employee data - demo seed skipped.');

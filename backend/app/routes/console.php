@@ -11,6 +11,16 @@ Schedule::command('attendance:recount-hours')->everyMinute()->withoutOverlapping
 
 // Close out each finished day: scheduled, never clocked in, not on approved leave = Absent. Run shortly after
 // midnight Manila time (and again at noon as a safety net); it only ever looks at days that are already over.
+//
+// The demo rebuild goes FIRST, deliberately. The demo employees are shipped with schedules running weeks
+// ahead, and nothing else can ever clock them in, so any day that passes without a rebuild is a day the
+// marker below would record as Absent for all of them - 20 rows with no clock-in and no clock-out, on a
+// dashboard that otherwise says those people worked. Running the rebuild at 00:05 and the marker at 00:10
+// means the marker finds a real record for yesterday and has nothing to do. Set REFRESH_DEMO_DAILY=false to
+// turn the rebuild off; the marker still runs.
+if (filter_var(env('REFRESH_DEMO_DAILY', true), FILTER_VALIDATE_BOOLEAN)) {
+    Schedule::command('demo:refresh --close-today')->dailyAt('00:05')->timezone('Asia/Manila')->withoutOverlapping();
+}
 Schedule::command('attendance:mark-absent')->dailyAt('00:10')->timezone('Asia/Manila')->withoutOverlapping();
 Schedule::command('attendance:mark-absent')->dailyAt('12:00')->timezone('Asia/Manila')->withoutOverlapping();
 
