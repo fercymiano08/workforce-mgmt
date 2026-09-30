@@ -36,8 +36,6 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::middleware('admin')->group(function () {
             Route::get('/', [OvertimeRequestController::class, 'index']);
             Route::patch('/bulk-status', [OvertimeRequestController::class, 'bulkUpdateStatus']);
-            // Declared before /{id} so the word "bulk" is never read as an id.
-            Route::post('/bulk', [OvertimeRequestController::class, 'bulkStore']);
             Route::delete('/{id}', [OvertimeRequestController::class, 'destroy']);
         });
         // Dual rule enforced inline: admin can set any status, employee can

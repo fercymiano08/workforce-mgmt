@@ -1,7 +1,7 @@
 import { useState, useMemo, useEffect } from 'react';
 import { createPortal } from 'react-dom';
 import { useSearchParams } from 'react-router-dom';
-import { CheckCircle, AlertTriangle, Timer, Coffee, MapPin, Clock, X, Check, CheckCheck, ChevronDown, ChevronRight, Hand, ClipboardCheck, Plus } from 'lucide-react';
+import { CheckCircle, AlertTriangle, Timer, Coffee, MapPin, Clock, X, Check, CheckCheck, Hand, ClipboardCheck } from 'lucide-react';
 import Card from '../../components/ui/Card';
 import Button from '../../components/ui/Button';
 import Badge from '../../components/ui/Badge';
@@ -9,12 +9,12 @@ import Avatar from '../../components/ui/Avatar';
 import SearchBar from '../../components/ui/SearchBar';
 import Modal from '../../components/ui/Modal';
 import TableShell from '../../components/ui/TableShell';
+import TableFilters from '../../components/ui/TableFilters';
 import Input, { Select, Textarea } from '../../components/ui/Input';
 import { Pagination } from '../../components/ui/Table';
 import { SkeletonTable } from '../../components/ui/LoadingSkeleton';
 import { adjustmentService, attendanceService, employeeService, overtimeService } from '../../services/api';
 import CorrectionsAdmin from '../../components/attendance/CorrectionsAdmin';
-import BulkOvertimeModal from '../../components/attendance/BulkOvertimeModal';
 import { kioskService } from '../../services/kioskService';
 import { formatHours, toDateKey } from '../../services/attendanceService';
 import { formatDate, formatTime } from '../../utils/helpers';
@@ -73,15 +73,18 @@ export default function Attendance() {
 
   const [overtimeSearch, setOvertimeSearch] = useState('');
   const [overtimeStatusFilter, setOvertimeStatusFilter] = useState('All');
+  // Department used to be a collapsible grouping with a nested table per department. It is a filter
+  // now: one table, one list, and a control to narrow it. The grouping meant a reader had to open a
+  // section to discover what was in it, and on a phone each nested table was its own horizontal
+  // scroll - so a single question ("who in Support is waiting?") meant scrolling through five of them.
+  const [overtimeDeptFilter, setOvertimeDeptFilter] = useState('All');
   const [, setOvertimePage] = useState(1);
   const [selectedOvertime, setSelectedOvertime] = useState(null);
   const [deciding, setDeciding] = useState(false);
-  const [bulkOvertimeOpen, setBulkOvertimeOpen] = useState(false);
   const [approveHours, setApproveHours] = useState('');
   const [approveComment, setApproveComment] = useState('');
   const [selectedOtIds, setSelectedOtIds] = useState(new Set());
   const [bulkLoading, setBulkLoading] = useState(false);
-  const [collapsedDepts, setCollapsedDepts] = useState(new Set());
 
   const {
     data: earlyRecords,
@@ -120,9 +123,10 @@ export default function Attendance() {
       const name = `${r.firstName} ${r.lastName}`.toLowerCase();
       const matchSearch = !overtimeSearch || name.includes(overtimeSearch.toLowerCase());
       const matchStatus = overtimeStatusFilter === 'All' || r.status === overtimeStatusFilter;
-      return matchSearch && matchStatus;
+      const matchDept = overtimeDeptFilter === 'All' || (r.department || 'Unassigned') === overtimeDeptFilter;
+      return matchSearch && matchStatus && matchDept;
     }).sort((a, b) => b.requestedDate.localeCompare(a.requestedDate));
-  }, [enrichedOvertime, overtimeSearch, overtimeStatusFilter]);
+  }, [enrichedOvertime, overtimeSearch, overtimeStatusFilter, overtimeDeptFilter]);
 
   const openOvertime = (req) => {
     setApproveHours(req.expectedHours ? String(req.expectedHours) : '');
@@ -131,15 +135,31 @@ export default function Attendance() {
     setSelectedOvertime(req);
   };
 
-  const otDepartments = useMemo(() => {
-    const groups = {};
-    for (const r of filteredOvertime) {
+  /*
+    The department list is built from the requests themselves, not from the employee roster.
+
+    A department with nobody who has ever asked for overtime has nothing to filter to, so offering it
+    would produce an empty table and look like the filter had failed. Sorted, with Unassigned last,
+    because a row with no department is the one case worth noticing rather than scanning past.
+  */
+  const overtimeDeptOptions = useMemo(() => {
+    const seen = new Map();
+    for (const r of enrichedOvertime) {
       const dept = r.department || 'Unassigned';
-      if (!groups[dept]) groups[dept] = [];
-      groups[dept].push(r);
+      seen.set(dept, (seen.get(dept) || 0) + 1);
     }
-    return Object.entries(groups).sort((a, b) => a[0].localeCompare(b[0]));
-  }, [filteredOvertime]);
+    return [...seen.keys()]
+      .sort((a, b) => (a === 'Unassigned' ? 1 : b === 'Unassigned' ? -1 : a.localeCompare(b)))
+      .map((d) => ({ value: d, label: d }));
+  }, [enrichedOvertime]);
+
+  const clearOvertimeFilters = () => {
+    setOvertimeSearch('');
+    setOvertimeStatusFilter('All');
+    setOvertimeDeptFilter('All');
+    setOvertimePage(1);
+    setSelectedOtIds(new Set());
+  };
 
   const pendingOtIds = useMemo(
     () => new Set(filteredOvertime.filter(r => r.status === 'Pending').map(r => r.id)),
@@ -162,14 +182,6 @@ export default function Attendance() {
     setSelectedOtIds(prev => {
       const next = new Set(prev);
       next.has(id) ? next.delete(id) : next.add(id);
-      return next;
-    });
-  };
-
-  const toggleDeptCollapse = (dept) => {
-    setCollapsedDepts(prev => {
-      const next = new Set(prev);
-      next.has(dept) ? next.delete(dept) : next.add(dept);
       return next;
     });
   };
@@ -515,123 +527,112 @@ export default function Attendance() {
       </div>
 
       {/* Filters + Bulk Actions */}
-      <Card padding={false}>
-        <div className="p-4 border-b border-gray-100">
-          <div className="flex items-center justify-between flex-wrap gap-3">
-            <div className="flex flex-wrap items-center gap-3">
-              <SearchBar value={overtimeSearch} onChange={(v) => { setOvertimeSearch(v); setOvertimePage(1); setSelectedOtIds(new Set()); }} placeholder="Search employee..." className="w-full sm:w-64" />
-              <Select value={overtimeStatusFilter} onChange={e => { setOvertimeStatusFilter(e.target.value); setOvertimePage(1); setSelectedOtIds(new Set()); }} containerClass="w-full sm:w-36">
-                <option value="All">All Status</option>
-                <option value="Pending">Pending</option>
-                <option value="Approved">Approved</option>
-                <option value="Rejected">Rejected</option>
-                <option value="Cancelled">Cancelled</option>
-              </Select>
-            </div>
-            <div className="flex items-center gap-3 flex-wrap">
-              <Button size="sm" variant="primary" icon={Plus} onClick={() => setBulkOvertimeOpen(true)}>
-                Raise overtime
-              </Button>
-              {pendingOtIds.size > 0 && (
-                <label className="flex items-center gap-2 text-sm cursor-pointer select-none py-2">
-                  <input type="checkbox" checked={isAllPendingSelected} onChange={() => toggleSelectAll([...pendingOtIds])} className="w-4 h-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500" />
-                  <span className="text-gray-600">Select all pending</span>
-                </label>
-              )}
-            </div>
-          </div>
-        </div>
+      <div className="space-y-3">
+        <TableFilters
+          search={overtimeSearch}
+          onSearchChange={(v) => { setOvertimeSearch(v); setOvertimePage(1); setSelectedOtIds(new Set()); }}
+          searchPlaceholder="Search employee..."
+          onClear={clearOvertimeFilters}
+          resultCount={filteredOvertime.length}
+          totalCount={enrichedOvertime.length}
+          filters={[
+            {
+              key: 'dept',
+              label: 'Filter by department',
+              value: overtimeDeptFilter,
+              onChange: (v) => { setOvertimeDeptFilter(v); setOvertimePage(1); setSelectedOtIds(new Set()); },
+              options: [{ value: 'All', label: 'All Departments' }, ...overtimeDeptOptions],
+            },
+            {
+              key: 'status',
+              label: 'Filter by status',
+              value: overtimeStatusFilter,
+              onChange: (v) => { setOvertimeStatusFilter(v); setOvertimePage(1); setSelectedOtIds(new Set()); },
+              options: [
+                { value: 'All', label: 'All Status' },
+                { value: 'Pending', label: 'Pending' },
+                { value: 'Approved', label: 'Approved' },
+                { value: 'Rejected', label: 'Rejected' },
+                { value: 'Cancelled', label: 'Cancelled' },
+              ],
+            },
+          ]}
+        >
+          {pendingOtIds.size > 0 && (
+            <label className="flex items-center gap-2 text-sm cursor-pointer select-none shrink-0">
+              <input
+                type="checkbox"
+                checked={isAllPendingSelected}
+                onChange={() => toggleSelectAll([...pendingOtIds])}
+                className="w-4 h-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+              />
+              <span className="text-gray-600 whitespace-nowrap">All pending</span>
+            </label>
+          )}
+        </TableFilters>
 
-        {loadingOvertime ? (
-          <div className="p-4"><SkeletonTable rows={6} cols={6} /></div>
-        ) : filteredOvertime.length === 0 ? (
-          <div className="px-4 py-12 text-center text-gray-400 text-sm">No overtime requests found</div>
-        ) : (
-          <div className="divide-y divide-gray-50">
-            {otDepartments.map(([dept, rows]) => {
-              const deptPendingIds = rows.filter(r => r.status === 'Pending').map(r => r.id);
-              const deptAllSelected = deptPendingIds.length > 0 && deptPendingIds.every(id => selectedOtIds.has(id));
-              const collapsed = collapsedDepts.has(dept);
-              return (
-                <div key={dept}>
-                  <div className="flex items-center gap-3 px-4 py-3 bg-gray-50/80">
-                    <button onClick={() => toggleDeptCollapse(dept)} className="text-gray-400 hover:text-gray-600 transition-colors">
-                      {collapsed ? <ChevronRight className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
-                    </button>
-                    <p className="font-semibold text-sm text-gray-800 flex-1">{dept}</p>
-                    <span className="text-xs font-medium text-gray-400 bg-white border border-gray-200 rounded-full px-2.5 py-0.5">
-                      {rows.length} request{rows.length === 1 ? '' : 's'}
-                    </span>
-                    {deptPendingIds.length > 0 && (
-                      <label className="flex items-center gap-1.5 text-xs cursor-pointer select-none ml-1">
-                        <input type="checkbox" checked={deptAllSelected} onChange={() => toggleSelectAll(deptPendingIds)} className="w-3.5 h-3.5 rounded border-gray-300 text-blue-600 focus:ring-blue-500" />
-                        <span className="text-gray-500">All pending</span>
-                      </label>
-                    )}
-                  </div>
-                  {!collapsed && (
-                    <TableShell minWidth="min-w-[560px]">
-                      <table className="w-full">
-                        <thead>
-                          <tr className="border-b border-gray-100 bg-gray-50/30">
-                            <th className="w-10 px-4 py-2.5" />
-                            {['Employee', 'Date', 'Expected Hours', 'Reason', 'Status', ''].map(h => (
-                              <th key={h} className="px-4 py-2.5 text-left text-[10px] font-semibold text-gray-400 uppercase tracking-wider">{h}</th>
-                            ))}
-                          </tr>
-                        </thead>
-                        <tbody className="divide-y divide-gray-50">
-                          {rows.map((r) => (
-                            <tr key={r.id} className={`transition-colors ${selectedOtIds.has(r.id) ? 'bg-blue-50/50' : 'hover:bg-gray-50/50'}`}>
-                              <td className="px-4 py-3">
-                                {r.status === 'Pending' && (
-                                  <input
-                                    type="checkbox"
-                                    checked={selectedOtIds.has(r.id)}
-                                    onChange={() => toggleSelectOne(r.id)}
-                                    className="w-4 h-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
-                                  />
-                                )}
-                              </td>
-                              <td className="px-4 py-3.5">
-                                <div className="flex items-center gap-3">
-                                  <Avatar firstName={r.firstName} lastName={r.lastName} size="sm" src={r.avatar} />
-                                  <div>
-                                    <p className="font-medium text-sm text-gray-900">{r.firstName} {r.lastName}</p>
-                                    <p className="text-xs text-gray-500">{r.department}</p>
-                                  </div>
-                                </div>
-                              </td>
-                              <td className="px-4 py-3.5 text-sm text-gray-700">{formatDate(r.date)}</td>
-                              <td className="px-4 py-3.5 text-sm text-gray-700">
-                                {r.status === 'Approved' && r.approvedHours != null
-                                  ? <span><span className="font-medium text-gray-900">{formatHours(r.approvedHours)}h</span> <span className="text-gray-400">(of {r.expectedHours ? `${formatHours(r.expectedHours)}h` : '-'})</span></span>
-                                  : r.expectedHours ? `${formatHours(r.expectedHours)}h` : '-'}
-                              </td>
-                              <td className="px-4 py-3.5 text-sm text-gray-600 max-w-xs truncate">{r.reason}</td>
-                              <td className="px-4 py-3.5"><Badge variant={overtimeStatusVariant[r.status] || 'default'} dot size="xs">{r.status}</Badge></td>
-                              <td className="px-4 py-3.5">
-                                {/* The only way into an overtime decision, so it cannot be a bare word
-                                    with no padding around it - on a phone that is not a tap target. */}
-                                <button
-                                  onClick={() => openOvertime(r)}
-                                  className="-m-1.5 px-1.5 py-1.5 pointer-coarse:px-2.5 pointer-coarse:py-2.5 rounded-lg text-xs font-semibold text-blue-600 hover:text-blue-700 hover:bg-blue-50 transition-colors"
-                                >
-                                  View
-                                </button>
-                              </td>
-                            </tr>
-                          ))}
-                        </tbody>
-                      </table>
-                    </TableShell>
-                  )}
-                </div>
-              );
-            })}
-          </div>
-        )}
-      </Card>
+        <Card padding={false}>
+          {loadingOvertime ? (
+            <div className="p-4"><SkeletonTable rows={6} cols={6} /></div>
+          ) : filteredOvertime.length === 0 ? (
+            <div className="px-4 py-12 text-center text-gray-400 text-sm">No overtime requests found</div>
+          ) : (
+            <TableShell minWidth="min-w-[640px]">
+              <table className="w-full">
+                <thead>
+                  <tr className="border-b border-gray-100 bg-gray-50/30">
+                    <th className="w-10 px-4 py-2.5" />
+                    {['Employee', 'Department', 'Date', 'Expected Hours', 'Reason', 'Status', ''].map(h => (
+                      <th key={h} className="px-4 py-2.5 text-left text-[10px] font-semibold text-gray-400 uppercase tracking-wider">{h}</th>
+                    ))}
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-gray-50">
+                  {filteredOvertime.map((r) => (
+                    <tr key={r.id} className={`transition-colors ${selectedOtIds.has(r.id) ? 'bg-blue-50/50' : 'hover:bg-gray-50/50'}`}>
+                      <td className="px-4 py-3">
+                        {r.status === 'Pending' && (
+                          <input
+                            type="checkbox"
+                            checked={selectedOtIds.has(r.id)}
+                            onChange={() => toggleSelectOne(r.id)}
+                            className="w-4 h-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+                          />
+                        )}
+                      </td>
+                      <td className="px-4 py-3.5">
+                        <div className="flex items-center gap-3">
+                          <Avatar firstName={r.firstName} lastName={r.lastName} size="sm" src={r.avatar} />
+                          <p className="font-medium text-sm text-gray-900">{r.firstName} {r.lastName}</p>
+                        </div>
+                      </td>
+                      <td className="px-4 py-3.5 text-sm text-gray-500 whitespace-nowrap">{r.department || 'Unassigned'}</td>
+                      <td className="px-4 py-3.5 text-sm text-gray-700 whitespace-nowrap">{formatDate(r.date)}</td>
+                      <td className="px-4 py-3.5 text-sm text-gray-700 whitespace-nowrap">
+                        {r.status === 'Approved' && r.approvedHours != null
+                          ? <span><span className="font-medium text-gray-900">{formatHours(r.approvedHours)}h</span> <span className="text-gray-400">(of {r.expectedHours ? `${formatHours(r.expectedHours)}h` : '-'})</span></span>
+                          : r.expectedHours ? `${formatHours(r.expectedHours)}h` : '-'}
+                      </td>
+                      <td className="px-4 py-3.5 text-sm text-gray-600 max-w-[16rem] truncate" title={r.reason}>{r.reason}</td>
+                      <td className="px-4 py-3.5"><Badge variant={overtimeStatusVariant[r.status] || 'default'} dot size="xs">{r.status}</Badge></td>
+                      <td className="px-4 py-3.5">
+                        {/* The only way into an overtime decision, so it cannot be a bare word
+                            with no padding around it - on a phone that is not a tap target. */}
+                        <button
+                          onClick={() => openOvertime(r)}
+                          className="-m-1.5 px-1.5 py-1.5 pointer-coarse:px-2.5 pointer-coarse:py-2.5 rounded-lg text-xs font-semibold text-blue-600 hover:text-blue-700 hover:bg-blue-50 transition-colors"
+                        >
+                          View
+                        </button>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </TableShell>
+          )}
+        </Card>
+      </div>
 
       {/* Bulk Action Bar */}
       {anySelected && createPortal(
@@ -1011,13 +1012,6 @@ export default function Attendance() {
           </div>
         )}
       </Modal>
-
-      <BulkOvertimeModal
-        isOpen={bulkOvertimeOpen}
-        onClose={() => setBulkOvertimeOpen(false)}
-        employees={employees}
-        onCreated={() => { refreshOvertime(); }}
-      />
     </div>
   );
 }
