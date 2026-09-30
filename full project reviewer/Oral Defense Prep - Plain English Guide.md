@@ -130,7 +130,7 @@ Browser (frontend) → sends a request to `/api/...` → the frontend's proxy (V
 3. Each day the employee **clocks in/out** (face at the kiosk).
 4. If they can't come in, they **file a leave request**; HR **approves or rejects** it, and a "leave balance" is updated.
 5. Weekly, the system builds a **timesheet** (hours worked). When the week ends the employee reviews and submits it (or the system submits it Monday noon); HR approves it, or rejects it with a reason, and approved ones go to payroll once. Employees can also open a live **"This Week"** timesheet and a **history** of past weeks right from the My Timesheet page.
-6. If they work extra hours, they can file an **overtime request**, which HR approves (can be done in bulk).
+6. If they work extra hours, they can file an **overtime request**, which HR approves (opening each one and deciding it).
 
 ## Flow 4 - The "brain": Analytics + AI decision support (HR only)
 
@@ -148,10 +148,10 @@ Browser (frontend) → sends a request to `/api/...` → the frontend's proxy (V
 Use these as quick talking points. Say each in ONE breath.
 
 **Everyone uses:**
-- **Login / Auth** - "The gateway. Logs people in, gives a token, and blocks attackers with a lockout."
+- **Login / Auth** - "The gateway. Logs people in, gives a token, and blocks attackers with a lockout. An employee can also switch on a second sign-in step: the password alone does not get a token, a one-time code does."
 - **Attendance** - "Who was present and when. Clock-in/out records for everyone, with alerts if something's wrong."
 - **Leave** - "Time off requests. Employees file, HR approves/rejects, and balances are updated."
-- **Overtime** - "Extra hours worked. Employees request, HR approves (even in bulk)."
+- **Overtime** - "Extra hours worked. Employees request, HR opens each one and approves or rejects it."
 - **Timesheets** - "A weekly summary of hours with a live 'This Week' popup and a history table. Employees submit after the week ends, HR approves or rejects with a reason."
 
 **Workforce Admin only:**
@@ -395,9 +395,9 @@ Use this as a rapid-fire review. One line = one idea. Cover the right column, th
 | **Reports** | Printable/CSV outputs | Reads live data + formats via `reportHelpers.js` | Proof and paperwork done from one button |
 | **AI Decision Support** | AI insights + one-click actions | Rules build the findings and the score from 30 days of data → Gemini only words them (rule wording if it is unavailable) → decision queue | Flags problems HR would miss; actions reuse normal endpoints |
 | **Security Events** | Log of suspicious kiosk activity | `face_mismatch`/`pin_failed` stored Open → HR resolves/escalates | Buddy-punching is caught and reviewable |
-| **Notifications** | In-app bell messages | Backend INSERTs a row; bell refreshes every 30 s while the tab is visible (newest 200) | People learn of approvals/leaves/SO immediately |
+| **Notifications** | In-app bell messages | Backend INSERTs a row; bell refreshes every 30 s while the tab is visible (newest 200) and the badge number is read from the server's unread-count endpoint; a nightly job prunes anything older than 30 days | People learn of approvals/leaves/SO immediately, and the number only ever means "actionable now" |
 | **Kiosk Setup** | Configures the door device | PIN hash, location, verification method stored in `settings.kiosk` | The entrance behaves exactly how HR wants |
-| **Settings/Profile** | App config (admin) + a separate My Profile page for employees | One settings row (JSON groups) incl. a **Time Manager** tab (late grace period, no-show alert threshold, break-time rules, early-leave policy — now admin-configurable, not hardcoded); Employee Settings = password + appearance only; My Profile edits contact info + photo with validation, salary and face template never sent | Flexible config; employees can't touch salary/department; Profile (who I am) is split from Settings (how the app behaves) |
+| **Settings/Profile** | App config (admin) + a separate My Profile page for employees | One settings row (JSON groups) incl. a **Time Manager** tab (late grace period, no-show alert threshold, break-time rules, early-leave policy — now admin-configurable, not hardcoded); Employee Settings = password + font size only (an Appearance section: the dark-theme toggle that was once here was removed on purpose — it was a "set" nobody asked for, and with no dark styles it only made native controls follow the phone's dark mode); My Profile edits contact info + photo with validation, salary and face template never sent | Flexible config; employees can't touch salary/department; Profile (who I am) is split from Settings (how the app behaves) |
 
 ---
 
@@ -516,6 +516,6 @@ Use this as a rapid-fire review. One line = one idea. Cover the right column, th
 - **Leave costs working days:** weekends, holidays and days off are not charged. The time-off domain counts the working days itself, in-process, from the same database the schedule uses, when the request is filed.
 - **Absences are recorded automatically:** a nightly job marks a finished, scheduled day with no clock-in and no approved leave as Absent, so the numbers are honest.
 - **Everything sensitive is audited:** sign-ins, failed sign-ins, password changes, overtime decisions, and any change to settings. Exporting a report or the audit log asks the administrator to type their password again.
-- **Administrator's daily workflow:** the dashboard's "Needs your attention" panel, bulk leave approval with a team-impact view, reopenable overtime decisions, and a Notifications page.
+- **Administrator's daily workflow:** the dashboard's "Needs your attention" panel, leave and overtime decided one request at a time (each with a team-impact view), reopenable overtime decisions, and a Notifications page whose number is the server's real unread count.
 - **Automated shift scheduling** is rule-based, not AI: it picks only eligible people (active, not on leave, not already scheduled, under the weekly hours limit), shares shifts fairly, shows a draft that HR can edit, and saves nothing until HR approves.
 

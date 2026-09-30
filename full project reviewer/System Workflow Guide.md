@@ -114,7 +114,7 @@ Even in one app, a few rules keep things fast and safe. Most were added after pr
 | **Mail and the AI call can't hang a request** | SMTP has an 8 s timeout (`MAIL_TIMEOUT`); the AI (Gemini) call defaults to 15 s (`GEMINI_TIMEOUT`) | These are the two calls that still genuinely leave the process, to a real external server. PHP kills any request after 30 s. A dead mail host or slow AI must fail fast, not turn into a 500 |
 | **The database enforces one-per-day** | A unique index on ttendance (employee_id, date) and shift_schedules (employee_id, date) means two simultaneous requests can never create a duplicate, even under Docker's multiple workers (an application check alone can be beaten by a race). The app turns the database's refusal into a friendly message | The admin's manual *Add attendance* had no duplicate check at all before this |
 | **Working-day logic uses Manila time** | The app runs in UTC, but shifts and attendance are Manila wall-clock. The no-show alert scan uses the company's clock (LocalTime), so a missing 8 AM person is flagged at 9 AM, not ~5 PM | Comparing a Manila shift start with a UTC now() made the alert fire 8 hours late |
-| **Lists are bounded** | Notification lists return the newest 200; `GET /api/attendance` accepts optional `?from=&to=` and the HR Dashboard asks for only the last 35 days | The bell is polled every 30 s by every open tab |
+| **Lists are bounded** | Notification lists return the newest 200 (the badge number does **not** come from that list — it reads `/api/notifications/unread-count`, so it is always the real total, even past 200); `GET /api/attendance` accepts optional `?from=&to=` and the HR Dashboard asks for only the last 35 days | The bell is polled every 30 s by every open tab; notifications older than 30 days are pruned nightly (`notifications:prune`), so the badge reflects what is actionable now, not everything ever sent |
 | **Duplicate requests are collapsed in the browser** | The shared HTTP client (`services/http.js`) will not send a second identical create/update/delete (same method, URL and body) while the first is still in flight — the caller just receives the first response. On top of that the shared `Button` locks itself while its action is running, and the server refuses duplicates for leave (overlapping dates), overtime (same day) and shift assignment (same day) | A slow response can never turn a double click, an Enter repeat or a spammed button into two records. Proven by an automated script (5 identical POSTs → the server receives 1) |
 | **Face scanning is warmed up and lean** | The three face-api networks are all warmed with a throw-away pass while the page/modal opens (registration and the kiosk preload the ~7 MB of models early); detection tries a 160 px input first and 320 px as the fallback (was 224/416); redundant re-detection was removed; the result flash and retry pause were shortened | The first scan used to pay a multi-second shader-compile cost and two heavier detection passes. Honest note: these are targeted fixes to the known slow spots; the actual speed still depends on the kiosk's GPU/CPU |
 | **The frontend never waits forever** | Every API call has a 45 s timeout; notification polling pauses while the browser tab is hidden and catches up when it becomes visible | A hung backend now ends in an error message instead of an endless spinner |
@@ -151,10 +151,10 @@ There are three roles. Each role logs in through the same login page but lands o
 | 4 | HR Dashboard `HR_Manager/Dashboard.jsx` | Admin | Company overview: stats cards, charts, quick glance at everything |
 | 5 | Employees `HR_Manager/Employees.jsx` | Admin | Company directory: view, search, edit, archive employees |
 | 6 | Employee Registration `HR_Manager/EmployeeRegistration.jsx` | Admin | Add a brand-new employee + create their login account |
-| 7 | Attendance `HR_Manager/Attendance.jsx` | Admin | See and correct everyone's daily clock records |
+| 7 | Attendance `HR_Manager/Attendance.jsx` | Admin | See and correct everyone's daily clock records; filter the history by a calendar date range |
 | 8 | Leave Management `HR_Manager/LeaveManagement.jsx` | Admin | Approve / reject leave requests |
 | 9 | Shifts `HR_Manager/Shifts.jsx` | Admin | Manage shift templates + build weekly schedules |
-| 10 | Timesheets `HR_Manager/Timesheets.jsx` | Admin | Review each employee's week (summary cards, quick filters, sortable table), open a side panel with the day-by-day attendance, then approve or reject — one by one or in bulk |
+| 10 | Timesheets `HR_Manager/Timesheets.jsx` | Admin | Review each employee's week (summary cards, quick filters, sortable table), open a side panel with the day-by-day attendance, then approve or reject |
 | 11 | Reports `HR_Manager/Reports.jsx` | Admin | Build printable/CSV reports from live data |
 | 12 | Analytics `HR_Manager/Analytics.jsx` | Admin | Deep charts: trends, punctuality, productivity |
 | 13 | AI Decision Support `HR_Manager/AIDecisionSupport.jsx` | Admin | AI-generated insights + one-click decision queue |
@@ -165,7 +165,7 @@ There are three roles. Each role logs in through the same login page but lands o
 | 18 | Leave `Employee/Leave.jsx` | Employee | Apply for leave, track status, see balances |
 | 19 | My Timesheet `Employee/MyTimesheet.jsx` | Employee | Review own weekly hours and submit them |
 | 20 | My Profile `Employee/MyProfile.jsx` | Employee | Identity, employment, leave balances, face registration status; edit own phone/address/emergency contact/photo |
-| 21 | Settings `Employee/Settings.jsx` | Employee | Change password (live requirements checklist) and appearance only |
+| 21 | Settings `Employee/Settings.jsx` | Employee | Change password (live requirements checklist) and font size (the Appearance section) |
 | 22 | Kiosk Setup `KIOSK/KioskSetup.jsx` | Admin (device) | Configure and lock the entrance tablet into kiosk mode |
 | 23 | Attendance Terminal `KIOSK/AttendanceTerminal.jsx` | Employees at door | The clock-in/clock-out device itself |
 
@@ -248,6 +248,8 @@ After login, the backend issues a personal access token (stored in the `personal
 | 7 | From now on, every request automatically carries the token |
 
 Wrong password → error message, nothing stored.
+
+**The second sign-in step (opt-in, employees).** An employee who turns it on in **My Profile** does not get a session token from the password alone: `POST /api/auth/login` answers `twoFactorRequired` and the frontend keeps the sign-in *pending* (no token issued, nothing stored) while asking for a one-time code. `POST /api/auth/two-factor/verify` exchanges the code for the token. The code is time-limited and single-use (its lifetime comes from the environment), and the verify route is rate-limited on its own — separately from the password lockout — so guessing the code cannot be used to wear the account down. Turning the step off requires the current password again.
 
 ### Flow B — Forgot / Reset Password
 
@@ -662,6 +664,8 @@ Creates a notification reminding the employee
 **File:** `HR_Manager/Attendance.jsx`
 
 **Absent days are recorded automatically.** A day that is over, where the person had a scheduled shift, never clocked in and had no approved leave, is written as an **Absent** record by `attendance:mark-absent` (00:10 Manila time, again at noon as a safety net; only finished days, only once per person/day). Before this, the Absent numbers on the dashboards, analytics and AI only counted records typed in by hand. The page's Absent card therefore shows **yesterday**.
+
+**History is filtered by a date-range picker, not by fixed period buckets.** The page used to offer cron-like buckets ("All", "Today", "This Week", "Last 30 Days") and nothing else — finding one specific day meant opening the week it fell in. A calendar range (`DateRangePicker.jsx`) is the filter now: pick a start, then an end, and the table shows exactly that span (open-ended ranges show everything). An old bookmark like `?period=today|week|month` is still honoured on arrival so it lands on something sensible.
 
 **Overtime decisions can be reopened.** An approved or rejected overtime request has a **Reopen** button that puts it back in the queue (the hours that count change accordingly); every decision and reopening is written to the Audit Logs.
 
@@ -1185,6 +1189,10 @@ Open events raise the system's concern level; resolving them restores the score.
 
 **Who sees what:** the admins share one inbox (notifications with no employee attached). An employee sees **every** notification addressed to them — outcomes, reminders, shift changes, clock-in/out confirmations, certificate deadlines — and never the admins' or another employee's. The bell refreshes every 30 seconds while the tab is open; a failed refresh keeps what is already shown.
 
+**The badge number is the server's real count, not a count of the on-screen list.** The red number comes from `GET /api/notifications/unread-count` (`NotificationController@unreadCount`), fetched on every poll and again after every mark-read / delete — so it can never quietly disagree with the database, not even past the 200-row list cap. Marking something read only takes effect on the server (a failed write leaves the item unread on screen instead of pretending it worked, which is why the number no longer "comes back" after a refresh).
+
+**Old notifications are retired nightly.** Nothing used to age out, so resolved weeks-old alerts sat in the bell forever inflating the number. `notifications:prune` (02:00 Manila) deletes anything older than 30 days (`--days` on the command tunes it) from admin and employee bells alike — the durable record of who approved what lives in the audit log and in the records themselves, not the bell.
+
 ### Who Creates Notifications (Creation Points)
 
 | Event | Notification to |
@@ -1219,7 +1227,8 @@ Something happens → backend INSERTs a notification row
         │
         ▼
 Bell refreshes every 30 s (only while the browser tab is visible,
-and immediately when the tab is shown again)  → badge number
+and immediately when the tab is shown again) → badge number is
+fetched from GET /api/notifications/unread-count (the true total)
         │
         ▼
 Open dropdown → GET /api/notifications/employee/{myId}
@@ -1227,6 +1236,9 @@ Open dropdown → GET /api/notifications/employee/{myId}
         │
         ├── click one  → POST /api/notifications/{id}/read (+ navigate to action_url)
         └── "mark all" → POST /api/notifications/read-all
+
+Old rows (older than 30 days) are deleted nightly by notifications:prune,
+so the number keeps meaning "actionable now", not "everything ever".
 ```
 
 ---
@@ -1276,6 +1288,7 @@ Profile and Settings are separate pages. **My Profile** (`/my-profile`) answers 
 | `attendance:mark-absent` | 00:10 and 12:00 Manila | Writes Absent for finished, scheduled days with no clock-in and no approved leave |
 | `timesheets:auto-submit`, `timesheets:remind` | hourly | Submits unsubmitted finished weeks at Monday 12:00 Manila; sends the one-time reminders |
 | `early-outs:expire-certificates` | hourly | A SICK early clock-out without a certificate by its deadline becomes unexcused |
+| `notifications:prune` | 02:00 Manila | Deletes notifications older than 30 days (admin and employee bells alike), so the unread badge keeps reflecting what needs acting on now |
 
 Weeks everywhere (timesheets, "this week", schedules) run **Monday to Sunday** (ISO 8601); "today" is always the company's calendar day in Manila, whatever the viewer's computer says.
 
@@ -1353,7 +1366,8 @@ Which tables each module touches (R = read, W = write). This map is logical — 
 | 48 hours | Deadline to upload a medical certificate for a SICK early clock-out (editable in Settings) |
 | 3 employees | Same reason, same day = "possible early-leave pattern" alert |
 | 7 days | How far back an employee can file an overtime request for a day already worked |
-| 200 | Newest notifications returned per list |
+| 200 | Newest notifications returned per list (the badge count is not limited by this — it comes from the unread-count endpoint) |
+| 30 days | How long a notification survives before the nightly `notifications:prune` deletes it |
 | 35 days | Attendance window the HR Dashboard requests |
 | 1 s / 3 s | Connect / total timeout for notification and audit calls |
 | 45 s | Frontend request timeout (the servers cut requests off at ~30 s) |
