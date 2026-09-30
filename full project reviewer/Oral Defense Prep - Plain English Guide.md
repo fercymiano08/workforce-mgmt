@@ -486,7 +486,7 @@ Use this as a rapid-fire review. One line = one idea. Cover the right column, th
 ## People & registry (48-50)
 48. Who are the demo logins? → admin@workforcepro.com/Admin@123 and employee@workforcepro.com/Employee@123.
 49. Team members? → Fercy, Asniyah, John Paul, Florita, Kyle.
-50. The client? → Archon Nell Inc., contact Nardz Olarte (QA/QC supervisor).
+50. The client? → Archon Nell Inc., contact Junar Love Olarte (QA/QC supervisor).
 51. What does the timesheet "This Week" popup show? → A live, per-day breakdown of the current week (Date, Day, Status, Clock In, Clock Out, Break, Hours) with this week's totals — even before any timesheet is saved. It's an "Auto" record until the week is submitted.
 52. What is "Timesheet History"? → The list below the My Timesheet summary card: every saved week (range, status, Regular/Overtime/Total hours, submitted date). Clicking a row reopens that week's full popup.
 

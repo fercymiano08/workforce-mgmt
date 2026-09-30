@@ -4,7 +4,7 @@
 > We built **AI-Enhanced Workforce Management** for **Archon Nell Inc.**: a web app with
 > **Facial Recognition clock-in**, **Shift Scheduling**, **Leave Management**, **Weekly Timesheets**,
 > **Workforce Analytics**, and an **AI Decision Support** module. Built with **React + Laravel + PostgreSQL**.
-> Users: Workforce Admin, Employees, and an entrance Clock-In kiosk device. Team of 5 under client **Nardz Olarte**.
+> Users: Workforce Admin, Employees, and an entrance Clock-In kiosk device. Team of 5 under client **Junar Love Olarte**.
 
 ---
 
@@ -53,7 +53,7 @@ Client's Company Information:
 
 - "ARCHO NELL INCORPORATED" (Company Name)
 - known in the Cement, Steel, Petrochemical and Construction industries as a reliable solutions provider. (Motto)
-- "NARDZ OLARTE" (Name of our Client)
+- "JUNAR LOVE OLARTE" (Name of our Client)
 - Quality control, Quality assurance supervisor (Position of our client in thier workplace)
 
 PostgreSQL Password:
