@@ -3,7 +3,6 @@ import { useLocation } from 'react-router-dom';
 import clsx from 'clsx';
 import Sidebar from './Sidebar';
 import Topbar from './Topbar';
-import MobileTabBar from './MobileTabBar';
 import Breadcrumbs from './Breadcrumb';
 import NotificationToasts from '../common/NotificationToasts';
 import { settingsService } from '../../services/api';
@@ -63,10 +62,14 @@ export default function MainLayout({ children }) {
             // 8% of the width for no reason.
             'px-4 sm:px-6 lg:px-8',
             // Top padding clears the notch and the status bar in standalone mode; bottom padding
-            // clears the tab bar plus the gesture bar. The calc() reads 0 in an ordinary browser tab,
-            // so the browser view is unchanged.
+            // clears the gesture bar and nothing else.
+            //
+            // This used to reserve 6rem at the bottom for a fixed tab bar. With the bar gone, keeping
+            // that reservation would have left a screen's worth of dead space under the last card on
+            // every page - so the padding is now only what the phone's own furniture needs, and the
+            // content runs to the real bottom edge.
             'pt-[max(1rem,env(safe-area-inset-top))]',
-            'pb-[max(6rem,calc(4rem+env(safe-area-inset-bottom)))] lg:pb-8'
+            'pb-[max(1rem,env(safe-area-inset-bottom))]'
           )}
           style={{ overflowAnchor: 'none' }}
         >
@@ -89,7 +92,19 @@ export default function MainLayout({ children }) {
           </div>
         </main>
       </div>
-      <MobileTabBar />
+      {/*
+        There is no bottom navigation bar.
+
+        The fixed bar gave four modules a permanent one-tap home, and it was the right idea on paper.
+        In practice it competed with the drawer for the same modules, so the same destinations were
+        reachable two different ways with two different sets of icons - and the bar's five slots were
+        narrower than the phone, which is how the labels ended up clipped to two or three characters.
+        One way to navigate is easier to learn than two.
+
+        The drawer is the whole navigation now, and it already carried the pending-approvals badge the
+        bar had been showing, so nothing was lost with it. It is reachable from the hamburger in the
+        header, which is always on screen.
+      */}
       <NotificationToasts />
     </div>
   );

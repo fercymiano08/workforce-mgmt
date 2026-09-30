@@ -131,6 +131,13 @@ export default function Sidebar({ isOpen, onClose }) {
           'lg:translate-x-0',
           isOpen ? 'translate-x-0' : '-translate-x-full'
         )}
+        style={{
+          // The drawer now carries all of the navigation, so it has to clear the phone's own furniture
+          // on both ends: the notch above the wordmark, and the gesture bar below the sign-out row.
+          // Both read 0 in a browser tab and on a desktop, so nothing else moves.
+          paddingTop: 'env(safe-area-inset-top)',
+          paddingBottom: 'env(safe-area-inset-bottom)',
+        }}
       >
         {/* Logo */}
         <div className="px-6 h-[72px] flex items-center gap-3 flex-shrink-0">

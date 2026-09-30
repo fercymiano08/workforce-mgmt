@@ -281,7 +281,7 @@ export default function MyProfile() {
   const education = Array.isArray(employee.education) ? employee.education : [];
 
   return (
-    <div className="space-y-6 animate-fadeIn pb-24">
+      <div className="space-y-6 animate-fadeIn">
       {/* Header */}
       <div className="flex items-center gap-3">
         <div className="w-10 h-10 rounded-xl bg-blue-50 flex items-center justify-center">
