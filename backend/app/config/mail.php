@@ -91,7 +91,17 @@ return [
              | BREVO_HOST says otherwise.
              */
             'host' => env('BREVO_HOST', 'smtp-relay.brevo.com'),
-            'port' => (int) env('BREVO_PORT', 587),
+            /*
+             | 2525, not Brevo's usual 587.
+             |
+             | This relay is reached from Render's free web service plan, which blocks outbound
+             | 25, 465 and 587 - port 2525 is the one Brevo port that stays open there (see
+             | render.yaml). Defaulting to 587 meant that choosing this mailer by name, with no
+             | other setting touched, silently traded a working port for a blocked one: the
+             | connection never opens, so neither Brevo's dashboard nor Gmail's inbox shows
+             | anything, which looks identical to the mailer being off.
+             */
+            'port' => (int) env('BREVO_PORT', 2525),
             'username' => env('BREVO_USERNAME') ?: env('MAIL_USERNAME'),
             'password' => env('BREVO_PASSWORD') ?: env('MAIL_PASSWORD'),
             'timeout' => (int) env('MAIL_TIMEOUT', 8),

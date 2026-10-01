@@ -93,7 +93,9 @@ class MailFromAddressTest extends TestCase
 
         $this->assertSame('smtp', $mail['mailers']['brevo']['transport']);
         $this->assertSame('smtp-relay.brevo.com', $mail['mailers']['brevo']['host']);
-        $this->assertSame(587, $mail['mailers']['brevo']['port']);
+        // Not Brevo's usual 587: Render's free web service plan blocks it, and 2525 is the port
+        // that stays open there. See config/mail.php.
+        $this->assertSame(2525, $mail['mailers']['brevo']['port']);
 
         // No scheme default, and 'tls' must never come back. Symfony supports only 'smtp' and
         // 'smtps', so a 'tls' default throws UnsupportedSchemeException before the socket opens:
@@ -196,7 +198,11 @@ class MailFromAddressTest extends TestCase
             $mail['mailers']['brevo']['host'],
             'Selecting the brevo mailer must not inherit smtp.gmail.com as its host.'
         );
-        $this->assertSame(587, $mail['mailers']['brevo']['port']);
+        $this->assertSame(
+            2525,
+            $mail['mailers']['brevo']['port'],
+            'Selecting the brevo mailer must not inherit the other mailer\'s port either.'
+        );
     }
 
     /** The smtp mailer keeps honouring MAIL_HOST, so the separation does not break existing setups. */
@@ -212,11 +218,11 @@ class MailFromAddressTest extends TestCase
     {
         $mail = $this->loadMailConfig([
             'BREVO_HOST' => 'smtp-relay.brevo.com',
-            'BREVO_PORT' => '2525',
+            'BREVO_PORT' => '465',
         ]);
 
         $this->assertSame('smtp-relay.brevo.com', $mail['mailers']['brevo']['host']);
-        $this->assertSame(2525, $mail['mailers']['brevo']['port']);
+        $this->assertSame(465, $mail['mailers']['brevo']['port']);
     }
 
     public function test_the_mailer_never_points_at_the_log_driver_in_production(): void
