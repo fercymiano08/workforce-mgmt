@@ -44,6 +44,19 @@ if ! is_off "${RUN_MIGRATIONS:-true}"; then
         # is a far worse outcome than one stale record. A real problem is still printed in full.
         php artisan db:seed --force --no-interaction || echo "==> Seeding reported a problem; starting anyway (the data already in the database is still valid)"
     fi
+
+    if ! is_off "${RUN_DEMO_REFRESH:-true}"; then
+        echo "==> Refreshing demo attendance so today is not stale"
+        # Same command routes/console.php schedules nightly at 00:05 Manila time - run it again right
+        # here too, so a deploy does not have to wait for the next cron tick before the demo employees
+        # look like people who worked today. It is deterministic and idempotent (the same arrival
+        # times every run for the same day), so running it twice in one day changes nothing, and it
+        # never touches an account registered through the system - only the seeded demo employees, who
+        # cannot clock themselves in through the kiosk. Not fatal, same reasoning as seeding above: a
+        # deploy should not go down over this when the API itself is healthy, and tonight's scheduled
+        # run will retry it regardless.
+        php artisan demo:refresh --close-today --no-interaction || echo "==> Demo refresh reported a problem; starting anyway (tonight's scheduled run will retry it)"
+    fi
 fi
 
 # The scheduler talks to stdout, which is the same stream as the API's. Keep it quiet so its
