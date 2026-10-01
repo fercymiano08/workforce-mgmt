@@ -135,17 +135,25 @@ return [
 
     'from' => [
         /*
-         | The From address decides whether a message reaches a Gmail inbox, not which relay sends
-         | it. The relay will happily accept mail claiming to be from any domain at all; Gmail then
-         | checks that domain's SPF/DKIM/DMARC records and, finding nothing authorising this server,
-         | fails the message straight to spam or rejects it.
+         | The From address decides whether a message reaches a Gmail inbox - not which relay
+         | sends it. A relay accepts whatever From you hand it and passes it on untouched; Gmail
+         | then checks that domain's SPF/DKIM/DMARC records, finds nothing authorising the sender,
+         | and discards the mail. The relay's dashboard still shows a clean send, because the
+         | rejection happens after the relay's involvement ends.
          |
-         | So the safe default is the address the system actually authenticates as (MAIL_USERNAME).
-         | That is guaranteed to be a sender the provider has verified, which is the only address
-         | that can be trusted to arrive. Setting MAIL_FROM_ADDRESS to a domain you do not control
-         | is what silently breaks delivery.
+         | MAIL_FROM_ADDRESS must therefore be a real, provider-verified sender address.
+         |
+         | It must NOT fall back to MAIL_USERNAME unguarded. For an SMTP relay that is a login key,
+         | not an address - Brevo's looks like 'xsmtp-relay.brevo.com-a1b2c3' - so an unguarded
+         | fallback would put that string in the From header and produce mail that is invalid at
+         | every hop. The fallback below therefore applies only when MAIL_USERNAME genuinely looks
+         | like an email address, which is the case for mailers that authenticate with one.
          */
-        'address' => env('MAIL_FROM_ADDRESS') ?: (env('MAIL_USERNAME') ?: 'hello@example.com'),
+        'address' => env('MAIL_FROM_ADDRESS') ?: ((static function (): string {
+            $candidate = trim((string) env('MAIL_USERNAME'));
+
+            return filter_var($candidate, FILTER_VALIDATE_EMAIL) ? $candidate : 'hello@example.com';
+        })()),
         'name' => env('MAIL_FROM_NAME') ?: env('APP_NAME', 'Laravel'),
     ],
 
