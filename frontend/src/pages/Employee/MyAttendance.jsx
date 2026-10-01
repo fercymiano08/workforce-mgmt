@@ -311,7 +311,7 @@ export default function MyAttendance() {
           <button
             key={tab.key}
             onClick={() => setActiveTab(tab.key)}
-            className={`px-4 py-2 pointer-coarse:py-2.5 text-[13px] font-semibold rounded-lg transition-colors ${
+            className={`shrink-0 whitespace-nowrap px-4 py-2 pointer-coarse:py-2.5 text-[13px] font-semibold rounded-lg transition-colors ${
               activeTab === tab.key
                 ? 'bg-white text-gray-900 shadow-sm'
                 : 'text-gray-500 hover:text-gray-700'

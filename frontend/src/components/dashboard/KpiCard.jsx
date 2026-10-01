@@ -29,7 +29,11 @@ export default function KpiCard({ label, value, icon: Icon, change, changeType, 
       <div className="flex items-start justify-between gap-3 flex-1">
         <div className="min-w-0 flex-1">
           <p className="text-[13px] font-medium text-gray-400 truncate">{label}</p>
-          <p className="text-[30px] font-bold text-gray-900 mt-2 tracking-tight leading-none">{value}</p>
+          {/* A long value (e.g. "4122.46h" on a 2-up mobile grid) used to overflow this box and render
+              straight through the icon next to it - unreadable, not just cramped. Smaller on a narrow
+              screen first, so it rarely even needs to, and truncate as the backstop for whatever still
+              doesn't fit, so it ellipsizes instead of colliding with anything. */}
+          <p className="text-2xl sm:text-[30px] font-bold text-gray-900 mt-2 tracking-tight leading-none tabular-nums truncate" title={typeof value === 'string' || typeof value === 'number' ? String(value) : undefined}>{value}</p>
           {subtext && <p className="text-xs text-gray-400 mt-3">{subtext}</p>}
           {change && (
             <div className="flex items-center gap-1.5 mt-3">
