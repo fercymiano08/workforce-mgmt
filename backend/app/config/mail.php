@@ -50,6 +50,28 @@ return [
             'local_domain' => env('MAIL_EHLO_DOMAIN', parse_url((string) env('APP_URL', 'http://localhost'), PHP_URL_HOST)),
         ],
 
+        /*
+         | Brevo (formerly Sendinblue) transactional relay.
+         |
+         | Set MAIL_MAILER=brevo and fill in the SMTP key from Brevo's SMTP & API > SMTP keys.
+         | Host and port are Brevo's own defaults, so only the key is normally needed.
+         |
+         | Note that relay choice does not affect deliverability on its own. What decides whether
+         | Gmail shows a message in the inbox is the From address (see the 'from' block below) -
+         | a relay will happily accept mail claiming to be from a domain it cannot vouch for, and
+         | Gmail will then quietly bin it.
+         */
+        'brevo' => [
+            'transport' => 'smtp',
+            'scheme' => env('MAIL_SCHEME', 'tls'),
+            'host' => env('MAIL_HOST', 'smtp-relay.brevo.com'),
+            'port' => (int) env('MAIL_PORT', 587),
+            'username' => env('MAIL_USERNAME'),
+            'password' => env('MAIL_PASSWORD'),
+            'timeout' => (int) env('MAIL_TIMEOUT', 8),
+            'local_domain' => env('MAIL_EHLO_DOMAIN', parse_url((string) env('APP_URL', 'http://localhost'), PHP_URL_HOST)),
+        ],
+
         'ses' => [
             'transport' => 'ses',
         ],
@@ -112,8 +134,19 @@ return [
     */
 
     'from' => [
-        'address' => env('MAIL_FROM_ADDRESS', 'hello@example.com'),
-        'name' => env('MAIL_FROM_NAME', env('APP_NAME', 'Laravel')),
+        /*
+         | The From address decides whether a message reaches a Gmail inbox, not which relay sends
+         | it. The relay will happily accept mail claiming to be from any domain at all; Gmail then
+         | checks that domain's SPF/DKIM/DMARC records and, finding nothing authorising this server,
+         | fails the message straight to spam or rejects it.
+         |
+         | So the safe default is the address the system actually authenticates as (MAIL_USERNAME).
+         | That is guaranteed to be a sender the provider has verified, which is the only address
+         | that can be trusted to arrive. Setting MAIL_FROM_ADDRESS to a domain you do not control
+         | is what silently breaks delivery.
+         */
+        'address' => env('MAIL_FROM_ADDRESS') ?: (env('MAIL_USERNAME') ?: 'hello@example.com'),
+        'name' => env('MAIL_FROM_NAME') ?: env('APP_NAME', 'Laravel'),
     ],
 
 ];
