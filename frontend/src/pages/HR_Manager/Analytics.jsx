@@ -3,7 +3,7 @@ import {
   BarChart, Bar, Cell, PieChart, Pie, LineChart, Line,
   XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend
 } from 'recharts';
-import { Printer, TrendingUp } from 'lucide-react';
+import { Printer, TrendingUp, Percent, Clock, Trophy, CalendarDays } from 'lucide-react';
 import Card, { CardHeader, CardTitle, CardDescription } from '../../components/ui/Card';
 import Button from '../../components/ui/Button';
 import FormulaInfo from '../../components/analytics/FormulaInfo';
@@ -72,6 +72,33 @@ function ScoreRing({ score, size = 140, stroke = 12, color = '#3B82F6', track = 
   );
 }
 
+const kpiTone = {
+  blue: 'bg-blue-50 text-blue-600',
+  purple: 'bg-purple-50 text-purple-600',
+  emerald: 'bg-emerald-50 text-emerald-600',
+  amber: 'bg-amber-50 text-amber-600',
+};
+
+// The at-a-glance strip: four numbers pulled from the very cards below, not a second calculation -
+// so there is never a question this page answers two different ways. Each one names which card
+// to point at for "where did that come from?".
+function KpiTile({ label, value, icon: Icon, tone, hint }) {
+  return (
+    <Card className="!p-4 overflow-hidden" hover>
+      <div className="flex items-center gap-3">
+        <div className={`w-10 h-10 rounded-xl flex items-center justify-center shrink-0 ${kpiTone[tone]}`}>
+          <Icon className="w-5 h-5" />
+        </div>
+        <div className="min-w-0">
+          <p className="text-xl font-bold text-gray-900 tabular-nums truncate">{value}</p>
+          <p className="text-xs text-gray-500 truncate">{label}</p>
+        </div>
+      </div>
+      {hint && <p className="text-[11px] text-gray-400 mt-2 truncate">{hint}</p>}
+    </Card>
+  );
+}
+
 /**
  * Time & Attendance's "explain yourself" page: every card carries its own data source and
  * formula (the ⓘ, top right of each card - see FormulaInfo), so nobody showing this page has to
@@ -111,6 +138,14 @@ export default function Analytics() {
 
   const leaveTypeKeys = useMemo(() => [...(leaveTrend?.types ?? []), 'other'], [leaveTrend]);
 
+  // Every value here is read straight off a card below, never recomputed - this row is a faster
+  // way to see them, not a second source that could ever disagree with the card it summarises.
+  const topDept = punctuality?.departments?.[0] ?? null;
+  const leaveDaysTotal = useMemo(
+    () => (leaveTrend?.buckets ?? []).reduce((sum, b) => sum + (b.total || 0), 0),
+    [leaveTrend]
+  );
+
   if (loading) {
     return <SkeletonPage kpiCount={3} />;
   }
@@ -146,6 +181,38 @@ export default function Analytics() {
       <div className="hidden print:block">
         <h1 className="text-xl font-bold text-gray-900">Workforce Analytics</h1>
         <p className="text-sm text-gray-600">{periodMeta?.label} &middot; Printed {new Date().toLocaleString()}</p>
+      </div>
+
+      {/* At-a-glance strip - the same four numbers the cards below already explain, just faster to read. */}
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 print:hidden">
+        <KpiTile
+          label="Attendance Rate"
+          value={rate ? `${rate.rate}%` : '—'}
+          icon={Percent}
+          tone="blue"
+          hint="See Attendance Rate below"
+        />
+        <KpiTile
+          label="Overtime Logged"
+          value={overtime ? `${overtime.totalHours}h` : '—'}
+          icon={Clock}
+          tone="purple"
+          hint="See Overtime Hours below"
+        />
+        <KpiTile
+          label="Best On-Time Dept."
+          value={topDept ? `${topDept.rate}%` : '—'}
+          icon={Trophy}
+          tone="emerald"
+          hint={topDept ? topDept.department : 'See Department Punctuality below'}
+        />
+        <KpiTile
+          label="Approved Leave Days"
+          value={leaveTrend ? leaveDaysTotal : '—'}
+          icon={CalendarDays}
+          tone="amber"
+          hint="See Leave Trends below"
+        />
       </div>
 
       {/* Row 1: Attendance Summary + Attendance Rate */}
