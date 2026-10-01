@@ -54,7 +54,7 @@ services:
         value: https://workforce-api-nm7v.onrender.com
       # Used for the link inside the "reset your password" email only.
       - key: FRONTEND_URL
-        value: https://workforce-management.onrender.com
+        value: https://workforce-management-qty0.onrender.com
       - key: LOG_CHANNEL
         value: stderr
       - key: LOG_LEVEL
@@ -107,10 +107,13 @@ services:
 
   # ------------------------------------------------------- Frontend (React 19 / Vite, static files)
   - type: web
-    # Render derives the public hostname from this name, so it produces
-    # https://workforce-management.onrender.com. Renaming an existing live service does NOT rename
-    # it in Render - do it once in the dashboard (Settings -> Name) so the hostname is freed and the
-    # old one redirected, and let this file keep matching afterwards.
+    # Render derives the public hostname from this name, but the plain
+    # https://workforce-management.onrender.com was already taken (by another, now-unused Render
+    # service - worth deleting on the dashboard so it stops consuming a free slot and nobody lands on
+    # it by mistake), so this one actually lives at https://workforce-management-qty0.onrender.com.
+    # Renaming an existing live service does NOT rename it in Render - do it once in the dashboard
+    # (Settings -> Name) so the hostname is freed and the old one redirected, and let this file keep
+    # matching afterwards.
     name: workforce-management
     runtime: static
     buildCommand: cd frontend && npm ci && npm run build

@@ -52,13 +52,15 @@ You open `http://localhost:5173` in the browser. Vite's dev proxy (`frontend/vit
 
 The backend is a single Laravel app living at `backend/app/`, with one `vendor/`, one `.env`, and one `artisan`. Internally it is still organized by the same 8 business domains the system was split into (identity, attendance, scheduling, time-off, payroll, communications, configuration, intelligence) — they are just folders/route groups inside one app now, not separate deployable services.
 
+> **This is also deployed live on Render, not only local.** Everything above describes your laptop. The same code is also running in production, publicly reachable by anyone: backend at `https://workforce-api-nm7v.onrender.com` (a Docker **web service**, defined by `render.yaml`, built from `docker/backend.Dockerfile`, started by `docker/backend-start.sh`) and frontend at `https://workforce-management-qty0.onrender.com` (a Render **static site** — Render builds the React app and serves the files directly; there is no nginx container in production, unlike the local Docker setup in Part 3 §22). Production has no separate scheduler container either: `backend-start.sh` runs migrations, seeds/refreshes the demo data, starts `php artisan schedule:work` in the background, then runs the API server in the foreground — scheduler and API share one container. Production email goes out through **Brevo** (`smtp-relay.brevo.com`, port **2525** specifically — Render's free web-service plan blocks the usual SMTP ports 25/465/587 outbound, and 2525 is the one Brevo port left open) with `MAIL_MAILER=smtp`, not Gmail and not the `log` driver local dev can use.
+
 ## 0.2 "What/How/Why" for the three big technologies
 
 | Tech | What it is | How we use it | Why we picked it |
 |------|-----------|---------------|------------------|
-| **React** | A JavaScript library for building web screens | 24 page files under `frontend/src/pages/` | Fast, component-based, huge ecosystem; runs in any browser |
-| **Laravel** | A PHP web framework | One Laravel app under `backend/app/app/`, organized into 8 domain folders (routes/controllers/services/models) | Secure by default (hashing, validation), clean layered structure (routes → controllers → services → models) |
-| **PostgreSQL** | A relational database (tables with rows/columns) | One database (`workforce_mgnt`), 28 tables total (19 business + 9 framework). Any domain that needs another domain's data just queries the real table directly — no copies, no sync | Reliable, handles relational + JSON data well, free |
+| **React** | A JavaScript library for building web screens | 25 page files under `frontend/src/pages/` | Fast, component-based, huge ecosystem; runs in any browser |
+| **Laravel** | A PHP web framework | One Laravel app under `backend/app/app/`, organized into 9 domain folders (routes/controllers/services/models) | Secure by default (hashing, validation), clean layered structure (routes → controllers → services → models) |
+| **PostgreSQL** | A relational database (tables with rows/columns) | One database (`workforce_mgnt`), 29 tables total (20 business + 9 framework). Any domain that needs another domain's data just queries the real table directly — no copies, no sync | Reliable, handles relational + JSON data well, free |
 
 > If a panelist asks "why PostgreSQL instead of MySQL?" — add: "PostgreSQL handles JSON columns and complex reporting cleanly, and it's what our team is consistent with. MySQL would also work; ours was a deliberate choice for reliability."
 
@@ -97,7 +99,7 @@ The eight labels inside the box are **not services** — they are folders/route 
 
 > **One sentence:** the browser sends every request to the one backend; Laravel's `auth:sanctum` middleware checks *who you are* once, on the way in; the matching controller applies that domain's business rules and reads/writes the one database.
 
-> **Why this looks the way it does (important for the defense):** the Workforce Management System is one subsystem of a larger E-Commerce Enterprise platform, and *that* platform is the thing organized as microservices — Workforce Management is meant to be **one** of those microservices. For a while, this subsystem's own internals were further split into 8 separate Laravel services (core/intelligence/attendance/scheduling/timeoff/payroll/communications/configuration), each with its own port and database. That was applying the microservices pattern one level too deep — real inter-service HTTP calls, replica tables and a shared service token existed purely to let one part of *this one subsystem* talk to another part of itself. It was consolidated back into a single Laravel monolith before the defense: same 8 domains, same business rules, now one process and one database, with the actual service boundary sitting one level up (Workforce Management as a whole, inside the larger platform).
+> **Why this looks the way it does (important for the defense):** the Workforce Management System is one subsystem of a larger E-Commerce Enterprise platform, and *that* platform is the thing organized as microservices — Workforce Management is meant to be **one** of those microservices. For a while, this subsystem's own internals were further split into 8 separate Laravel services (core/intelligence/attendance/scheduling/timeoff/payroll/communications/configuration), each with its own port and database. That was applying the microservices pattern one level too deep — real inter-service HTTP calls, replica tables and a shared service token existed purely to let one part of *this one subsystem* talk to another part of itself. It was consolidated back into a single Laravel monolith before the defense: same 8 domains, same business rules, now one process and one database, with the actual service boundary sitting one level up (Workforce Management as a whole, inside the larger platform). A 9th domain, Audit, was added afterward for the security/action log - it was never part of the original split.
 
 ### How domains that need each other's data get it now
 
@@ -168,6 +170,8 @@ There are three roles. Each role logs in through the same login page but lands o
 | 21 | Settings `Employee/Settings.jsx` | Employee | Change password (live requirements checklist) and font size (the Appearance section) |
 | 22 | Kiosk Setup `KIOSK/KioskSetup.jsx` | Admin (device) | Configure and lock the entrance tablet into kiosk mode |
 | 23 | Attendance Terminal `KIOSK/AttendanceTerminal.jsx` | Employees at door | The clock-in/clock-out device itself |
+| 24 | Audit Logs `HR_Manager/AuditLogs.jsx` | Admin | Searchable history of sensitive actions (logins, password resets, exports, settings changes, approvals) |
+| 25 | Notifications `Notifications.jsx` | Everyone | The bell's full-page view: All / Unread / Important tabs, search, grouping by day |
 
 ---
 
@@ -318,7 +322,8 @@ Because the expiry lives in the token, closing the laptop lid or leaving a tab o
 ### Flow B3 — Sensitive Actions Leave A Trail
 
 * **Sign-ins and password events are audited** (the audit domain writes them): `auth.login`, `auth.login_failed`, `auth.login_locked` (5 failed tries), `auth.logout`, `auth.password_changed`, `auth.password_reset_requested`, `auth.password_reset`.
-* **Exports ask for the password again.** Exporting a report (CSV / Excel / PDF) or the audit log opens "Confirm it's you"; the server checks the password (`POST /api/auth/confirm-password`, 5 wrong tries per minute) and records `auth.export_confirmed` (or `auth.confirm_failed`) with what it was for. We use the password rather than an emailed code because the administrator account is a fixed login, not a real mailbox.
+* **So is the two-factor step:** `auth.two_factor_challenge_issued` (code emailed), `auth.two_factor_verified`, `auth.two_factor_failed`, `auth.two_factor_enabled`, `auth.two_factor_disabled`.
+* **Exports no longer ask for the password again.** An earlier version opened a "Confirm it's you" password prompt before every report export, print or audit-log export (`POST /api/auth/confirm-password`). It was removed on purpose: the person asking is already signed in and already allowed to see exactly what they are exporting, so the extra step guarded nothing — it only made printing feel broken on a phone. Exports happen immediately now; there is no separate `auth.export_confirmed` event, and the endpoint is gone.
 * **Other changes now audited too:** overtime requested / decided / reopened / withdrawn / deleted (`overtime.*`), and any change to the company / system / kiosk settings (`settings.updated`, with the before and after of what changed).
 
 ### Flow C — Change Password (while logged in)
@@ -708,6 +713,8 @@ An employee with an **Approved leave** covering today is marked on-leave rather 
 
 ### Corrections — when the record is wrong because something stopped it being recorded
 
+**Files:** `components/attendance/CorrectionsEmployee.jsx` (inside Employee's My Attendance), `components/attendance/CorrectionsAdmin.jsx` (inside HR's Attendance page), backend `AttendanceAdjustmentController.php`, `AttendanceAdjustmentService.php`, `CorrectionCorroboration.php`
+
 A **Corrections** tab sits inside Time & Attendance, beside Early Clock Outs: on the employee's **My Attendance** page and on the admin's **Time & Attendance** page. It is not a separate module.
 
 The employee files a correction (last 7 days only) for one of two problems:
@@ -991,10 +998,12 @@ SENT TO PAYROLL   (admin: "Send to payroll")
 
 **"Present" is a group with two parts: On Time and Late** (everyone who came in, whichever way). The dashboard draws it as **one Present bar split into two colours** — green On Time, amber Late — and the Present Today card shows the total with "X on time · Y late" underneath. **Early Leave stays its own category** (it is about leaving, not arriving), as do Absent and On Leave. Nothing is counted twice, and the stored status values are unchanged. The attendance rate is *attended ÷ (attended + absent)*, so approved leave never lowers it and someone who left early still counts as having come to work.
 
-### How It Works (Cached Stats Pattern)
+### How It Works (Two Patterns, Side By Side)
+
+The HR Dashboard's own stat cards and the AI insights badge still use the **older cached pattern**, untouched by the Analytics rebuild below:
 
 ```
-AnalyticsService queries raw tables (attendance, leaves, overtime_requests...)
+AnalyticsService::all() queries raw tables (attendance, leaves, overtime_requests...)
    │
    ▼
 Computes five prepared sections, stored in the `analytics` table as JSON:
@@ -1005,30 +1014,37 @@ Computes five prepared sections, stored in the `analytics` table as JSON:
    punctuality_score         on-time percentage per employee/dept
    │
    ▼
-Dashboard/Analytics pages just fetch these prepared JSON blobs
-(GET /api/analytics or /api/analytics/{section}) and draw charts
+Dashboard fetches these prepared JSON blobs
+(GET /api/analytics or /api/analytics/{section}) and draws its charts
 ```
 
-Why cached? Chart pages stay instant — heavy aggregation runs once through the service instead of on every page load.
+Why cached? The Dashboard loads often (every visit, every "Needs your attention" refresh); heavy aggregation runs once through the service instead of on every page load.
 
-### The Analytics Screen (`HR_Manager/Analytics.jsx`) — What's Actually On It
+**The Analytics page does not use that cache at all.** It was rebuilt around a single filter and one endpoint computed fresh on every request: `AnalyticsService::workforceCards($period)`, called through `GET /api/analytics/workforce?period=week|month|year` (admin only). Nothing is pre-stored for it in the `analytics` table — whichever period is selected is queried live, so the numbers are always exactly current for that window, never a stale cached blob.
 
-The page is deliberately not "everything as a bar chart" — each section uses whichever chart type reads best for that data:
+### The Analytics Screen (`HR_Manager/Analytics.jsx`) — Rebuilt Around One Filter, Six Self-Explaining Cards
 
-| Section | Chart type | Shows |
-|---------|-----------|-------|
-| Three KPI meters (top row) | Stat/meter tiles | Overall Attendance Rate, Overall Punctuality, Total Overtime Hours |
-| Attendance Trend | Bar chart | Monthly attendance rate over the year |
-| Department Productivity | Full pie chart | Productivity score share by department |
-| Leave Trends | Horizontal (sideways) stacked bar chart | Leave usage over time, broken down |
-| Overtime by Department | Line chart | OT volume/distribution over time |
-| Punctuality Leaderboard | Ranked list | Top performers and who needs attention, by on-time percentage |
-| Leave Type Composition | Donut chart | Share of leave taken by type (Vacation/Sick/Emergency/Special/Funeral/Unpaid) |
+**One filter drives the whole page:** a **This Week / This Month / This Year** switch (This Week is selected by default, since it's the freshest view). Changing it re-fetches `GET /api/analytics/workforce?period=...` and every card below updates together — there is no longer a Month/Quarter/Year split with different cards per period.
+
+Above the six cards sits an **at-a-glance KPI strip** (4 tiles: Attendance Rate, Overtime Logged, Best On-Time Dept., Approved Leave Days) repeating the headline numbers the cards below explain in full, so a glance answers the common questions without reading every chart.
+
+**Every card carries its own data source and formula**, shown via a small ⓘ info popover in the card's header (`FormulaInfo`) — so nobody presenting this page has to remember a rule the code already states out loud. The same text prints inline (not as a hidden popover) when the page is exported via the **Export / Print** button (`window.print()`, with print-specific layout), so a handed-out copy is still self-explaining on paper.
+
+| # | Card | Chart type | Shows | Formula (as stated on the card) |
+|---|------|-----------|-------|----------------------------------|
+| 1 | Attendance Summary | Pie chart | Present (On Time) / Present (Late) / Early Leave / Absent for the whole period — green / amber / blue / red | Count of each status ÷ total attendance records × 100 |
+| 2 | Attendance Rate | Ring (headline %) + a small trend line across the period's sub-buckets | Out of all scheduled workdays, what % did employees actually show up for? | (Present days ÷ scheduled days) × 100 — days covered by **approved leave are excluded** from "scheduled days", so an excused absence never lowers the rate |
+| 3 | Leave Trends | Vertical stacked bar chart | Approved leave days by type, per sub-period (days for a week, weeks for a month, months for a year) | Each approved request's day count, summed per leave type per sub-bucket |
+| 4 | Overtime Hours | Dark-purple line/dot chart | Total overtime logged per sub-period | Sum of overtime hours (from attendance records) per sub-bucket — **grouped by time period now, not by department** |
+| 5 | Department Punctuality | Ranked horizontal bars, **by department only — never by individual employee name** | Which department clocks in on time the most | (On-time clock-ins ÷ total clock-ins) × 100, per department |
+| 6 | Leave Type Composition | Donut chart | Share of **approved** leave requests by type | Count of approved requests per type ÷ total approved × 100 — pending, rejected and cancelled requests are excluded; they never happened |
+
+> **What changed from the old design (good to know for the defense):** the page used to offer a Month/Quarter/Year filter with a different card mix per period, a "Punctuality Leaderboard" that ranked individual employees by name, an "Overtime by Department" chart, and no visible formula or data-source for any card. The rebuild replaced all of that: one filter for everything, department-only punctuality ranking (nobody is singled out by name), overtime grouped by time period instead of department, and every card stating its own source and formula so the numbers never have to be taken on faith.
 
 ### Tech Trail
 
-- Endpoints: `GET /api/analytics`, `GET /api/analytics/{section}` (admin)
-- Tables: `analytics` (read/write cache), everything else read-only sources
+- Endpoints: `GET /api/analytics/workforce?period=week|month|year` (admin, live — the Analytics page); `GET /api/analytics`, `GET /api/analytics/{section}` (admin, cached — the HR Dashboard and AI insights badge)
+- Tables: `analytics` (read/write cache, cached pattern only), `attendance`, `leaves`, `overtime_requests`, `shift_schedules`, `employees` — all read-only sources for the live Workforce Analytics cards
 
 ---
 
@@ -1036,7 +1052,7 @@ The page is deliberately not "everything as a bar chart" — each section uses w
 
 **What it is:** read-only report builder — turn live data into printable documents or CSV exports.
 
-> **Data leaves the system in only a few controlled places:** the Reports page (CSV / Excel / PDF), the timesheets "Send to payroll" file (each approved week only once), and the Audit Logs export. Other pages (Attendance, Analytics, Timesheets) no longer have their own export buttons, and employees can only print their own attendance and timesheets (Print / PDF).
+> **Data leaves the system in only a few controlled places:** the Reports page (CSV / Excel / PDF), the timesheets "Send to payroll" file (each approved week only once), and the Audit Logs export (CSV). Attendance and Timesheets have no export buttons of their own; employees can only print their own attendance and timesheets (Print / PDF). Analytics' **Export / Print** button is the same kind of browser print, not a raw data download — it turns the page itself (cards, formulas and all) into a printable handout via `window.print()`, it does not write a CSV/Excel/PDF file.
 
 **File:** `HR_Manager/Reports.jsx`, helpers in `utils/reportHelpers.js`
 
@@ -1285,6 +1301,7 @@ Profile and Settings are separate pages. **My Profile** (`/my-profile`) answers 
 | `attendance:check-alerts` | every minute | Raises the admins' alerts (possible no-show after the absent-grace time, incomplete record, unauthorized overtime, staffing shortage) about a minute after they happen, each once a day, using the Manila clock |
 | `attendance:recount-hours` | every minute | Re-counts recent days from the real clock-out after an overtime approval or withdrawal |
 | `timesheets:refresh` | every minute | Rebuilds recent timesheets after a punch, overtime approval or correction |
+| `demo:refresh --close-today` | 00:05 Manila (right before `attendance:mark-absent`) | Rebuilds the demo employees' recent schedules, attendance, early leaves, **leave requests and overtime requests** so they roll forward with "today" instead of staying frozen at whenever the database was seeded. Runs first on purpose — if it ran after `attendance:mark-absent`, every demo employee due a day's rebuild would already have been written off as Absent by then. Set `REFRESH_DEMO_DAILY=false` to turn the nightly rebuild off (the Absent-marker still runs) |
 | `attendance:mark-absent` | 00:10 and 12:00 Manila | Writes Absent for finished, scheduled days with no clock-in and no approved leave |
 | `timesheets:auto-submit`, `timesheets:remind` | hourly | Submits unsubmitted finished weeks at Monday 12:00 Manila; sends the one-time reminders |
 | `early-outs:expire-certificates` | hourly | A SICK early clock-out without a certificate by its deadline becomes unexcused |
@@ -1292,7 +1309,7 @@ Profile and Settings are separate pages. **My Profile** (`/my-profile`) answers 
 
 Weeks everywhere (timesheets, "this week", schedules) run **Monday to Sunday** (ISO 8601); "today" is always the company's calendar day in Manila, whatever the viewer's computer says.
 
-The demo employees cannot use the kiosk, so before a presentation run `php artisan demo:refresh` (see the backend README): it rebuilds their recent history through the system's own rules.
+**Demo data now rolls forward on its own, including leave and overtime.** The demo employees cannot use the kiosk, so their schedules, attendance, early leaves, leave requests and overtime requests are all rebuilt by `php artisan demo:refresh` (previously this covered only schedules/attendance/timesheets, as static one-time seed data that never advanced with "today"). Leave and overtime are added on a sparse, deterministic per-person schedule (roughly one every few weeks per person — the same inputs always produce the same result, so re-running it never doubles anything up), topped up with a small **guaranteed-recent floor** so the last ~10 days always have at least a little real Approved leave to show — without the floor, Workforce Analytics' This Week filter could legitimately come up empty by chance. This now runs automatically every night at 00:05 Manila time (`routes/console.php`) and once at container boot on the hosted deployment (`docker/backend-start.sh`), in addition to running it by hand (`php artisan demo:refresh --close-today`, see the backend README) right before a presentation to be sure.
 
 ---
 
@@ -1314,25 +1331,27 @@ It's honest UX: the app tells you what it can and cannot reach right now.
 
 Which tables each module touches (R = read, W = write). This map is logical — and in the consolidated system it is also physical: **one database, one app**, so an `R` means a real read of the live table, not a replica. The replica layer (`SnapshotSyncService` + read-only copies per service) was the price the microservices split paid for keeping services' databases independent; after consolidation it was deleted, because every table now lives in the same `workforce_mgnt` database with real foreign keys where it matters.
 
-| Module | users | employees | departments | roles | shift_def | shift_sched | attendance | leaves | ot_req | timesheets | notifications | sec_events | settings | analytics |
-|--------|:----:|:---------:|:-----------:|:-----:|:---------:|:-----------:|:----------:|:------:|:------:|:----------:|:-------------:|:----------:|:--------:|:---------:|
-| Auth | RW | R | | | | | | | | | | | | |
-| Employees/Registration | W | RW | R | R | | | | | | | | | | |
-| Kiosk Setup | | | | | | | | | | | W | RW | RW | |
-| Kiosk Terminal | | R | | | R | R | RW | R | | | | W | | |
-| Employee Dashboard | | R | | | R | R | R | R | R | R | R | | | |
-| My Attendance | | R | | | | | R | | | | W | | | |
-| HR Attendance | | R | | | R | R | RW | R | | | | | | |
-| Shifts | | R | | | R | RW | | | | | | | | |
-| Leave (both sides) | | RW | | | | | R | RW | | | RW | | | |
-| Overtime (both sides) | | | | | | | RW | | RW | RW | RW | | | |
-| Timesheets | | R | R | | | | R | | R | RW | RW | | | |
-| Dashboard/Analytics | | R | R | | | | R | R | R | | | | | RW |
-| Reports | | R | | | | | R | R | R | R | | | | |
-| AI Decision Support | | R | | | | | R | RW | RW | | W | RW | RW | R |
-| Security Events | | R | | | | | | | | | W | RW | | |
-| Notifications | | | | | | | | | | | RW | | | |
-| Settings/Profile | W | RW | | | | | | | | | | | RW | |
+| Module | users | employees | departments | roles | shift_def | shift_sched | attendance | adj | leaves | ot_req | timesheets | notifications | sec_events | settings | analytics |
+|--------|:----:|:---------:|:-----------:|:-----:|:---------:|:-----------:|:----------:|:---:|:------:|:------:|:----------:|:-------------:|:----------:|:--------:|:---------:|
+| Auth | RW | R | | | | | | | | | | | | | |
+| Employees/Registration | W | RW | R | R | | | | | | | | | | | |
+| Kiosk Setup | | | | | | | | | | | | W | RW | RW | |
+| Kiosk Terminal | | R | | | R | R | RW | | R | | | | W | | |
+| Employee Dashboard | | R | | | R | R | R | | R | R | R | R | | | |
+| My Attendance | | R | | | | | R | RW | | | | W | | | |
+| HR Attendance | | R | | | R | R | RW | RW | R | | | | | | |
+| Shifts | | R | | | R | RW | | | | | | | | | |
+| Leave (both sides) | | RW | | | | | R | | RW | | | RW | | | |
+| Overtime (both sides) | | | | | | | RW | | | RW | RW | RW | | | |
+| Timesheets | | R | R | | | | R | | | R | RW | RW | | | |
+| Dashboard/Analytics | | R | R | | | | R | | R | R | | | | | RW |
+| Reports | | R | | | | | R | | R | R | R | | | | |
+| AI Decision Support | | R | | | | | R | | RW | RW | | W | RW | RW | R |
+| Security Events | | R | | | | | | | | | | W | RW | | |
+| Notifications | | | | | | | | | | | | RW | | | |
+| Settings/Profile | W | RW | | | | | | | | | | | | RW | |
+
+`adj` is `attendance_adjustments` (Module 7's Corrections feature — not in the original map, added when Corrections shipped). Two tables deliberately sit outside this matrix: `audit_events` (written by nearly every module above whenever it does something sensitive — logins, approvals, settings changes, schedule edits, correction decisions — see each module's own text for exactly which actions) and `two_factor_challenges` (written only by Auth, during the second sign-in step).
 
 ## 20. Status Vocabulary (Cheat Sheet)
 
@@ -1401,7 +1420,7 @@ Workforce MGNT/
 │   ├── vite.config.js                proxies every /api/* prefix to ONE backend at :8000
 │   └── package.json
 ├── backend/
-│   └── app/                          ★ ONE LARAVEL APP — all 8 domains inside it
+│   └── app/                          ★ ONE LARAVEL APP — all 9 domains inside it
 │       ├── app/
 │       │   ├── Http/Controllers/Api/ per-domain controllers (AuthController,
 │       │   │                         AttendanceController, LeaveController,
@@ -1417,14 +1436,23 @@ Workforce MGNT/
 │       │   └── services/             {auth,identity,audit,attendance,scheduling,
 │       │                             timeoff,payroll,communications,configuration,
 │       │                             intelligence}.php   ← one per domain
-│       ├── database/migrations/      ALL tables (28 total: 19 business + 9 framework)
+│       ├── database/migrations/      53 migration files; 29 live tables today (20 business + 9 framework)
 │       ├── database/seeders/         demo workforce data
-│       ├── tests/                    ONE offline test suite — 385 tests (1725 assertions)
+│       ├── tests/                    ONE offline test suite — 476 tests (2207 assertions)
 │       └── .env                      ONE database: workforce_mgnt (PostgreSQL)
-├── docker-compose.yml               Docker: 4 containers (see Start Here §10)
-├── docker/                          backend.Dockerfile (app + scheduler, same image),
-│                                   frontend.Dockerfile, nginx.conf (proxies /api → app:8000),
-│                                   backend-entrypoint.sh (migrations + serve)
+├── docker-compose.yml               Local Docker: 4 containers (see Start Here §10) — postgres, app,
+│                                   scheduler, frontend/nginx. Render production is NOT this file:
+│                                   it is built straight from render.yaml + the two Dockerfiles below,
+│                                   with no nginx and no separate scheduler container (see Part 0 §0.1)
+├── docker/                          backend.Dockerfile (the image both local Docker and Render build),
+│                                   frontend.Dockerfile (local Docker only — Render's frontend is a
+│                                   static site built by its own buildCommand, not this Dockerfile),
+│                                   nginx.conf (local Docker's reverse proxy, proxies /api → app:8000),
+│                                   backend-entrypoint.sh (local Docker: migrations + serve),
+│                                   backend-start.sh (Render only: migrate + seed/refresh + scheduler
+│                                   in the background + serve in the foreground, one container)
+├── render.yaml                       Render Blueprint: declares workforce-api (Docker web service)
+│                                   and workforce-management (static site) plus the free Postgres
 ├── .env.docker.example              template for the git-ignored .env that holds Docker's secrets
 ├── start-all.ps1                     boots the backend + scheduler + frontend, health-checks /up
 └── stop-all.ps1                      stops everything start-all.ps1 started
@@ -1459,7 +1487,7 @@ Nine times out of ten the bug is one of: stale frontend state (refresh), wrong r
 ## Summary Card
 
 > **Frontend** draws screens, validates for convenience, never touches SQL — and its Vite dev proxy is the only thing that knows where the backend lives (`127.0.0.1:8000` locally, `http://app:8000` in Docker).
-> **The one backend (:8000)** is a single Laravel app containing **8 cleanly-separated domains** — auth/identity, attendance, scheduling, time-off, payroll, communications, configuration, intelligence. One process, one port, one PostgreSQL database, one test suite (310 tests, 1272 assertions). There is no gateway, no service-to-service HTTP, no shared secret token, no internal API.
+> **The one backend (:8000)** is a single Laravel app containing **8 cleanly-separated domains** — auth/identity, attendance, scheduling, time-off, payroll, communications, configuration, intelligence. One process, one port, one PostgreSQL database, one test suite (476 tests, 2207 assertions). There is no gateway, no service-to-service HTTP, no shared secret token, no internal API.
 > **Cross-domain data** moves with plain Eloquent relationships and real foreign keys inside the same database — no snapshot replication, no `*Client` classes. The consolidation deleted all of it: nothing was left needing a replica.
 >
 > **Kiosk** verifies faces in-browser, and its rules are enforced by the attendance domain **server-side** (no shift or finished shift = refused; up to 15 min after start = Present, later = Late with a warning; leaving early needs a reason). A face mismatch is logged and alerts the Workforce Admins.
@@ -1467,3 +1495,4 @@ Nine times out of ten the bug is one of: stale frontend state (refresh), wrong r
 > **Requests** (leave/OT) follow one pattern: apply → Pending → decide → notify (+ balance/reconciliation side effects) — now entirely in-process, where the AI path and the HR path share the same "must still be Pending" guard.
 > **Timesheets** are born automatically from attendance and end locked after HR approval — one join away in the same database, no replica involved.
 > **AI** (intelligence domain) reads real tables directly, answers with whichever brain is available (Gemini or the rule-based fallback), acts on requests through the same service classes the manual path uses, and remembers what you've resolved.
+> **Deployed, not just local:** the same app also runs live on Render — backend `workforce-api-nm7v.onrender.com` (Docker web service), frontend `workforce-management-qty0.onrender.com` (static site) — with real email through Brevo and no local-only dependency left unaddressed (Part 0 §0.1).

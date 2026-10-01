@@ -39,7 +39,7 @@ You don't need to know how to write these. You need to know what they're FOR, so
 
 **React** — a JavaScript tool for building the screens you click on. It's popular because it's fast and breaks the interface into reusable pieces ("components" — a button component, a table component, etc.) instead of rebuilding the whole page every time something changes.
 
-**Laravel** — a PHP tool (a "framework") for building backends. It comes with security, database handling, and routing (matching a URL like `/api/employees` to the right piece of code) already built in, so you don't build those from scratch. Your project has **one** Laravel app, organized internally into **8 domains** (business areas) so the code stays easy to navigate — Identity, Attendance, Scheduling, Time-off, Payroll, Communications, Configuration, and Intelligence.
+**Laravel** — a PHP tool (a "framework") for building backends. It comes with security, database handling, and routing (matching a URL like `/api/employees` to the right piece of code) already built in, so you don't build those from scratch. Your project has **one** Laravel app, organized internally into **9 domains** (business areas) so the code stays easy to navigate — Identity, Attendance, Scheduling, Time-off, Payroll, Communications, Configuration, Intelligence, and Audit (the security/action log added after the original 8 were named).
 
 **PostgreSQL** — a database program. It stores data as tables (think Excel sheets: rows and columns). It's reliable, free, and handles the kind of data this project has well. Your project runs **one** PostgreSQL database, `workforce_mgnt`, holding every table the app needs.
 
@@ -56,6 +56,7 @@ Read this twice. These are the words a panelist drops into a question assuming y
 | **Request** | One message sent from the frontend to a backend, e.g. "log me in" or "give me today's attendance." |
 | **JSON** | The text format both sides use to talk. Looks like `{"name": "Fercy", "status": "Present"}`. Not code — just a structured way to write data as text. |
 | **Token** | A digital ID badge. After you log in, the backend gives your browser a token. Every request after that carries the token so the backend knows who's asking. |
+| **2FA (two-factor sign-in)** | An optional extra step anyone can turn on from **My Profile**: after your password is correct, the backend emails a time-limited code and you must enter it before you actually get in. This is separate from the "forgot password" code — that one resets a password you don't remember; 2FA is a second check on a password you got right. |
 | **Middleware** | A bouncer that checks your token/role BEFORE your request reaches the real code. "Are you logged in? Are you allowed here?" |
 | **Controller** | The specific piece of backend code that handles one endpoint — reads the request, decides what to do, talks to the database, sends back JSON. |
 | **Model** | Code that represents one database table. The `Employee` model = the `employees` table. Lets the backend read/write that table without writing raw SQL by hand everywhere. |
@@ -99,7 +100,7 @@ Inside that one app, the code IS organized into 8 clear domains — folders/name
 | Domain | Its job |
 |--------|---------|
 | Identity | logging people in, the employee directory |
-| Attendance | daily clock-ins/outs, the kiosk |
+| Attendance | daily clock-ins/outs, the kiosk, and Corrections (an employee's request to fix a missed or wrong punch) |
 | Scheduling | shift templates, who works when |
 | Time-off | leave requests, overtime requests |
 | Payroll | weekly timesheets |
@@ -114,11 +115,11 @@ That's "organized by domain" — a good coding practice **inside one app** — a
 > "At the scale of the whole company platform we're building, we DO use microservices — the Workforce Management System is one independently-deployed service among several. But inside this one service, we deliberately kept it as a single, well-organized monolith instead of splitting it further into 8 tiny services, because at this size that split would add real cost — separate databases, network calls in the middle of a single feature, background jobs just to keep copies of the same data in sync — without a real benefit. Nothing inside this system needs to scale independently or ship on its own release schedule. You only pay the microservices complexity tax when you actually need what it buys you."
 
 **One sentence to say out loud if asked "so is this a monolith or microservices?":**
-> "Both, at different zoom levels: it's one microservice inside our larger E-Commerce Enterprise platform, and internally that one service is a single Laravel monolith, cleanly organized into 8 domains rather than split into 8 separately deployed services — because splitting it further wouldn't have bought us anything at this size."
+> "Both, at different zoom levels: it's one microservice inside our larger E-Commerce Enterprise platform, and internally that one service is a single Laravel monolith, cleanly organized into 9 domains rather than split into 8 separately deployed services (the 9th, Audit, was added after the split was already undone) — because splitting it further wouldn't have bought us anything at this size."
 
 ---
 
-## 5. How do the 8 domains share data with each other, then?
+## 5. How do the 9 domains share data with each other, then?
 
 Good news: in a single application this is the *simplest* part to explain — and it's much easier than the fancy answer it used to be.
 
@@ -148,6 +149,10 @@ Let's trace what happens when an employee clocks in at the kiosk. Read this like
 
 Notice: only the **Attendance domain** was involved in the core action. The other domains (payroll, time-off, scheduling…) didn't need to do anything — but they're not separate apps that had to be left out; they're just folders in the same app that weren't needed for this request.
 
+### What if the kiosk gets it wrong?
+
+Sometimes the punch itself is the problem — someone genuinely worked past the end of their shift, or the kiosk simply failed to record a tap. That's what **Corrections** (still inside Attendance) is for: the employee opens a correction request, states what actually happened, and attaches a photo as proof. A Workforce Admin then reviews it side-by-side against the kiosk's own punch records before approving or rejecting it. It's a request-and-review flow, same shape as leave or overtime — nobody can just edit their own attendance record directly.
+
 ---
 
 ## 7. "Is the AI feature actually accurate?"
@@ -160,6 +165,10 @@ Good question to be ready for — say this honestly, it's actually a strength if
 - So "accurate" here means: every number comes straight from the database and the rules, never from the AI. The AI's only job is wording.
 
 **One sentence:** *"Our rules compute every number and decide every finding from the database; Gemini only turns them into readable sentences, and if it is unavailable the same findings and score are shown with rule-written wording."*
+
+### And the Workforce Analytics page itself — no AI involved at all
+
+Separate page, separate job: **Workforce Analytics** (also in the Intelligence domain) is plain reporting, nothing generated. One filter — **This Week / This Month / This Year** — drives six cards, and every card names its own receipts: a small ⓘ on the card pops up the exact data source and formula it used, and that same explanation prints inline when you export/print the page. The six cards are: **Attendance Summary** (pie: present-on-time / present-late / early-leave / absent), **Attendance Rate** (a ring plus a trend line: present days ÷ scheduled days, with days covered by approved leave excluded from "scheduled"), **Leave Trends** (stacked bar: approved leave days by type, per sub-period), **Overtime Hours** (line/dot chart: total overtime hours per period), **Department Punctuality** (ranked bars **by department only, never by individual employee name** — a deliberate privacy choice), and **Leave Type Composition** (donut: approved leave requests only, excluding pending/rejected/cancelled). If anyone asks why punctuality isn't ranked by name: that's intentional, not a missing feature.
 
 ---
 
@@ -180,7 +189,7 @@ This will make or break your confidence more than any Q&A. Memorize this section
 ## 9. What to actually study, in order, tonight
 
 1. Re-read Section 4 (monolith vs microservices) until you can say it without looking.
-2. Re-read Section 5 (how the 8 domains share data) until you can say it without looking — they don't call each other, they read/write the same models in one database.
+2. Re-read Section 5 (how the 9 domains share data) until you can say it without looking — they don't call each other, they read/write the same models in one database.
 3. Open `Oral Defense Prep - Plain English Guide.md` — it has the full script, roles, and a 50-question rapid-fire quiz.
 4. Open `Defense Q&A - Easy to Extremely Hard.md` (new file) and go through it top to bottom — stop and re-read this file's relevant section any time you get one wrong.
 5. Open `activator-deactivator.md` and physically run `.\start-all.ps1` yourself at least once before tomorrow, so the first time you see it work isn't in front of the panel.
@@ -307,8 +316,22 @@ The first build is slow; rebuilds are quick because unchanged steps are reused. 
 
 ### 10.11 Honest limits (say these if asked)
 
-Docker here is a **development / demonstration setup on one machine**, not production hosting: the containers use PHP's built-in server (not PHP-FPM), there is no HTTPS or domain, no image registry, no automatic deployment pipeline, and the database port is published on your laptop. Secrets live in a local `.env` file. For real hosting you'd add a domain + HTTPS, PHP-FPM behind nginx, a secrets manager, backups and a CI/CD pipeline.
+**This describes `docker compose` on your own laptop specifically** — see 10.13 for the separate, actually-public deployment. Locally, Docker is a **development / demonstration setup on one machine**, not production hosting: the containers use PHP's built-in server (not PHP-FPM), there is no HTTPS or domain, no image registry, and the database port is published on your laptop. Secrets live in a local `.env` file. For real hosting you'd add a domain + HTTPS, PHP-FPM behind nginx, a secrets manager, and backups.
 
 ### 10.12 The one-paragraph answer for the panel
 
 > "Docker packages each part of our system — the database, the one Laravel backend, its background scheduler and the frontend — into sealed containers that behave the same on any computer. One command, `docker compose up -d --build`, starts all 4 containers in the right order, creates the single `workforce_mgnt` database, runs the backend's migrations, and seeds the admin and demo data. It doesn't change what the system does; it changes how it's built and started, so we can demo it on any machine without installing PHP, Node or PostgreSQL first. It's a development setup, not production hosting."
+
+### 10.13 Beyond your laptop: the system is also live on the internet
+
+Everything in Section 10 so far describes running Docker **on your own machine**. Separately, the same backend image (built from this same `docker/backend.Dockerfile`) is also deployed, for real, on **Render** — so the system is no longer only something you run locally or in a defense room with no signal:
+
+- Backend API: `https://workforce-api-nm7v.onrender.com`
+- Frontend: `https://workforce-management-qty0.onrender.com`
+
+This is described end-to-end in `render.yaml` (a "Blueprint" Render reads to build both services and a managed Postgres database) and in `DEPLOY.md`. A few things worth knowing if a panelist asks "so is it actually hosted somewhere?":
+
+- It redeploys automatically: a push to `main` on GitHub triggers Render to rebuild and restart the affected service — that's the "automatic deployment pipeline" the local-only setup doesn't have.
+- Production email goes through **Brevo** (`smtp-relay.brevo.com`), on port **2525** specifically — Render's free plan blocks the usual SMTP ports (25, 465, 587) outbound, and 2525 is the one Brevo port left open. Local development can still just use Gmail or the `log` driver (mail "sent" only to a log file).
+- Render's free Postgres database is deleted 30 days after creation — `DEPLOY.md` has the plan for migrating it to a free database that doesn't expire.
+- Local dev (the PowerShell scripts, or `docker compose` as described above) is still how you'd actually build and test a change — the Render deployment is where the *finished* system lives for anyone without the project on their own computer.

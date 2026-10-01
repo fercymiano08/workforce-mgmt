@@ -40,8 +40,12 @@ php artisan demo:refresh            # rebuilds their last 4 weeks up to today (-
 
 It rebuilds their schedules, attendance and timesheets through the system's own rules (Monday-Saturday work
 days, holidays and approved leave skipped, Present/Late by the kiosk's grace rule, hours counted like the
-kiosk counts them, timesheets moved through the real workflow). Employees registered through the system are
-never touched. Back up first: `pg_dump -U postgres -d workforce_mgnt -f before-demo.sql` (keep the file outside the project, and never commit it).
+kiosk counts them, timesheets moved through the real workflow), and also scatters a sparse, deterministic
+set of fresh approved leave and overtime requests across the same window - those used to be static one-time
+seed data that never advanced with "today", which left Workforce Analytics' This Week/Month filters empty
+more often than not. Employees registered through the system are never touched. Back up first:
+`pg_dump -U postgres -d workforce_mgnt -f before-demo.sql` (keep the file outside the project, and never
+commit it).
 
 ## Tests
 

@@ -64,7 +64,7 @@ Think of the system like a **restaurant**:
   → Like *one filing room* with a clearly labeled cabinet per department, not eight separate locked rooms down the hall from each other.
 
 **The flow (always):**
-Browser (frontend) → sends a request to `/api/...` → the frontend's proxy (Vite in dev / nginx in Docker) forwards it to the one Laravel backend on port 8000 → a controller in the matching domain folder handles it, following that domain's rules → Eloquent models read/write the one PostgreSQL database → sends back an answer (JSON) → frontend shows it on screen.
+Browser (frontend) → sends a request to `/api/...` → forwarded to the one Laravel backend (by Vite's proxy in dev, nginx in Docker, or directly over HTTPS to the live `workforce-api-nm7v.onrender.com` when using the public deployment) → a controller in the matching domain folder handles it, following that domain's rules → Eloquent models read/write the one PostgreSQL database → sends back an answer (JSON) → frontend shows it on screen.
 
 > If a panelist asks "how does data move?", this one sentence answers it. If they follow up with "so it's all one backend?" — yes, and that's intentional: Workforce Management is one team's domain with one consistent data model, so it's built as one cohesive, independently-deployable unit - a single microservice inside the larger E-Commerce Enterprise platform - organized internally by domain so the code stays easy to navigate, test, and hand off.
 
@@ -87,6 +87,7 @@ Browser (frontend) → sends a request to `/api/...` → the frontend's proxy (V
 - Passwords must be **8+ characters with uppercase, lowercase, and a number**.
 - Forgot password → email, then the new password, and only then is a **6-digit code (OTP)** emailed and its countdown started; valid **5 minutes**, one-time use (then request a new one).
 - Workforce Admin (admin) account **cannot** reset via forgot-password (it's the reserved owner account).
+- Separate second step: any account can switch on **two-factor sign-in** (Settings/Profile). Once it's on, a correct password does NOT hand over the token by itself - the backend emails a fresh 6-digit code and only issues the token after that code checks out. It's off by default (opt-in, per account), and it's a different code/flow from the forgot-password OTP above - one gets you a new password, the other finishes an ordinary sign-in.
 
 ## Flow 2 - Attendance with facial recognition (the kiosk)
 
@@ -135,7 +136,7 @@ Browser (frontend) → sends a request to `/api/...` → the frontend's proxy (V
 ## Flow 4 - The "brain": Analytics + AI decision support (HR only)
 
 **Plain story:**
-1. The **Analytics** page shows dashboards: who's late, attendance rates, overtime summaries, etc.
+1. The **Workforce Analytics** page has one filter - **This Week / This Month / This Year** - and that one choice drives 6 cards: Attendance Summary, Attendance Rate, Leave Trends, Overtime Hours, Department Punctuality, and Leave Type Composition. Every card has a small ⓘ in the corner that states, in plain words, exactly where its numbers came from and the formula used to get them - so if a panelist points at a number and asks "where did that come from?", you tap the ⓘ and the card answers for you. There's also an Export/Print button that turns the page into a handout, formulas and all.
 2. The **AI Decision Support** page looks at the last 30 days and gives HR **findings and recommendations** (e.g. "3 late arrivals in 30 days", "overtime above 1 hour a day"). **Fixed rules decide the findings and the Workforce Health Score** (the page shows how the score is calculated).
 3. When online, **Google Gemini writes the explanation** in plain language. It cannot add, drop or re-rate a finding, and a sentence with a number that is not in the data is thrown away.
 4. When **Gemini is unavailable** (no internet, no key, Google busy, or the free daily limit used up), the rules' own wording is shown: **the same findings and the same score**, with a banner saying why.
@@ -150,6 +151,7 @@ Use these as quick talking points. Say each in ONE breath.
 **Everyone uses:**
 - **Login / Auth** - "The gateway. Logs people in, gives a token, and blocks attackers with a lockout. An employee can also switch on a second sign-in step: the password alone does not get a token, a one-time code does."
 - **Attendance** - "Who was present and when. Clock-in/out records for everyone, with alerts if something's wrong."
+- **Corrections** *(inside Time & Attendance)* - "For the two times the kiosk record is wrong: you worked past your shift, or the kiosk just didn't catch your clock-in/out. File it with a photo as proof; HR checks it against the kiosk's own punch records before deciding."
 - **Leave** - "Time off requests. Employees file, HR approves/rejects, and balances are updated."
 - **Overtime** - "Extra hours worked. Employees request, HR opens each one and approves or rejects it."
 - **Timesheets** - "A weekly summary of hours with a live 'This Week' popup and a history table. Employees submit after the week ends, HR approves or rejects with a reason."
@@ -158,7 +160,7 @@ Use these as quick talking points. Say each in ONE breath.
 - **Employees / Registration** - "The company directory. HR adds, edits, and removes employees, and each one automatically gets a login account."
 - **Face Registration** - "Turns a person's face into a 128-number face print so the kiosk can recognize them."
 - **Departments & Roles** - "The org chart - what departments exist and what job titles belong to them."
-- **Analytics** - "Charts and dashboards summarizing attendance, overtime, etc."
+- **Analytics** - "One filter - This Week/Month/Year - driving 6 cards (attendance, attendance rate, leave, overtime, department punctuality, leave mix), and every card states its own data source and formula so nobody has to take the number on faith."
 - **AI Decision Support** - "An assistant that points out problems in the data and lets HR act on them."
 - **Reports** - "Printable documents - weekly timesheet summaries, attendance summaries, and more."
 - **Kiosk Setup/Controls** - "Configure the door device: name, location, PIN, active on/off."
@@ -180,6 +182,7 @@ These are the exact things the panel may probe. Say them confidently.
 | **Password hashing (bcrypt)** | Passwords are scrambled before storage, so even the database can't reveal the original. |
 | **Role-based access (RBAC)** | Employees and Workforce Admin see different menus. Admin-only routes are protected server-side. |
 | **OTP reset** | Forgot password asks for the email and the new password first, then sends a 6-digit code that expires in 5 minutes and works only once. |
+| **Two-factor sign-in** | An optional second step any account can switch on: after the password is checked, no token is issued yet - a 6-digit code is emailed and must be entered before the login finishes. Off by default; separate from the OTP reset above. |
 | **Login lockout** | 5 wrong attempts = 60-second cool-down (stops guessing/brute-force). |
 | **Password policy** | Min 8 + upper + lower + number (enforced on change, reset, and registration). |
 | **Throttling** | Forgot-password and reset endpoints are throttled (limited requests per minute). |
@@ -211,6 +214,8 @@ These are the exact things the panel may probe. Say them confidently.
 ---
 
 # PART 8 - Demo-day script (practice out loud)
+
+**Live, public link (no laptop needed):** `https://workforce-management-qty0.onrender.com` - the real system, hosted on Render, reachable from any browser. It talks to the API at `https://workforce-api-nm7v.onrender.com`. Same demo accounts below work there too. A scheduled ping keeps the free-tier API from falling asleep, but open it once before you go on just in case - a cold start can take 30-60 seconds.
 
 **Demo accounts (they exist in your database):**
 - Workforce Admin: `admin@workforcepro.com` / `Admin@123`
@@ -262,6 +267,9 @@ A: Face recognition runs locally in the browser, AI falls back to rule-based mod
 **Q: Why can't the admin reset their own password?**
 A: The admin account is a fixed reserved credential. Employees use the OTP email flow; the admin account is deliberately protected from self-reset.
 
+**Q: How do OTP and two-factor emails actually get delivered now that this is live on the internet, not just on your laptop?**
+A: Through Brevo's SMTP relay, on port 2525 specifically - Render's free web-service plan blocks the usual outbound SMTP ports (25, 465, 587), so Gmail's SMTP simply can't connect from there, and 2525 is the one Brevo port that stays open. Locally, in dev, it's fine to point `MAIL_MAILER` at Gmail or just log emails to a file instead - only the live Render deployment needs this.
+
 **Q: How do you prevent someone guessing passwords?**
 A: Five failed attempts trigger a 60-second lockout, plus the password policy and bcrypt hashing.
 
@@ -278,7 +286,7 @@ A: The face doesn't match, so the kiosk shows an "Identity Verification Failed" 
 A: Every action makes several requests and each one boots the Laravel framework (about half a second on a low-power laptop CPU), locally run on PHP's built-in single-request server. We measured it. We cut the load in code (light employee lists, bounded notification batches, concurrent alert pushes, short timeouts on external calls) — and the pre-consolidation performance burden (identity hops to `core`, replica sync) is simply gone, since it's one in-process backend now. The remaining slowness is mostly the laptop (a low-power CPU, limited free RAM, running on battery) and the one-request-at-a-time local server, not a bug; Docker's multiple workers help.
 
 **Q: Where is data stored?**
-A: In **one** PostgreSQL database, `workforce_mgnt` — 28 tables: 19 business tables (users, employees, attendance, shifts, leaves, timesheets, notifications, security events, settings, AI insights...) plus 9 Laravel framework tables. The database used to be split into 8 separate databases, one per service, with synced read-only copies so services could see each other's data; after consolidation every table has exactly one copy, and any domain that needs another domain's data just queries the real table in the same database.
+A: In **one** PostgreSQL database, `workforce_mgnt` — 29 tables: 20 business tables (users, employees, attendance, shifts, leaves, timesheets, notifications, security events, settings, two-factor challenges, AI insights...) plus 9 Laravel framework tables, built from 53 migrations. The database used to be split into 8 separate databases, one per service, with synced read-only copies so services could see each other's data; after consolidation every table has exactly one copy, and any domain that needs another domain's data just queries the real table in the same database.
 
 ---
 
@@ -318,7 +326,7 @@ The "scariest" architecture question — and your answer is actually a strength,
                 │  ┌──────────┐┌──────────┐┌──────────┐┌──────────┐        │
                 │  │ Identity ││Attendance││Scheduling││ Time-off │  ...   │
                 │  └──────────┘└──────────┘└──────────┘└──────────┘        │
-                │   (8 domain folders: routes + controllers + models -    │
+                │   (9 domain folders: routes + controllers + models -    │
                 │    grouped by topic, not separately deployed)           │
                 └───────────────────────────┬──────────────────────────────┘
                                              ▼
@@ -349,9 +357,9 @@ The "scariest" architecture question — and your answer is actually a strength,
 - **Splitting Workforce Management into 8 services added cost with no benefit.** Nothing in this system needs independent scaling (attendance doesn't get 10x the traffic of payroll), a different release schedule (we ship them all together anyway), or a different team owning each piece (it's one team). Splitting it gave us 8 databases to keep in sync, a background job copying "replica" tables so services could see each other's data, and network calls between pieces of the SAME domain — pure overhead.
 - **The real microservice boundary is one level up.** Workforce Management as a WHOLE is the right unit to separate from Orders, Inventory, Customers, and the other subsystems of the e-commerce platform — those genuinely are different domains, likely different teams, and could genuinely need independent scaling or release schedules. That's where the microservices pattern earns its keep.
 - **The fix was mechanical, not a rewrite:** the 8 domains' routes, controllers, and models moved into one Laravel app's folders, the 8 databases merged into one (`workforce_mgnt`), and the inter-service HTTP glue (SERVICE_TOKEN, snapshot sync, `/internal/*` routes) was deleted because nothing needed it anymore.
-- **Every business-rule test survived.** Consolidation only removed tests that existed purely to check the removed inter-service HTTP transport (e.g. "does service A correctly call service B's internal API"). Every test that checks an actual business rule (attendance rules, leave balances, payroll math, security lockouts, etc.) was kept, and the suite has grown since with new features (early-leave reasons, audit logging, timesheet history) to **385 tests, 1272 assertions, all passing today**.
+- **Every business-rule test survived.** Consolidation only removed tests that existed purely to check the removed inter-service HTTP transport (e.g. "does service A correctly call service B's internal API"). Every test that checks an actual business rule (attendance rules, leave balances, payroll math, security lockouts, etc.) was kept, and the suite has grown since with new features (early-leave reasons, audit logging, timesheet history, corrections, two-factor sign-in, the rebuilt analytics) to **476 tests, 2207 assertions, all passing today**.
 
-## How the 8 domains stay organized without 8 databases
+## How the 9 domains stay organized without 9 databases
 
 Inside the one Laravel app, each domain is just a folder grouping: its own routes file, its own controllers, its own Eloquent models - all pointed at the same `workforce_mgnt` database. Need attendance data while approving a leave request? It's a normal Eloquent relationship or a query in the same database - no HTTP call, no token, no waiting for a sync job. That's the entire "how do the pieces talk to each other" question now: they don't need to talk, because they're already in the same process reading the same tables.
 
@@ -386,12 +394,13 @@ Use this as a rapid-fire review. One line = one idea. Cover the right column, th
 | **Face Registration** | Turns a face into a 128-number print | Stores `face_image` + `face_descriptor` JSON per employee in `employees`, in the one database; list responses omit both and the Edit modal fetches them on demand | Lets the kiosk verify identity without passwords or staff |
 | **Attendance (kiosk)** | The clock-in/out terminal | Face match (< 0.6 distance) + server-enforced rules (shift required, Present ≤ 15 min / Late after, reason for early leave) → one row in `attendance` | Accurate, tamper-resistant attendance with zero manual work |
 | **HR Attendance** | Fix/correct daily records | Approve, edit, delete rows; computed Late/Present/Absent | Keeps records honest; the audit trail source of truth |
+| **Corrections** | Employee-filed fix for a wrong kiosk record | Employee files for "worked past shift" or "kiosk missed my clock-in/out" with photo proof → HR compares it to the kiosk's own punch record and approves (entering the final time by hand) or rejects | Lets a real mistake get fixed without just taking the employee's word for it |
 | **Leave** | Time-off requests | Apply (Pending) → HR Approve/Reject → deducts balance → notify | Balances stay consistent; approved leave stops "Absent" flags |
 | **Overtime** | Extra hours tracking | Same lifecycle as leave, PLUS reconciliation pushes approved OT into attendance + timesheets | Payroll numbers agree across every page |
 | **Shifts/Schedules** | Who works when | Templates + generated/edited assignments in `shift_schedules` | Drives kiosk validation, Late/Present math, coverage analysis |
 | **Timesheets** | Weekly hour summaries + a live "This Week" popup + full history | Auto-generated from attendance → "This Week" opens a live per-day breakdown; employee submits (or auto-submitted Monday noon) → HR approves / rejects with a reason → sent to payroll once; hours freeze after submitting | Payroll-friendly, auditable, no manual summing |
 | **Dashboard** | Today's numbers at a glance | Reads cached aggregates + live counts | Manager sees the company in 5 seconds |
-| **Analytics** | Deep trend charts | `AnalyticsService` pre-computes 6 JSON sections into `analytics` table | Instant chart loads; heavy math runs once |
+| **Analytics** | Deep trend charts, each one self-explaining | One This Week/Month/Year filter drives 6 cards (Attendance Summary, Attendance Rate, Leave Trends, Overtime Hours, Department Punctuality, Leave Type Composition); `AnalyticsService` computes each card's numbers AND its plain-English data-source/formula text, shown via an ⓘ popover and printed inline on export | A panelist asking "where did this number come from?" gets an immediate, confident answer straight off the card |
 | **Reports** | Printable/CSV outputs | Reads live data + formats via `reportHelpers.js` | Proof and paperwork done from one button |
 | **AI Decision Support** | AI insights + one-click actions | Rules build the findings and the score from 30 days of data → Gemini only words them (rule wording if it is unavailable) → decision queue | Flags problems HR would miss; actions reuse normal endpoints |
 | **Security Events** | Log of suspicious kiosk activity | `face_mismatch`/`pin_failed` stored Open → HR resolves/escalates | Buddy-punching is caught and reviewable |
@@ -427,7 +436,8 @@ Use this as a rapid-fire review. One line = one idea. Cover the right column, th
 
 ## Architecture (6-12)
 6. How does data move? → Page → api.js → the frontend's proxy forwards it to the one Laravel backend on port 8000 → Controller in the matching domain folder → Eloquent → the one PostgreSQL database → JSON → screen.
-7a. Is Docker used? → Yes, as an alternative way to run the whole system. Docker Compose starts 4 containers: PostgreSQL, the app (Laravel), a scheduler, and the frontend (nginx). No features changed (only a few small bug fixes found while testing); Docker only changes how it is built and started. It targets development/demonstration on one machine — no cloud, no HTTPS, no CI/CD yet.
+7a. Is Docker used? → Yes, two ways. Locally, Docker Compose starts 4 containers: PostgreSQL, the app (Laravel), a scheduler, and the frontend (nginx) - one machine, no cloud needed. And that same backend Docker image is what Render builds and runs for the **live public deployment** (see Q7b) - so "Dockerized" isn't just a local convenience here, it's the actual production container. No features changed by using Docker either way; it only changes how the system is built and started.
+7b. Is this deployed anywhere real, or only local? → Yes - it's live on Render, publicly reachable from any browser, not just a local/Docker demo. Backend: `workforce-api-nm7v.onrender.com` (a Docker web service, built from `render.yaml`, with HTTPS that Render issues automatically). Frontend: `workforce-management-qty0.onrender.com` (a static site). There's no CI/CD pipeline running tests on push yet - just a small scheduled ping (`.github/workflows/keep-awake.yml`) that hits the API every 5 minutes so Render's free tier doesn't let it fall asleep between demos.
 7. Why so few running programs? → Frontend (5173) + one Laravel backend on port 8000 + one scheduler, all against one PostgreSQL database (5432). That's 3 processes plus the database — down from an earlier design with 8 separate services, because Workforce Management is one cohesive domain, not eight.
 8. What is a token? → ID badge issued at login by the backend, shown on every request, validated by the same backend, destroyed at logout.
 9. What is middleware? → Bouncer that checks token + role before the controller runs.
@@ -436,13 +446,13 @@ Use this as a rapid-fire review. One line = one idea. Cover the right column, th
 12. Why did we pick each tech? → React=fast UI, Laravel=secure backend, PostgreSQL=reliable relational database, Gemini=smart insights.
 
 ## Database (13-19)
-13. How many tables? → 28 (19 business + 9 Laravel plumbing). The 19 business tables include the newest: `early_clock_outs` (early-leave reasons), `attendance_adjustments` (corrections with photo proof) and `audit_events` (the audit trail).
+13. How many tables? → 29 (20 business + 9 Laravel plumbing), built from 53 migrations. The business tables include the newest: `early_clock_outs` (early-leave reasons), `attendance_adjustments` (corrections with photo proof), `audit_events` (the audit trail), and `two_factor_challenges` (the emailed-code second sign-in step).
 14. Which table is most important? → `employees` - everything links by `employee_id`.
 15. What is a primary key? → Unique row ID (e.g. `EMP20260001`).
 16. What is a foreign key? → A column pointing to another table's key (attendance.employee_id → employees.id).
 17. What is a JOIN? → Combining two tables on their key to show related data together.
 18. Why JSON columns? → Flexible config (leave_balances, kiosk, ai_resolved_insights).
-19. How many employees/attendance rows are in the demo? → 10 seeded demo employees (plus the admin/employee demo accounts), with attendance rows generated from their schedules.
+19. How many employees/attendance rows are in the demo? → 10 seeded demo employees (plus the admin/employee demo accounts), with attendance rows generated from their schedules. Leave and overtime requests are seeded the same rolling way - a sparse, deterministic scatter of approved requests that advances with "today" every time `php artisan demo:refresh` runs - so Analytics and the AI page never come up empty just because the demo is being run on a different day than it was first seeded.
 
 ## Attendance rules (20-26)
 20. When is someone Late? → Clock-in more than 15 min after shift start (08:15:01 or later for an 08:00 shift). The server decides, from its own clock.
@@ -462,7 +472,7 @@ Use this as a rapid-fire review. One line = one idea. Cover the right column, th
 29. What is reconciliation (OT)? → Approved OT hours copied into attendance + timesheet so payroll agrees.
 30. How is a timesheet born? → Auto-generated from that week's attendance rows.
 31. Who submits/approves timesheets? → Employee submits own; HR approves/rejects.
-32. Can an employee fix a missing clock-out? → No - only HR corrects records.
+32. Can an employee fix a missing clock-out? → Not directly - only HR edits the actual record. But the employee can file a **Correction** request (worked past shift, or the kiosk missed the clock-in/out) with a photo as proof, and HR decides it against the kiosk's own punch data.
 33. What's a "remind me to clock out"? → A self-nudge, max 1 per person per day.
 
 ## Security (34-41)
@@ -481,7 +491,7 @@ Use this as a rapid-fire review. One line = one idea. Cover the right column, th
 44. What 4 things does AI return? → healthScore, insights, decisionQueue, source.
 45. What actions can HR take in one click? → Approve/reject leave & OT, resolve security events.
 46. Why cached analytics? → Heavy math runs once via AnalyticsService; charts stay instant.
-47. What are the 5 analytics sections? → attendance_trend, department_productivity, leave_trend, overtime_summary, punctuality_score — computed by the AnalyticsService in the analytics domain, reading the same single database.
+47. What are the 6 Workforce Analytics cards? → Attendance Summary (present-on-time/present-late/early-leave/absent, as a pie), Attendance Rate (present days ÷ scheduled days, approved leave excluded from "scheduled"), Leave Trends (approved leave days by type, stacked bars), Overtime Hours (total overtime per period, a line chart), Department Punctuality (on-time rate ranked by department only - never by individual name, a deliberate privacy choice), and Leave Type Composition (share of APPROVED leave requests by type, a donut - pending/rejected/cancelled excluded). One This Week/Month/Year filter drives all 6; each card's ⓘ states its own data source and formula. Computed by the AnalyticsService, reading the same single database.
 
 ## People & registry (48-50)
 48. Who are the demo logins? → admin@workforcepro.com/Admin@123 and employee@workforcepro.com/Employee@123.
@@ -500,12 +510,12 @@ Use this as a rapid-fire review. One line = one idea. Cover the right column, th
 
 **The 5 things to remember:**
 1. **Image** = the packed recipe; **container** = that recipe running. (`Dockerfile` builds an image.)
-2. **`docker-compose.yml`** = the conductor's sheet that starts all **4 containers** in order: 1 PostgreSQL, 1 Laravel backend (all 8 domains), 1 scheduler (same backend image, running the scheduled jobs), 1 frontend (React + nginx).
+2. **`docker-compose.yml`** = the conductor's sheet that starts all **4 containers** in order: 1 PostgreSQL, 1 Laravel backend (all 9 domains), 1 scheduler (same backend image, running the scheduled jobs), 1 frontend (React + nginx).
 3. **One command** starts everything: `docker compose up -d --build`. It builds the images, creates the one `workforce_mgnt` database the first time, and runs the migrations.
 4. **Data survives** in a volume (`down` keeps it, `down -v` erases it). Docker's database is **separate** from the local one the scripts use.
 5. **Docker keeps a copy of the code** — after any change, rebuild with `--build`.
 
-**Say this if asked:** *"Docker lets us start the whole system, all 4 parts, with one command on any laptop without installing PHP, Node or PostgreSQL. It doesn't change any feature. It's a demo/dev setup, not production hosting."*
+**Say this if asked:** *"Docker lets us start the whole system, all 4 parts, with one command on any laptop without installing PHP, Node or PostgreSQL. It doesn't change any feature. Locally it's our demo/dev setup - and the same backend Docker image is also what's actually running live on Render right now, so Docker isn't just a local convenience here."*
 
 **Full explanation, file by file:** `00 - Start Here - Absolute Beginner Guide.md` → Section 10. **How to run it:** `activator-deactivator.md` → Way 2.
 

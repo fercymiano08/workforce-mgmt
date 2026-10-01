@@ -10,7 +10,7 @@ Everything Render needs is declared in `render.yaml`, so there is no dashboard c
 | Laravel API | Render web service (Docker) | free tier |
 | Scheduler | inside the API container, `schedule:work` | free |
 | PostgreSQL | Render's built-in Postgres | free **for 30 days** - see below |
-| Keep-awake ping | GitHub Actions, every 5 min | free |
+| Keep-awake ping | UptimeRobot, every 5 min | free |
 
 ---
 
@@ -50,7 +50,7 @@ fallback instead, so nothing breaks.
    | Name | What it is |
    |---|---|
    | `workforce-api` | the Laravel API, with the scheduler running inside it |
-   | `workforce-frontend` | the React app |
+   | `workforce-management` | the React app |
    | `workforce-db` | the PostgreSQL database |
 
 5. Fill in the two boxes it asks for: **APP_KEY** (from step 1b) and **GEMINI_API_KEY** (optional).
@@ -69,8 +69,10 @@ database. The first build takes about 5-8 minutes; the **Events** tab shows each
    | `GEMINI_API_KEY` | optional, from <https://aistudio.google.com>; blank is fine |
 
    Go to **workforce-api -> Environment -> Add Environment Variable**, add each one, then hit
-   **Save Changes** and **Restart Service** (or just redeploy). The entrypoint runs all 51
-   migrations and the demo seed on boot, so the app comes up fully populated.
+   **Save Changes** and **Restart Service** (or just redeploy). The entrypoint runs all 53
+   migrations, the demo seed, and `demo:refresh --close-today` on boot, so the app comes up fully
+   populated with attendance, leave and overtime data that already looks like today, not a stale
+   snapshot from whenever the database was first created.
 
    These three live in the dashboard rather than in `render.yaml` on purpose. Render's
    `fromDatabase` and environment-group bindings were dropped without warning when this Blueprint
@@ -78,9 +80,11 @@ database. The first build takes about 5-8 minutes; the **Events** tab shows each
    a service that looked perfectly healthy and failed every request. A value typed into the
    dashboard cannot be lost that way.
 
-7. When it finishes, open the `workforce-frontend` service -> the link at the top of the page
-   (`https://workforce-frontend.onrender.com`) **is your public app.** That is the URL for your
-   slides, your QR code and your panel.
+7. When it finishes, open the `workforce-management` service -> the link at the top of the page
+   **is your public app.** That is the URL for your slides, your QR code and your panel. The real
+   one right now is `https://workforce-management-qty0.onrender.com` - Render appended `-qty0`
+   because the plain name was already taken (see the next section), so check the dashboard rather
+   than assuming the un-suffixed name still works.
 
 ### If a service name gets a suffix
 
@@ -119,14 +123,17 @@ Check in this order, so you find a problem while you still have time:
 
 ## 4. Refreshing the demo data before you present
 
-The demo employees' schedules, attendance and timesheets are built by the seeders on every
-deploy, so a redeploy is a reset button:
+The demo employees' schedules, attendance, timesheets, leave and overtime are all rebuilt by
+`demo:refresh --close-today` on every deploy (it also runs on its own every night at 00:05 Manila
+time, `routes/console.php`), so a redeploy is a reset button:
 
 **Render dashboard -> `workforce-api` -> Manual Deploy -> Deploy Now**
 
 Do this the morning of the defense. It re-runs the migrations and rebuilds the last weeks of demo
-data up to today, and it undoes anything a rehearsal left behind. (Live punches you make *during*
-the defense are also reset by a redeploy - so do not redeploy while you are presenting.)
+data up to today - leave and overtime requests included, so Workforce Analytics' This Week/Month/
+Year filters all have something real to show, not just the attendance trend - and it undoes
+anything a rehearsal left behind. (Live punches you make *during* the defense are also reset by a
+redeploy - so do not redeploy while you are presenting.)
 
 ---
 
@@ -151,7 +158,7 @@ employer looks at the link more than a month from now. Fix it once, in about 10 
 3. Delete the five `DB_*` values that were pointing at `workforce-db` (Render shows them as coming
    from the database, which locks them) - if Render will not let you edit them, delete the
    `workforce-db` database first, then add the Neon values.
-4. **Manual Deploy.** `docker/backend-entrypoint.sh` runs all 51 migrations against the new
+4. **Manual Deploy.** `docker/backend-entrypoint.sh` runs all 53 migrations against the new
    database and seeds the demo data, so the app comes up populated.
 5. Delete the now-unused `workforce-db` database, and remove the `databases:` block plus the
    `fromDatabase:` entries from `render.yaml`.
@@ -209,14 +216,15 @@ notices when it is out of date, so you do not have to tell anyone to hard-refres
 
 | Symptom | Cause and fix |
 |---|---|
-| First load of the day takes ~1 minute, then it is fast | The free API was asleep. `.github/workflows/keep-awake.yml` pings it every 5 minutes to prevent this; check that the workflow exists under the **Actions** tab (scheduled workflows only run from the default branch). |
+| First load of the day takes ~1 minute, then it is fast | The free API was asleep. An UptimeRobot monitor (uptimerobot.com, free account) pinging `https://<api-host>/up` every 5 minutes prevents this - set one up if you have not. `.github/workflows/keep-awake.yml` does the same thing in theory, but GitHub's own scheduler is not reliable enough to depend on alone: checked live, it fired every 3-8 hours instead of every 5 minutes, and went silent for over a day straight. Leave the workflow in place as a harmless backup; do not rely on it as the only pinger. |
+| Login works, but "reset your password" or the 2FA sign-in code never arrives, and Brevo's own dashboard shows no send attempt at all | Check `MAIL_MAILER` on the `workforce-api` Environment tab is `smtp`, not `brevo`. A custom `brevo` mailer exists in `config/mail.php` as an alternative, but selecting it by name with nothing else changed used to default its port to Brevo's usual 587 - which Render's free plan blocks outbound, so the connection never opens and nothing reaches Brevo or Gmail. That default now points at 2525 too, but `smtp` pointed straight at `MAIL_HOST`/`MAIL_PORT` (the setup in section 6) is the one this Blueprint is built around - keep it. |
 | Login says `Unauthenticated` or the console shows `blocked by CORS policy ... No 'Access-Control-Allow-Origin' header` | `VITE_API_URL` is wrong. It must be the API hostname Render gave the `api` service **including the trailing `/api`** (e.g. `https://<api-host>/api`). Dropping the `/api` makes the app request `/auth/login` instead of `/api/auth/login`; that 404 is returned without CORS headers, so the browser blames CORS and login never works. |
 | Login says `Unauthenticated` but the request URL in the Network tab is correct | The token was rejected, not lost. The API is running an older build than the frontend - redeploy the API and sign in again. |
 | API log: `No application encryption key` | `APP_KEY` was pasted wrong. It must be the full `base64:...` line, with the prefix. |
 | API log: `could not translate host name` or connection refused | The database is not ready yet, or `DB_HOST` is not Render's internal host. A second deploy fixes a race during the very first apply. |
 | Kiosk photo upload fails or the page hangs | The free instance has 512 MB. A 20 MB base64 photo is a lot for it. Take a smaller photo, or use an employee whose face is already registered. |
 | Build fails in the `npm ci` step | `frontend/package-lock.json` must be committed. It is. If you added a dependency without committing the lock file, that is the cause. |
-| `workforce-frontend` 404s on a deep link such as `/attendance` | The `routes:` rewrite in `render.yaml` is missing. Put it back and redeploy. |
+| `workforce-management` 404s on a deep link such as `/attendance` | The `routes:` rewrite in `render.yaml` is missing. Put it back and redeploy. |
 
 ---
 

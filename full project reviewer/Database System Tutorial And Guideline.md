@@ -14,7 +14,7 @@
 2. [Connection Details](#2-connection-details)
 3. [The Tools](#3-the-tools)
 4. [Database Concepts You Need To Know](#4-database-concepts-you-need-to-know)
-5. [All 28 Tables Explained (19 business + 9 framework)](#5-all-28-tables-explained-19-business--9-framework)
+5. [All 29 Tables Explained (20 business + 9 framework)](#5-all-29-tables-explained-20-business--9-framework)
 6. [Relationships Map](#6-relationships-map)
 7. [pgAdmin 4 Walkthrough](#7-pgadmin-4-walkthrough)
 8. [Essential SQL Queries (Cheat Sheet)](#8-essential-sql-queries-cheat-sheet)
@@ -30,20 +30,21 @@
 |----------|-------|
 | Database Engine | PostgreSQL 18 |
 | Database Name | **One database: `workforce_mgnt`** (the system was originally split into 8 databases, one per microservice; it was consolidated back into a single Laravel monolith + single database before the defense — see the note below) |
-| Total Tables | 28 tables in `workforce_mgnt`: 19 "business" tables + 9 Laravel framework tables. Every table has exactly **one** copy — there are no more read-only replica tables and nothing to keep in sync |
-| Managed By | One flat set of Laravel 13 migrations (`backend/app/database/migrations/`) + pgAdmin 4 |
+| Total Tables | 29 tables in `workforce_mgnt`: 20 "business" tables + 9 Laravel framework tables. Every table has exactly **one** copy — there are no more read-only replica tables and nothing to keep in sync |
+| Managed By | One flat set of Laravel 13 migrations (`backend/app/database/migrations/`, 53 migration files) + pgAdmin 4 |
 | Runs On | Local machine (`127.0.0.1:5432`), one PostgreSQL server hosting the one database |
 | Runs On (Docker) | The `postgres` container, published on the host at **`127.0.0.1:5433`**, hosting the same single database (data in the `pgdata` Docker volume). It is a **separate** server from the local one on 5432; the password is in the git-ignored `.env` |
+| Runs On (Production) | The system is now also deployed live on Render: the Laravel API runs as the `workforce-api-nm7v.onrender.com` Docker web service, the React app as the `workforce-management-qty0.onrender.com` static site, and the database is Render's own managed PostgreSQL instance (`workforce-db`) rather than the local machine or the Docker Compose `postgres` container. Same schema, same migrations, same single `workforce_mgnt`-equivalent database — just a different host, reached over Render's internal network via `DB_HOST`/`DB_URL` instead of `127.0.0.1` |
 
 The database stores everything the system knows: employee records, attendance history, leave requests, shift schedules, timesheets, security events, and app configuration — all in one place, grouped by domain.
 
 > **Why one database?** The Workforce Management System is itself just one microservice inside a larger E-Commerce Enterprise platform under development. Splitting *its own* internals into 8 further microservices/databases was applying the pattern one level too deep, and it was corrected before the defense. With one database, normal foreign keys and joins work directly across every domain — e.g. a timesheet query can join straight to `attendance` and `employees` in a single SQL statement — with no replication lag and no risk of a replica going stale.
 
-The 19 business tables are grouped below by domain. This is a **logical grouping only** — there is no schema or database boundary between them; every table lives in the same `workforce_mgnt` database and can be joined to any other with a normal SQL `JOIN`.
+The 20 business tables are grouped below by domain. This is a **logical grouping only** — there is no schema or database boundary between them; every table lives in the same `workforce_mgnt` database and can be joined to any other with a normal SQL `JOIN`.
 
 | Domain | Tables |
 |--------|--------|
-| Identity | `users`, `employees`, `departments`, `roles`, `audit_events` |
+| Identity | `users`, `employees`, `departments`, `roles`, `audit_events`, `two_factor_challenges` |
 | Attendance | `attendance`, `early_clock_outs`, `attendance_adjustments`, `security_events` |
 | Scheduling | `shift_definitions`, `shift_schedules`, `holidays`, `schedule_settings` |
 | Time-off | `leaves`, `overtime_requests` |
@@ -68,6 +69,8 @@ DB_PASSWORD=<your-database-password>   # set in backend/app/.env, never committe
 ```
 
 To inspect the data from pgAdmin 4 or `psql`, connect to the same server (`127.0.0.1:5432`, same username/password) and open the `workforce_mgnt` database.
+
+> **Production note:** the live Render deployment does not use this local `.env` at all — the `workforce-api-nm7v.onrender.com` web service gets its own `DB_HOST`/`DB_PORT`/`DB_DATABASE`/`DB_USERNAME`/`DB_PASSWORD` (or a single `DB_URL`) from Render's managed `workforce-db` Postgres instance, set as environment variables on the Render dashboard, not committed anywhere. Everything else in this guide (table shapes, relationships, SQL) applies identically there — it's the same schema on a different host.
 
 ---
 
@@ -105,17 +108,17 @@ Some columns (like `settings.kiosk`) store flexible structured data as JSON inst
 
 ---
 
-## 5. All 28 Tables Explained (19 business + 9 framework)
+## 5. All 29 Tables Explained (20 business + 9 framework)
 
 > The tables below are described once, logically — each still means the same thing it always did, and every one lives as a single, real copy in the one `workforce_mgnt` database (see the domain grouping in Section 1). Table shapes (columns, types, relationships) are unchanged from the earlier multi-database design.
 
-### Core Business Tables (19) — most appear in the original ERD; `early_clock_outs`, `attendance_adjustments` and `audit_events` were added later
+### Core Business Tables (20) — most appear in the original ERD; `early_clock_outs`, `attendance_adjustments`, `audit_events` and `two_factor_challenges` were added later
 
 #### People & Organization
 
 | Table | Purpose | Key Columns |
 |-------|---------|-------------|
-| `users` | Login accounts for the Workforce Admin and Employees | `id`, `employee_id`, `email`, `password`, `role`, `role_label` |
+| `users` | Login accounts for the Workforce Admin and Employees | `id`, `employee_id`, `email`, `password`, `role`, `role_label`, `two_factor_enabled` |
 | `employees` | Full employee profiles including face photo + descriptor for kiosk recognition | `id`, `first_name`, `last_name`, `department`, `position`, `face_image`, `face_descriptor`, `leave_balances` |
 | `departments` | Company departments | `id`, `name`, `head`, `budget`, `employee_count` |
 | `roles` | Job titles per department — powers the Position dropdown | `id`, `department_id` (FK), `name` |
@@ -153,6 +156,7 @@ Some columns (like `settings.kiosk`) store flexible structured data as JSON inst
 |-------|---------|-------------|
 | `notifications` | In-app alerts shown in the bell dropdown | `id`, `title`, `message`, `employee_id` (nullable FK), `read` |
 | `security_events` | Buddy-punching attempts: face mismatches, failed PINs. A face mismatch also creates an admin notification (`security_face_mismatch`) | `id`, `type`, `message`, `employee_id` (nullable FK), `status` |
+| `two_factor_challenges` | Two-factor sign-in by emailed 6-digit code, switched on per account via `users.two_factor_enabled`. One live challenge per user at most (`user_id` is unique, with a real `FOREIGN KEY` + cascade delete to `users.id`) — signing in again supersedes the old code. The code is stored hashed, like a password-reset code, and `attempts` caps guessing on a single challenge | `id`, `user_id` (FK, unique), `code`, `attempts`, `expires_at` |
 | `audit_events` | Append-only audit trail: who did what, when, with before/after snapshots (read-only in the admin UI) | `id`, `service`, `event`, `entity_type`, `actor`, `before`, `after` |
 | `settings` | Single-row app config: company info, kiosk PIN hash, AI memory, and the **Time Manager** attendance-timing rules (late grace period, no-show/absent alert threshold, lunch/break rules, early-leave policy) — these used to be hardcoded constants and are now admin-configurable here | `company`, `kiosk`, `ai_resolved_insights`, `system` |
 | `analytics` | Cached dashboard statistics | `attendance_trend`, `punctuality_score`, etc. |
@@ -177,6 +181,7 @@ employees  1 --- *  security_events     security_events.employee_id (nullable)
 attendance 1 --- 0..1 early_clock_outs  early_clock_outs.attendance_id (also employee_id)
 departments 1 -- *  roles               roles.department_id
 shift_definitions 1 - * shift_schedules shift_schedules.shift_id
+users      1 --- 0..1 two_factor_challenges  two_factor_challenges.user_id
 ```
 
 **Logical links (no hard foreign key):**
@@ -185,7 +190,7 @@ shift_definitions 1 - * shift_schedules shift_schedules.shift_id
 
 **`employees` is the central entity** — every module connects to it via `employee_id`.
 
-> **Note:** these relationships are still mostly enforced by application logic rather than hard PostgreSQL `FOREIGN KEY` constraints (checked with `pg_constraint` — only `roles.department_id → departments.id` declares one), which is an ordinary application-level design choice, not a workaround for anything. Now that everything lives in one `workforce_mgnt` database again, every relationship above is a normal, live `JOIN` — no cross-database boundary, no replica tables, and nothing to sync.
+> **Note:** these relationships are still mostly enforced by application logic rather than hard PostgreSQL `FOREIGN KEY` constraints (checked against the migrations — only `roles.department_id → departments.id` and `two_factor_challenges.user_id → users.id` declare one), which is an ordinary application-level design choice, not a workaround for anything. Now that everything lives in one `workforce_mgnt` database again, every relationship above is a normal, live `JOIN` — no cross-database boundary, no replica tables, and nothing to sync.
 
 ---
 
@@ -308,18 +313,19 @@ Note: both restore STRUCTURE only. Live data, if any, lives on the original mach
 | Likely question | Ready answer (plain) |
 |----------------|----------------------|
 | Why PostgreSQL and not MySQL? | Both work; PostgreSQL handles JSON columns and complex reporting cleanly, and it's genuinely free. Our team chose it for reliability. |
-| How many tables did you design? | 19 logical business tables + 9 Laravel framework tables = 28 tables, all in one database, `workforce_mgnt`. |
+| How many tables did you design? | 20 logical business tables + 9 Laravel framework tables = 29 tables, all in one database, `workforce_mgnt`. |
 | Why one database instead of splitting it up? | The Workforce Management System is itself one microservice inside a larger E-Commerce Enterprise platform we're building. Splitting its own internals into 8 further microservices/databases applied the pattern one level too deep, so we consolidated back into one Laravel app and one database before the defense. One database means normal foreign keys and joins work directly across every domain — e.g. a timesheet query can join straight to `attendance` and `employees` — with no replication lag and no risk of a stale replica. |
 | Which table is the most important? | `employees` — it's the center. Attendance, leaves, overtime, schedules, and timesheets all point back to it by `employee_id`, as a direct join against the one real `employees` table. |
 | How do your tables connect to each other? | Normal SQL — a `JOIN` on the shared key (usually `employee_id`), or a foreign key like `roles.department_id → departments.id`. Everything is in the same database, so there's no cross-service call or sync job involved. |
-| Do you use foreign key constraints? | Mostly enforced at the application layer rather than with hard `FOREIGN KEY` constraints (only `roles.department_id` declares one) — a normal design choice for this app, not a workaround for anything. Because everything lives in one database, every relationship in Section 6 is still a live, ordinary `JOIN`. |
+| Do you use foreign key constraints? | Mostly enforced at the application layer rather than with hard `FOREIGN KEY` constraints (only `roles.department_id` and `two_factor_challenges.user_id` declare one) — a normal design choice for this app, not a workaround for anything. Because everything lives in one database, every relationship in Section 6 is still a live, ordinary `JOIN`. |
 | What is a JOIN? | Combining two tables on their key, e.g. join `attendance` to `employees` so a report shows the person's name next to each clock-in. |
 | Why JSON columns? | For flexible data that doesn't deserve its own table: `employees.leave_balances`, `settings.kiosk`, `settings.ai_resolved_insights`, `settings.system` (the Time Manager rules). |
 | How is the database created? | One Laravel app with one flat set of migrations (`backend/app/database/migrations/`) builds every table, and one `DatabaseSeeder` (fed by JSON mock files) fills in demo data: `cd backend/app && php artisan migrate:fresh --seed`. |
 | What is an index for? | A shortcut to find rows faster, e.g. `attendance(employee_id, date)` makes the kiosk's "was this person here today?" instant. |
 | Where is the password stored? | In `backend/app/.env` as DB settings, not in code — `.env` is gitignored so secrets never reach GitHub. |
 | What would happen if a table were deleted? | Re-run `php artisan migrate:fresh --seed` inside `backend/app` to rebuild the whole database and re-fill it with demo data. |
+| Is this actually deployed anywhere, or only local? | Both. It runs locally (and in Docker Compose) for development, and it's also deployed live on Render for the defense — the API as a Docker web service, the React app as a static site, and the database as Render's own managed PostgreSQL. Same migrations, same schema, same tables either way; only the host changes. |
 
-> Strong closing line about the DB: **"Everything still hangs off `employee_id` conceptually, and now it's literal too — the 22 business tables all live in one `workforce_mgnt` database, so attendance, leaves, schedules, timesheets, and analytics can all be joined directly against `employees` with a normal SQL `JOIN`, no sync jobs or cross-service calls required."**
+> Strong closing line about the DB: **"Everything still hangs off `employee_id` conceptually, and now it's literal too — the 20 business tables all live in one `workforce_mgnt` database, so attendance, leaves, schedules, timesheets, and analytics can all be joined directly against `employees` with a normal SQL `JOIN`, no sync jobs or cross-service calls required."**
 
 ---
