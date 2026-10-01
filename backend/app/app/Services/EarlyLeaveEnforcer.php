@@ -89,10 +89,38 @@ class EarlyLeaveEnforcer
             $record->update($updates);
         }
 
+        /*
+          Only alert once per record.
+
+          notification_sent exists on the row precisely so this decision can be persisted, but it was
+          never read: applyAtPunch notified unconditionally, so re-applying the policy to the same
+          early clock-out - which is exactly what a demo data refresh does on every deploy - sent HR
+          the same alert again, brand new and unread. The badge would climb back after each deploy
+          and look like the mark-as-read button was broken.
+
+          Skipping is safe because the alert is about the punch, not about the running count: the nth
+          occurrence and the allowance above are still recomputed and still written into the
+          classification note, so only the duplicate message is suppressed.
+        */
+        if ($record->notification_sent) {
+            return $this->result($record, $nth, $allowed, $windowDays, $autoUnpaid, $needsProof);
+        }
+
         $this->notifyAdmins($record, $nth, $allowed, $windowDays, $autoUnpaid);
         $this->notifyEmployee($record, $nth, $allowed, $windowDays, $autoUnpaid, $needsProof);
         $this->flagCopycatPattern($record);
 
+        $record->update(['notification_sent' => true]);
+
+        return $this->result($record, $nth, $allowed, $windowDays, $autoUnpaid, $needsProof);
+    }
+
+    /**
+     * The punch's outcome, as the kiosk and the API return it. Split out so the alert path and the
+     * already-alerted path return exactly the same shape.
+     */
+    private function result(EarlyClockOut $record, int $nth, int $allowed, int $windowDays, bool $autoUnpaid, bool $needsProof): array
+    {
         return [
             'classification' => $record->fresh()->classification,
             'autoUnpaid' => $autoUnpaid,

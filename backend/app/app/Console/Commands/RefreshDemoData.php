@@ -214,7 +214,13 @@ class RefreshDemoData extends Command
                 $closed = $out && (! $isToday || $closeToday);
 
                 // About one day in 17 they have to leave before the end. The kiosk never refuses the punch, it
-                // asks why, and the day is scored as Early Leave with a record HR is alerted about.
+                // asks why, and the day is scored as Early Leave with a record HR can review.
+
+                // This rebuilds HISTORY on every deploy, so the record is created already marked as
+                // alerted. Firing the policy here would page HR about a punch that happened weeks
+                // ago, brand new and unread, on every single deploy - which is what kept the
+                // notification badge pinned at its highest number no matter what was read. The
+                // early clock-out still exists for HR to classify; it just does not arrive as news.
                 $earlyRoll = crc32($employeeId.'|'.$date.'|early') % 100;
                 $isEarly = $closed && $earlyRoll < 6;
                 if ($isEarly) {
@@ -243,7 +249,7 @@ class RefreshDemoData extends Command
                         'minutes_early' => (int) abs($effectiveEnd->diffInMinutes($out)),
                         'reason_code' => $reason['code'], 'reason_note' => $reason['note'],
                         'proof' => [], 'reason_status' => 'PROVIDED',
-                        'classification' => 'PENDING_REVIEW', 'notification_sent' => false,
+                        'classification' => 'PENDING_REVIEW', 'notification_sent' => true,
                     ]));
                 }
             }

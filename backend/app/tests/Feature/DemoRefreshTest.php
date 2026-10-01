@@ -12,6 +12,7 @@ use App\Models\ScheduleSetting;
 use App\Models\ShiftDefinition;
 use App\Models\ShiftSchedule;
 use App\Models\Timesheet;
+use App\Services\EarlyLeaveEnforcer;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Carbon;
 use Tests\TestCase;
@@ -108,6 +109,70 @@ class DemoRefreshTest extends TestCase
 
         // Initials instead of a borrowed picture
         $this->assertNull(Employee::find(self::DEMO)->avatar);
+    }
+
+    /**
+     * The badge-stuck-at-35 bug, kept as a regression test.
+     *
+     * demo:refresh runs on every deploy and rebuilds the demo employees' history from scratch. It used
+     * to apply the early clock-out policy to each punch it rebuilt, and that policy paged the admins
+     * every time. Because the records are deleted and recreated each run, the alerts came back new
+     * and unread - so an admin could read everything, watch the badge reach zero, and find it full
+     * again after the next deploy. Rebuilding history is not news, so nothing here alerts.
+     */
+    public function test_a_refresh_does_not_raise_fresh_alerts_about_punches_that_already_happened(): void
+    {
+        $this->artisan('demo:refresh', ['--weeks' => 3])->assertSuccessful();
+
+        $early = EarlyClockOut::where('employee_id', self::DEMO)->get();
+        $this->assertNotEmpty($early, 'the demo should still contain early clock-outs to review');
+
+        // HR still has the records to classify...
+        foreach ($early as $record) {
+            $this->assertSame('PENDING_REVIEW', $record->classification);
+        }
+        // ...but the rebuild did not page anyone about them.
+        $this->assertSame(0, Notification::where('type', 'early_clock_out')->count());
+        $this->assertSame(0, Notification::where('type', 'early_leave_auto_unpaid')->count());
+
+        // Running it again changes nothing: still no alerts, and the count does not creep up.
+        $before = Notification::count();
+        $this->artisan('demo:refresh', ['--weeks' => 3])->assertSuccessful();
+        $this->assertSame(0, Notification::where('type', 'early_clock_out')->count());
+        $this->assertLessThanOrEqual($before, Notification::count());
+    }
+
+    /**
+     * The same bug from the other end: applying the early clock-out policy to a record that has
+     * already been alerted must not alert the admins again.
+     */
+    public function test_reapplying_the_policy_to_an_already_alerted_punch_is_silent(): void
+    {
+        $this->artisan('demo:refresh', ['--weeks' => 3])->assertSuccessful();
+
+        $record = EarlyClockOut::where('employee_id', self::DEMO)->first();
+        $this->assertNotNull($record);
+
+        // A live punch is created un-alerted and alerts once.
+        $fresh = EarlyClockOut::create([
+            'id' => 'ECO999', 'attendance_id' => $record->attendance_id,
+            'employee_id' => $record->employee_id, 'employee_name' => $record->employee_name,
+            'date' => $record->date, 'scheduled_end_time' => $record->scheduled_end_time,
+            'actual_clock_out_time' => $record->actual_clock_out_time, 'minutes_early' => 30,
+            'reason_code' => 'OTHER', 'reason_note' => 'x', 'proof' => [],
+            'reason_status' => 'PROVIDED', 'classification' => 'PENDING_REVIEW',
+            'notification_sent' => false,
+        ]);
+
+        $enforcer = app(EarlyLeaveEnforcer::class);
+        $enforcer->applyAtPunch($fresh);
+        $this->assertSame(1, Notification::where('type', 'early_clock_out')->count());
+        $this->assertTrue($fresh->fresh()->notification_sent);
+
+        // Re-applying it - which a data refresh, a retry or a queued job can all do - is silent.
+        $enforcer->applyAtPunch($fresh->fresh());
+        $enforcer->applyAtPunch($fresh->fresh());
+        $this->assertSame(1, Notification::where('type', 'early_clock_out')->count());
     }
 
     public function test_notifications_about_the_replaced_records_go_but_everything_else_stays(): void

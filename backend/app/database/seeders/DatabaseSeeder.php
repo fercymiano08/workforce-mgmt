@@ -399,6 +399,25 @@ class DatabaseSeeder extends Seeder
             $data['timestamp'] = isset($data['timestamp']) && $data['timestamp']
                 ? date('Y-m-d H:i:s', strtotime($data['timestamp']) + $shiftSeconds)
                 : now();
+
+            /*
+              The read flag belongs to the person using the system, not to the fixture.
+
+              This runs on every deploy, and a plain updateOrCreate would write the mock's
+              "read": false straight back over whatever the reader had actually done. The visible
+              symptom was a notification badge stuck on 35 forever: an admin would read everything,
+              watch it fall to zero, and find 35 waiting again after the next deploy - which looks
+              exactly like the mark-as-read button being broken.
+
+              So on a row that already exists the fixture's read value is discarded and the real one
+              is left alone. Only a genuinely new notification is seeded as unread. The title, body
+              and link still refresh, so a corrected fixture reaches everyone who has not read it.
+            */
+            $existing = Notification::find($data['id']);
+            if ($existing !== null) {
+                $data['read'] = $existing->read;
+            }
+
             Notification::updateOrCreate(['id' => $data['id']], $data);
         }
     }
