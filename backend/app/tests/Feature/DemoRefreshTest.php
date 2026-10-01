@@ -63,7 +63,13 @@ class DemoRefreshTest extends TestCase
         }
         $this->assertArrayNotHasKey('2030-01-01', $shifts->all());
         $this->assertArrayNotHasKey('2030-01-09', $shifts->all());
-        $this->assertArrayHasKey('2030-01-04', $shifts->all());   // a Saturday is a work day
+        // A Saturday is a work day - checked as "at least one Saturday in the window", not one hardcoded
+        // date: demo:refresh also scatters fresh approved leave across this same window (see
+        // rollingLeave()), and a specific Saturday can legitimately land inside one person's leave.
+        $this->assertTrue(
+            $shifts->keys()->contains(fn ($day) => Carbon::parse($day)->isoWeekday() === 6),
+            'no Saturday was scheduled anywhere in the rebuilt window'
+        );
         $this->assertSame('2029-12-31', $shifts->keys()->sort()->first());   // from the Monday two weeks back
 
         foreach ($attendance as $a) {

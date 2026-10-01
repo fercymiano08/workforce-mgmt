@@ -12,6 +12,7 @@ use App\Models\Leave;
 use App\Models\ScheduleSetting;
 use App\Models\ShiftDefinition;
 use App\Models\ShiftSchedule;
+use App\Models\OvertimeRequest;
 use App\Models\Timesheet;
 use App\Models\User;
 use App\Services\EarlyLeaveEnforcer;
@@ -19,6 +20,7 @@ use App\Services\ShiftHours;
 use App\Services\SystemSettings;
 use App\Services\TimesheetGenerationService;
 use App\Services\TimesheetWorkflow;
+use App\Services\WorkingDays;
 use Illuminate\Console\Command;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\DB;
@@ -39,7 +41,16 @@ use Illuminate\Support\Facades\DB;
  *   hours      ShiftHours::count() - paid time from the shift start, lunch deducted, overtime only if approved
  *   timesheets TimesheetGenerationService, Monday-Sunday weeks, moved through TimesheetWorkflow
  *              (older weeks approved, last week waiting for review, this week still a draft)
+ *   leave      a sparse, deterministic scatter of fresh Approved leave requests across the rebuilt
+ *              window (roughly one every 3 weeks per person) - without this, Leave Trends and Leave
+ *              Type Composition on the Workforce Analytics page only ever showed whatever was in the
+ *              original one-time seed, which falls further into the past every day the system is
+ *              live and eventually leaves every period filter but "This Year" empty
+ *   overtime   the same idea for Approved overtime requests (roughly one scheduled day in 12), which
+ *              attendance's own hours (above) already reads to decide how late someone worked
  * Arrival times vary per person and day but are the same on every run for the same day (no randomness).
+ * Leave and overtime use the same deterministic-per-person-per-stretch approach, and never touch a
+ * request that already exists - re-running this never adds a second one over the same days.
  *
  * By default today is left mid-shift: the people are at their desks and have not clocked out yet. Pass
  * --close-today to treat today as a finished workday instead, so today's clock-outs are written too.
@@ -54,7 +65,7 @@ class RefreshDemoData extends Command
 
     protected $description = "Rebuild the demo employees' schedules, attendance and timesheets up to today";
 
-    public function handle(TimesheetGenerationService $timesheets, TimesheetWorkflow $workflow): int
+    public function handle(TimesheetGenerationService $timesheets, TimesheetWorkflow $workflow, WorkingDays $workingDays): int
     {
         $ids = $this->demoEmployeeIds();
         if ($ids === []) {
@@ -103,7 +114,7 @@ class RefreshDemoData extends Command
         $closeToday = (bool) $this->option('close-today');
         $admin = User::where('role', 'Administrator')->value('name') ?: 'Workforce Admin';
 
-        DB::transaction(function () use ($ids, $from, $today, $now, $tz, $shift, $shiftId, $grace, $closeToday, $timesheets, $workflow, $admin): void {
+        DB::transaction(function () use ($ids, $from, $today, $now, $tz, $shift, $shiftId, $grace, $closeToday, $timesheets, $workflow, $workingDays, $admin): void {
             // Initials instead of borrowed cartoon pictures
             Employee::whereIn('id', $ids)->update(['avatar' => null]);
 
@@ -159,8 +170,17 @@ class RefreshDemoData extends Command
             Timesheet::whereIn('employee_id', $ids)->delete();
             ShiftSchedule::whereIn('employee_id', $ids)->where('date', '<=', $today)->delete();
 
+            // 0. Leave and overtime requests roll forward with "today" too - added BEFORE the schedule
+            // is built, so a freshly-granted leave day correctly takes that person off the schedule the
+            // same way a real approval would (scheduleRows() below reads Leave the same way either way).
+            $this->rollingLeave($ids, $from, $today, $workingDays);
+
             // 1. Schedules: exactly what automated scheduling would give them (work days, holidays, leave)
             $plan = ['rows' => $this->scheduleRows($ids, $from, $today)];
+
+            // Overtime requests only make sense on a day the person is actually scheduled to work, so
+            // this reads the schedule just built rather than recomputing work days and holidays again.
+            $this->rollingOvertime($plan['rows']);
             $scheduleNo = $this->maxNumber(ShiftSchedule::class, 'SCH');
             foreach ($plan['rows'] as $row) {
                 ShiftSchedule::create([
@@ -293,6 +313,95 @@ class RefreshDemoData extends Command
         ];
 
         return $reasons[crc32($employeeId.'|early-reason') % count($reasons)];
+    }
+
+    /**
+     * A fresh, sparse scatter of Approved leave across the rebuilt window - roughly one short leave
+     * every 3 weeks per person, on a deterministic week so re-running this never doubles up. Never
+     * touches a stretch that already has an approved request over it (hand-entered or from an earlier
+     * run), so this only ever fills gaps, never overwrites a real answer.
+     *
+     * @param  list<string>  $ids
+     */
+    private function rollingLeave(array $ids, string $from, string $to, WorkingDays $workingDays): void
+    {
+        $types = ['Vacation', 'Sick', 'Emergency', 'Funeral', 'Special'];
+        $leaveNo = $this->maxNumber(Leave::class, 'LVE');
+        $toDate = Carbon::parse($to);
+
+        foreach (Employee::whereIn('id', $ids)->get(['id', 'first_name', 'last_name']) as $employee) {
+            $name = trim($employee->first_name.' '.$employee->last_name);
+
+            for ($weekStart = Carbon::parse($from)->startOfWeek(Carbon::MONDAY); $weekStart->lte($toDate); $weekStart->addWeeks(3)) {
+                $roll = crc32($employee->id.'|leave|'.$weekStart->toDateString()) % 100;
+                if ($roll >= 35) {
+                    continue;   // most 3-week stretches: no leave for this person
+                }
+
+                $start = $weekStart->copy()->addDays($roll % 5);   // a weekday within that week
+                $end = $start->copy()->addDays($roll % 3);          // 1-3 calendar days
+                if ($start->toDateString() < $from || $end->toDateString() > $to) {
+                    continue;   // stays inside the window being rebuilt
+                }
+
+                $overlaps = Leave::where('employee_id', $employee->id)
+                    ->where('start_date', '<=', $end->toDateString())
+                    ->where('end_date', '>=', $start->toDateString())
+                    ->exists();
+                if ($overlaps) {
+                    continue;
+                }
+
+                $days = $workingDays->count($employee->id, $start->toDateString(), $end->toDateString())['days'];
+                if ($days < 1) {
+                    continue;   // landed entirely on a day off or a holiday
+                }
+
+                Leave::create([
+                    'id' => 'LVE'.str_pad((string) ++$leaveNo, 3, '0', STR_PAD_LEFT),
+                    'employee_id' => $employee->id, 'employee_name' => $name,
+                    'leave_type' => $types[$roll % count($types)],
+                    'start_date' => $start->toDateString(), 'end_date' => $end->toDateString(), 'days' => $days,
+                    'reason' => 'Demo data.', 'status' => 'Approved',
+                    'applied_date' => $start->copy()->subDays(3)->toDateString(), 'approved_by' => 'Workforce Admin',
+                ]);
+            }
+        }
+    }
+
+    /**
+     * A fresh, sparse scatter of Approved overtime across the days the schedule just built actually
+     * has someone working - roughly one scheduled day in 12. Read by ShiftHours::effectiveEnd() when
+     * attendance (below) works out how late that day counts as having gone.
+     *
+     * @param  list<array{employee_id: string, employee_name: string, date: string}>  $scheduleRows
+     */
+    private function rollingOvertime(array $scheduleRows): void
+    {
+        $otNo = $this->maxNumber(OvertimeRequest::class, 'OT');
+
+        foreach ($scheduleRows as $row) {
+            $roll = crc32($row['employee_id'].'|ot|'.$row['date']) % 100;
+            if ($roll >= 8) {
+                continue;
+            }
+
+            $already = OvertimeRequest::where('employee_id', $row['employee_id'])
+                ->where('date', $row['date'])->where('status', 'Approved')->exists();
+            if ($already) {
+                continue;
+            }
+
+            $hours = round(1 + ($roll % 20) / 10, 1);   // 1.0h - 2.9h
+            OvertimeRequest::create([
+                'id' => 'OT'.str_pad((string) ++$otNo, 3, '0', STR_PAD_LEFT),
+                'employee_id' => $row['employee_id'], 'employee_name' => $row['employee_name'],
+                'date' => $row['date'], 'expected_hours' => $hours, 'approved_hours' => $hours,
+                'reason' => 'Demo data.', 'status' => 'Approved',
+                'requested_date' => Carbon::parse($row['date'])->subDay()->toDateString(),
+                'approved_by' => 'Workforce Admin', 'approved_at' => Carbon::parse($row['date'])->subDay(),
+            ]);
+        }
     }
 
     /**

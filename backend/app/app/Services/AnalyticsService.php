@@ -15,6 +15,8 @@ use Illuminate\Support\Facades\DB;
  */
 class AnalyticsService
 {
+    public function __construct(private readonly WorkingDays $workingDays) {}
+
     /**
      * The number of completed months a windowed metric covers, so the caller cannot ask for a
      * window that is not a whole number of months or that runs past the finished data.
@@ -628,7 +630,7 @@ class AnalyticsService
 
         $rows = Leave::where('status', 'Approved')
             ->whereBetween('start_date', [$range['start']->toDateString(), $range['end']->toDateString()])
-            ->get(['leave_type', 'start_date', 'days']);
+            ->get(['employee_id', 'leave_type', 'start_date', 'end_date', 'days']);
 
         $out = array_map(
             fn ($b) => array_merge(['label' => $b['label'], 'total' => 0.0], array_fill_keys([...$types, 'other'], 0.0)),
@@ -642,7 +644,13 @@ class AnalyticsService
             }
             $type = strtolower((string) $row->leave_type);
             $key = in_array($type, $types, true) ? $type : 'other';
-            $days = (float) ($row->days ?? 0);
+            // Older approved requests were recorded before every leave carried its own day count, so
+            // 'days' is null on them - work it out the same way a new request does (WorkingDays,
+            // what LeaveController actually charges against the balance) rather than silently
+            // counting a real approved week off as zero days.
+            $days = $row->days !== null
+                ? (float) $row->days
+                : (float) $this->workingDays->count($row->employee_id, $row->start_date->toDateString(), $row->end_date->toDateString())['days'];
             $out[$idx][$key] += $days;
             $out[$idx]['total'] += $days;
         }
