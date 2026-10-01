@@ -110,7 +110,8 @@ export default function Analytics() {
   const { isDark } = useTheme();
   const chart = chartTheme(isDark);
   const LEAVE_TYPE_COLORS = lowercaseLeaveTypeColors(isDark);
-  const [period, setPeriod] = useState('month');
+  // This Week opens first - the freshest, most relevant view when someone lands on this page.
+  const [period, setPeriod] = useState('week');
 
   const { data, loading } = useApiData(() => analyticsService.getWorkforce(period), [period]);
 

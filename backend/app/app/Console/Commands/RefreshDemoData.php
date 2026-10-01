@@ -42,10 +42,11 @@ use Illuminate\Support\Facades\DB;
  *   timesheets TimesheetGenerationService, Monday-Sunday weeks, moved through TimesheetWorkflow
  *              (older weeks approved, last week waiting for review, this week still a draft)
  *   leave      a sparse, deterministic scatter of fresh Approved leave requests across the rebuilt
- *              window (roughly one every 3 weeks per person) - without this, Leave Trends and Leave
- *              Type Composition on the Workforce Analytics page only ever showed whatever was in the
- *              original one-time seed, which falls further into the past every day the system is
- *              live and eventually leaves every period filter but "This Year" empty
+ *              window (roughly one every 3 weeks per person), topped up with a few guaranteed ones
+ *              in the last 10 days - without this, Leave Trends and Leave Type Composition on the
+ *              Workforce Analytics page only ever showed whatever was in the original one-time seed,
+ *              which falls further into the past every day the system is live, and the sparse scatter
+ *              alone can legitimately miss "This Week" or the first days of "This Month" by chance
  *   overtime   the same idea for Approved overtime requests (roughly one scheduled day in 12), which
  *              attendance's own hours (above) already reads to decide how late someone worked
  * Arrival times vary per person and day but are the same on every run for the same day (no randomness).
@@ -174,6 +175,14 @@ class RefreshDemoData extends Command
             // is built, so a freshly-granted leave day correctly takes that person off the schedule the
             // same way a real approval would (scheduleRows() below reads Leave the same way either way).
             $this->rollingLeave($ids, $from, $today, $workingDays);
+
+            // rollingLeave() is sparse by design (one real approval every few weeks per person), which
+            // can legitimately land nowhere in the last few days - purely bad luck, but Workforce
+            // Analytics is opened on whatever day it is opened, and "This Week" or the first days of
+            // "This Month" must not be empty just because the dice did not favour that exact window.
+            // This tops up a small, guaranteed number of recent approvals so there is always something
+            // real to show, without touching anyone who already has one nearby.
+            $this->recentLeaveFloor($ids, $today, $workingDays);
 
             // 1. Schedules: exactly what automated scheduling would give them (work days, holidays, leave)
             $plan = ['rows' => $this->scheduleRows($ids, $from, $today)];
@@ -366,6 +375,56 @@ class RefreshDemoData extends Command
                     'applied_date' => $start->copy()->subDays(3)->toDateString(), 'approved_by' => 'Workforce Admin',
                 ]);
             }
+        }
+    }
+
+    /**
+     * Tops up the last 10 days with a handful of guaranteed-recent Approved leave requests, one
+     * workday long, for whichever of the first 3 demo employees do not already have an approved
+     * request ending in that window. Deterministic per person (same "today" -> same result), so
+     * this never doubles up on a re-run and never overwrites a request that is already there.
+     */
+    private function recentLeaveFloor(array $ids, string $to, WorkingDays $workingDays): void
+    {
+        $toDate = Carbon::parse($to);
+        $windowStart = $toDate->copy()->subDays(9)->toDateString();
+        $leaveNo = $this->maxNumber(Leave::class, 'LVE');
+        $types = ['Vacation', 'Sick', 'Emergency'];
+
+        $guaranteed = 0;
+        foreach (Employee::whereIn('id', $ids)->orderBy('id')->get(['id', 'first_name', 'last_name']) as $employee) {
+            if ($guaranteed >= 3) {
+                break;
+            }
+
+            $hasRecent = Leave::where('employee_id', $employee->id)->where('status', 'Approved')
+                ->where('end_date', '>=', $windowStart)->where('start_date', '<=', $to)->exists();
+            if ($hasRecent) {
+                continue;   // already has something real in this window - nothing to top up
+            }
+
+            $roll = crc32($employee->id.'|recent-leave|'.$to) % 100;
+            $start = $toDate->copy()->subDays($roll % 8);   // somewhere in the last 0-7 days
+            $days = $workingDays->count($employee->id, $start->toDateString(), $start->toDateString())['days'];
+            if ($days < 1) {
+                $start = $start->copy()->addDay();   // landed on a day off - nudge forward one day
+                $days = $start->lte($toDate)
+                    ? $workingDays->count($employee->id, $start->toDateString(), $start->toDateString())['days']
+                    : 0;
+            }
+            if ($days < 1) {
+                continue;   // both candidate days were off - skip rather than force a non-work day
+            }
+
+            Leave::create([
+                'id' => 'LVE'.str_pad((string) ++$leaveNo, 3, '0', STR_PAD_LEFT),
+                'employee_id' => $employee->id, 'employee_name' => trim($employee->first_name.' '.$employee->last_name),
+                'leave_type' => $types[$roll % count($types)],
+                'start_date' => $start->toDateString(), 'end_date' => $start->toDateString(), 'days' => $days,
+                'reason' => 'Demo data.', 'status' => 'Approved',
+                'applied_date' => $start->copy()->subDays(2)->toDateString(), 'approved_by' => 'Workforce Admin',
+            ]);
+            $guaranteed++;
         }
     }
 
