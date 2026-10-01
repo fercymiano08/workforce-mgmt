@@ -63,7 +63,19 @@ return [
          */
         'brevo' => [
             'transport' => 'smtp',
-            'scheme' => env('MAIL_SCHEME', 'tls'),
+            /*
+             | No default scheme, and that is deliberate.
+             |
+             | I previously defaulted this to 'tls', which is not a scheme Symfony supports: it
+             | accepts only 'smtp' and 'smtps'. Symfony then threw UnsupportedSchemeException before
+             | a socket was ever opened, so not one message reached the relay and its dashboard
+             | showed nothing at all.
+             |
+             | Left unset, Symfony picks the right behaviour from the port: 'smtp' on 587 (opportunistic
+             | STARTTLS), 'smtp' on 2525, 'smtps' on 465. Set MAIL_SCHEME=smtp for 587/2525 or
+             | MAIL_SCHEME=smtps for 465 - never 'tls'.
+             */
+            'scheme' => env('MAIL_SCHEME'),
             /*
              | Read from BREVO_HOST, not MAIL_HOST.
              |

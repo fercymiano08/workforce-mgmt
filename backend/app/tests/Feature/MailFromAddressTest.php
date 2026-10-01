@@ -94,7 +94,29 @@ class MailFromAddressTest extends TestCase
         $this->assertSame('smtp', $mail['mailers']['brevo']['transport']);
         $this->assertSame('smtp-relay.brevo.com', $mail['mailers']['brevo']['host']);
         $this->assertSame(587, $mail['mailers']['brevo']['port']);
-        $this->assertSame('tls', $mail['mailers']['brevo']['scheme']);
+
+        // No scheme default, and 'tls' must never come back. Symfony supports only 'smtp' and
+        // 'smtps', so a 'tls' default throws UnsupportedSchemeException before the socket opens:
+        // nothing reaches the relay, and its dashboard shows no activity to explain why.
+        $this->assertNull($mail['mailers']['brevo']['scheme']);
+    }
+
+    /** The scheme must be one Symfony actually supports, or the send dies before connecting. */
+    public function test_the_mailer_only_accepts_schemes_symfony_supports(): void
+    {
+        foreach (['tls', 'starttls', 'ssl'] as $unsupported) {
+            $this->assertNotContains(
+                $unsupported,
+                ['smtp', 'smtps'],
+                "'{$unsupported}' makes Symfony throw before opening a connection."
+            );
+        }
+
+        foreach (['smtp', 'smtps'] as $supported) {
+            $mail = $this->loadMailConfig(['MAIL_SCHEME' => $supported]);
+
+            $this->assertSame($supported, $mail['mailers']['brevo']['scheme']);
+        }
     }
 
     /**
