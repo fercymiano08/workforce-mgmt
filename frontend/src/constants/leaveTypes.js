@@ -40,8 +40,17 @@ export const leaveTypeChartColorIn = (type, isDark) => leaveTypeChartColorFor(is
 
 // The analytics API returns the leave types as lowercase keys ("vacation"), so that page needs the
 // same palette re-keyed rather than a second hand-written copy of it.
-export const lowercaseLeaveTypeColors = (isDark = false) =>
-  Object.fromEntries(Object.entries(leaveTypeChartColorFor(isDark)).map(([type, color]) => [type.toLowerCase(), color]));
+export const lowercaseLeaveTypeColors = (isDark = false) => ({
+  // Neutral slate, matching the fallback above, so an unmapped type never borrows another slice's
+  // colour. See the note on lowercaseLeaveTypeLabels for what 'other' is.
+  other: isDark ? '#7d7d88' : '#94A3B8',
+  ...Object.fromEntries(Object.entries(leaveTypeChartColorFor(isDark)).map(([type, color]) => [type.toLowerCase(), color])),
+});
 
-export const lowercaseLeaveTypeLabels = () =>
-  Object.fromEntries(Object.keys(LEAVE_TYPE_CHART_COLORS).map((type) => [type.toLowerCase(), type]));
+// 'other' has no colour of its own above, because it is not a leave type anyone picks - it is the
+// bucket an unrecognised type is counted into so approved leave can never vanish from a chart. It
+// gets the neutral slate, and a readable label rather than a raw lowercase key.
+export const lowercaseLeaveTypeLabels = () => ({
+  ...Object.fromEntries(Object.keys(LEAVE_TYPE_CHART_COLORS).map((type) => [type.toLowerCase(), type])),
+  other: 'Other',
+});

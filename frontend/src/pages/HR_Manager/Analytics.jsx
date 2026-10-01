@@ -186,14 +186,23 @@ export default function Analytics() {
   // The 6-month trend already holds everything a "right now" composition needs -
   // sum the visible range per leave type instead of a second API call.
   const leaveComposition = useMemo(() => {
+    // Counted off the server's own monthly total rather than off the six known types, so the donut
+    // always sums to every approved leave in the range. If a leave type arrives that this palette
+    // has no colour for, the server files it under 'other' and it still gets a slice - the two
+    // numbers on this card can no longer silently disagree.
+    const total = leaveTrend.reduce((s, m) => s + (m.total ?? 0), 0);
     const totals = {};
     for (const type of Object.keys(LEAVE_TYPE_COLORS)) {
       totals[type] = leaveTrend.reduce((s, m) => s + (m[type] ?? 0), 0);
     }
+    const known = Object.values(totals).reduce((s, v) => s + v, 0);
+    if (total > known) {
+      totals.other = total - known;
+    }
     return Object.entries(totals)
       .filter(([, count]) => count > 0)
-      .map(([type, count]) => ({ type, name: LEAVE_TYPE_LABELS[type], value: count, color: LEAVE_TYPE_COLORS[type] }));
-  }, [leaveTrend]);
+      .map(([type, count]) => ({ type, name: LEAVE_TYPE_LABELS[type] || type, value: count, color: LEAVE_TYPE_COLORS[type] }));
+  }, [leaveTrend, LEAVE_TYPE_COLORS]);
   const leaveTotal = leaveComposition.reduce((s, d) => s + d.value, 0);
 
   if (loading) {

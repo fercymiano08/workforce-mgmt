@@ -13,6 +13,7 @@ use App\Services\NotificationService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Carbon;
+use Illuminate\Validation\Rule;
 use Illuminate\Validation\ValidationException;
 
 class LeaveController extends Controller
@@ -79,7 +80,7 @@ class LeaveController extends Controller
         $data = Leave::apiFillable($request->validate([
             'employeeId' => 'required|string|max:20',
             'employeeName' => 'required|string|max:150',
-            'leaveType' => 'required|string|max:50',
+            'leaveType' => ['required', 'string', 'max:50', Rule::in(Employee::leaveTypes())],
             'startDate' => 'required|date',
             'endDate' => 'required|date',
             'reason' => 'required|string',
@@ -190,7 +191,27 @@ class LeaveController extends Controller
         }
 
         $balance = collect($employee->leaveBalances())->firstWhere('type', $leaveType);
-        if ($balance && $balance['remaining'] < $requested) {
+
+        if (! $balance) {
+            /*
+              No allowance row for this type. The check used to simply return, which meant an
+              unknown type could be filed for any number of days with no limit at all - the
+              'Half Day' requests in the data went through exactly this gap. Falling back to the
+              default entitlement keeps the check meaningful rather than skipping it. Unreachable
+              through the API now that leaveType is validated, but leave records can also be
+              imported, so the guard stays.
+            */
+            $default = Employee::defaultLeaveBalances()[$leaveType] ?? 0;
+            if ($default < $requested) {
+                throw ValidationException::withMessages([
+                    'leaveType' => ["No leave allowance is set up for {$leaveType}, so this request cannot be filed. Ask an administrator to set the allowance first."],
+                ]);
+            }
+
+            return;
+        }
+
+        if ($balance['remaining'] < $requested) {
             throw ValidationException::withMessages([
                 'leaveType' => ["Insufficient balance. Only {$balance['remaining']} day(s) of {$leaveType} leave remaining."],
             ]);
@@ -207,7 +228,7 @@ class LeaveController extends Controller
         $data = Leave::apiFillable($request->validate([
             'employeeId' => 'sometimes|string|max:20',
             'employeeName' => 'sometimes|string|max:150',
-            'leaveType' => 'sometimes|string|max:50',
+            'leaveType' => ['sometimes', 'string', 'max:50', Rule::in(Employee::leaveTypes())],
             'startDate' => 'sometimes|date',
             'endDate' => 'sometimes|date',
             'reason' => 'sometimes|string',

@@ -64,6 +64,26 @@ class Employee extends Model
     }
 
     /**
+     * The canonical leave types a request may be filed under.
+     *
+     * Kept beside the entitlement map rather than in the controller so there is exactly one
+     * definition of "a leave type exists here": every allowance above is a key of this list, and
+     * every type allowed through validation is a key of it too. Adding a seventh type means adding
+     * it in one place and the form, the balance check and the analytics charts all follow.
+     *
+     * Requests were previously validated as a bare string, so any text at all could be filed and
+     * stored. A 'Half Day' request reached the database that way: it has no balance here, so it
+     * skipped the allowance check entirely, and no chart had a bucket for it, so approved leave
+     * existed while appearing on no report at all.
+     *
+     * @return list<string>
+     */
+    public static function leaveTypes(): array
+    {
+        return array_keys(self::defaultLeaveBalances());
+    }
+
+    /**
      * Total approved leave days consumed per type.
      *
      * @return array<string, float>

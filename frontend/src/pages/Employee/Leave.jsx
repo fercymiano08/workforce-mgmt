@@ -33,6 +33,9 @@ const leaveTypeVariant = {
   Special: 'purple',
   Funeral: 'indigo',
   Unpaid: 'teal',
+  // Retained for display only. 'Half Day' is not one of the six canonical types and can no longer
+  // be filed, but approved requests carrying it already exist in the data, and a historical row
+  // still has to render as a labelled badge rather than falling through to a blank cell.
   'Half Day': 'info',
 };
 

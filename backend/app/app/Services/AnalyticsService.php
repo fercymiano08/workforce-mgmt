@@ -153,11 +153,21 @@ class AnalyticsService
                     return;
                 }
                 $bucket = $months[$key];
-                $bucket['total']++;
-                $type = strtolower($record->leave_type);
+                $type = strtolower((string) $record->leave_type);
                 if (array_key_exists($type, $bucket)) {
                     $bucket[$type]++;
+                } else {
+                    /*
+                      A leave type this chart has no bucket for still counts towards the month's
+                      total. It used to be dropped from both, which meant approved leave could exist
+                      in the database and appear nowhere on the page, and the headline count and the
+                      donut could quietly disagree. It goes into 'other' so nothing approved is ever
+                      invisible - 'Half Day' is a real approved request in the data and has no
+                      balance or bucket of its own, which is exactly the case this catches.
+                    */
+                    $bucket['other'] = ($bucket['other'] ?? 0) + 1;
                 }
+                $bucket['total']++;
                 $months[$key] = $bucket;
             });
 

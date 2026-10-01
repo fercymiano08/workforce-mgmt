@@ -4,6 +4,7 @@ namespace Tests\Feature;
 
 use App\Models\Attendance;
 use App\Models\Employee;
+use App\Models\Leave;
 use App\Models\ShiftSchedule;
 use App\Models\Timesheet;
 use App\Models\User;
@@ -171,6 +172,41 @@ class WorkforceProductivityTest extends TestCase
         // department), so a workforce with no departments on file produced an empty chart.
         $this->assertSame(2, $data['totals']['daysExpected']);
         $this->assertCount(5, $data['components']);
+    }
+
+    public function test_approved_leave_of_an_unknown_type_is_still_counted_not_dropped(): void
+    {
+        Carbon::setTestNow('2026-10-15 10:00:00');
+        $admin = $this->admin();
+        $employee = $this->employee();
+
+        // 'Half Day' is a real approved request in the data but has no balance or chart bucket of
+        // its own. The leave trend used to discard it from both the monthly total and the donut, so
+        // approved leave existed in the database and was invisible on the page.
+        Leave::create([
+            'id' => 'LVEH1', 'employee_id' => $employee->id, 'employee_name' => 'Test One',
+            'leave_type' => 'Half Day', 'start_date' => '2026-09-11', 'end_date' => '2026-09-11',
+            'reason' => 'x', 'status' => 'Approved', 'applied_date' => '2026-09-10',
+        ]);
+        Leave::create([
+            'id' => 'LVEV1', 'employee_id' => $employee->id, 'employee_name' => 'Test One',
+            'leave_type' => 'Vacation', 'start_date' => '2026-09-14', 'end_date' => '2026-09-15',
+            'reason' => 'x', 'status' => 'Approved', 'applied_date' => '2026-09-10',
+        ]);
+
+        $trend = $this->actingAs($admin)->getJson('/api/analytics/leave-trend')->assertOk()->json('data');
+        $september = collect($trend)->firstWhere('month', 'Sep 2026');
+
+        $this->assertNotNull($september);
+        // Two approved requests in September, and both are accounted for.
+        $this->assertSame(2, $september['total']);
+        $this->assertSame(1, $september['vacation']);
+        $this->assertSame(1, $september['other'], 'The unknown type must land in other, not vanish.');
+
+        // The six named buckets plus other must add up to the total, so the donut can never be short.
+        $buckets = ['vacation', 'sick', 'emergency', 'special', 'funeral', 'unpaid', 'other'];
+        $sum = array_sum(array_map(fn ($k) => $september[$k] ?? 0, $buckets));
+        $this->assertSame($september['total'], $sum);
     }
 
     public function test_an_impossible_window_is_clamped_instead_of_being_trusted(): void

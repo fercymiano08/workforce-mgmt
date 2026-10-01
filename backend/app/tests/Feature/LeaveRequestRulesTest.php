@@ -2,6 +2,7 @@
 
 namespace Tests\Feature;
 
+use App\Models\Employee;
 use App\Models\Leave;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Carbon;
@@ -120,5 +121,106 @@ class LeaveRequestRulesTest extends TestCase
             ->postJson('/api/leaves', $this->payload('2030-07-10', '2030-07-08'))
             ->assertStatus(422)
             ->assertJsonValidationErrors('endDate');
+    }
+
+    /**
+     * leaveType used to be validated as a bare string, so any text could be filed and stored.
+     * 'Half Day' reached the database that way: with no allowance row of its own it skipped the
+     * balance check completely, and with no chart bucket it appeared on no report at all.
+     */
+    public function test_a_leave_type_that_is_not_one_of_the_six_is_refused(): void
+    {
+        $this->actingAs($this->otpEmployeeUser())
+            ->postJson('/api/leaves', $this->payload('2030-07-10', '2030-07-10', ['leaveType' => 'Half Day']))
+            ->assertStatus(422)
+            ->assertJsonValidationErrors('leaveType');
+
+        $this->assertSame(0, Leave::where('leave_type', 'Half Day')->count());
+    }
+
+    public function test_free_text_is_refused_as_a_leave_type(): void
+    {
+        $this->actingAs($this->otpEmployeeUser())
+            ->postJson('/api/leaves', $this->payload('2030-07-10', '2030-07-10', ['leaveType' => 'Not A Real Type']))
+            ->assertStatus(422)
+            ->assertJsonValidationErrors('leaveType');
+    }
+
+    public function test_editing_a_request_cannot_smuggle_in_an_unknown_leave_type(): void
+    {
+        $existing = Leave::create([
+            'id' => 'LVE900', 'employee_id' => 'EMP-OTP', 'employee_name' => 'Juan Dela Cruz',
+            'leave_type' => 'Vacation', 'start_date' => '2030-07-10', 'end_date' => '2030-07-10',
+            'reason' => 'Family trip', 'status' => 'Pending', 'applied_date' => '2030-01-01',
+        ]);
+
+        // Editing a leave request is an Administrator action, so this is where an unknown type
+        // would otherwise be introduced into the table from.
+        $this->actingAs($this->adminUser())
+            ->putJson('/api/leaves/'.$existing->id, ['leaveType' => 'Half Day'])
+            ->assertStatus(422)
+            ->assertJsonValidationErrors('leaveType');
+
+        $this->assertSame('Vacation', $existing->fresh()->leave_type);
+    }
+
+    /** The canonical list and the entitlement map are the same list, kept side by side. */
+    public function test_every_allowed_leave_type_has_an_allowance_and_nothing_more(): void
+    {
+        $types = Employee::leaveTypes();
+        $entitlements = Employee::defaultLeaveBalances();
+
+        $this->assertSame(['Vacation', 'Sick', 'Emergency', 'Special', 'Funeral', 'Unpaid'], $types);
+        // The allowance map is the single source of truth: no type allowed through validation is
+        // missing an entitlement, and no entitlement lacks a validation entry.
+        $this->assertSame([], array_diff($types, array_keys($entitlements)));
+        $this->assertSame([], array_diff(array_keys($entitlements), $types));
+    }
+
+    /**
+     * A type missing from an employee's stored allowance map used to skip the balance check
+     * entirely, so it could be filed for unlimited days. It now falls back to the default
+     * entitlement, which is what stops unlimited leave appearing to be allowed.
+     */
+    public function test_a_type_missing_from_a_employees_allowances_falls_back_to_the_default(): void
+    {
+        $user = $this->otpEmployeeUser();
+        // The employee's own map omits Sick, so there is no row for it to check against.
+        $employee = Employee::firstOrCreate(['id' => 'EMP-OTP'], [
+            'first_name' => 'Juan', 'last_name' => 'Dela Cruz', 'email' => 'jdc@x.com',
+            'department' => 'IT & Systems', 'status' => 'Active',
+        ]);
+        $employee->leave_balances = ['Vacation' => 20, 'Unpaid' => 30];
+        $employee->save();
+        $this->assertNull(
+            collect($employee->fresh()->leaveBalances())->firstWhere('type', 'Sick'),
+            'Sick must genuinely be absent from this employee\'s map for the fallback to be exercised.'
+        );
+
+        // Well over the default 10-day Sick entitlement, so the fallback limit must bite.
+        $this->actingAs($user)
+            ->postJson('/api/leaves', $this->payload('2030-07-01', '2030-08-31', ['leaveType' => 'Sick']))
+            ->assertStatus(422)
+            ->assertJsonValidationErrors('leaveType');
+
+        $this->assertSame(0, Leave::where('leave_type', 'Sick')->count());
+    }
+
+    /** Inside the fallback entitlement the request is allowed, proving the fallback is a real limit. */
+    public function test_the_fallback_allowance_still_permits_a_request_within_it(): void
+    {
+        $user = $this->otpEmployeeUser();
+        $employee = Employee::firstOrCreate(['id' => 'EMP-OTP'], [
+            'first_name' => 'Juan', 'last_name' => 'Dela Cruz', 'email' => 'jdc@x.com',
+            'department' => 'IT & Systems', 'status' => 'Active',
+        ]);
+        $employee->leave_balances = ['Vacation' => 20, 'Unpaid' => 30];
+        $employee->save();
+
+        $this->actingAs($user)
+            ->postJson('/api/leaves', $this->payload('2030-07-10', '2030-07-10', ['leaveType' => 'Sick']))
+            ->assertStatus(201);
+
+        $this->assertSame(1, Leave::where('leave_type', 'Sick')->count());
     }
 }

@@ -42,7 +42,10 @@ const allTabs = ['Pending Approvals', 'All Requests'];
 // Two date ranges (YYYY-MM-DD strings) share at least one day
 const overlaps = (a, b) => a.startDate <= b.endDate && b.startDate <= a.endDate;
 const statuses = ['All', 'Pending', 'Approved', 'Rejected', 'Cancelled'];
-const leaveTypes = ['All', 'Vacation', 'Sick', 'Emergency', 'Special', 'Funeral', 'Unpaid', 'Half Day'];
+// 'Half Day' used to sit in this filter list. It is not one of the six canonical leave types and
+// the server now refuses it, so the filter could only ever match nothing. Kept off the list so the
+// dropdown offers exactly the types that can actually be filed.
+const leaveTypes = ['All', 'Vacation', 'Sick', 'Emergency', 'Special', 'Funeral', 'Unpaid'];
 
 const ROWS_PER_PAGE = 8;
 
