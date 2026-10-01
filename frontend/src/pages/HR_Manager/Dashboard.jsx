@@ -490,7 +490,7 @@ export default function Dashboard() {
       </div>
 
       {/* Row 1: KPI Cards */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-6">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
         {kpiCards.map((card) => (
           <KpiCard key={card.labelKey} {...card} label={t(card.labelKey)} />
         ))}
