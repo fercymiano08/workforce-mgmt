@@ -37,7 +37,7 @@ const shortDate = (dateKey) => { const l = dayLabel(dateKey); return `${l.weekda
 
 const blankForm = () => ({
   startDate: nextMonday(), weeks: 1, workDays: [1, 2, 3, 4, 5, 6],
-  required: 5, department: '', position: '', maxWeeklyHours: 48,
+  required: 5, department: '', position: '',
 });
 
 // Automated shift scheduling: the rules build a draft, HR reviews it and approves it. Nothing is saved until Approve.
@@ -67,7 +67,6 @@ function AutomatedShiftFlow({ isOpen, onClose, employees, shiftDefs, onChanged }
   const payload = () => ({
     startDate: form.startDate, weeks: Number(form.weeks), workDays: form.workDays,
     required: Number(form.required), department: form.department || null, position: form.position || null,
-    maxWeeklyHours: Number(form.maxWeeklyHours) || undefined,
   });
 
   const periodProblem = !form.startDate ? 'Pick a start date.'
@@ -151,7 +150,6 @@ function AutomatedShiftFlow({ isOpen, onClose, employees, shiftDefs, onChanged }
             <p className="text-sm text-gray-500">{formatDate(form.startDate)} – {formatDate(endDate)} · tell the system how many people each day needs.</p>
             <div className="grid sm:grid-cols-2 gap-4">
               <Input label="Employees required per day" type="number" min={1} value={form.required} onChange={(e) => set('required', e.target.value)} required />
-              <Input label="Max paid hours per week, each person" type="number" min={1} max={168} value={form.maxWeeklyHours} onChange={(e) => set('maxWeeklyHours', e.target.value)} />
               <Select label="Department (optional)" value={form.department} onChange={(e) => setForm((f) => ({ ...f, department: e.target.value, position: '' }))}>
                 <option value="">All departments</option>
                 {departments.map((d) => <option key={d} value={d}>{d}</option>)}
@@ -344,7 +342,7 @@ function Review({ draft, cells, editing, weekIndex, setWeekIndex, onToggleEdit, 
       </div>
       <p className="text-xs text-gray-500">
         <strong className="text-gray-700">{draft.shift.name}</strong> · {formatTime(draft.shift.startTime)} – {formatTime(draft.shift.endTime)} ({hours}h paid)
-        {draft.department ? ` · ${draft.department}` : ''}{draft.position ? ` · ${draft.position}` : ''} · max {draft.maxWeeklyHours}h a week each
+        {draft.department ? ` · ${draft.department}` : ''}{draft.position ? ` · ${draft.position}` : ''}
       </p>
 
       {draft.eligibleEmployees === 0 ? (
@@ -419,7 +417,7 @@ function Review({ draft, cells, editing, weekIndex, setWeekIndex, onToggleEdit, 
             <Panel icon={Scale} title="Fairness">
               <p className="text-sm text-gray-700">Each person works between <strong>{Math.min(...perPerson)}</strong> and <strong>{Math.max(...perPerson)}</strong> shifts in this period.</p>
               <p className="text-xs text-gray-400 mt-1">{Math.max(...perPerson) - Math.min(...perPerson) <= 1 ? 'Shared as evenly as the days allow.' : 'Uneven: leave, existing shifts or your edits shifted the load.'}</p>
-              {overLimit.length > 0 && <p className="text-xs text-rose-600 mt-1.5">{overLimit.length} person{overLimit.length === 1 ? '' : 's'} over {draft.maxWeeklyHours}h in a week after your edits.</p>}
+              {overLimit.length > 0 && <p className="text-xs text-rose-600 mt-1.5">{overLimit.length} person{overLimit.length === 1 ? '' : 's'} over the weekly hours limit in a week after your edits.</p>}
             </Panel>
 
             <Panel icon={CalendarRange} title="Coverage by day">

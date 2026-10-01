@@ -38,8 +38,8 @@ const ADMIN_PAGES = [
 const EMPLOYEE_PAGES = [
   { key: 'my-attendance', labelKey: 'nav.myAttendance', path: '/my-attendance', icon: CalendarCheck, terms: 'my attendance records clock in out times present late absent' },
   { key: 'my-schedule', labelKey: 'nav.mySchedule', path: '/my-schedule', icon: Clock, terms: 'my shift shifts schedule scheduling roster' },
-  { key: 'leave', labelKey: 'nav.leave', path: '/leave', icon: CalendarDays, terms: 'my leave leaves requests vacation sick approval' },
-  { key: 'my-timesheet', labelKey: 'nav.timesheets', path: '/my-timesheet', icon: ClipboardList, terms: 'my timesheet hours payroll week' },
+  { key: 'leave', labelKey: 'nav.leaveEmployee', path: '/leave', icon: CalendarDays, terms: 'my leave leaves requests vacation sick approval' },
+  { key: 'my-timesheet', labelKey: 'nav.timesheetsEmployee', path: '/my-timesheet', icon: ClipboardList, terms: 'my timesheet hours payroll week' },
   { key: 'my-profile', labelKey: 'nav.myProfile', path: '/my-profile', icon: User, terms: 'my profile personal information details' },
   { key: 'notifications', labelKey: 'nav.notifications', path: '/notifications', icon: Bell, terms: 'notifications alerts inbox' },
   { key: 'settings', labelKey: 'nav.settings', path: '/settings', icon: Settings, terms: 'settings preferences password account' },

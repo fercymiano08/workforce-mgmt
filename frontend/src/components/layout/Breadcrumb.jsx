@@ -1,7 +1,10 @@
 import { Link, useLocation } from 'react-router-dom';
 import { ChevronRight, Home } from 'lucide-react';
+import { useAuth } from '../../context/AuthContext';
 
-const routeNames = {
+// One map per role. An employee is looking at their own records, so "My Leave" is the honest name
+// for the same screen that is "Leave Management" when the reader is deciding somebody else's leave.
+const ADMIN_NAMES = {
   '/': 'Dashboard',
   '/employees': 'Employees',
   '/employee-registration': 'Employee Registration',
@@ -10,6 +13,7 @@ const routeNames = {
   '/my-schedule': 'My Schedule',
   '/shifts': 'Shift & Schedule',
   '/timesheets': 'Timesheet Management',
+  '/my-timesheet': 'My Timesheet',
   '/leave': 'Leave Management',
   '/analytics': 'Workforce Analytics',
   '/reports': 'Reports',
@@ -18,8 +22,15 @@ const routeNames = {
   '/kiosk-setup': 'Kiosk Setup',
 };
 
+const EMPLOYEE_NAMES = {
+  ...ADMIN_NAMES,
+  '/leave': 'My Leave',
+};
+
 export default function Breadcrumbs() {
   const location = useLocation();
+  const { isAdmin } = useAuth();
+  const routeNames = isAdmin ? ADMIN_NAMES : EMPLOYEE_NAMES;
   const pathnames = location.pathname.split('/').filter(x => x);
 
   if (location.pathname === '/') return null;

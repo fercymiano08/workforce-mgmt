@@ -41,19 +41,31 @@ const RANGE_OPTIONS = [
   { days: 30, label: '30 days' },
 ];
 
-// Recharts takes literal colour values, so it cannot be themed by the utility classes
-// that invert the rest of the app - the series palette is chosen per theme instead
-// (see constants/chartTheme.js), or a dark screen keeps the light theme's neon bars.
-const departmentPalette = (colors) => ({
-  Engineering: colors.blue,
-  Marketing: colors.purple,
-  Finance: colors.emerald,
-  HR: colors.sky,
-  Sales: colors.amber,
-  Operations: colors.teal,
-  IT: colors.indigo,
-  Legal: colors.rose,
-});
+// The one overall workforce score, as a ring. An SVG circle rather than a Recharts radial bar
+// because it is a single value, not a series - the number in the middle is the whole point, and
+// the gap is drawn from a fixed circumference so the stroke does not scale with the text.
+const ScoreRing = ({ score, size = 160, stroke = 14, color = '#3B82F6', track = '#E2E8F0' }) => {
+  const radius = (size - stroke) / 2;
+  const circumference = 2 * Math.PI * radius;
+  const pct = Math.max(0, Math.min(100, Number(score) || 0));
+
+  return (
+    <div className="relative shrink-0" style={{ width: size, height: size }}>
+      <svg width={size} height={size} className="-rotate-90">
+        <circle cx={size / 2} cy={size / 2} r={radius} fill="none" stroke={track} strokeWidth={stroke} />
+        <circle
+          cx={size / 2} cy={size / 2} r={radius} fill="none" stroke={color} strokeWidth={stroke}
+          strokeLinecap="round" strokeDasharray={circumference}
+          strokeDashoffset={circumference - (pct / 100) * circumference}
+        />
+      </svg>
+      <div className="absolute inset-0 flex flex-col items-center justify-center">
+        <span className="text-4xl font-bold text-gray-900 tabular-nums">{pct}</span>
+        <span className="text-xs font-semibold text-gray-400">out of 100</span>
+      </div>
+    </div>
+  );
+};
 
 const leaveTypeBadge = (type) => {
   // Same variants as leaveTypeVariant in pages/Employee/Leave.jsx, which the badge-only pages use.
@@ -101,7 +113,16 @@ export default function Dashboard() {
   const { isDark } = useTheme();
   const chart = chartTheme(isDark);
   const COLORS = chart.colors;
-  const departmentColors = departmentPalette(chart.colors);
+  // One colour per productivity part, matched to what that part already looks like elsewhere:
+  // attendance green (the "Present" series), hours blue, punctuality sky, overtime amber (the
+  // overtime colour used on every timesheet bar), timesheets purple.
+  const componentColors = {
+    attendance: COLORS.emerald,
+    hours: COLORS.blue,
+    punctuality: COLORS.sky,
+    overtime: COLORS.amber,
+    timesheets: COLORS.purple,
+  };
 
   const [loading, setLoading] = useState(true);
   const [employees, setEmployees] = useState([]);
@@ -357,15 +378,12 @@ export default function Dashboard() {
     }));
   }, [leaves, isDark]);
 
-  const weeklyAttendanceData = useMemo(() => {
+  const monthlyAttendanceData = useMemo(() => {
     const trend = analytics?.attendanceTrend || [];
     return trend.map((row) => ({ week: row.month, percentage: row.rate ?? 0 }));
   }, [analytics]);
 
-  const productivityData = useMemo(() => {
-    const rows = analytics?.departmentProductivity || [];
-    return rows.map((row) => ({ department: row.name, score: row.productivity ?? 0 }));
-  }, [analytics]);
+  const productivity = analytics?.departmentProductivity || null;
 
   const pendingLeaveRequests = useMemo(
     () =>
@@ -606,11 +624,11 @@ export default function Dashboard() {
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         <ChartCard title={t('dashboard.weeklyTrend')} badge={t('dashboard.overall')} badgeVariant="success">
           <div className="h-[320px]">
-            {weeklyAttendanceData.length === 0 ? (
+            {monthlyAttendanceData.length === 0 ? (
               <EmptyState message={t('dashboard.noData')} />
             ) : (
               <ResponsiveContainer width="100%" height="100%">
-                <BarChart data={weeklyAttendanceData} barSize={28} margin={{ top: 8, right: 8, left: -12, bottom: 0 }}>
+                <BarChart data={monthlyAttendanceData} barSize={28} margin={{ top: 8, right: 8, left: -12, bottom: 0 }}>
                   <CartesianGrid strokeDasharray="3 3" stroke={chart.grid} vertical={false} />
                   <XAxis dataKey="week" axisLine={false} tickLine={false} tick={{ fontSize: 12, fill: chart.axis }} />
                   <YAxis domain={[0, 100]} axisLine={false} tickLine={false} tick={{ fontSize: 12, fill: chart.axis }} />
@@ -622,24 +640,28 @@ export default function Dashboard() {
           </div>
         </ChartCard>
 
-        <ChartCard title={t('dashboard.productivity')} badge={t('dashboard.byDepartment')} badgeVariant="purple">
+        <ChartCard title={t('dashboard.productivity')} badge={t('dashboard.overall')} badgeVariant="purple">
           <div className="h-[320px]">
-            {productivityData.length === 0 ? (
+            {!productivity || productivity.score == null ? (
               <EmptyState message={t('dashboard.noData')} />
             ) : (
-              <ResponsiveContainer width="100%" height="100%">
-                <BarChart data={productivityData} layout="vertical" barSize={16} barCategoryGap={10} margin={{ top: 8, right: 12, left: 0, bottom: 0 }}>
-                  <CartesianGrid strokeDasharray="3 3" stroke={chart.grid} horizontal={false} />
-                  <XAxis type="number" domain={[0, 100]} axisLine={false} tickLine={false} tick={{ fontSize: 12, fill: chart.axis }} />
-                  <YAxis type="category" dataKey="department" axisLine={false} tickLine={false} tick={{ fontSize: 12, fill: '#475569' }} width={110} />
-                  <Tooltip content={<CustomTooltip />} cursor={{ fill: chart.cursor }} />
-                  <Bar dataKey="score" name="score" radius={[0, 6, 6, 0]}>
-                    {productivityData.map((entry, index) => (
-                      <Cell key={`cell-${index}`} fill={departmentColors[entry.department] || COLORS.blue} />
-                    ))}
-                  </Bar>
-                </BarChart>
-              </ResponsiveContainer>
+              <div className="h-full flex items-center justify-center gap-6 flex-wrap px-2">
+                <ScoreRing score={productivity.score} size={168} stroke={14} color={COLORS.purple} track={chart.grid} />
+                <div className="space-y-2.5 min-w-[180px]">
+                  {(productivity.components || []).map((c) => (
+                    <div key={c.key}>
+                      <div className="flex items-baseline justify-between gap-3 text-xs">
+                        <span className="text-gray-500">{c.label}</span>
+                        <span className="font-semibold text-gray-800">{c.score}%</span>
+                      </div>
+                      <div className="h-1.5 rounded-full bg-gray-100 mt-1 overflow-hidden">
+                        <div className="h-full rounded-full" style={{ width: `${c.score}%`, background: componentColors[c.key] || COLORS.blue }} />
+                      </div>
+                    </div>
+                  ))}
+                  <p className="text-[11px] text-gray-400 pt-1">Completed months only</p>
+                </div>
+              </div>
             )}
           </div>
         </ChartCard>

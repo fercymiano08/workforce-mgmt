@@ -304,14 +304,20 @@ export default function Leave() {
                 </div>
               ))}
             </div>
-            <div className="hidden sm:grid grid-cols-2 sm:grid-cols-4 gap-4">
+            <div className="hidden sm:grid grid-cols-2 sm:grid-cols-4 gap-3.5">
               {Array.from({ length: 4 }).map((_, i) => (
-                <Card key={i} className="overflow-hidden">
-                  <div className="skeleton w-10 h-10 rounded-xl mb-3" />
-                  <div className="skeleton h-3 w-20 rounded" />
-                  <div className="skeleton h-7 w-16 rounded mt-2" />
-                  <div className="skeleton h-1.5 w-full rounded-full mt-3" />
-                  <div className="skeleton h-3 w-24 rounded mt-1.5" />
+                <Card key={i} padding={false}>
+                  <div className="p-4">
+                    <div className="flex items-center gap-2.5">
+                      <div className="skeleton w-8 h-8 rounded-lg flex-shrink-0" />
+                      <div className="flex-1 space-y-1.5">
+                        <div className="skeleton h-3 w-20 rounded" />
+                        <div className="skeleton h-2 w-16 rounded" />
+                      </div>
+                      <div className="skeleton h-5 w-12 rounded" />
+                    </div>
+                    <div className="skeleton h-1.5 w-full rounded-full mt-3" />
+                  </div>
                 </Card>
               ))}
             </div>
@@ -347,23 +353,32 @@ export default function Leave() {
               })}
             </div>
 
-            <div className="hidden sm:grid grid-cols-2 sm:grid-cols-4 gap-4">
+            <div className="hidden sm:grid grid-cols-2 sm:grid-cols-4 gap-3.5">
               {leaveBalances.map((b) => {
                 const style = leaveBalanceStyle[b.type] || fallbackBalanceStyle;
                 const pct = b.total > 0 ? Math.max((b.remaining / b.total) * 100, 0) : 0;
                 return (
-                  <Card key={b.type} className="overflow-hidden" hover>
-                    <div className={`w-10 h-10 rounded-xl flex items-center justify-center mb-3 ${style.iconBg || 'bg-gray-50'}`}>
-                      {style.icon && <style.icon className={`w-5 h-5 ${style.text}`} />}
+                  // One row, one glance. These used to be a 40px icon, a label, a big number, a bar and a
+                  // caption stacked on top of each other - six of them ate the whole screen and pushed the
+                  // requests people actually came for below the fold.
+                  <Card key={b.type} padding={false} hover>
+                    <div className="p-4">
+                      <div className="flex items-center gap-2.5">
+                        <div className={`w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0 ${style.iconBg || 'bg-gray-50'}`}>
+                          {style.icon && <style.icon className={`w-4 h-4 ${style.text}`} />}
+                        </div>
+                        <div className="min-w-0 flex-1">
+                          <p className={`text-[13px] font-semibold truncate ${style.text}`}>{b.type} Leave</p>
+                          <p className="text-[11px] text-gray-400">{b.used} of {b.total} days used</p>
+                        </div>
+                        <p className="text-lg font-bold text-gray-900 whitespace-nowrap">
+                          {b.remaining}<span className="text-xs font-normal text-gray-400">/{b.total}</span>
+                        </p>
+                      </div>
+                      <div className={`w-full h-1.5 rounded-full mt-3 ${style.barBg}`}>
+                        <div className={`h-1.5 rounded-full transition-all duration-500 ${style.color}`} style={{ width: `${pct}%` }} />
+                      </div>
                     </div>
-                    <p className={`text-xs font-semibold uppercase tracking-wide ${style.text}`}>{b.type} Leave</p>
-                    <p className="text-2xl font-bold text-gray-900 mt-2">
-                      {b.remaining} <span className="text-sm font-normal text-gray-400">/ {b.total}</span>
-                    </p>
-                    <div className={`w-full h-1.5 rounded-full mt-3 ${style.barBg}`}>
-                      <div className={`h-1.5 rounded-full transition-all duration-500 ${style.color}`} style={{ width: `${pct}%` }} />
-                    </div>
-                    <p className="text-xs text-gray-500 mt-1.5">{b.remaining === 0 ? 'All used' : `${b.remaining} days remaining`}</p>
                   </Card>
                 );
               })}

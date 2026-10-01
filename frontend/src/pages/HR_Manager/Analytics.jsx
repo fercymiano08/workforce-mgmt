@@ -28,14 +28,7 @@ const kpiColors = {
 
 const scoreColor = (value, colors) => (value >= 90 ? colors.emerald : value >= 75 ? colors.amber : colors.red);
 
-// One fixed color per department, assigned by alphabetical name order so it never
-// shifts with API response order or a re-fetch (identity, not magnitude - the pie's
-// job is "which department", so color follows the department, not the score).
-const DEPARTMENT_COLOR_ORDER = ['blue', 'emerald', 'amber', 'red', 'purple', 'sky', 'indigo', 'teal'];
-function departmentColorMap(names, colors) {
-const sorted = [...new Set(names)].sort();
-return Object.fromEntries(sorted.map((name, i) => [name, colors[DEPARTMENT_COLOR_ORDER[i % DEPARTMENT_COLOR_ORDER.length]]]));
-}
+
 
 // Charts only ever show real recorded activity. Until employees start clocking
 // in, filing leave, etc., each chart shows this honest placeholder instead of
@@ -122,6 +115,43 @@ function RankRow({ rank, name, department, score, tone }) {
   );
 }
 
+// One colour per productivity part, matched to what that part already looks like elsewhere on
+// the dashboard: attendance green (the "Present" series), hours blue, punctuality sky, overtime
+// amber (the overtime colour used on every timesheet bar), timesheets purple.
+const PRODUCTIVITY_COLORS = {
+  attendance: '#10B981',
+  hours: '#3B82F6',
+  punctuality: '#0EA5E9',
+  overtime: '#F59E0B',
+  timesheets: '#8B5CF6',
+};
+
+// The one overall workforce score, as a ring. A plain SVG circle rather than a Recharts radial
+// bar: it is a single value, not a series, so the number in the middle is the whole point. The
+// gap is measured against a fixed circumference so the stroke never scales with the text.
+const ScoreRing = ({ score, size = 152, stroke = 13, color = '#8B5CF6', track = '#F1F5F9' }) => {
+  const radius = (size - stroke) / 2;
+  const circumference = 2 * Math.PI * radius;
+  const pct = Math.max(0, Math.min(100, Number(score) || 0));
+
+  return (
+    <div className="relative shrink-0" style={{ width: size, height: size }}>
+      <svg width={size} height={size} className="-rotate-90">
+        <circle cx={size / 2} cy={size / 2} r={radius} fill="none" stroke={track} strokeWidth={stroke} />
+        <circle
+          cx={size / 2} cy={size / 2} r={radius} fill="none" stroke={color} strokeWidth={stroke}
+          strokeLinecap="round" strokeDasharray={circumference}
+          strokeDashoffset={circumference - (pct / 100) * circumference}
+        />
+      </svg>
+      <div className="absolute inset-0 flex flex-col items-center justify-center">
+        <span className="text-4xl font-bold text-gray-900 tabular-nums">{pct}</span>
+        <span className="text-xs font-semibold text-gray-400">out of 100</span>
+      </div>
+    </div>
+  );
+};
+
 export default function Analytics() {
   const { isDark } = useTheme();
   const chart = chartTheme(isDark);
@@ -133,7 +163,7 @@ export default function Analytics() {
   );
   const rangeLimit = { month: 1, quarter: 3, year: 12 }[range];
   const attendanceTrend = (analyticsData?.attendanceTrend ?? []).slice(-rangeLimit);
-  const departmentProductivity = analyticsData?.departmentProductivity ?? [];
+  const productivity = analyticsData?.departmentProductivity ?? null;
   const leaveTrendFull = analyticsData?.leaveTrend ?? [];
   const leaveTrend = leaveTrendFull.slice(-rangeLimit);
   const overtimeSummary = analyticsData?.overtimeSummary ?? [];
@@ -145,10 +175,7 @@ export default function Analytics() {
     ? punctualityScore.reduce((s, p) => s + p.score, 0) / punctualityScore.length
     : 0;
 
-  const deptColors = useMemo(
-    () => departmentColorMap((analyticsData?.departmentProductivity ?? []).map((d) => d.name), chart.colors),
-    [analyticsData, chart.colors]
-  );
+  
 
   const topPerformers = punctualityScore.slice(0, 5);
   const needsAttention = punctualityScore.slice(-5).reverse().filter((p) => !topPerformers.includes(p));
@@ -242,50 +269,43 @@ export default function Analytics() {
 
         <Card>
           <CardHeader>
-            <CardTitle>Department Productivity</CardTitle>
-            <CardDescription>Productivity scores by department</CardDescription>
+            <CardTitle>Workforce Productivity</CardTitle>
+            <CardDescription>
+              One score for the whole workforce, from completed months
+              {productivity?.period?.label ? ` · ${productivity.period.label}` : ''}
+            </CardDescription>
           </CardHeader>
-          {departmentProductivity.length === 0 ? (
+          {!productivity || productivity.score == null ? (
             <ChartEmpty />
           ) : (
-          <div className="h-72">
-            <ResponsiveContainer width="100%" height="100%">
-              <PieChart>
-                <Pie
-                  data={departmentProductivity}
-                  cx="50%"
-                  cy="40%"
-                  outerRadius={72}
-                  paddingAngle={2}
-                  dataKey="productivity"
-                  nameKey="name"
-                >
-                  {departmentProductivity.map((entry) => (
-                    <Cell key={entry.name} fill={deptColors[entry.name]} />
-                  ))}
-                </Pie>
-                <Tooltip
-                  content={({ active, payload }) => {
-                    if (active && payload && payload.length) {
-                      return (
-                        <div className="bg-white rounded-xl shadow-lg border border-gray-100 p-3">
-                          <p className="text-sm font-semibold text-gray-900">{payload[0].name}</p>
-                          <p className="text-xs text-gray-600">Productivity: {payload[0].value.toFixed(1)}%</p>
-                        </div>
-                      );
-                    }
-                    return null;
-                  }}
-                />
-                <Legend
-                  iconType="square"
-                  iconSize={8}
-                  wrapperStyle={{ fontSize: 11, paddingTop: 12 }}
-                  formatter={(value, entry) => <span className="text-gray-600">{value} Â· {entry.payload.productivity.toFixed(0)}%</span>}
-                />
-              </PieChart>
-            </ResponsiveContainer>
-          </div>
+            <div className="h-72 flex items-center justify-center gap-6 px-2">
+              <ScoreRing
+                score={productivity.score}
+                size={152}
+                stroke={13}
+                color={chart.colors.purple}
+                track={chart.grid}
+              />
+              <div className="space-y-2.5 min-w-[176px]">
+                {productivity.components.map((c) => (
+                  <div key={c.key}>
+                    <div className="flex items-baseline justify-between gap-3 text-xs">
+                      <span className="text-gray-500">
+                        {c.label}
+                        <span className="text-gray-400"> · {Math.round(c.weight * 100)}%</span>
+                      </span>
+                      <span className="font-semibold text-gray-800">{c.score}%</span>
+                    </div>
+                    <div className="h-1.5 rounded-full mt-1 overflow-hidden" style={{ background: chart.grid }}>
+                      <div
+                        className="h-full rounded-full"
+                        style={{ width: `${c.score}%`, background: PRODUCTIVITY_COLORS[c.key] || chart.colors.blue }}
+                      />
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
           )}
         </Card>
       </div>

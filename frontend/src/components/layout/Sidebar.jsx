@@ -60,8 +60,8 @@ const employeeMenuItems = [
   { path: '/', key: 'nav.dashboard', icon: LayoutDashboard },
   { path: '/my-attendance', key: 'nav.myAttendance', icon: Fingerprint },
   { path: '/my-schedule', key: 'nav.mySchedule', icon: CalendarClock },
-  { path: '/leave', key: 'nav.leave', icon: Calendar },
-  { path: '/my-timesheet', key: 'nav.timesheets', icon: FileClock },
+  { path: '/leave', key: 'nav.leaveEmployee', icon: Calendar },
+  { path: '/my-timesheet', key: 'nav.timesheetsEmployee', icon: FileClock },
   { path: '/my-profile', key: 'nav.myProfile', icon: User },
   { path: '/settings', key: 'nav.settings', icon: Settings },
 ];

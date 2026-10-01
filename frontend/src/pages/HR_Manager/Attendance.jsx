@@ -108,7 +108,7 @@ export default function Attendance() {
   const [earlyFilter, setEarlyFilter] = useState('All');
   const [selectedEarly, setSelectedEarly] = useState(null);
   const [earlyClassify, setEarlyClassify] = useState('');
-  const [earlyOverride, setEarlyOverride] = useState(false);
+  
   const [classifying, setClassifying] = useState(false);
 
   useEffect(() => {
@@ -198,7 +198,6 @@ export default function Attendance() {
 
   const openEarly = (rec) => {
     setEarlyClassify(rec.classification === 'PENDING_REVIEW' ? '' : rec.classification);
-    setEarlyOverride(false);
     setSelectedEarly(rec);
   };
 
@@ -206,7 +205,7 @@ export default function Attendance() {
     if (!selectedEarly || !earlyClassify) return;
     setClassifying(true);
     try {
-      await attendanceService.classifyEarlyClockOut(selectedEarly.id, earlyClassify, earlyOverride);
+      await attendanceService.classifyEarlyClockOut(selectedEarly.id, earlyClassify);
       await refreshEarly();
       setSelectedEarly(null);
       toast.success('Classification Saved', 'The early clock-out has been classified.');
@@ -872,7 +871,7 @@ export default function Attendance() {
                     {selectedEarly.proofDueAt
                       ? ` Due ${new Date(selectedEarly.proofDueAt).toLocaleString('en-US', { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' })}; after that it becomes unexcused automatically.`
                       : ''}
-                    {' '}Excusing it as Sick needs a certificate, or the Override option below.
+                    {' '}Excusing it as Sick needs a certificate.
                   </p>
                 )}
               </div>
@@ -910,20 +909,6 @@ export default function Attendance() {
             <p className="text-xs text-gray-400">
               Classifying only adjusts the payroll consequence of the shortfall. The punch remains valid regardless.
             </p>
-            <label className="flex items-start gap-3 rounded-xl border border-gray-200 bg-gray-50 p-3 cursor-pointer">
-              <input
-                type="checkbox"
-                checked={earlyOverride}
-                onChange={(e) => setEarlyOverride(e.target.checked)}
-                className="mt-0.5 w-4 h-4 accent-blue-600"
-              />
-              <span>
-                <span className="block text-sm font-medium text-gray-800">Override automatic policy</span>
-                <span className="block text-xs text-gray-500 mt-0.5">
-                  When selected, the rolling early-out limit and medical-certificate rules are bypassed for this record.
-                </span>
-              </span>
-            </label>
             <div className="flex justify-end gap-3 pt-4 border-t border-gray-100">
               <Button variant="outline" onClick={() => setSelectedEarly(null)} disabled={classifying}>Cancel</Button>
               <Button icon={ClipboardCheck} loading={classifying} disabled={!earlyClassify} onClick={handleEarlyClassify}>Save Classification</Button>

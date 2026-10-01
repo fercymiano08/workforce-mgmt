@@ -18,7 +18,7 @@ class AnalyticsService
     {
         return [
             'attendanceTrend' => $this->attendanceTrend(),
-            'departmentProductivity' => $this->departmentProductivity(),
+            'departmentProductivity' => $this->workforceProductivity(),
             'leaveTrend' => $this->leaveTrend(),
             'overtimeSummary' => $this->overtimeSummary(),
             'punctualityScore' => $this->punctualityScore(),
@@ -29,7 +29,7 @@ class AnalyticsService
     {
         return match ($key) {
             'attendance_trend' => $this->attendanceTrend(),
-            'department_productivity' => $this->departmentProductivity(),
+            'department_productivity' => $this->workforceProductivity(),
             'leave_trend' => $this->leaveTrend(),
             'overtime_summary' => $this->overtimeSummary(),
             'punctuality_score' => $this->punctualityScore(),
@@ -37,9 +37,19 @@ class AnalyticsService
         };
     }
 
+    /**
+     * Twelve buckets of completed months, most recent last.
+     *
+     * The month still in progress is deliberately left out. On the 2nd of a month the company has two
+     * days of attendance data, so a rate for that month is measured against almost nothing and reads as
+     * a near-perfect 100% - which is not a fact about the workforce, it is an artefact of dividing by a
+     * tiny denominator. The partial month returns as soon as it is finished, so nothing is hidden, it
+     * simply cannot be summarised honestly until it is a whole month.
+     */
     private function attendanceTrend(): array
     {
-        $start = Carbon::now()->subMonths(11)->startOfMonth();
+        $end = Carbon::now()->subMonthNoOverflow()->startOfMonth();
+        $start = $end->copy()->subMonths(11)->startOfMonth();
 
         $months = collect();
         for ($i = 0; $i < 12; $i++) {
@@ -159,41 +169,113 @@ class AnalyticsService
     }
 
     /**
-     * Heuristic proxy, not a directly measured metric: there is no task or
-     * output tracking anywhere in the schema to derive a "true" productivity
-     * number from. This is a weighted composite of real attendance rate,
-     * punctuality, and overtime burden (more unplanned overtime lowers the
-     * score) per department, normalized to 0-100.
+     * One score for the whole workforce, 0-100, built from four things the company actually
+     * measures: attendance, working hours, overtime and timesheets.
+     *
+     * It is deliberately not grouped by department. The four inputs come from attendance punches and
+     * timesheet weeks, which exist whoever the person works under, so asking an admin to file
+     * employees into departments first would be a requirement the number does not have.
+     *
+     * This is a heuristic proxy, not a measured productivity figure. There is no task or output
+     * tracking anywhere in the schema, so a "true" productivity number cannot be derived from the
+     * data the system holds. Each part is computed over completed months only, for the same reason
+     * the attendance trend skips the month in progress.
      */
-    private function departmentProductivity(): array
+    private function workforceProductivity(): array
     {
-        $rows = DB::table('attendance')
-            ->join('employees', 'employees.id', '=', 'attendance.employee_id')
-            ->selectRaw('employees.department as department')
+        $end = Carbon::now()->subMonthNoOverflow()->startOfMonth();
+        $start = $end->copy()->subMonths(11)->startOfMonth();
+
+        // 1. Attendance: days attended (on time, late or left early) over days expected. Approved
+        //    leave is excluded from the denominator, so an approved absence never costs anyone.
+        $att = DB::table('attendance')
             ->selectRaw('COUNT(*) as total')
-            ->selectRaw("SUM(CASE WHEN attendance.status = 'Absent' THEN 1 ELSE 0 END) as absent_count")
-            ->selectRaw("SUM(CASE WHEN attendance.status = 'Present' THEN 1 ELSE 0 END) as present_count")
-            ->selectRaw("SUM(CASE WHEN attendance.status = 'Late' THEN 1 ELSE 0 END) as late_count")
-            ->selectRaw('AVG(attendance.overtime) as avg_overtime')
-            ->whereNotNull('employees.department')
-            ->groupBy('employees.department')
-            ->get();
+            ->selectRaw("SUM(CASE WHEN status = 'Absent' THEN 1 ELSE 0 END) as absent_count")
+            ->selectRaw("SUM(CASE WHEN status = 'Present' THEN 1 ELSE 0 END) as present_count")
+            ->selectRaw("SUM(CASE WHEN status = 'Late' THEN 1 ELSE 0 END) as late_count")
+            ->where('date', '>=', $start->toDateString())
+            ->where('date', '<', $end->toDateString())
+            ->first();
 
-        return $rows->map(function ($r) {
-            $attendanceRate = $r->total > 0 ? (($r->total - $r->absent_count) / $r->total) * 100 : 0.0;
-            $punctuality = ($r->present_count + $r->late_count) > 0
-                ? ($r->present_count / ($r->present_count + $r->late_count)) * 100
-                : 0.0;
-            $overtimeScore = max(0.0, 100 - ((float) $r->avg_overtime * 10));
+        $attended = (int) $att->present_count + (int) $att->late_count;
+        $expected = $attended + (int) $att->absent_count;
+        $attendanceScore = $expected > 0 ? ($attended / $expected) * 100 : 0.0;
 
-            $productivity = (0.5 * $attendanceRate) + (0.3 * $punctuality) + (0.2 * $overtimeScore);
+        // 2. Punctuality: of the days attended, how many were on time rather than late.
+        $punctualityScore = $attended > 0 ? ((int) $att->present_count / $attended) * 100 : 0.0;
 
-            return [
-                'name' => $r->department,
-                'productivity' => round(min(100, max(0, $productivity)), 1),
-                'attendance' => round($attendanceRate, 1),
-                'efficiency' => round(min(100, max(0, $overtimeScore)), 1),
-            ];
-        })->values()->all();
+        // 3. Working hours: hours actually logged against the hours people were scheduled for. This
+        //    is what catches short days that still show up as "attended", which attendance alone
+        //    scores as a good day.
+        $hrs = DB::table('timesheets')
+            ->selectRaw('SUM(regular_hours) as regular')
+            ->selectRaw('SUM(total_hours) as total')
+            ->where('week_start', '>=', $start->toDateString())
+            ->where('week_start', '<', $end->toDateString())
+            ->first();
+
+        $scheduled = (float) ($hrs->regular ?: 0);
+        $logged = (float) ($hrs->total ?: 0);
+        // 85% of scheduled hours counts as full marks: nobody is expected to finish every week
+        // early, and scoring 100% only at exactly 100% would make the number meaningless.
+        $hoursScore = $scheduled > 0 ? min(100, ($logged / $scheduled) / 0.85 * 100) : 0.0;
+
+        // 4. Overtime burden: overtime is capacity the company paid for out of schedule, so a
+        //    heavier overtime load lowers the score rather than raising it.
+        $ot = DB::table('attendance')
+            ->selectRaw('AVG(overtime) as avg_overtime')
+            ->selectRaw('COUNT(*) as records')
+            ->where('date', '>=', $start->toDateString())
+            ->where('date', '<', $end->toDateString())
+            ->first();
+
+        $avgOvertime = (float) ($ot->avg_overtime ?: 0);
+        $overtimeScore = max(0.0, 100 - ($avgOvertime * 10));
+
+        // 5. Timesheet compliance: weeks recorded on time against weeks that had to be recorded.
+        //    A week still open or waiting on HR is neither good nor bad, so it is left out rather
+        //    than counted against the workforce.
+        $weeks = DB::table('timesheets')
+            ->selectRaw("SUM(CASE WHEN status = 'Pending' THEN 1 ELSE 0 END) as pending_count")
+            ->selectRaw("SUM(CASE WHEN status <> 'Pending' THEN 1 ELSE 0 END) as recorded_count")
+            ->where('week_start', '>=', $start->toDateString())
+            ->where('week_start', '<', $end->toDateString())
+            ->first();
+
+        $recorded = (int) $weeks->recorded_count;
+        $decidable = $recorded + (int) $weeks->pending_count;
+        $timesheetScore = $decidable > 0 ? ($recorded / $decidable) * 100 : 0.0;
+
+        // Attendance and hours are what the workforce directly controls, so they carry the most
+        // weight; punctuality, overtime and timesheet discipline adjust around them.
+        $productivity = (0.35 * $attendanceScore)
+            + (0.25 * $hoursScore)
+            + (0.15 * $punctualityScore)
+            + (0.15 * $overtimeScore)
+            + (0.10 * $timesheetScore);
+
+        return [
+            'score' => round(min(100, max(0, $productivity)), 1),
+            'components' => [
+                ['key' => 'attendance', 'label' => 'Attendance', 'weight' => 0.35, 'score' => round($attendanceScore, 1)],
+                ['key' => 'hours', 'label' => 'Working hours', 'weight' => 0.25, 'score' => round($hoursScore, 1)],
+                ['key' => 'punctuality', 'label' => 'Punctuality', 'weight' => 0.15, 'score' => round($punctualityScore, 1)],
+                ['key' => 'overtime', 'label' => 'Overtime burden', 'weight' => 0.15, 'score' => round($overtimeScore, 1)],
+                ['key' => 'timesheets', 'label' => 'Timesheet records', 'weight' => 0.10, 'score' => round($timesheetScore, 1)],
+            ],
+            'period' => [
+                'from' => $start->toDateString(),
+                'to' => $end->copy()->subDay()->toDateString(),
+                'label' => $start->format('M Y').' - '.$end->copy()->subDay()->format('M Y'),
+            ],
+            'totals' => [
+                'daysExpected' => $expected,
+                'daysAttended' => $attended,
+                'hoursLogged' => round($logged, 1),
+                'hoursScheduled' => round($scheduled, 1),
+                'avgOvertime' => round($avgOvertime, 2),
+                'weeksRecorded' => $recorded,
+            ],
+        ];
     }
 }
