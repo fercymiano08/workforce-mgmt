@@ -145,8 +145,8 @@ const ScoreRing = ({ score, size = 152, stroke = 13, color = '#8B5CF6', track = 
         />
       </svg>
       <div className="absolute inset-0 flex flex-col items-center justify-center">
-        <span className="text-4xl font-bold text-gray-900 tabular-nums">{pct}</span>
-        <span className="text-xs font-semibold text-gray-400">out of 100</span>
+        <span className="text-5xl font-bold text-gray-900 tabular-nums">{pct}</span>
+        <span className="text-sm font-semibold text-gray-400 mt-0.5">out of 100</span>
       </div>
     </div>
   );
@@ -157,11 +157,14 @@ export default function Analytics() {
   const chart = chartTheme(isDark);
   const LEAVE_TYPE_COLORS = lowercaseLeaveTypeColors(isDark);
   const [range, setRange] = useState('month');
-  const { data: analyticsData, loading } = useApiData(
-    () => analyticsService.getAll(),
-    []
-  );
   const rangeLimit = { month: 1, quarter: 3, year: 12 }[range];
+  // Productivity is one number, not an array, so it cannot be cut down here like the trends are -
+  // it is recomputed server-side over the chosen window. rangeLimit is in the dependency list so
+  // moving the Month/Quarter/Year control refetches it.
+  const { data: analyticsData, loading } = useApiData(
+    () => analyticsService.getAll({ months: rangeLimit }),
+    [rangeLimit]
+  );
   const attendanceTrend = (analyticsData?.attendanceTrend ?? []).slice(-rangeLimit);
   const productivity = analyticsData?.departmentProductivity ?? null;
   const leaveTrendFull = analyticsData?.leaveTrend ?? [];
@@ -271,7 +274,7 @@ export default function Analytics() {
           <CardHeader>
             <CardTitle>Workforce Productivity</CardTitle>
             <CardDescription>
-              One score for the whole workforce, from completed months
+              One score for the whole workforce, {range === 'month' ? 'this month' : range === 'quarter' ? 'this quarter' : 'this year'}
               {productivity?.period?.label ? ` · ${productivity.period.label}` : ''}
             </CardDescription>
           </CardHeader>
@@ -281,12 +284,12 @@ export default function Analytics() {
             <div className="h-72 flex items-center justify-center gap-6 px-2">
               <ScoreRing
                 score={productivity.score}
-                size={152}
-                stroke={13}
+                size={208}
+                stroke={18}
                 color={chart.colors.purple}
                 track={chart.grid}
               />
-              <div className="space-y-2.5 min-w-[176px]">
+              <div className="space-y-3 min-w-[210px] flex-1 max-w-[300px]">
                 {productivity.components.map((c) => (
                   <div key={c.key}>
                     <div className="flex items-baseline justify-between gap-3 text-xs">

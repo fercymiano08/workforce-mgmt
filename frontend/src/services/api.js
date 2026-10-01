@@ -402,8 +402,8 @@ export const analyticsService = {
     const { data } = await http.get('/analytics/punctuality-score');
     return data;
   },
-  getAll: async () => {
-    const { data } = await http.get('/analytics');
+  getAll: async (params = {}) => {
+    const { data } = await http.get('/analytics', { params });
     return data;
   },
   getAiInsights: async (fresh = false) => {

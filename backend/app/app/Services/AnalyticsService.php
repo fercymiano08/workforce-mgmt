@@ -14,22 +14,39 @@ use Illuminate\Support\Facades\DB;
  */
 class AnalyticsService
 {
-    public function all(): array
+    /**
+     * The number of completed months a windowed metric covers, so the caller cannot ask for a
+     * window that is not a whole number of months or that runs past the finished data.
+     */
+    public const MIN_WINDOW_MONTHS = 1;
+    public const MAX_WINDOW_MONTHS = 12;
+    public const DEFAULT_WINDOW_MONTHS = 12;
+
+    public static function windowMonths(?int $months): int
+    {
+        if ($months === null) {
+            return self::DEFAULT_WINDOW_MONTHS;
+        }
+
+        return max(self::MIN_WINDOW_MONTHS, min(self::MAX_WINDOW_MONTHS, $months));
+    }
+
+    public function all(?int $months = null): array
     {
         return [
             'attendanceTrend' => $this->attendanceTrend(),
-            'departmentProductivity' => $this->workforceProductivity(),
+            'departmentProductivity' => $this->workforceProductivity(self::windowMonths($months)),
             'leaveTrend' => $this->leaveTrend(),
             'overtimeSummary' => $this->overtimeSummary(),
             'punctualityScore' => $this->punctualityScore(),
         ];
     }
 
-    public function section(string $key): array
+    public function section(string $key, ?int $months = null): array
     {
         return match ($key) {
             'attendance_trend' => $this->attendanceTrend(),
-            'department_productivity' => $this->workforceProductivity(),
+            'department_productivity' => $this->workforceProductivity(self::windowMonths($months)),
             'leave_trend' => $this->leaveTrend(),
             'overtime_summary' => $this->overtimeSummary(),
             'punctuality_score' => $this->punctualityScore(),
@@ -181,10 +198,12 @@ class AnalyticsService
      * data the system holds. Each part is computed over completed months only, for the same reason
      * the attendance trend skips the month in progress.
      */
-    private function workforceProductivity(): array
+    private function workforceProductivity(int $months = 12): array
     {
-        $end = Carbon::now()->subMonthNoOverflow()->startOfMonth();
-        $start = $end->copy()->subMonths(11)->startOfMonth();
+        // The window is half-open and ends where the current month begins, so the month still in
+        // progress is outside it by construction rather than by a filter that might be forgotten.
+        $end = Carbon::now()->startOfMonth();
+        $start = $end->copy()->subMonths($months)->startOfMonth();
 
         // 1. Attendance: days attended (on time, late or left early) over days expected. Approved
         //    leave is excluded from the denominator, so an approved absence never costs anyone.
@@ -229,8 +248,12 @@ class AnalyticsService
             ->where('date', '<', $end->toDateString())
             ->first();
 
-        $avgOvertime = (float) ($ot->avg_overtime ?: 0);
-        $overtimeScore = max(0.0, 100 - ($avgOvertime * 10));
+        // No attendance rows means no average overtime, which is not the same as "zero overtime".
+        // Defaulting to 0 here would hand out a perfect 100 on this part for an empty window and
+        // inflate the total, so an absent average scores nothing instead.
+        $hasPunches = (int) $ot->records > 0;
+        $avgOvertime = $hasPunches ? (float) $ot->avg_overtime : 0.0;
+        $overtimeScore = $hasPunches ? max(0.0, 100 - ($avgOvertime * 10)) : 0.0;
 
         // 5. Timesheet compliance: weeks recorded on time against weeks that had to be recorded.
         //    A week still open or waiting on HR is neither good nor bad, so it is left out rather
@@ -266,7 +289,10 @@ class AnalyticsService
             'period' => [
                 'from' => $start->toDateString(),
                 'to' => $end->copy()->subDay()->toDateString(),
-                'label' => $start->format('M Y').' - '.$end->copy()->subDay()->format('M Y'),
+                'label' => $months === 1
+                    ? $start->format('M Y')
+                    : $start->format('M Y').' - '.$end->copy()->subDay()->format('M Y'),
+                'months' => $months,
             ],
             'totals' => [
                 'daysExpected' => $expected,

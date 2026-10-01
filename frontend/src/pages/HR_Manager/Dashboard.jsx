@@ -60,8 +60,8 @@ const ScoreRing = ({ score, size = 160, stroke = 14, color = '#3B82F6', track = 
         />
       </svg>
       <div className="absolute inset-0 flex flex-col items-center justify-center">
-        <span className="text-4xl font-bold text-gray-900 tabular-nums">{pct}</span>
-        <span className="text-xs font-semibold text-gray-400">out of 100</span>
+        <span className="text-5xl font-bold text-gray-900 tabular-nums">{pct}</span>
+        <span className="text-sm font-semibold text-gray-400 mt-0.5">out of 100</span>
       </div>
     </div>
   );
@@ -646,8 +646,8 @@ export default function Dashboard() {
               <EmptyState message={t('dashboard.noData')} />
             ) : (
               <div className="h-full flex items-center justify-center gap-6 flex-wrap px-2">
-                <ScoreRing score={productivity.score} size={168} stroke={14} color={COLORS.purple} track={chart.grid} />
-                <div className="space-y-2.5 min-w-[180px]">
+                <ScoreRing score={productivity.score} size={216} stroke={19} color={COLORS.purple} track={chart.grid} />
+                <div className="space-y-3 min-w-[200px] flex-1 max-w-[290px]">
                   {(productivity.components || []).map((c) => (
                     <div key={c.key}>
                       <div className="flex items-baseline justify-between gap-3 text-xs">
