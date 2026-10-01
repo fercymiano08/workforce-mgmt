@@ -64,10 +64,24 @@ return [
         'brevo' => [
             'transport' => 'smtp',
             'scheme' => env('MAIL_SCHEME', 'tls'),
-            'host' => env('MAIL_HOST', 'smtp-relay.brevo.com'),
-            'port' => (int) env('MAIL_PORT', 587),
-            'username' => env('MAIL_USERNAME'),
-            'password' => env('MAIL_PASSWORD'),
+            /*
+             | Read from BREVO_HOST, not MAIL_HOST.
+             |
+             | Falling back to MAIL_HOST here was a trap: a deployment that moved from Gmail to Brevo
+             | almost certainly still has MAIL_HOST=smtp.gmail.com left over from before. Reusing that
+             | variable meant setting MAIL_MAILER=brevo still dialled Gmail, presenting Brevo's SMTP
+             | key to a server that does not know it, and failing authentication - so not one message
+             | reached Brevo and the dashboard showed nothing at all, which looks exactly like the
+             | mailer not being enabled.
+             |
+             | The mailer you select by name should therefore not borrow another mailer's settings.
+             | MAIL_HOST remains the host for the 'smtp' mailer; this one is Brevo's unless
+             | BREVO_HOST says otherwise.
+             */
+            'host' => env('BREVO_HOST', 'smtp-relay.brevo.com'),
+            'port' => (int) env('BREVO_PORT', 587),
+            'username' => env('BREVO_USERNAME') ?: env('MAIL_USERNAME'),
+            'password' => env('BREVO_PASSWORD') ?: env('MAIL_PASSWORD'),
             'timeout' => (int) env('MAIL_TIMEOUT', 8),
             'local_domain' => env('MAIL_EHLO_DOMAIN', parse_url((string) env('APP_URL', 'http://localhost'), PHP_URL_HOST)),
         ],

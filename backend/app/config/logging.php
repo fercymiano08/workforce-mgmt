@@ -94,6 +94,19 @@ return [
             'processors' => [PsrLogMessageProcessor::class],
         ],
 
+        /*
+         | Writes to stderr, which is the stream a container platform actually collects.
+         |
+         | The default 'single' channel writes to storage/logs/laravel.log inside the container,
+         | where nothing outside can read it. On a platform showing only stdout/stderr that means a
+         | real failure happens with no visible sign anywhere - and mail failures are the worst case,
+         | because they are deliberately logged and swallowed so that an unreachable mail server
+         | cannot break a request that already succeeded. The only symptom is an email that never
+         | arrives, with no error to find.
+         |
+         | Set LOG_CHANNEL=stderr on a container deployment and every warning, including the
+         | swallowed mail failures, shows up in the platform's own log stream.
+         */
         'stderr' => [
             'driver' => 'monolog',
             'level' => env('LOG_LEVEL', 'debug'),

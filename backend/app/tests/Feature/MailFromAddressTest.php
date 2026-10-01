@@ -150,6 +150,53 @@ class MailFromAddressTest extends TestCase
         }
     }
 
+    /**
+     * The bug that stopped mail reaching Brevo entirely.
+     *
+     * The brevo mailer used to read MAIL_HOST, so a deployment that had moved from Gmail to Brevo
+     * while still carrying MAIL_HOST=smtp.gmail.com would dial Gmail, hand it Brevo's SMTP key, and
+     * fail authentication - without a single message ever reaching Brevo, so Brevo's own log showed
+     * nothing and it looked like the mailer had not been switched on at all.
+     *
+     * The two mailers now have separate hosts, so selecting one cannot inherit the other's.
+     */
+    public function test_the_brevo_mailer_ignores_a_stale_mail_host_left_over_from_another_provider(): void
+    {
+        $mail = $this->loadMailConfig([
+            'MAIL_HOST' => 'smtp.gmail.com',
+            'MAIL_PORT' => '587',
+            'BREVO_HOST' => null,
+            'BREVO_PORT' => null,
+        ]);
+
+        $this->assertSame(
+            'smtp-relay.brevo.com',
+            $mail['mailers']['brevo']['host'],
+            'Selecting the brevo mailer must not inherit smtp.gmail.com as its host.'
+        );
+        $this->assertSame(587, $mail['mailers']['brevo']['port']);
+    }
+
+    /** The smtp mailer keeps honouring MAIL_HOST, so the separation does not break existing setups. */
+    public function test_the_smtp_mailer_still_honours_mail_host(): void
+    {
+        $mail = $this->loadMailConfig(['MAIL_HOST' => 'smtp.gmail.com', 'MAIL_PORT' => '587']);
+
+        $this->assertSame('smtp.gmail.com', $mail['mailers']['smtp']['host']);
+    }
+
+    /** BREVO_* overrides win when a deployment genuinely needs to point elsewhere. */
+    public function test_brevo_specific_variables_override_the_defaults(): void
+    {
+        $mail = $this->loadMailConfig([
+            'BREVO_HOST' => 'smtp-relay.brevo.com',
+            'BREVO_PORT' => '2525',
+        ]);
+
+        $this->assertSame('smtp-relay.brevo.com', $mail['mailers']['brevo']['host']);
+        $this->assertSame(2525, $mail['mailers']['brevo']['port']);
+    }
+
     public function test_the_mailer_never_points_at_the_log_driver_in_production(): void
     {
         // 'log' silently writes mail to a file instead of sending it. Harmless locally, and the
