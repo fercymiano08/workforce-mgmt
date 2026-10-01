@@ -34,6 +34,19 @@ class AnalyticsController extends Controller
         return response()->json(['data' => $this->analytics->all($this->months($request))]);
     }
 
+    /**
+     * The Workforce Analytics page (This Week / This Month / This Year). Separate from getAll()
+     * above on purpose: that one is windowed in trailing months and still feeds the main
+     * Dashboard and the AI insights badge, so it stays exactly as it is.
+     */
+    public function workforce(Request $request): JsonResponse
+    {
+        $period = $request->query('period');
+        $period = in_array($period, AnalyticsService::VALID_WORKFORCE_PERIODS, true) ? $period : 'month';
+
+        return response()->json(['data' => $this->analytics->workforceCards($period)]);
+    }
+
     public function section(Request $request, string $section): JsonResponse
     {
         $map = [

@@ -406,6 +406,12 @@ export const analyticsService = {
     const { data } = await http.get('/analytics', { params });
     return data;
   },
+  // The Workforce Analytics page's 6 cards, for a single This Week/Month/Year filter - separate
+  // from getAll() above, which the main Dashboard and the AI insights badge still use unchanged.
+  getWorkforce: async (period) => {
+    const { data } = await http.get('/analytics/workforce', { params: { period } });
+    return data;
+  },
   getAiInsights: async (fresh = false) => {
     const { data } = await http.get('/analytics/ai/insights', { params: fresh ? { refresh: 1 } : undefined });
     return data;

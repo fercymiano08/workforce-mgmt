@@ -5,6 +5,7 @@ namespace App\Services;
 use App\Models\Attendance;
 use App\Models\Employee;
 use App\Models\Leave;
+use App\Models\ShiftSchedule;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\DB;
 
@@ -385,6 +386,391 @@ class AnalyticsService
                 'overtimeShare' => round($overtimeShare, 2),
                 'weeksClosed' => $closedWeeks,
                 'weeksRecorded' => $recordedWeeks,
+            ],
+        ];
+    }
+
+    // =====================================================================================
+    // Workforce Analytics page (This Week / This Month / This Year): six cards, each carrying
+    // its own data-source and formula text so the page can explain itself without anyone
+    // having to remember the rule separately. Entirely additive - all() and section() above,
+    // which the main Dashboard and the AI insights badge both still call, are untouched.
+    // =====================================================================================
+
+    public const VALID_WORKFORCE_PERIODS = ['week', 'month', 'year'];
+
+    public function workforceCards(string $period): array
+    {
+        $range = $this->periodRange($period);
+        $buckets = $this->subBuckets($range['key'], $range['start'], $range['containerEnd']);
+
+        return [
+            'period' => [
+                'key' => $range['key'],
+                'from' => $range['start']->toDateString(),
+                'to' => $range['end']->toDateString(),
+                'label' => $range['label'],
+            ],
+            'attendanceSummary' => $this->attendanceSummary($range),
+            'attendanceRate' => $this->attendanceRate($range, $buckets),
+            'leaveTrend' => $this->leaveTrendForPeriod($range, $buckets),
+            'overtimeHours' => $this->overtimeHours($range, $buckets),
+            'departmentPunctuality' => $this->departmentPunctuality($range),
+            'leaveComposition' => $this->leaveComposition($range),
+        ];
+    }
+
+    /**
+     * Resolves week|month|year (anything else falls back to month) to a date window in the
+     * company's own timezone. 'end' is capped at today - a card never asks about a day that
+     * has not happened yet - while 'containerEnd' keeps the whole period's natural boundary
+     * (e.g. Sunday, or the month's last day), so the bucket list below still has its full
+     * shape with the as-yet-unhappened part sitting honestly at zero.
+     */
+    private function periodRange(string $period): array
+    {
+        $period = in_array($period, ['week', 'year'], true) ? $period : 'month';
+        $today = Carbon::now(ShiftHours::timezone())->startOfDay();
+
+        $start = match ($period) {
+            'week' => $today->copy()->startOfWeek(Carbon::MONDAY),
+            'year' => $today->copy()->startOfYear(),
+            default => $today->copy()->startOfMonth(),
+        };
+        $containerEnd = match ($period) {
+            'week' => $start->copy()->addDays(6),
+            'year' => $today->copy()->endOfYear()->startOfDay(),
+            default => $today->copy()->endOfMonth()->startOfDay(),
+        };
+        $end = $today->lt($containerEnd) ? $today->copy() : $containerEnd->copy();
+
+        $label = match ($period) {
+            'week' => $start->format('M j').' - '.$containerEnd->format('M j, Y'),
+            'year' => (string) $start->year,
+            default => $start->format('F Y'),
+        };
+
+        return ['key' => $period, 'start' => $start, 'end' => $end, 'containerEnd' => $containerEnd, 'label' => $label];
+    }
+
+    /**
+     * The bucket list a time-axis card is drawn against: one per day for a week, one per
+     * calendar week for a month, one per calendar month for a year - so every chart stays
+     * readable (4-7 bars) no matter which filter is active, instead of 30 daily bars for
+     * "This Month".
+     */
+    private function subBuckets(string $period, Carbon $start, Carbon $containerEnd): array
+    {
+        if ($period === 'week') {
+            $buckets = [];
+            for ($i = 0; $i < 7; $i++) {
+                $day = $start->copy()->addDays($i);
+                $buckets[] = ['label' => $day->format('D'), 'from' => $day->copy(), 'to' => $day->copy()];
+            }
+
+            return $buckets;
+        }
+
+        if ($period === 'year') {
+            $buckets = [];
+            for ($i = 0; $i < 12; $i++) {
+                $month = $start->copy()->addMonths($i);
+                $buckets[] = ['label' => $month->format('M'), 'from' => $month->copy()->startOfMonth(), 'to' => $month->copy()->endOfMonth()->startOfDay()];
+            }
+
+            return $buckets;
+        }
+
+        // month: 7-day chunks from the 1st to the month's actual last day (the final chunk is
+        // whatever is left, not a full 7).
+        $buckets = [];
+        $cursor = $start->copy();
+        $week = 1;
+        while ($cursor->lte($containerEnd)) {
+            $to = $cursor->copy()->addDays(6)->min($containerEnd);
+            $buckets[] = ['label' => 'Week '.$week, 'from' => $cursor->copy(), 'to' => $to->copy()];
+            $cursor = $to->copy()->addDay();
+            $week++;
+        }
+
+        return $buckets;
+    }
+
+    /** Which bucket a date falls into, or null if it is outside every one (should not happen - every bucket list spans its whole container). */
+    private static function bucketIndexForDate(array $buckets, string $dateString): ?int
+    {
+        foreach ($buckets as $i => $b) {
+            if ($dateString >= $b['from']->toDateString() && $dateString <= $b['to']->toDateString()) {
+                return $i;
+            }
+        }
+
+        return null;
+    }
+
+    /**
+     * Card 1: "Attendance Summary". A pie of the whole period, not a trend - how the selected
+     * window's attendance actually broke down. The four statuses are already mutually
+     * exclusive on every Attendance row (see the class-level note above), so this is a
+     * straight count per status, same classification attendanceTrend() above already uses.
+     */
+    private function attendanceSummary(array $range): array
+    {
+        $rows = Attendance::whereBetween('date', [$range['start']->toDateString(), $range['end']->toDateString()])
+            ->selectRaw('status, COUNT(*) as c')
+            ->groupBy('status')
+            ->pluck('c', 'status');
+
+        $onTime = (int) ($rows['Present'] ?? 0);
+        $late = (int) ($rows['Late'] ?? 0);
+        $earlyLeave = (int) ($rows['Early Leave'] ?? 0);
+        $absent = (int) ($rows['Absent'] ?? 0);
+        $total = $onTime + $late + $earlyLeave + $absent;
+
+        $pct = fn (int $n) => $total > 0 ? round($n / $total * 100, 1) : 0.0;
+
+        return [
+            'total' => $total,
+            'slices' => [
+                ['key' => 'onTime', 'label' => 'Present (On Time)', 'value' => $onTime, 'pct' => $pct($onTime), 'color' => 'emerald'],
+                ['key' => 'late', 'label' => 'Present (Late)', 'value' => $late, 'pct' => $pct($late), 'color' => 'amber'],
+                ['key' => 'earlyLeave', 'label' => 'Early Leave', 'value' => $earlyLeave, 'pct' => $pct($earlyLeave), 'color' => 'blue'],
+                ['key' => 'absent', 'label' => 'Absent', 'value' => $absent, 'pct' => $pct($absent), 'color' => 'red'],
+            ],
+            'meta' => [
+                'dataSource' => 'Attendance records (clock-in/clock-out) for the selected period.',
+                'formula' => "Count of each status \u{f7} total attendance records \u{d7} 100. One record = one employee's attendance for one day/shift.",
+            ],
+        ];
+    }
+
+    /**
+     * Present days against scheduled days for an arbitrary window - shared by the card's
+     * headline number (the full selected period) and its sparkline (one call per sub-bucket).
+     *
+     * A scheduled day covered by approved leave is excused from the denominator, the same way
+     * attendance:mark-absent never turns it into an Absent record (MarkAbsentDays.php) - an
+     * approved absence does not cost anyone, here either.
+     */
+    private function attendanceRateFor(string $from, string $to): array
+    {
+        if ($from > $to) {
+            return ['presentDays' => 0, 'scheduledDays' => 0, 'rate' => 0.0];
+        }
+
+        $presentDays = Attendance::whereBetween('date', [$from, $to])
+            ->whereIn('status', ['Present', 'Late', 'Early Leave'])
+            ->count();
+
+        $schedules = ShiftSchedule::where('status', 'Scheduled')
+            ->whereBetween('date', [$from, $to])
+            ->get(['employee_id', 'date']);
+
+        if ($schedules->isEmpty()) {
+            return ['presentDays' => $presentDays, 'scheduledDays' => 0, 'rate' => 0.0];
+        }
+
+        $leaves = Leave::where('status', 'Approved')
+            ->whereDate('end_date', '>=', $from)
+            ->whereDate('start_date', '<=', $to)
+            ->get(['employee_id', 'start_date', 'end_date']);
+
+        $scheduledDays = 0;
+        foreach ($schedules as $schedule) {
+            $date = $schedule->date->toDateString();
+            $onLeave = $leaves->contains(fn ($l) => $l->employee_id === $schedule->employee_id
+                && $l->start_date->toDateString() <= $date && $l->end_date->toDateString() >= $date);
+            if (! $onLeave) {
+                $scheduledDays++;
+            }
+        }
+
+        $rate = $scheduledDays > 0 ? round($presentDays / $scheduledDays * 100, 1) : 0.0;
+
+        return ['presentDays' => $presentDays, 'scheduledDays' => $scheduledDays, 'rate' => $rate];
+    }
+
+    /** Card 2: "Attendance Rate" - the big KPI (ring) plus a small trend line across the period's buckets. */
+    private function attendanceRate(array $range, array $buckets): array
+    {
+        $endString = $range['end']->toDateString();
+        $overall = $this->attendanceRateFor($range['start']->toDateString(), $endString);
+
+        $trend = array_map(function ($b) use ($endString) {
+            $from = $b['from']->toDateString();
+            if ($from > $endString) {
+                // A bucket entirely after today has not happened yet - zero, not a query that can only
+                // ever return nothing.
+                return ['label' => $b['label'], 'rate' => 0.0];
+            }
+            $to = min($b['to']->toDateString(), $endString);
+            $r = $this->attendanceRateFor($from, $to);
+
+            return ['label' => $b['label'], 'rate' => $r['rate']];
+        }, $buckets);
+
+        return [
+            'rate' => $overall['rate'],
+            'presentDays' => $overall['presentDays'],
+            'scheduledDays' => $overall['scheduledDays'],
+            'trend' => $trend,
+            'meta' => [
+                'dataSource' => 'Attendance records vs. scheduled shifts for the selected period.',
+                'formula' => "(Present days \u{f7} scheduled days) \u{d7} 100. Scheduled days excludes days covered by approved leave - an excused absence is not held against the rate. Out of all scheduled workdays, what % did employees actually show up for?",
+            ],
+        ];
+    }
+
+    /** Card 3: "Leave Trends" - approved leave days (not requests), summed per type per sub-bucket. */
+    private function leaveTrendForPeriod(array $range, array $buckets): array
+    {
+        $types = ['vacation', 'sick', 'emergency', 'special', 'funeral', 'unpaid'];
+
+        $rows = Leave::where('status', 'Approved')
+            ->whereBetween('start_date', [$range['start']->toDateString(), $range['end']->toDateString()])
+            ->get(['leave_type', 'start_date', 'days']);
+
+        $out = array_map(
+            fn ($b) => array_merge(['label' => $b['label'], 'total' => 0.0], array_fill_keys([...$types, 'other'], 0.0)),
+            $buckets
+        );
+
+        foreach ($rows as $row) {
+            $idx = self::bucketIndexForDate($buckets, $row->start_date->toDateString());
+            if ($idx === null) {
+                continue;
+            }
+            $type = strtolower((string) $row->leave_type);
+            $key = in_array($type, $types, true) ? $type : 'other';
+            $days = (float) ($row->days ?? 0);
+            $out[$idx][$key] += $days;
+            $out[$idx]['total'] += $days;
+        }
+
+        foreach ($out as &$bucket) {
+            foreach ($bucket as $k => $v) {
+                if ($k !== 'label') {
+                    $bucket[$k] = round($v, 1);
+                }
+            }
+        }
+        unset($bucket);
+
+        return [
+            'buckets' => $out,
+            'types' => $types,
+            'meta' => [
+                'dataSource' => 'Approved leave records.',
+                'formula' => "Total leave days per period, grouped by leave type (each request's day count, summed).",
+            ],
+        ];
+    }
+
+    /** Card 4: "Overtime Hours" - total overtime logged per sub-bucket, one series. */
+    private function overtimeHours(array $range, array $buckets): array
+    {
+        $rows = Attendance::whereBetween('date', [$range['start']->toDateString(), $range['end']->toDateString()])
+            ->whereNotNull('overtime')
+            ->where('overtime', '>', 0)
+            ->get(['date', 'overtime']);
+
+        $out = array_map(fn ($b) => ['label' => $b['label'], 'hours' => 0.0], $buckets);
+
+        foreach ($rows as $row) {
+            $idx = self::bucketIndexForDate($buckets, $row->date->toDateString());
+            if ($idx === null) {
+                continue;
+            }
+            $out[$idx]['hours'] += (float) $row->overtime;
+        }
+
+        foreach ($out as &$bucket) {
+            $bucket['hours'] = round($bucket['hours'], 1);
+        }
+        unset($bucket);
+
+        return [
+            'buckets' => $out,
+            'totalHours' => round(array_sum(array_column($out, 'hours')), 1),
+            'meta' => [
+                'dataSource' => 'Overtime records (the overtime hours logged on each attendance record).',
+                'formula' => 'Sum of overtime hours per period.',
+            ],
+        ];
+    }
+
+    /** Card 5: "Department Punctuality" - ranked by department, never by name, so nobody is singled out. */
+    private function departmentPunctuality(array $range): array
+    {
+        $rows = DB::table('attendance')
+            ->join('employees', 'employees.id', '=', 'attendance.employee_id')
+            ->whereBetween('attendance.date', [$range['start']->toDateString(), $range['end']->toDateString()])
+            ->whereNotNull('employees.department')
+            ->selectRaw('employees.department as department')
+            ->selectRaw("SUM(CASE WHEN attendance.status = 'Present' THEN 1 ELSE 0 END) as on_time")
+            ->selectRaw("SUM(CASE WHEN attendance.status IN ('Present','Late','Early Leave') THEN 1 ELSE 0 END) as total_clockins")
+            ->groupBy('employees.department')
+            ->get();
+
+        $departments = $rows->filter(fn ($r) => (int) $r->total_clockins > 0)
+            ->map(fn ($r) => [
+                'department' => $r->department,
+                'onTime' => (int) $r->on_time,
+                'totalClockIns' => (int) $r->total_clockins,
+                'rate' => round(((int) $r->on_time / (int) $r->total_clockins) * 100, 1),
+            ])
+            ->sortByDesc('rate')
+            ->values()
+            ->all();
+
+        return [
+            'departments' => $departments,
+            'meta' => [
+                'dataSource' => 'Attendance records grouped by department.',
+                'formula' => "(On-time clock-ins \u{f7} total clock-ins) \u{d7} 100, per department. Which department clocks in on time the most?",
+            ],
+        ];
+    }
+
+    /** Card 6: "Leave Type Composition" - approved requests only; counted, not summed in days. */
+    private function leaveComposition(array $range): array
+    {
+        $types = ['vacation', 'sick', 'emergency', 'special', 'funeral', 'unpaid'];
+
+        $rows = Leave::where('status', 'Approved')
+            ->whereBetween('start_date', [$range['start']->toDateString(), $range['end']->toDateString()])
+            ->selectRaw('leave_type, COUNT(*) as c')
+            ->groupBy('leave_type')
+            ->pluck('c', 'leave_type');
+
+        // A type this donut has no slice of its own for (e.g. 'Half Day' - a real approved request
+        // with no bucket of its own, same case leaveTrendForPeriod() above already guards) still has
+        // to be counted, or approved leave could exist in the database and be invisible here - same
+        // reasoning, same 'other' bucket, so the two cards can never quietly disagree.
+        $counts = array_fill_keys([...$types, 'other'], 0);
+        foreach ($rows as $type => $count) {
+            $key = strtolower((string) $type);
+            $key = in_array($key, $types, true) ? $key : 'other';
+            $counts[$key] += (int) $count;
+        }
+
+        $total = array_sum($counts);
+        $slices = collect($counts)
+            ->filter(fn ($count) => $count > 0)
+            ->map(fn ($count, $type) => [
+                'type' => $type,
+                'count' => $count,
+                'pct' => $total > 0 ? round($count / $total * 100, 1) : 0.0,
+            ])
+            ->values()
+            ->all();
+
+        return [
+            'total' => $total,
+            'slices' => $slices,
+            'meta' => [
+                'dataSource' => 'Approved leave records only - pending, rejected and cancelled requests are excluded; they never happened.',
+                'formula' => "Count of approved leave requests per type \u{f7} total approved \u{d7} 100.",
             ],
         ];
     }

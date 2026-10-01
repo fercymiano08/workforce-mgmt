@@ -13,11 +13,16 @@
 const SERIES_LIGHT = {
   blue: '#3B82F6', emerald: '#10B981', amber: '#F59E0B', red: '#EF4444',
   purple: '#8B5CF6', sky: '#0EA5E9', indigo: '#6366F1', rose: '#F43F5E', teal: '#14B8A6',
+  // A deliberately darker purple than 'purple' above - requested for the Overtime Hours chart,
+  // which used to be amber ("yellow is ugly") and needed a shade saturated enough to read clearly
+  // as its own dotted line rather than a lighter wash.
+  purpleDark: '#6D28D9',
 };
 
 const SERIES_DARK = {
   blue: '#5B8FD6', emerald: '#3FA98A', amber: '#C99A3F', red: '#D9646B',
   purple: '#8B78D6', sky: '#4E9BC4', indigo: '#6E7BD6', rose: '#D4738A', teal: '#3FA0A8',
+  purpleDark: '#9B6FE0',
 };
 
 export function chartTheme(isDark) {

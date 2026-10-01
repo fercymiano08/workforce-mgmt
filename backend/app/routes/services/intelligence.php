@@ -17,6 +17,7 @@ use Illuminate\Support\Facades\Route;
 Route::middleware('auth:sanctum')->prefix('analytics')->group(function () {
     Route::middleware('admin')->group(function () {
         Route::get('/', [AnalyticsController::class, 'getAll']);
+        Route::get('/workforce', [AnalyticsController::class, 'workforce']);
         Route::get('/{section}', [AnalyticsController::class, 'section']);
 
         Route::get('/ai/insights', [AIDecisionSupportController::class, 'insights']);

@@ -44,10 +44,14 @@ export default function MainLayout({ children }) {
     // own bars hidden, which is taller than the space actually available - the bottom of every page
     // was therefore unreachable, and the fixed tab bar sat over content that could not be scrolled
     // clear of it. 100dvh is the real height right now, and it is what an installed app uses.
-    <div className="flex h-screen h-[100dvh] overflow-hidden bg-[#F8FAFC]">
-      <Sidebar isOpen={sidebarOpen} onClose={() => setSidebarOpen(false)} />
-      <div className="flex-1 flex flex-col min-w-0 lg:ml-[260px]">
-        <Topbar onMenuToggle={() => setSidebarOpen(!sidebarOpen)} />
+    <div className="flex h-screen h-[100dvh] overflow-hidden bg-[#F8FAFC] print:h-auto print:overflow-visible print:bg-white">
+      <div className="print:hidden">
+        <Sidebar isOpen={sidebarOpen} onClose={() => setSidebarOpen(false)} />
+      </div>
+      <div className="flex-1 flex flex-col min-w-0 lg:ml-[260px] print:ml-0">
+        <div className="print:hidden">
+          <Topbar onMenuToggle={() => setSidebarOpen(!sidebarOpen)} />
+        </div>
         {/* overflow-x-hidden is a floor, not the fix: a wide table scrolls inside its own box, and
             anything that still manages to push this container wider would otherwise slide the whole
             page sideways under the reader's thumb. A grid of columns has more width than a phone
@@ -55,7 +59,7 @@ export default function MainLayout({ children }) {
         <main
           ref={mainRef}
           className={clsx(
-            'flex-1 overflow-y-auto overflow-x-hidden',
+            'flex-1 overflow-y-auto overflow-x-hidden print:overflow-visible print:h-auto',
             // Horizontal padding is the same on a phone as on a tablet, so a card's left edge sits
             // one consistent distance from the glass rather than drifting per breakpoint. The padding
             // step itself still grows with the screen, because a 16px gutter on a 400px phone eats
