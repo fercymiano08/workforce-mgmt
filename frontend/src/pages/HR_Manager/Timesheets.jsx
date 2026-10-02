@@ -113,12 +113,12 @@ function WeekBreakdown({ ts }) {
                 </div>
                 <div className="mt-1.5 h-1.5 rounded-full bg-gray-100 overflow-hidden flex">
                   <div className="bg-blue-500" style={{ width: `${Math.min(100, ((record.regularHours || 0) / tallest) * 100)}%` }} />
-                  <div className="bg-amber-400" style={{ width: `${Math.min(100, ((record.overtime || 0) / tallest) * 100)}%` }} />
+                  <div className="bg-cyan-400" style={{ width: `${Math.min(100, ((record.overtime || 0) / tallest) * 100)}%` }} />
                 </div>
               </div>
               <div className="text-right shrink-0">
                 <p className="text-sm font-semibold text-gray-900">{hoursText(record.totalHours)}</p>
-                {record.overtime > 0 && <p className="text-[10px] text-amber-600">{hoursText(record.overtime)} OT</p>}
+                {record.overtime > 0 && <p className="text-[10px] text-cyan-600">{hoursText(record.overtime)} OT</p>}
               </div>
             </>
           ) : (
@@ -130,7 +130,21 @@ function WeekBreakdown({ ts }) {
   );
 }
 
+// A full paid day on the standard shift: 08:00-17:00 less the 1-hour lunch break.
+const FULL_DAY_PAID_HOURS = 8;
+
 function TimesheetPanel({ ts, position, onClose, onPrev, onNext, onDecide, busy }) {
+  // "Late hours": the paid time lost that week to arriving late or leaving early, i.e. each worked day's
+  // shortfall against a full paid day. (Days not worked at all are absences, not lateness, and are not in it.)
+  const { data: weekRecords } = useApiData(() => attendanceService.getByEmployeeId(ts.employeeId), [ts.employeeId]);
+  const lateHours = useMemo(() => {
+    const first = ts.weekStart;
+    const last = addDays(ts.weekStart, 6);
+    const total = (weekRecords || [])
+      .filter((r) => r.date >= first && r.date <= last && r.clockIn && r.clockOut && ['Present', 'Late', 'Early Leave'].includes(r.status))
+      .reduce((sum, r) => sum + Math.max(0, FULL_DAY_PAID_HOURS - (r.regularHours || 0)), 0);
+    return Math.round(total * 100) / 100;
+  }, [weekRecords, ts.weekStart]);
   // which form is open at the bottom: null | 'reject' | 'reopen'
   const [mode, setMode] = useState(null);
   const [reason, setReason] = useState('');
@@ -208,15 +222,15 @@ function TimesheetPanel({ ts, position, onClose, onPrev, onNext, onDecide, busy 
               <div className="mt-2 h-1.5 rounded-full bg-emerald-100 overflow-hidden"><div className="h-full bg-emerald-500" style={{ width: `${filled}%` }} /></div>
               <p className="text-[11px] text-emerald-600 mt-1">{Math.round(filled)}% of a {WEEK_HOURS}h week</p>
             </div>
-            <div className="rounded-xl bg-blue-50 p-4">
-              <p className="text-[11px] font-semibold uppercase tracking-wide text-blue-600">Regular</p>
-              <p className="text-2xl font-bold text-blue-700 mt-1">{hoursText(ts.regularHours)}</p>
-              <p className="text-[11px] text-blue-600 mt-3">Break: {hoursText(ts.breakHours)}</p>
+            <div className="rounded-xl bg-orange-50 p-4" title="Paid time lost to arriving late or leaving early: each worked day's shortfall against a full 8-hour paid day">
+              <p className="text-[11px] font-semibold uppercase tracking-wide text-orange-600">Late hours</p>
+              <p className="text-2xl font-bold text-orange-700 mt-1">{weekRecords ? hoursText(lateHours) : '—'}</p>
+              <p className="text-[11px] text-orange-600 mt-1">Missed from late arrival or early leave</p>
             </div>
-            <div className="rounded-xl bg-amber-50 p-4">
-              <p className="text-[11px] font-semibold uppercase tracking-wide text-amber-600">Overtime</p>
-              <p className="text-2xl font-bold text-amber-700 mt-1">{hoursText(ts.overtimeHours)}</p>
-              <p className="text-[11px] text-amber-600 mt-1">{ts.approvedOtHours > 0 ? `${hoursText(ts.approvedOtHours)} approved` : 'None approved'}</p>
+            <div className="rounded-xl bg-cyan-50 p-4">
+              <p className="text-[11px] font-semibold uppercase tracking-wide text-cyan-600">Overtime</p>
+              <p className="text-2xl font-bold text-cyan-700 mt-1">{hoursText(ts.overtimeHours)}</p>
+              <p className="text-[11px] text-cyan-600 mt-1">{ts.approvedOtHours > 0 ? `${hoursText(ts.approvedOtHours)} approved` : 'None approved'}</p>
             </div>
             <div className="rounded-xl bg-purple-50 p-4">
               <p className="text-[11px] font-semibold uppercase tracking-wide text-purple-600">Payable overtime</p>
