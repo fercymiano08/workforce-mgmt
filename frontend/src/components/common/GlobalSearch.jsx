@@ -82,6 +82,13 @@ const saveRecent = (term) => {
   } catch { /* private mode: recents are a convenience, not a requirement */ }
 };
 
+const clearRecentStorage = () => {
+  try { window.localStorage.removeItem(RECENT_KEY); } catch { /* nothing to clear */ }
+};
+const removeRecentStorage = (term) => {
+  try { window.localStorage.setItem(RECENT_KEY, JSON.stringify(readRecent().filter((r) => r !== term))); } catch { /* ignore */ }
+};
+
 const escapeRegExp = (s) => s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 
 // Bold the part of a result that matched what was typed, so it is obvious why a row is there.
@@ -181,6 +188,9 @@ export default function GlobalSearch() {
     document.addEventListener('keydown', onKey);
     return () => document.removeEventListener('keydown', onKey);
   }, []);
+
+  const removeRecent = (value) => { removeRecentStorage(value); setRecent(readRecent()); };
+  const clearRecent = () => { clearRecentStorage(); setRecent([]); };
 
   const close = useCallback(() => {
     setOpen(false);
@@ -295,14 +305,26 @@ export default function GlobalSearch() {
               {showHeading && (
                 <p className="px-4 pt-3 pb-1.5 text-[10px] font-bold uppercase tracking-wider text-gray-400 flex items-center justify-between">
                   <span>{item.group}</span>
-                  <span className="font-semibold text-gray-300">{count}</span>
+                  {item.kind === 'recent' ? (
+                    <button
+                      type="button"
+                      onMouseDown={(e) => e.preventDefault()}
+                      onClick={clearRecent}
+                      className="normal-case tracking-normal text-[11px] font-semibold text-blue-600 hover:text-blue-700"
+                    >
+                      Clear all
+                    </button>
+                  ) : (
+                    <span className="font-semibold text-gray-300">{count}</span>
+                  )}
                 </p>
               )}
+              <div className={`flex items-center transition-colors ${index === active ? 'bg-blue-50/70' : 'hover:bg-gray-50'}`}>
               <button
                 type="button"
                 onMouseEnter={() => setActive(index)}
                 onClick={() => go(item)}
-                className={`w-full flex items-center gap-3 px-4 py-2.5 text-left transition-colors ${index === active ? 'bg-blue-50/70' : 'hover:bg-gray-50'}`}
+                className="flex-1 min-w-0 flex items-center gap-3 pl-4 pr-2 py-2.5 text-left"
               >
                 <span className={`w-8 h-8 rounded-lg flex items-center justify-center shrink-0 ${style.tint}`}>
                   <Icon className="w-4 h-4" />
@@ -316,8 +338,20 @@ export default function GlobalSearch() {
                 {item.badge && (
                   <span className={`shrink-0 text-[10px] font-semibold px-2 py-0.5 rounded-full ${badgeTone(item.badge)}`}>{item.badge}</span>
                 )}
-                {index === active && <CornerDownLeft className="w-3.5 h-3.5 text-gray-400 shrink-0" />}
+                {index === active && item.kind !== 'recent' && <CornerDownLeft className="w-3.5 h-3.5 text-gray-400 shrink-0" />}
               </button>
+              {item.kind === 'recent' && (
+                <button
+                  type="button"
+                  aria-label={`Remove "${item.title}" from recent searches`}
+                  onMouseDown={(e) => e.preventDefault()}
+                  onClick={() => removeRecent(item.recentTerm)}
+                  className="mr-3 w-6 h-6 rounded-full text-gray-400 hover:text-gray-600 hover:bg-gray-200/70 flex items-center justify-center shrink-0 transition-colors"
+                >
+                  <X className="w-3.5 h-3.5" />
+                </button>
+              )}
+              </div>
             </div>
           );
         })}
