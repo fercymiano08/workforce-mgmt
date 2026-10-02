@@ -10,7 +10,7 @@ import Button from '../../components/ui/Button';
 import Badge from '../../components/ui/Badge';
 import Avatar from '../../components/ui/Avatar';
 import SearchBar from '../../components/ui/SearchBar';
-import { Select } from '../../components/ui/Input';
+import FilterMenu from '../../components/ui/FilterMenu';
 import Modal from '../../components/ui/Modal';
 import { Pagination } from '../../components/ui/Table';
 import TableShell from '../../components/ui/TableShell';
@@ -418,10 +418,6 @@ function AdminTimesheetsView() {
 
   if (!timesheetsLoaded) return <SkeletonPage kpiCount={4} />;
 
-  const pill = (active) => clsx(
-    'px-3 py-1.5 rounded-full text-xs font-semibold border transition-colors whitespace-nowrap',
-    active ? 'bg-blue-600 text-white border-blue-600' : 'bg-white text-gray-600 border-gray-200 hover:border-blue-300 hover:text-blue-700',
-  );
   const readyHours = readyForPayroll.reduce((s, t) => s + (t.totalHours || 0), 0);
 
   return (
@@ -460,27 +456,44 @@ function AdminTimesheetsView() {
 
       <Card padding={false}>
         <div className="p-4 space-y-3 border-b border-gray-100">
-          <div className="flex flex-col lg:flex-row gap-3">
+          {/* One tidy row: search, then the three filters as dropdowns. A filter that is narrowing the
+              list turns blue, so what is switched on is visible without opening anything. */}
+          <div className="flex flex-col lg:flex-row lg:items-center gap-3">
             <SearchBar value={search} onChange={(v) => { setSearch(v); resetPage(); }} placeholder="Search by employee name or ID..." className="flex-1 min-w-[220px]" />
-            <Select value={deptFilter} onChange={(e) => { setDeptFilter(e.target.value); resetPage(); }} containerClass="w-full lg:w-52">
-              {departments.map((d) => <option key={d} value={d}>{d === 'All' ? 'All departments' : d}</option>)}
-            </Select>
-          </div>
-          <div className="flex flex-wrap items-center gap-x-6 gap-y-3">
-            <div className="flex flex-wrap items-center gap-2">
-              <span className="text-[11px] font-semibold uppercase tracking-wide text-gray-400 mr-1">Status</span>
-              {['All', 'Draft', 'Submitted', 'Approved', 'Rejected'].map((s) => (
-                <button key={s} type="button" className={pill(statusFilter === s)} onClick={() => { setStatusFilter(s); resetPage(); }}>
-                  {s === 'Draft' ? 'In progress' : s}{s !== 'All' && <span className="ml-1.5 opacity-70">{count(s)}</span>}
-                </button>
-              ))}
+            <div className="grid grid-cols-1 sm:grid-cols-3 lg:flex gap-2.5">
+              <FilterMenu
+                label="Status"
+                value={statusFilter}
+                defaultValue="All"
+                onChange={(v) => { setStatusFilter(v); resetPage(); }}
+                options={[
+                  { value: 'All', label: 'All' },
+                  ...['Draft', 'Submitted', 'Approved', 'Rejected'].map((s) => ({ value: s, label: s === 'Draft' ? 'In progress' : s, count: count(s) })),
+                ]}
+              />
+              <FilterMenu
+                label="Week"
+                value={period}
+                defaultValue="all"
+                onChange={(v) => { setPeriod(v); resetPage(); }}
+                options={PERIODS.map((p) => ({ value: p.id, label: p.label }))}
+              />
+              <FilterMenu
+                label="Dept"
+                value={deptFilter}
+                defaultValue="All"
+                onChange={(v) => { setDeptFilter(v); resetPage(); }}
+                options={departments.map((d) => ({ value: d, label: d === 'All' ? 'All departments' : d }))}
+                align="right"
+              />
             </div>
-            <div className="flex flex-wrap items-center gap-2">
-              <span className="text-[11px] font-semibold uppercase tracking-wide text-gray-400 mr-1">Week</span>
-              {PERIODS.map((p) => <button key={p.id} type="button" className={pill(period === p.id)} onClick={() => { setPeriod(p.id); resetPage(); }}>{p.label}</button>)}
-            </div>
-            {filtersOn && <button type="button" onClick={clearAll} className="ml-auto text-xs font-semibold text-blue-600 hover:text-blue-700">Show everything</button>}
           </div>
+          {filtersOn && (
+            <div className="flex items-center justify-between gap-3 text-xs">
+              <span className="text-gray-500">Showing <span className="font-semibold text-gray-700">{rows.length}</span> timesheet{rows.length === 1 ? '' : 's'}</span>
+              <button type="button" onClick={clearAll} className="font-semibold text-blue-600 hover:text-blue-700">Clear filters</button>
+            </div>
+          )}
         </div>
 
         <TableShell minWidth="min-w-[720px]">
