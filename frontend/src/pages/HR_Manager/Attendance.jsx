@@ -342,8 +342,8 @@ export default function Attendance() {
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
         {[
           { label: 'Present Today', value: stats.present, sub: `${stats.onTime} on time · ${stats.late} late`, icon: CheckCircle, color: 'emerald' },
-          { label: 'Late Today', value: stats.late, icon: AlertTriangle, color: 'red' },
-          { label: 'Absent Yesterday', value: stats.absent, sub: 'Recorded automatically after each day', icon: Coffee, color: 'amber' },
+          { label: 'Late Today', value: stats.late, icon: AlertTriangle, color: 'amber' },
+          { label: 'Absent Yesterday', value: stats.absent, sub: 'Recorded automatically after each day', icon: Coffee, color: 'red' },
           { label: 'Avg Overtime Today', value: `${stats.avgOvertime}h`, icon: Timer, color: 'blue' },
         ].map(s => {
           const colorMap = { emerald: 'bg-emerald-50 text-emerald-600', red: 'bg-red-50 text-red-600', amber: 'bg-amber-50 text-amber-600', blue: 'bg-blue-50 text-blue-600' };
