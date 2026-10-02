@@ -134,15 +134,20 @@ function WeekBreakdown({ ts }) {
 const FULL_DAY_PAID_HOURS = 8;
 
 function TimesheetPanel({ ts, position, onClose, onPrev, onNext, onDecide, busy }) {
-  // "Late hours": the paid time lost that week to arriving late or leaving early, i.e. each worked day's
-  // shortfall against a full paid day. (Days not worked at all are absences, not lateness, and are not in it.)
+  // "Missed hours": paid time the employee was scheduled for but did not attend that week - the shortfall of
+  // each worked day against a full paid day (late arrival, early leave) plus a full day for every absence.
+  // Approved leave is excused, so it is not in it.
   const { data: weekRecords } = useApiData(() => attendanceService.getByEmployeeId(ts.employeeId), [ts.employeeId]);
-  const lateHours = useMemo(() => {
+  const missedHours = useMemo(() => {
     const first = ts.weekStart;
     const last = addDays(ts.weekStart, 6);
     const total = (weekRecords || [])
-      .filter((r) => r.date >= first && r.date <= last && r.clockIn && r.clockOut && ['Present', 'Late', 'Early Leave'].includes(r.status))
-      .reduce((sum, r) => sum + Math.max(0, FULL_DAY_PAID_HOURS - (r.regularHours || 0)), 0);
+      .filter((r) => r.date >= first && r.date <= last)
+      .reduce((sum, r) => {
+        if (r.status === 'Absent') return sum + FULL_DAY_PAID_HOURS;
+        if (r.clockIn && r.clockOut && ['Present', 'Late', 'Early Leave'].includes(r.status)) return sum + Math.max(0, FULL_DAY_PAID_HOURS - (r.regularHours || 0));
+        return sum;
+      }, 0);
     return Math.round(total * 100) / 100;
   }, [weekRecords, ts.weekStart]);
   // which form is open at the bottom: null | 'reject' | 'reopen'
@@ -222,10 +227,10 @@ function TimesheetPanel({ ts, position, onClose, onPrev, onNext, onDecide, busy 
               <div className="mt-2 h-1.5 rounded-full bg-emerald-100 overflow-hidden"><div className="h-full bg-emerald-500" style={{ width: `${filled}%` }} /></div>
               <p className="text-[11px] text-emerald-600 mt-1">{Math.round(filled)}% of a {WEEK_HOURS}h week</p>
             </div>
-            <div className="rounded-xl bg-orange-50 p-4" title="Paid time lost to arriving late or leaving early: each worked day's shortfall against a full 8-hour paid day">
-              <p className="text-[11px] font-semibold uppercase tracking-wide text-orange-600">Late hours</p>
-              <p className="text-2xl font-bold text-orange-700 mt-1">{weekRecords ? hoursText(lateHours) : '—'}</p>
-              <p className="text-[11px] text-orange-600 mt-1">Missed from late arrival or early leave</p>
+            <div className="rounded-xl bg-orange-50 p-4" title="Paid time scheduled but not attended: late arrivals and early leaves (the shortfall against a full 8-hour day) plus full days of absence. Approved leave is not counted.">
+              <p className="text-[11px] font-semibold uppercase tracking-wide text-orange-600">Missed hours</p>
+              <p className="text-2xl font-bold text-orange-700 mt-1">{weekRecords ? hoursText(missedHours) : '—'}</p>
+              <p className="text-[11px] text-orange-600 mt-1">Late, early leave or absent</p>
             </div>
             <div className="rounded-xl bg-cyan-50 p-4">
               <p className="text-[11px] font-semibold uppercase tracking-wide text-cyan-600">Overtime</p>
