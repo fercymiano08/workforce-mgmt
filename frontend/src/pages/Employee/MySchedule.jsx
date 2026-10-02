@@ -19,8 +19,8 @@ const shiftIconColors = {
 };
 const shiftBadgeVariant = { SHIFT004: 'primary', SHIFT005: 'danger' };
 const statusBadgeVariant = {
-  Upcoming: 'primary', Scheduled: 'warning', Completed: 'success',
-  Cancelled: 'danger',
+  Upcoming: 'primary', Scheduled: 'warning', Completed: 'success', 'In progress': 'info',
+  Absent: 'danger', Missed: 'danger', 'On leave': 'default', Cancelled: 'danger',
 };
 
 export default function MySchedule() {
@@ -129,8 +129,25 @@ export default function MySchedule() {
     return map;
   }, [attendanceRecords, employeeId]);
 
+  // What actually happened on a day that is today or already past, from the attendance record - a past
+  // shift that was worked should read "Completed", not still "Scheduled".
+  const attendanceByDate = useMemo(() => {
+    const map = {};
+    for (const a of attendanceRecords || []) {
+      if (a.employeeId === employeeId && !map[a.date]) map[a.date] = a;
+    }
+    return map;
+  }, [attendanceRecords, employeeId]);
+
   const scheduleStatus = (schedule) => {
     if (referenceDate && schedule.date > referenceDate) return 'Upcoming';
+    if (schedule.status === 'Cancelled') return 'Cancelled';
+    const a = attendanceByDate[schedule.date];
+    if (a?.status === 'On Leave') return 'On leave';
+    if (a?.status === 'Absent') return 'Absent';
+    if (a?.clockIn && a?.clockOut) return 'Completed';
+    if (a?.clockIn) return 'In progress';
+    if (referenceDate && schedule.date < referenceDate) return 'Missed';
     return schedule.status;
   };
 

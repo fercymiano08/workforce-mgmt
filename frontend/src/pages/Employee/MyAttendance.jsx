@@ -292,6 +292,7 @@ export default function MyAttendance() {
       {/* Shift Timer */}
       <ShiftTimer
         activeAttendance={activeAttendance}
+        todayRecord={records?.find((a) => a.date === todayDay && a.clockIn) || null}
         shiftStartTime={todayShift?.startTime || '08:00'}
         shiftEndTime={effectiveShiftEnd}
         shiftName={todayShift?.name || ''}

@@ -57,9 +57,9 @@ function tenure(hireDate) {
 
 function ReadOnlyField({ label, value, mono = false }) {
   return (
-    <div className="flex flex-col gap-1.5">
+    <div className="flex flex-col gap-1.5 min-w-0">
       <span className="text-sm font-medium text-gray-700">{label}</span>
-      <div className={`px-3.5 py-2.5 text-sm rounded-xl border border-gray-100 bg-gray-50 text-gray-700 ${mono ? 'font-mono' : ''}`}>
+      <div className={`px-3.5 py-2.5 text-sm rounded-xl border border-gray-100 bg-gray-50 text-gray-700 break-words ${mono ? 'font-mono' : ''}`}>
         {value || '—'}
       </div>
     </div>

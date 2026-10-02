@@ -20,12 +20,14 @@ function formatRemaining(totalSeconds) {
   return `${pad(h)}:${pad(m)}:${pad(s)}`;
 }
 
-export default function ShiftTimer({ activeAttendance, shiftStartTime = '08:00', shiftEndTime = '17:00', shiftName = '', overtimeHours = 0 }) {
+export default function ShiftTimer({ activeAttendance, todayRecord = null, shiftStartTime = '08:00', shiftEndTime = '17:00', shiftName = '', overtimeHours = 0 }) {
   const [now, setNow] = useState(() => new Date());
   const [reminderSent, setReminderSent] = useState(false);
   const sentRef = useRef(false);
 
   const clockedIn = Boolean(activeAttendance?.clockIn && !activeAttendance?.clockOut);
+  // Clocked in AND out today: the shift is done, which is not the same as "not clocked in yet".
+  const finished = !clockedIn && Boolean(todayRecord?.clockIn && todayRecord?.clockOut);
 
   useEffect(() => {
     if (!clockedIn) return;
@@ -72,7 +74,13 @@ export default function ShiftTimer({ activeAttendance, shiftStartTime = '08:00',
         </div>
         <div>
           <p className="text-[11px] font-semibold uppercase tracking-wider text-gray-400">Shift Timer</p>
-          {!clockedIn ? (
+          {finished ? (
+            <p className="text-sm font-medium text-gray-700">
+              Shift completed — clocked in <span className="font-semibold text-gray-900">{formatTime(String(todayRecord.clockIn).slice(0, 5))}</span>,
+              out <span className="font-semibold text-gray-900">{formatTime(String(todayRecord.clockOut).slice(0, 5))}</span>
+              {todayRecord.totalHours ? <span className="text-emerald-600 font-medium"> · {todayRecord.totalHours}h worked</span> : null}
+            </p>
+          ) : !clockedIn ? (
             <p className="text-sm font-medium text-gray-500">Not clocked in yet — the countdown starts on clock-in</p>
           ) : ended ? (
             <div>
@@ -92,10 +100,10 @@ export default function ShiftTimer({ activeAttendance, shiftStartTime = '08:00',
       </div>
       <div className="text-right">
         <p className={`font-mono text-3xl font-bold tabular-nums ${ended ? 'text-amber-600' : 'text-blue-600'}`}>
-          {active ? formatRemaining(remainingSeconds) : '--:--:--'}
+          {finished ? 'Done' : active ? formatRemaining(remainingSeconds) : '--:--:--'}
         </p>
         <p className="text-[11px] uppercase tracking-wider text-gray-400 mt-1">
-          {ended ? 'Overtime started' : 'until shift end'}
+          {finished ? 'for today' : ended ? 'Overtime started' : 'until shift end'}
         </p>
       </div>
     </div>

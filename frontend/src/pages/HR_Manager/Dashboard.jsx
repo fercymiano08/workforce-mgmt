@@ -402,7 +402,7 @@ export default function Dashboard() {
   // Each card links to the screen the number describes, so the figure and the next action are the
   const kpiCards = [
     { labelKey: 'dashboard.totalEmployees', value: kpi.totalEmployees, icon: Users, change: null, accent: 'blue', to: '/employees' },
-    { labelKey: 'dashboard.presentToday', value: kpi.presentToday, icon: CheckCircle, change: null, accent: 'emerald', subtext: `${kpi.onTimeToday} on time Â· ${kpi.lateToday} late`, to: '/attendance' },
+    { labelKey: 'dashboard.presentToday', value: kpi.presentToday, icon: CheckCircle, change: null, accent: 'emerald', subtext: `${kpi.onTimeToday} on time · ${kpi.lateToday} late`, to: '/attendance' },
     { labelKey: 'dashboard.lateEmployees', value: kpi.lateToday, icon: Clock, change: null, accent: 'red', to: '/attendance?status=Late' },
     { labelKey: 'dashboard.attendanceRate', value: `${kpi.attendanceRate}%`, icon: TrendingUp, change: null, accent: 'purple', to: '/reports' },
   ];

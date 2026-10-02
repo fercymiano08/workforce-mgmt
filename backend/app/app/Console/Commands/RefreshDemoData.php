@@ -174,6 +174,7 @@ class RefreshDemoData extends Command
             // 0. Leave and overtime requests roll forward with "today" too - added BEFORE the schedule
             // is built, so a freshly-granted leave day correctly takes that person off the schedule the
             // same way a real approval would (scheduleRows() below reads Leave the same way either way).
+            $this->polishPlaceholderReasons();
             $this->rollingLeave($ids, $from, $today, $workingDays);
 
             // rollingLeave() is sparse by design (one real approval every few weeks per person), which
@@ -294,9 +295,15 @@ class RefreshDemoData extends Command
                     }
                     $name = trim((string) $sheet->employee_name);
                     $sheet = $workflow->submit($sheet, $name);
+                    // Sent on the Monday after the week, before the noon deadline - not at the moment this
+                    // command happened to run, which made every old week read "submitted today".
+                    $sentAt = Carbon::parse($week->toDateString(), $tz)->addDays(7)->setTime(8, 0)->addMinutes(crc32($id.$week->toDateString()) % 210);
+                    $stamps = ['submitted_at' => $sentAt, 'submitted_date' => $sentAt->toDateString()];
                     if ($week->toDateString() !== $lastMonday) {
                         $workflow->approve($sheet, $admin);   // last week is left waiting for review
+                        $stamps['reviewed_at'] = $sentAt->copy()->addHours(2 + crc32($id.'rev'.$week->toDateString()) % 20);
                     }
+                    Timesheet::where('id', $sheet->id)->update($stamps);
                 }
             }
         });
@@ -322,6 +329,43 @@ class RefreshDemoData extends Command
         ];
 
         return $reasons[crc32($employeeId.'|early-reason') % count($reasons)];
+    }
+
+    private const LEAVE_REASONS = [
+        'Vacation' => ['Family trip out of town', 'Rest days with family', 'Long weekend getaway', 'Personal time off'],
+        'Sick' => ['Fever and cough, advised to rest', 'Medical check-up', 'Stomach flu', 'Migraine, rested at home'],
+        'Emergency' => ['Family emergency', 'Urgent repairs at home', 'Accompanied a relative to the hospital'],
+        'Funeral' => ['Attending the wake and burial of a relative'],
+        'Special' => ['Wedding of a close relative', 'Birthday leave', 'School event of my child'],
+    ];
+
+    private const OVERTIME_REASONS = [
+        'Month-end reports', 'Backlog of customer escalations', 'Inventory count', 'System maintenance window',
+        'Order surge', 'Hand-over of a task to the next shift',
+    ];
+
+    /** A believable reason, the same every run for the same request (no randomness, like the rest of this command). */
+    private function leaveReason(string $type, string $seed): string
+    {
+        $list = self::LEAVE_REASONS[$type] ?? ['Personal matters'];
+
+        return $list[crc32($seed.'|reason') % count($list)];
+    }
+
+    private function overtimeReason(string $seed): string
+    {
+        return self::OVERTIME_REASONS[crc32($seed.'|ot-reason') % count(self::OVERTIME_REASONS)];
+    }
+
+    /** Requests an earlier run wrote with the placeholder "Demo data." get a real-sounding reason too. */
+    private function polishPlaceholderReasons(): void
+    {
+        Leave::where('reason', 'Demo data.')->get()->each(fn (Leave $l) => $l->updateQuietly([
+            'reason' => $this->leaveReason((string) $l->leave_type, $l->employee_id.$l->start_date->toDateString()),
+        ]));
+        OvertimeRequest::where('reason', 'Demo data.')->get()->each(fn (OvertimeRequest $o) => $o->updateQuietly([
+            'reason' => $this->overtimeReason($o->employee_id.$o->date->toDateString()),
+        ]));
     }
 
     /**
@@ -371,7 +415,7 @@ class RefreshDemoData extends Command
                     'employee_id' => $employee->id, 'employee_name' => $name,
                     'leave_type' => $types[$roll % count($types)],
                     'start_date' => $start->toDateString(), 'end_date' => $end->toDateString(), 'days' => $days,
-                    'reason' => 'Demo data.', 'status' => 'Approved',
+                    'reason' => $this->leaveReason($types[$roll % count($types)], $employee->id.$start->toDateString()), 'status' => 'Approved',
                     'applied_date' => $start->copy()->subDays(3)->toDateString(), 'approved_by' => 'Workforce Admin',
                 ]);
             }
@@ -421,7 +465,7 @@ class RefreshDemoData extends Command
                 'employee_id' => $employee->id, 'employee_name' => trim($employee->first_name.' '.$employee->last_name),
                 'leave_type' => $types[$roll % count($types)],
                 'start_date' => $start->toDateString(), 'end_date' => $start->toDateString(), 'days' => $days,
-                'reason' => 'Demo data.', 'status' => 'Approved',
+                'reason' => $this->leaveReason($types[$roll % count($types)], $employee->id.$start->toDateString()), 'status' => 'Approved',
                 'applied_date' => $start->copy()->subDays(2)->toDateString(), 'approved_by' => 'Workforce Admin',
             ]);
             $guaranteed++;
@@ -456,7 +500,7 @@ class RefreshDemoData extends Command
                 'id' => 'OT'.str_pad((string) ++$otNo, 3, '0', STR_PAD_LEFT),
                 'employee_id' => $row['employee_id'], 'employee_name' => $row['employee_name'],
                 'date' => $row['date'], 'expected_hours' => $hours, 'approved_hours' => $hours,
-                'reason' => 'Demo data.', 'status' => 'Approved',
+                'reason' => $this->overtimeReason($row['employee_id'].$row['date']), 'status' => 'Approved',
                 'requested_date' => Carbon::parse($row['date'])->subDay()->toDateString(),
                 'approved_by' => 'Workforce Admin', 'approved_at' => Carbon::parse($row['date'])->subDay(),
             ]);

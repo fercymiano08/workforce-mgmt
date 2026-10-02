@@ -21,6 +21,7 @@ import { SkeletonList, SkeletonPage } from '../../components/ui/LoadingSkeleton'
 import useApiData from '../../hooks/useApiData';
 import { attendanceService, leaveService, shiftService, timesheetService } from '../../services/api';
 import { formatDate, formatTime } from '../../utils/helpers';
+import { didAttend } from '../../utils/constants';
 import { useTheme } from '../../context/ThemeContext';
 import { chartTheme } from '../../constants/chartTheme';
 
@@ -192,9 +193,13 @@ export default function EmployeeDashboard() {
   }, [leaveBalances]);
 
   const pendingCount = myLeaves.filter((l) => l.status === 'Pending').length;
-  const attendanceRate = myAttendance.length
-    ? Math.round((myAttendance.filter((a) => a.status === 'Present').length / myAttendance.length) * 100)
-    : 0;
+  // Same definition as My Attendance and Workforce Analytics: days I came in (on time, late or left
+  // early) out of the days I was expected - approved leave is not held against me. This used to count
+  // only on-time days, so the dashboard and My Attendance showed two different "Attendance Rate"s.
+  const attendanceRate = (() => {
+    const counted = myAttendance.filter((a) => a.status !== 'On Leave');
+    return counted.length ? Math.round((counted.filter((a) => didAttend(a.status)).length / counted.length) * 100) : 0;
+  })();
 
   const todayDay = todayKey();
   const todayEarly = useMemo(
@@ -212,11 +217,11 @@ export default function EmployeeDashboard() {
         <p className="text-xs text-amber-700 mt-0.5">
           You clocked out {todayEarly.minutesEarly ? `${todayEarly.minutesEarly} min early` : 'early'} today
           {todayEarly.classification === 'UNPAID'
-            ? ' Â· classified as Unpaid'
+            ? ' · classified as Unpaid'
             : todayEarly.classification === 'PENDING_REVIEW'
-              ? ' Â· pending HR review'
+              ? ' · pending HR review'
               : todayEarly.classification
-                ? ' Â· excused'
+                ? ' · excused'
                 : ''}.
         </p>
       </div>
@@ -295,7 +300,7 @@ export default function EmployeeDashboard() {
         <KpiCard label="Attendance Rate" value={`${attendanceRate}%`} icon={CalendarDays} accent="purple" to="/my-attendance" />
         {/* The count is worked out from leave and timesheet requests, so it stays a dash until both
             have answered rather than briefly claiming there is nothing pending. */}
-        <KpiCard label="Pending Requests" value={loadingLeaves || loadingTimesheets ? 'â€”' : pendingCount} icon={Clock} accent="amber" to="/leave" />
+        <KpiCard label="Pending Requests" value={loadingLeaves || loadingTimesheets ? '—' : pendingCount} icon={Clock} accent="amber" to="/leave" />
       </div>
 
       {/* Early Leave Today */}
@@ -374,7 +379,7 @@ export default function EmployeeDashboard() {
                 </Badge>
               </div>
               <p className="text-xs text-gray-400 mt-1">
-                {formatDate(myTimesheet.weekStart)} â€“ {formatDate(myTimesheet.weekEnd)}
+                {formatDate(myTimesheet.weekStart)} – {formatDate(myTimesheet.weekEnd)}
               </p>
             </div>
             <div className="grid grid-cols-3 gap-5 sm:gap-8">
