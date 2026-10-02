@@ -55,7 +55,7 @@ if ! is_off "${RUN_MIGRATIONS:-true}"; then
         # cannot clock themselves in through the kiosk. Not fatal, same reasoning as seeding above: a
         # deploy should not go down over this when the API itself is healthy, and tonight's scheduled
         # run will retry it regardless.
-        php artisan demo:refresh --close-today --no-interaction || echo "==> Demo refresh reported a problem; starting anyway (tonight's scheduled run will retry it)"
+        php artisan demo:refresh --spare-today --no-interaction || echo "==> Demo refresh reported a problem; starting anyway (tonight's scheduled run will retry it)"
     fi
 fi
 

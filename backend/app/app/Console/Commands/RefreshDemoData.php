@@ -62,7 +62,8 @@ class RefreshDemoData extends Command
 
     protected $signature = 'demo:refresh
         {--weeks=4 : full weeks of history before the current one}
-        {--close-today : also write today\'s clock-outs, treating today as a finished workday rather than a shift in progress}';
+        {--close-today : also write today\'s clock-outs, treating today as a finished workday rather than a shift in progress}
+        {--spare-today : generate nothing for today and clear whatever was generated for it; today is left to the real kiosk}';
 
     protected $description = "Rebuild the demo employees' schedules, attendance and timesheets up to today";
 
@@ -113,9 +114,12 @@ class RefreshDemoData extends Command
         $shiftId = $shift->id;
         $grace = max(0, (int) app(SystemSettings::class)->get('late_grace_minutes', 15));
         $closeToday = (bool) $this->option('close-today');
+        $spareToday = (bool) $this->option('spare-today');
+        // Generation stops at $to. --spare-today ends it yesterday, so a day that has only just begun is never filled with made-up activity.
+        $to = $spareToday ? $now->copy()->subDay()->toDateString() : $today;
         $admin = User::where('role', 'Administrator')->value('name') ?: 'Workforce Admin';
 
-        DB::transaction(function () use ($ids, $from, $today, $now, $tz, $shift, $shiftId, $grace, $closeToday, $timesheets, $workflow, $workingDays, $admin): void {
+        DB::transaction(function () use ($ids, $from, $today, $now, $tz, $shift, $shiftId, $grace, $closeToday, $spareToday, $to, $timesheets, $workflow, $workingDays, $admin): void {
             // Initials instead of borrowed cartoon pictures
             Employee::whereIn('id', $ids)->update(['avatar' => null]);
 
@@ -170,12 +174,15 @@ class RefreshDemoData extends Command
             Attendance::whereIn('employee_id', $ids)->delete();
             Timesheet::whereIn('employee_id', $ids)->delete();
             ShiftSchedule::whereIn('employee_id', $ids)->where('date', '<=', $today)->delete();
+            if ($spareToday) {
+                OvertimeRequest::whereIn('employee_id', $ids)->where('date', $today)->where('approved_by', 'Workforce Admin')->delete();
+            }
 
             // 0. Leave and overtime requests roll forward with "today" too - added BEFORE the schedule
             // is built, so a freshly-granted leave day correctly takes that person off the schedule the
             // same way a real approval would (scheduleRows() below reads Leave the same way either way).
             $this->polishPlaceholderReasons();
-            $this->rollingLeave($ids, $from, $today, $workingDays);
+            $this->rollingLeave($ids, $from, $to, $workingDays);
 
             // rollingLeave() is sparse by design (one real approval every few weeks per person), which
             // can legitimately land nowhere in the last few days - purely bad luck, but Workforce
@@ -183,10 +190,10 @@ class RefreshDemoData extends Command
             // "This Month" must not be empty just because the dice did not favour that exact window.
             // This tops up a small, guaranteed number of recent approvals so there is always something
             // real to show, without touching anyone who already has one nearby.
-            $this->recentLeaveFloor($ids, $today, $workingDays);
+            $this->recentLeaveFloor($ids, $to, $workingDays);
 
             // 1. Schedules: exactly what automated scheduling would give them (work days, holidays, leave)
-            $plan = ['rows' => $this->scheduleRows($ids, $from, $today)];
+            $plan = ['rows' => $this->scheduleRows($ids, $from, $to)];
 
             // Overtime requests only make sense on a day the person is actually scheduled to work, so
             // this reads the schedule just built rather than recomputing work days and holidays again.
@@ -312,7 +319,7 @@ class RefreshDemoData extends Command
         });
 
         $this->info('Demo data rebuilt for '.count($ids).' demo employees, '.$from.' to '.$today
-            .($closeToday ? ' (today closed).' : ' (today still in progress).'));
+            .($spareToday ? ' (today left empty).' : ($closeToday ? ' (today closed).' : ' (today still in progress).')));
 
         return self::SUCCESS;
     }

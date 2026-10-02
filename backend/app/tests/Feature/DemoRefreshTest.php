@@ -287,4 +287,18 @@ class DemoRefreshTest extends TestCase
         $this->assertNotNull($today, 'today has a record');
         $this->assertNotNull($today->clock_out ?? ($today->status === 'Absent' ? 'absent' : null), 'and it is a finished day');
     }
+
+    public function test_spare_today_generates_nothing_for_today_and_clears_it(): void
+    {
+        Carbon::setTestNow(Carbon::parse('2030-01-16 01:00:00', 'Asia/Manila'));
+        $this->artisan('demo:refresh', ['--weeks' => 1, '--close-today' => true])->assertSuccessful();
+        $this->assertTrue(Attendance::where('date', '2030-01-16')->exists(), 'precondition: today was filled');
+
+        $this->artisan('demo:refresh', ['--weeks' => 1, '--spare-today' => true])->assertSuccessful();
+
+        $ids = Employee::where('id', self::DEMO)->pluck('id')->all();
+        $this->assertFalse(Attendance::whereIn('employee_id', $ids)->where('date', '2030-01-16')->exists());
+        $this->assertFalse(ShiftSchedule::whereIn('employee_id', $ids)->where('date', '2030-01-16')->exists());
+        $this->assertTrue(Attendance::where('employee_id', self::DEMO)->where('date', '2030-01-15')->exists(), 'yesterday is kept');
+    }
 }
