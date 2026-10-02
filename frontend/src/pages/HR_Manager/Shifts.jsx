@@ -6,12 +6,13 @@ import {
 } from 'lucide-react';
 import Card, { CardTitle, CardDescription } from '../../components/ui/Card';
 import Button from '../../components/ui/Button';
+import FilterMenu from '../../components/ui/FilterMenu';
 import Badge from '../../components/ui/Badge';
 import Avatar from '../../components/ui/Avatar';
 import Modal from '../../components/ui/Modal';
 import EmployeePicker from '../../components/scheduling/EmployeePicker';
 import AutomatedShiftModal from '../../components/scheduling/AutomatedShiftModal';
-import Input, { Select, Textarea } from '../../components/ui/Input';
+import Input, { Textarea } from '../../components/ui/Input';
 import { employeeService, shiftService } from '../../services/api';
 import { formatDate, formatTime } from '../../utils/helpers';
 import { useToast } from '../../context/ToastContext';
@@ -427,15 +428,13 @@ export default function Shifts() {
             <div className="sm:col-span-2">
               <Input icon={Search} placeholder="Search employee name or ID..." value={searchQuery} onChange={e => setSearchQuery(e.target.value)} />
             </div>
-            <Select value={departmentFilter} onChange={e => setDepartmentFilter(e.target.value)}>
-              <option value="">All Departments</option>
-              {departments.map(d => <option key={d} value={d}>{d}</option>)}
-            </Select>
+            <FilterMenu label="Dept" value={departmentFilter} defaultValue=""
+              onChange={setDepartmentFilter}
+              options={[{ value: '', label: 'All departments' }, ...departments.map((d) => ({ value: d, label: d }))]} />
             <Input type="date" value={dateFilter} onChange={e => setDateFilter(e.target.value)} />
-            <Select value={statusFilter} onChange={e => setStatusFilter(e.target.value)}>
-              <option value="">All Statuses</option>
-              {STATUS_OPTIONS.map(s => <option key={s} value={s}>{s}</option>)}
-            </Select>
+            <FilterMenu label="Status" value={statusFilter} defaultValue="" align="right"
+              onChange={setStatusFilter}
+              options={[{ value: '', label: 'All statuses' }, ...STATUS_OPTIONS.map((x) => ({ value: x, label: x }))]} />
           </div>
 
           <div className="flex items-center justify-between gap-3 mt-4 flex-wrap">

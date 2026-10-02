@@ -1,4 +1,5 @@
 import { useMemo, useState } from 'react';
+import FilterMenu from '../../components/ui/FilterMenu';
 import { useSearchParams } from 'react-router-dom';
 import { createPortal } from 'react-dom';
 import clsx from 'clsx';
@@ -306,11 +307,6 @@ export default function AuditLogs() {
     return out;
   }, [logs]);
 
-  const pill = (active) => clsx(
-    'px-3 py-1.5 rounded-full text-xs font-semibold border transition-colors whitespace-nowrap',
-    active ? 'bg-blue-600 text-white border-blue-600' : 'bg-white text-gray-600 border-gray-200 hover:border-blue-300 hover:text-blue-700',
-  );
-
   return (
     <div className="max-w-6xl mx-auto space-y-6 animate-fadeIn">
       {/* Header */}
@@ -350,6 +346,18 @@ export default function AuditLogs() {
               className="w-full pl-10 pr-3 py-2.5 text-sm border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500/30"
             />
           </div>
+          <div className="grid grid-cols-2 sm:flex gap-2.5">
+            <FilterMenu
+              label="Area" value={filters.service} defaultValue=""
+              onChange={(v) => setField('service', v)}
+              options={[{ value: '', label: 'All areas' }, ...(meta.services || []).map((x) => ({ value: x, label: areaName(x) }))]}
+            />
+            <FilterMenu
+              label="Period" value={range} defaultValue="all"
+              onChange={pickRange}
+              options={RANGES.map((r) => ({ value: r.id, label: r.label }))}
+            />
+          </div>
           {/* flex-wrap so the two date boxes drop onto their own line on a phone, and min-w-0 on the
               search so it can actually shrink - a flex child defaults to min-content width, which
               is what pushed this row 10px past the screen. */}
@@ -372,28 +380,13 @@ export default function AuditLogs() {
           </div>
         </div>
 
-        <div className="flex flex-wrap items-center gap-x-6 gap-y-3">
-          <div className="flex flex-wrap items-center gap-2">
-            <span className="text-[11px] font-semibold uppercase tracking-wide text-gray-400 mr-1">Area</span>
-            <button type="button" className={pill(!filters.service)} onClick={() => setField('service', '')}>All</button>
-            {(meta.services || []).map((s) => (
-              <button key={s} type="button" className={pill(filters.service === s)} onClick={() => setField('service', s)}>
-                {areaName(s)}
-              </button>
-            ))}
-          </div>
-          <div className="flex flex-wrap items-center gap-2">
-            <span className="text-[11px] font-semibold uppercase tracking-wide text-gray-400 mr-1">Period</span>
-            {RANGES.map((r) => (
-              <button key={r.id} type="button" className={pill(range === r.id)} onClick={() => pickRange(r.id)}>{r.label}</button>
-            ))}
-          </div>
-          {hasFilters && (
-            <button type="button" onClick={clearFilters} className="ml-auto text-xs font-semibold text-blue-600 hover:text-blue-700">
+        {hasFilters && (
+          <div className="flex items-center justify-end">
+            <button type="button" onClick={clearFilters} className="text-xs font-semibold text-blue-600 hover:text-blue-700">
               Clear filters
             </button>
-          )}
-        </div>
+          </div>
+        )}
       </div>
 
       {/* Timeline */}

@@ -8,7 +8,8 @@ import Button from '../../components/ui/Button';
 import Badge from '../../components/ui/Badge';
 import Avatar from '../../components/ui/Avatar';
 import SearchBar from '../../components/ui/SearchBar';
-import { Select, Textarea } from '../../components/ui/Input';
+import FilterMenu from '../../components/ui/FilterMenu';
+import { Textarea } from '../../components/ui/Input';
 import Modal from '../../components/ui/Modal';
 import { Pagination } from '../../components/ui/Table';
 import TableShell from '../../components/ui/TableShell';
@@ -231,16 +232,12 @@ export default function LeaveManagement() {
           placeholder="Search by employee name..."
           className="flex-1 min-w-[240px]"
         />
-        <Select value={statusFilter} onChange={(e) => { setStatusFilter(e.target.value); setCurrentPage(1); }} containerClass="w-40">
-          {statuses.map((s) => (
-            <option key={s} value={s}>{s === 'All' ? 'All Statuses' : s}</option>
-          ))}
-        </Select>
-        <Select value={typeFilter} onChange={(e) => { setTypeFilter(e.target.value); setCurrentPage(1); }} containerClass="w-44">
-          {leaveTypes.map((t) => (
-            <option key={t} value={t}>{t === 'All' ? 'All Leave Types' : t}</option>
-          ))}
-        </Select>
+        <FilterMenu label="Status" value={statusFilter} defaultValue="All" className="min-w-[11rem]"
+          onChange={(v) => { setStatusFilter(v); setCurrentPage(1); }}
+          options={statuses.map((s) => ({ value: s, label: s === 'All' ? 'All statuses' : s }))} />
+        <FilterMenu label="Type" value={typeFilter} defaultValue="All" className="min-w-[11rem]"
+          onChange={(v) => { setTypeFilter(v); setCurrentPage(1); }}
+          options={leaveTypes.map((t) => ({ value: t, label: t === 'All' ? 'All leave types' : t }))} />
       </div>
 
       {/* Table */}

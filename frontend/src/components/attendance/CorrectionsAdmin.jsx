@@ -6,7 +6,8 @@ import Button from '../ui/Button';
 import Card from '../ui/Card';
 import Modal from '../ui/Modal';
 import SearchBar from '../ui/SearchBar';
-import Input, { Select, Textarea } from '../ui/Input';
+import FilterMenu from '../ui/FilterMenu';
+import Input, { Textarea } from '../ui/Input';
 import { SkeletonTable } from '../ui/LoadingSkeleton';
 import ProofGallery from './ProofGallery';
 import { useToast } from '../../context/ToastContext';
@@ -128,17 +129,12 @@ export default function CorrectionsAdmin({ onChanged }) {
             </div>
             <div className="flex flex-wrap items-center gap-3">
               <SearchBar value={search} onChange={setSearch} placeholder="Search employee..." className="w-full sm:w-56" />
-              <Select value={type} onChange={(e) => setType(e.target.value)} containerClass="w-full sm:w-52">
-                <option value="All">All problems</option>
-                {ADJUSTMENT_TYPES.map((t) => <option key={t.value} value={t.value}>{t.short}</option>)}
-              </Select>
-              <Select value={status} onChange={(e) => setStatus(e.target.value)} containerClass="w-full sm:w-40">
-                <option value="All">All statuses</option>
-                <option value="Pending">Pending</option>
-                <option value="Approved">Approved</option>
-                <option value="Rejected">Not approved</option>
-                <option value="Cancelled">Withdrawn</option>
-              </Select>
+              <FilterMenu label="Problem" value={type} defaultValue="All" className="min-w-[12rem]"
+                onChange={setType}
+                options={[{ value: 'All', label: 'All problems' }, ...ADJUSTMENT_TYPES.map((t) => ({ value: t.value, label: t.short }))]} />
+              <FilterMenu label="Status" value={status} defaultValue="All" className="min-w-[11rem]" align="right"
+                onChange={setStatus}
+                options={[['All', 'All statuses'], ['Pending', 'Pending'], ['Approved', 'Approved'], ['Rejected', 'Not approved'], ['Cancelled', 'Withdrawn']].map(([value, label]) => ({ value, label }))} />
             </div>
           </div>
         </div>

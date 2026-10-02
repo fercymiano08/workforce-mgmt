@@ -6,6 +6,7 @@ import TodayBadge from '../../components/common/TodayBadge';
 import { coversToday } from '../../utils/today';
 import Badge from '../../components/ui/Badge';
 import SearchBar from '../../components/ui/SearchBar';
+import FilterMenu from '../../components/ui/FilterMenu';
 import EmptyState from '../../components/ui/EmptyState';
 import { SkeletonList } from '../../components/ui/LoadingSkeleton';
 import Input, { Select, Textarea } from '../../components/ui/Input';
@@ -400,16 +401,12 @@ export default function Leave() {
             placeholder="Search leave type or reason..."
             className="flex-1 min-w-[240px]"
           />
-          <Select value={statusFilter} onChange={(e) => { setStatusFilter(e.target.value); setCurrentPage(1); }} containerClass="w-40">
-            {statuses.map((s) => (
-              <option key={s} value={s}>{s === 'All' ? 'All Statuses' : s}</option>
-            ))}
-          </Select>
-          <Select value={typeFilter} onChange={(e) => { setTypeFilter(e.target.value); setCurrentPage(1); }} containerClass="w-44">
-            {types.map((t) => (
-              <option key={t} value={t}>{t === 'All' ? 'All Leave Types' : t}</option>
-            ))}
-          </Select>
+          <FilterMenu label="Status" value={statusFilter} defaultValue="All" className="min-w-[11rem]"
+            onChange={(v) => { setStatusFilter(v); setCurrentPage(1); }}
+            options={statuses.map((s) => ({ value: s, label: s === 'All' ? 'All statuses' : s }))} />
+          <FilterMenu label="Type" value={typeFilter} defaultValue="All" className="min-w-[11rem]"
+            onChange={(v) => { setTypeFilter(v); setCurrentPage(1); }}
+            options={types.map((t) => ({ value: t, label: t === 'All' ? 'All leave types' : t }))} />
         </div>
 
         {leavesLoading ? (

@@ -6,6 +6,7 @@ import Button from '../../components/ui/Button';
 import Badge from '../../components/ui/Badge';
 import Avatar from '../../components/ui/Avatar';
 import SearchBar from '../../components/ui/SearchBar';
+import FilterMenu from '../../components/ui/FilterMenu';
 import DateRangePicker from '../../components/ui/DateRangePicker';
 import Modal from '../../components/ui/Modal';
 import TableShell from '../../components/ui/TableShell';
@@ -377,15 +378,9 @@ export default function Attendance() {
                 onChange={(next) => { setDateRange(next); setCurrentPage(1); }}
                 allTimeLabel="All time"
               />
-              <Select value={statusFilter} onChange={e => { setStatusFilter(e.target.value); setCurrentPage(1); }} containerClass="w-full sm:w-36">
-                <option value="All">All Status</option>
-                <option value="Present">Present</option>
-                <option value="Late">Late</option>
-                <option value="Absent">Absent</option>
-                <option value="Half Day">Half Day</option>
-                <option value="Early Leave">Early Leave</option>
-                <option value="On Leave">On Leave</option>
-              </Select>
+              <FilterMenu label="Status" value={statusFilter} defaultValue="All" className="min-w-[10rem]"
+                onChange={(v) => { setStatusFilter(v); setCurrentPage(1); }}
+                options={[['All', 'All statuses'], ['Present', 'Present'], ['Late', 'Late'], ['Absent', 'Absent'], ['Half Day', 'Half Day'], ['Early Leave', 'Early Leave'], ['On Leave', 'On Leave']].map(([value, label]) => ({ value, label }))} />
             </div>
           </div>
         </div>
@@ -610,14 +605,9 @@ export default function Attendance() {
             </div>
             <div className="flex flex-wrap items-center gap-3">
               <SearchBar value={earlySearch} onChange={setEarlySearch} placeholder="Search employee..." className="w-full sm:w-64" />
-              <Select value={earlyFilter} onChange={(e) => setEarlyFilter(e.target.value)} containerClass="w-full sm:w-44">
-                <option value="All">All Classifications</option>
-                <option value="PENDING_REVIEW">Pending Review</option>
-                <option value="EXCUSED_SICK">Excused (Sick)</option>
-                <option value="EXCUSED_EMERGENCY">Excused (Emergency)</option>
-                <option value="EXCUSED_EARLY_LEAVE">Excused (Early Leave)</option>
-                <option value="UNPAID">Unpaid</option>
-              </Select>
+              <FilterMenu label="Class" value={earlyFilter} defaultValue="All" className="min-w-[12rem]" align="right"
+                onChange={setEarlyFilter}
+                options={[['All', 'All classifications'], ['PENDING_REVIEW', 'Pending review'], ['EXCUSED_SICK', 'Excused (Sick)'], ['EXCUSED_EMERGENCY', 'Excused (Emergency)'], ['EXCUSED_EARLY_LEAVE', 'Excused (Early Leave)'], ['UNPAID', 'Unpaid']].map(([value, label]) => ({ value, label }))} />
             </div>
           </div>
         </div>

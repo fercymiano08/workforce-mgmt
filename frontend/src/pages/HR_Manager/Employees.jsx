@@ -14,6 +14,7 @@ import Avatar from '../../components/ui/Avatar';
 import Input, { Select, Textarea } from '../../components/ui/Input';
 import PhoneInput from '../../components/ui/PhoneInput';
 import SearchBar from '../../components/ui/SearchBar';
+import FilterMenu from '../../components/ui/FilterMenu';
 import Modal from '../../components/ui/Modal';
 import { Pagination } from '../../components/ui/Table';
 import TableShell from '../../components/ui/TableShell';
@@ -379,15 +380,15 @@ export default function Employees() {
         <div className="p-4 border-b border-gray-100">
           <div className="flex items-center gap-3 flex-wrap">
             <SearchBar value={search} onChange={(v) => { setSearch(v); setCurrentPage(1); }} placeholder="Search by name, position, or email..." className="flex-1 min-w-[240px]" />
-            <Select value={deptFilter} onChange={(e) => { setDeptFilter(e.target.value); setRoleFilter('All'); setCurrentPage(1); }} containerClass="w-44">
-              {departments.map(d => <option key={d} value={d}>{d === 'All' ? 'All Departments' : d}</option>)}
-            </Select>
-            <Select value={roleFilter} onChange={(e) => { setRoleFilter(e.target.value); setCurrentPage(1); }} containerClass="w-44">
-              {rolesInFilter.map(r => <option key={r} value={r}>{r === 'All' ? (deptFilter === 'All' ? 'All Roles' : `All ${deptFilter} Roles`) : r}</option>)}
-            </Select>
-            <Select value={typeFilter} onChange={(e) => { setTypeFilter(e.target.value); setCurrentPage(1); }} containerClass="w-36">
-              {types.map(t => <option key={t} value={t}>{t === 'All' ? 'All Types' : t}</option>)}
-            </Select>
+            <FilterMenu label="Dept" value={deptFilter} defaultValue="All" className="min-w-[11rem]"
+              onChange={(v) => { setDeptFilter(v); setRoleFilter('All'); setCurrentPage(1); }}
+              options={departments.map((d) => ({ value: d, label: d === 'All' ? 'All departments' : d }))} />
+            <FilterMenu label="Role" value={roleFilter} defaultValue="All" className="min-w-[11rem]"
+              onChange={(v) => { setRoleFilter(v); setCurrentPage(1); }}
+              options={rolesInFilter.map((r) => ({ value: r, label: r === 'All' ? (deptFilter === 'All' ? 'All roles' : `All ${deptFilter} roles`) : r }))} />
+            <FilterMenu label="Type" value={typeFilter} defaultValue="All" className="min-w-[10rem]"
+              onChange={(v) => { setTypeFilter(v); setCurrentPage(1); }}
+              options={types.map((t) => ({ value: t, label: t === 'All' ? 'All types' : t }))} />
             {faceMissingCount > 0 && (
               <button
                 onClick={() => { setFaceMissingOnly(v => !v); setCurrentPage(1); }}
