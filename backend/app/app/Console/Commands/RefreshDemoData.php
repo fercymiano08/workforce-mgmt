@@ -212,7 +212,7 @@ class RefreshDemoData extends Command
                 $start = ShiftHours::baseStart($date, $shift->start_time, $tz);
 
                 if ($roll < 4) {   // about one day in 25: did not come in
-                    if (! $isToday) {
+                    if (! $isToday || $closeToday) {   // --close-today: today is a finished day, so an absence is recorded too
                         Attendance::create([
                             'id' => 'ATT'.str_pad((string) ++$attendanceNo, 3, '0', STR_PAD_LEFT),
                             'employee_id' => $employeeId, 'date' => $date, 'status' => 'Absent',
@@ -226,7 +226,10 @@ class RefreshDemoData extends Command
                 // One arrival in eight is late (16-50 min); the rest arrive 20 min early to 14 min after the start
                 $offset = $roll < 16 ? 16 + ($roll * 7) % 35 : -20 + ($roll * 13) % 35;
                 $clockIn = $start->copy()->addMinutes($offset);
-                if ($isToday && $clockIn->gt($now)) {
+                // Mid-shift (the default) someone who has not arrived yet has no record. With --close-today the
+                // whole day is written, so a run at 00:05 - which is when the nightly job fires - does not leave
+                // today empty until the next day: the dashboard cards read zero from midnight until the next run.
+                if ($isToday && ! $closeToday && $clockIn->gt($now)) {
                     continue;   // not arrived yet
                 }
                 $status = $clockIn->gt($start->copy()->addMinutes($grace)) ? 'Late' : 'Present';

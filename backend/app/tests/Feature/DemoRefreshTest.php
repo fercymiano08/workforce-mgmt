@@ -274,4 +274,17 @@ class DemoRefreshTest extends TestCase
 
         $this->assertSame($first, $second);
     }
+
+    public function test_close_today_fills_in_the_whole_day_even_when_run_just_after_midnight(): void
+    {
+        // The nightly job fires at 00:05. Nobody's arrival time has happened yet, but "close today" means
+        // the day is treated as finished - the dashboard must not read zero until the next night's run.
+        Carbon::setTestNow(Carbon::parse('2030-01-16 00:05:00', 'Asia/Manila'));
+
+        $this->artisan('demo:refresh', ['--weeks' => 1, '--close-today' => true])->assertSuccessful();
+
+        $today = Attendance::where('employee_id', self::DEMO)->where('date', '2030-01-16')->first();
+        $this->assertNotNull($today, 'today has a record');
+        $this->assertNotNull($today->clock_out ?? ($today->status === 'Absent' ? 'absent' : null), 'and it is a finished day');
+    }
 }
