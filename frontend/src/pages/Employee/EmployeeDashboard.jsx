@@ -1,22 +1,22 @@
-﻿import { useMemo } from 'react';
+﻿import { useMemo, useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import {
   Clock, CalendarDays, CalendarCheck, Hourglass,
   Briefcase, Plus,
   Fingerprint, FileText, CalendarClock, Calendar, ArrowRight,
-  Shield, Building2, BadgeCheck, DoorOpen, User, Settings, Inbox,
+  Shield, Building2, BadgeCheck, DoorOpen, User, Settings, Inbox, ChevronLeft, ChevronRight,
 } from 'lucide-react';
 import {
-  BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend,
+  BarChart, Bar, Cell, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
 } from 'recharts';
 import { useAuth } from '../../context/AuthContext';
 import TodayBadge from '../../components/common/TodayBadge';
-import { todayKey, todayRowClass, coversToday, thisWeek, weekWithRecords, dayTick, weekRangeLabel } from '../../utils/today';
+import { todayKey, todayRowClass, coversToday, thisWeek, weekOf, dayTick, weekRangeLabel } from '../../utils/today';
+import { scheduleOutcome, SCHEDULE_BADGE } from '../../utils/scheduleOutcome';
 import Badge from '../../components/ui/Badge';
 import Avatar from '../../components/ui/Avatar';
 import Button from '../../components/ui/Button';
 import KpiCard from '../../components/dashboard/KpiCard';
-import ChartCard from '../../components/dashboard/ChartCard';
 import { SkeletonList, SkeletonPage } from '../../components/ui/LoadingSkeleton';
 import useApiData from '../../hooks/useApiData';
 import { attendanceService, leaveService, shiftService, timesheetService } from '../../services/api';
@@ -56,21 +56,21 @@ const quickActions = [
   { label: 'Settings', hint: 'Password & look', path: '/settings', icon: Settings, tile: 'from-slate-500 to-slate-600 shadow-slate-500/25' },
 ];
 
-const CustomTooltip = ({ active, payload, label }) => {
-  if (active && payload && payload.length) {
-    return (
-      <div className="bg-white rounded-xl shadow-lg border border-gray-100 p-3">
-        <p className="text-sm font-semibold text-gray-900 mb-1">{label}</p>
-        {payload.map((entry, index) => (
-          <p key={index} className="text-xs text-gray-600">
-            <span className="inline-block w-2 h-2 rounded-full mr-1.5" style={{ backgroundColor: entry.color }} />
-            {entry.name}: {entry.value}h
-          </p>
-        ))}
-      </div>
-    );
-  }
-  return null;
+const CustomTooltip = ({ active, payload }) => {
+  if (!active || !payload || !payload.length) return null;
+  const d = payload[0].payload;
+  return (
+    <div className="bg-white rounded-xl shadow-lg border border-gray-100 p-3 min-w-[170px]">
+      <p className="text-sm font-semibold text-gray-900">{formatDate(d.date)}</p>
+      <p className="text-xs text-gray-500 mt-0.5">{d.status || (d.future ? 'Not yet' : 'No record')}</p>
+      {d.clockIn && (
+        <p className="text-xs text-gray-600 mt-1.5">
+          {formatTime(String(d.clockIn).slice(0, 5))}{d.clockOut ? ` – ${formatTime(String(d.clockOut).slice(0, 5))}` : ' – still in'}
+        </p>
+      )}
+      {d.hours > 0 && <p className="text-xs text-gray-600">{d.hours}h worked{d.overtime > 0 ? ` · ${d.overtime}h overtime` : ''}</p>}
+    </div>
+  );
 };
 
 export default function EmployeeDashboard() {
@@ -131,10 +131,19 @@ export default function EmployeeDashboard() {
     [leavesRecords, employeeId]
   );
 
+  // Every one of my shifts, newest at the top. This used to take the last 7 rows in whatever order the
+  // server returned them, so the list started at an old date and ignored most of the schedule.
   const mySchedule = useMemo(
-    () => (schedules || []).filter((s) => s.employeeId === employeeId).slice(-7),
+    () => (schedules || [])
+      .filter((s) => s.employeeId === employeeId)
+      .sort((a, b) => b.date.localeCompare(a.date)),
     [schedules, employeeId]
   );
+  const attendanceByDate = useMemo(() => {
+    const map = {};
+    (attendanceRecords || []).forEach((a) => { if (a.employeeId === employeeId && !map[a.date]) map[a.date] = a; });
+    return map;
+  }, [attendanceRecords, employeeId]);
 
   const myTimesheet = useMemo(
     () => (timesheetRecords || [])
@@ -143,39 +152,47 @@ export default function EmployeeDashboard() {
     [timesheetRecords, employeeId]
   );
 
-  // One Monday-to-Sunday week, the same week the admin overview draws, with a fixed bar size.
-  // The chart used to be built from the last 10 records instead, which meant an employee who had
-  // only clocked in once or twice got a chart with one or two categories: recharts then stretches
-  // each bar to fill its slot, so the card filled with a couple of giant blocks. Seven real days
-  // and a fixed bar width mean the shape is identical for everyone, whatever the record count.
-  const attendanceWeek = useMemo(
-    () => weekWithRecords(myAttendance.map((a) => a.date)),
-    [myAttendance]
-  );
+  // One Monday-to-Sunday week - the week the admin overview draws too - that the employee can page back
+  // through (up to 12 weeks). Seven real days with a fixed bar width keep the shape identical for everyone.
+  const [weeksBack, setWeeksBack] = useState(0);
+  const attendanceWeek = useMemo(() => {
+    const [y, m, d] = weekOf(todayKey()).start.split('-').map(Number);
+    const monday = new Date(Date.UTC(y, m - 1, d - 7 * weeksBack));
+    const days = Array.from({ length: 7 }, (_, i) => new Date(monday.getTime() + i * 86400000).toISOString().slice(0, 10));
+    return { days, weeksBack, start: days[0], end: days[6] };
+  }, [weeksBack]);
 
+  const STATUS_COLOR = { Present: COLORS.emerald, Late: COLORS.amber, 'Early Leave': COLORS.blue, Absent: COLORS.red, 'On Leave': COLORS.sky };
   const chartData = useMemo(() => {
-    const byDate = new Map();
-    myAttendance.forEach((a) => {
-      if (!byDate.has(a.date)) byDate.set(a.date, []);
-      byDate.get(a.date).push(a);
-    });
+    const today = todayKey();
     return attendanceWeek.days.map((date) => {
-      const rows = byDate.get(date) || [];
-      const hours = rows.reduce((sum, a) => sum + (a.clockIn && a.clockOut ? a.totalHours || 0 : 0), 0);
-      const row = rows[0];
+      const a = attendanceByDate[date] || null;
+      const worked = a && a.clockIn && a.clockOut ? a.totalHours || 0 : 0;
       return {
         date,
         day: dayTick(date),
-        hours: Math.round(hours * 10) / 10,
-        status: row ? row.status : null,
+        status: a ? a.status : null,
+        future: date > today,
+        clockIn: a?.clockIn || null,
+        clockOut: a?.clockOut || null,
+        overtime: a?.overtime || 0,
+        hours: Math.round(worked * 10) / 10,
+        // Absent / on-leave days have no hours, so they get a short marker bar instead of nothing.
+        bar: worked > 0 ? Math.round(worked * 10) / 10 : (a && (a.status === 'Absent' || a.status === 'On Leave') ? 0.6 : 0),
       };
     });
-  }, [attendanceWeek, myAttendance]);
+  }, [attendanceWeek, attendanceByDate]);
 
-  const isCurrentAttendanceWeek = attendanceWeek.weeksBack === 0;
+  const weekCounts = useMemo(() => {
+    const c = { Present: 0, Late: 0, 'Early Leave': 0, Absent: 0, hours: 0 };
+    chartData.forEach((d) => { if (d.status && c[d.status] !== undefined) c[d.status] += 1; c.hours += d.hours; });
+    c.hours = Math.round(c.hours * 10) / 10;
+    return c;
+  }, [chartData]);
+
+  const isCurrentAttendanceWeek = weeksBack === 0;
   const attendanceRangeLabel = weekRangeLabel(attendanceWeek.start, attendanceWeek.end);
 
-  const hasChartData = chartData.some((d) => d.hours > 0);
 
   // This week = Monday to Sunday (ISO 8601); only days that are finished (clocked out) count
   const hoursThisWeek = useMemo(() => {
@@ -308,26 +325,51 @@ export default function EmployeeDashboard() {
 
       {/* Attendance chart + My Schedule */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        <ChartCard title="My Attendance" badge={isCurrentAttendanceWeek ? 'This Week' : attendanceRangeLabel} badgeVariant="primary" className="lg:col-span-2">
-          <div className="h-[240px]">
-            {!hasChartData ? (
-              <EmptyChart message="Your hours chart fills in as you clock in and out from the attendance terminal." />
+        <div className="lg:col-span-2 bg-white rounded-2xl border border-gray-100 shadow-sm p-6 overflow-hidden h-[336px] flex flex-col">
+          <div className="flex items-center justify-between gap-3 mb-3 shrink-0">
+            <h3 className="text-base font-semibold text-gray-900 tracking-tight">My Attendance</h3>
+            <div className="flex items-center gap-1.5">
+              <button type="button" aria-label="Previous week" disabled={weeksBack >= 12} onClick={() => setWeeksBack((w) => w + 1)}
+                className="w-7 h-7 rounded-lg border border-gray-200 text-gray-500 hover:bg-gray-50 disabled:opacity-40 disabled:hover:bg-transparent flex items-center justify-center">
+                <ChevronLeft className="w-4 h-4" />
+              </button>
+              <Badge variant="primary" size="sm">{isCurrentAttendanceWeek ? `This Week · ${attendanceRangeLabel}` : attendanceRangeLabel}</Badge>
+              <button type="button" aria-label="Next week" disabled={weeksBack === 0} onClick={() => setWeeksBack((w) => Math.max(0, w - 1))}
+                className="w-7 h-7 rounded-lg border border-gray-200 text-gray-500 hover:bg-gray-50 disabled:opacity-40 disabled:hover:bg-transparent flex items-center justify-center">
+                <ChevronRight className="w-4 h-4" />
+              </button>
+            </div>
+          </div>
+          <div className="flex-1 min-h-0">
+            {!chartData.some((d) => d.status) ? (
+              <EmptyChart message={isCurrentAttendanceWeek ? 'Your week fills in as you clock in and out from the attendance terminal.' : 'No attendance was recorded for this week.'} />
             ) : (
               <ResponsiveContainer width="100%" height="100%">
                 {/* barSize is the whole point: without it recharts divides the plot by the number of bars,
                     so one record becomes a single block as wide as the card. */}
-                <BarChart data={chartData} barSize={32} barGap={3} barCategoryGap="18%" margin={{ top: 8, right: 8, left: -12, bottom: 0 }}>
+                <BarChart data={chartData} barSize={34} barCategoryGap="18%" margin={{ top: 8, right: 8, left: -12, bottom: 0 }}>
                   <CartesianGrid strokeDasharray="3 3" stroke={chart.grid} vertical={false} />
                   <XAxis dataKey="day" axisLine={false} tickLine={false} tick={{ fontSize: 12, fill: chart.axis }} />
-                  <YAxis axisLine={false} tickLine={false} tick={{ fontSize: 12, fill: chart.axis }} />
-                  <Tooltip content={<CustomTooltip />} />
-                  <Legend iconType="square" iconSize={8} wrapperStyle={{ paddingTop: 16, fontSize: 12 }} />
-                  <Bar dataKey="hours" name="Hours Worked" fill={COLORS.blue} radius={[6, 6, 0, 0]} />
+                  <YAxis axisLine={false} tickLine={false} tick={{ fontSize: 12, fill: chart.axis }} unit="h" domain={[0, (max) => Math.max(10, Math.ceil(max))]} allowDecimals={false} />
+                  <Tooltip content={<CustomTooltip />} cursor={{ fill: chart.cursor }} />
+                  <Bar dataKey="bar" radius={[6, 6, 0, 0]}>
+                    {chartData.map((d) => (
+                      <Cell key={d.date} fill={STATUS_COLOR[d.status] || chart.grid} />
+                    ))}
+                  </Bar>
                 </BarChart>
               </ResponsiveContainer>
             )}
           </div>
-        </ChartCard>
+          <div className="flex flex-wrap items-center gap-x-4 gap-y-1 pt-3 text-xs text-gray-500 shrink-0">
+            {[['Present', 'On time', COLORS.emerald], ['Late', 'Late', COLORS.amber], ['Early Leave', 'Early leave', COLORS.blue], ['Absent', 'Absent', COLORS.red]].map(([key, label, color]) => (
+              <span key={key} className="inline-flex items-center gap-1.5">
+                <span className="w-2 h-2 rounded-sm" style={{ backgroundColor: color }} />{label} <span className="font-semibold text-gray-700">{weekCounts[key]}</span>
+              </span>
+            ))}
+            <span className="ml-auto font-semibold text-gray-700">{weekCounts.hours}h worked</span>
+          </div>
+        </div>
 
         {/* My Schedule - fixed height, scrollable list. 336px matches the My Attendance card beside
             it (240px chart + header + padding) so the two cards line up on the row. */}
@@ -342,9 +384,9 @@ export default function EmployeeDashboard() {
             ) : (
               <>
             {mySchedule.length === 0 && (
-              <p className="px-6 py-6 text-sm text-gray-400 text-center">No upcoming shifts scheduled.</p>
+              <p className="px-6 py-6 text-sm text-gray-400 text-center">No shifts scheduled yet.</p>
             )}
-            {mySchedule.slice().reverse().map((entry) => {
+            {mySchedule.map((entry) => {
               const shift = (shiftDefs || []).find((s) => s.id === entry.shiftId);
               return (
                 <div key={entry.id} className={`px-6 py-3.5 flex items-center gap-3 hover:bg-gray-50 transition-colors ${todayRowClass(entry.date)}`}>
@@ -355,8 +397,8 @@ export default function EmployeeDashboard() {
                     <p className="text-sm font-semibold text-gray-900 truncate flex items-center gap-2">{formatDate(entry.date)}{entry.date === todayDay && <TodayBadge />}</p>
                     <p className="text-xs text-gray-400 mt-0.5">{shift?.name} &middot; {shift ? `${formatTime(shift.startTime)} - ${formatTime(shift.endTime)}` : ''}</p>
                   </div>
-                  <Badge variant={entry.status === 'Completed' ? 'success' : 'primary'} size="xs">
-                    {entry.status}
+                  <Badge variant={SCHEDULE_BADGE[scheduleOutcome(entry, attendanceByDate, todayDay)] || 'primary'} size="xs">
+                    {scheduleOutcome(entry, attendanceByDate, todayDay)}
                   </Badge>
               </div>
             );

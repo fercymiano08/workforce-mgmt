@@ -1,4 +1,5 @@
 import { useMemo, useState } from 'react';
+import { scheduleOutcome, SCHEDULE_BADGE } from '../../utils/scheduleOutcome';
 import {
   CalendarDays, CalendarClock, Zap, Flame,
   Clock, MapPin, Filter, CalendarOff, CalendarPlus,
@@ -18,10 +19,7 @@ const shiftIconColors = {
   SHIFT005: 'bg-red-50 text-red-600',
 };
 const shiftBadgeVariant = { SHIFT004: 'primary', SHIFT005: 'danger' };
-const statusBadgeVariant = {
-  Upcoming: 'primary', Scheduled: 'warning', Completed: 'success', 'In progress': 'info',
-  Absent: 'danger', Missed: 'danger', 'On leave': 'default', Cancelled: 'danger',
-};
+const statusBadgeVariant = SCHEDULE_BADGE;
 
 export default function MySchedule() {
   const { user } = useAuth();
@@ -139,17 +137,7 @@ export default function MySchedule() {
     return map;
   }, [attendanceRecords, employeeId]);
 
-  const scheduleStatus = (schedule) => {
-    if (referenceDate && schedule.date > referenceDate) return 'Upcoming';
-    if (schedule.status === 'Cancelled') return 'Cancelled';
-    const a = attendanceByDate[schedule.date];
-    if (a?.status === 'On Leave') return 'On leave';
-    if (a?.status === 'Absent') return 'Absent';
-    if (a?.clockIn && a?.clockOut) return 'Completed';
-    if (a?.clockIn) return 'In progress';
-    if (referenceDate && schedule.date < referenceDate) return 'Missed';
-    return schedule.status;
-  };
+  const scheduleStatus = (schedule) => scheduleOutcome(schedule, attendanceByDate, today);
 
   if (scheduleLoading) {
     return <SkeletonPage kpiCount={3} />;
