@@ -5,7 +5,7 @@ import {
 } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import {
-  BarChart, Bar, PieChart, Pie, Cell,
+  BarChart, Bar, PieChart, Pie, Cell, LineChart, Line,
   XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
   Legend,
 } from 'recharts';
@@ -44,7 +44,7 @@ const RANGE_OPTIONS = [
 // The one overall workforce score, as a ring. An SVG circle rather than a Recharts radial bar
 // because it is a single value, not a series - the number in the middle is the whole point, and
 // the gap is drawn from a fixed circumference so the stroke does not scale with the text.
-const ScoreRing = ({ score, size = 160, stroke = 14, color = '#3B82F6', track = '#E2E8F0' }) => {
+const ScoreRing = ({ score, size = 160, stroke = 14, color = '#3B82F6', track = '#E2E8F0', suffix, suffixLabel = 'out of 100' }) => {
   const radius = (size - stroke) / 2;
   const circumference = 2 * Math.PI * radius;
   const pct = Math.max(0, Math.min(100, Number(score) || 0));
@@ -60,8 +60,8 @@ const ScoreRing = ({ score, size = 160, stroke = 14, color = '#3B82F6', track = 
         />
       </svg>
       <div className="absolute inset-0 flex flex-col items-center justify-center">
-        <span className="text-5xl font-bold text-gray-900 tabular-nums">{pct}</span>
-        <span className="text-sm font-semibold text-gray-400 mt-0.5">out of 100</span>
+        <span className="text-5xl font-bold text-gray-900 tabular-nums">{pct}{suffix || ''}</span>
+        {!suffix && <span className="text-sm font-semibold text-gray-400 mt-0.5">{suffixLabel}</span>}
       </div>
     </div>
   );
@@ -113,16 +113,6 @@ export default function Dashboard() {
   const { isDark } = useTheme();
   const chart = chartTheme(isDark);
   const COLORS = chart.colors;
-  // One colour per productivity part, matched to what that part already looks like elsewhere:
-  // attendance green (the "Present" series), hours blue, punctuality sky, overtime amber (the
-  // overtime colour used on every timesheet bar), timesheets purple.
-  const componentColors = {
-    attendance: COLORS.emerald,
-    hours: COLORS.blue,
-    punctuality: COLORS.sky,
-    overtime: COLORS.amber,
-    timesheets: COLORS.purple,
-  };
 
   const [loading, setLoading] = useState(true);
   const [employees, setEmployees] = useState([]);
@@ -131,6 +121,10 @@ export default function Dashboard() {
   const [schedules, setSchedules] = useState([]);
   const [shiftDefs, setShiftDefs] = useState([]);
   const [analytics, setAnalytics] = useState(null);
+  // The same This Week figure Workforce Analytics itself shows and explains (present days ÷
+  // scheduled days) - one source of truth, so the number here can never quietly disagree with the
+  // card that states its formula.
+  const [workforceRate, setWorkforceRate] = useState(null);
   // How far back the trend card and the CSV reach. 30 days is the default because that is the span
   // the page has always been showing, so opening the dashboard looks the same as it did yesterday.
   const [rangeDays, setRangeDays] = useState(30);
@@ -181,6 +175,7 @@ export default function Dashboard() {
     load(shiftService.getAllShifts(), setShiftDefs, []);
 
     load(analyticsService.getAll(), setAnalytics, null);
+    load(analyticsService.getWorkforce('week'), setWorkforceRate, null);
     load(
       overtimeService.getAll(),
       (ot) => {
@@ -383,7 +378,7 @@ export default function Dashboard() {
     return trend.map((row) => ({ week: row.month, percentage: row.rate ?? 0 }));
   }, [analytics]);
 
-  const productivity = analytics?.departmentProductivity || null;
+  const attendanceRate = workforceRate?.attendanceRate || null;
 
   const pendingLeaveRequests = useMemo(
     () =>
@@ -640,27 +635,27 @@ export default function Dashboard() {
           </div>
         </ChartCard>
 
-        <ChartCard title={t('dashboard.productivity')} badge={t('dashboard.overall')} badgeVariant="purple">
+        <ChartCard title={t('dashboard.attendanceRate')} badge={t('dashboard.thisWeek')} badgeVariant="purple">
           <div className="h-[320px]">
-            {!productivity || productivity.score == null ? (
+            {!attendanceRate || attendanceRate.scheduledDays === 0 ? (
               <EmptyState message={t('dashboard.noData')} />
             ) : (
-              <div className="h-full flex items-center justify-center gap-6 flex-wrap px-2">
-                <ScoreRing score={productivity.score} size={216} stroke={19} color={COLORS.purple} track={chart.grid} />
-                <div className="space-y-3 min-w-[200px] flex-1 max-w-[290px]">
-                  {(productivity.components || []).map((c) => (
-                    <div key={c.key}>
-                      <div className="flex items-baseline justify-between gap-3 text-xs">
-                        <span className="text-gray-500">{c.label}</span>
-                        <span className="font-semibold text-gray-800">{c.score}%</span>
-                      </div>
-                      <div className="h-1.5 rounded-full bg-gray-100 mt-1 overflow-hidden">
-                        <div className="h-full rounded-full" style={{ width: `${c.score}%`, background: componentColors[c.key] || COLORS.blue }} />
-                      </div>
-                    </div>
-                  ))}
-                  <p className="text-[11px] text-gray-400 pt-1">Completed months only</p>
+              <div className="h-full flex flex-col items-center justify-center gap-3 px-2">
+                <ScoreRing score={attendanceRate.rate} size={190} stroke={17} color={COLORS.blue} track={chart.grid} suffix="%" />
+                <p className="text-xs text-gray-500">
+                  {attendanceRate.presentDays} present of {attendanceRate.scheduledDays} scheduled days
+                </p>
+                <div className="w-full max-w-sm h-14">
+                  <ResponsiveContainer width="100%" height="100%">
+                    <LineChart data={attendanceRate.trend} margin={{ top: 4, left: 0, right: 0, bottom: 0 }}>
+                      <Tooltip cursor={{ stroke: chart.grid }} contentStyle={chart.tooltipStyle} formatter={(v) => [`${v}%`, 'Rate']} />
+                      <Line type="monotone" dataKey="rate" stroke={COLORS.blue} strokeWidth={2} dot={false} />
+                    </LineChart>
+                  </ResponsiveContainer>
                 </div>
+                <p className="text-[11px] text-gray-400 text-center max-w-xs">
+                  Present days ÷ scheduled days (approved leave excluded) — the same figure Workforce Analytics explains.
+                </p>
               </div>
             )}
           </div>
