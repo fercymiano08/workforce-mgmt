@@ -69,7 +69,7 @@ export default function MyAttendance() {
     [employeeId]
   );
   const [periodFilter, setPeriodFilter] = useState('All');
-  const [activeTab, setActiveTab] = useState(searchParams.get('tab') === 'corrections' ? 'corrections' : 'attendance');
+  const [activeTab, setActiveTab] = useState(['corrections', 'overtime', 'early'].includes(searchParams.get('tab')) ? searchParams.get('tab') : 'attendance');
   const [todayShift, setTodayShift] = useState(null);
 
   const {

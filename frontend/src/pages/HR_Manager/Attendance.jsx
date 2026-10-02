@@ -85,7 +85,7 @@ export default function Attendance() {
     refresh: refreshOvertime,
   } = useApiData(() => overtimeService.getAll(), []);
 
-  const [overtimeSearch, setOvertimeSearch] = useState('');
+  const [overtimeSearch, setOvertimeSearch] = useState(searchParams.get('search') || '');
   const [overtimeStatusFilter, setOvertimeStatusFilter] = useState('All');
   // Department used to be a collapsible grouping with a nested table per department. It is a filter
   // now: one table, one list, and a control to narrow it. The grouping meant a reader had to open a
@@ -104,7 +104,7 @@ export default function Attendance() {
     refresh: refreshEarly,
   } = useApiData(() => attendanceService.getEarlyClockOuts(), []);
 
-  const [earlySearch, setEarlySearch] = useState('');
+  const [earlySearch, setEarlySearch] = useState(searchParams.get('search') || '');
   const [earlyFilter, setEarlyFilter] = useState('All');
   const [selectedEarly, setSelectedEarly] = useState(null);
   const [earlyClassify, setEarlyClassify] = useState('');

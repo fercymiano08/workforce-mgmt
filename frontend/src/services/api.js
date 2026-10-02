@@ -466,3 +466,12 @@ export const authService = {
     });
   },
 };
+
+// The topbar's universal search. The server decides what the signed-in role may see (an administrator
+// finds everyone's records, an employee only their own), so this just asks.
+export const searchService = {
+  query: async (q) => {
+    const { data } = await http.get('/search', { params: { q } });
+    return data;
+  },
+};

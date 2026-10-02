@@ -31,7 +31,7 @@ const translations = {
     'common.cancel': 'Cancel',
 
     // Topbar
-    'topbar.search': 'Search employees, reports...',
+    'topbar.search': 'Search people, records, pages...',
     'topbar.switchRole': 'Switch Role',
     'topbar.profile': 'Profile',
     'topbar.settings': 'Settings',

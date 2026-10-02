@@ -11,6 +11,7 @@
 */
 
 use App\Http\Controllers\Api\AnalyticsController;
+use App\Http\Controllers\Api\SearchController;
 use App\Http\Controllers\Api\AIDecisionSupportController;
 use Illuminate\Support\Facades\Route;
 
@@ -24,3 +25,6 @@ Route::middleware('auth:sanctum')->prefix('analytics')->group(function () {
         Route::post('/ai/actions', [AIDecisionSupportController::class, 'action']);
     });
 });
+
+// Universal search for the topbar: any signed-in user, results scoped to their role on the server.
+Route::middleware(['auth:sanctum', 'throttle:120,1'])->get('/search', [SearchController::class, 'index']);

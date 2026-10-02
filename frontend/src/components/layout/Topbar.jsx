@@ -70,7 +70,7 @@ export default function Topbar({ onMenuToggle }) {
         >
           <Menu className="w-5 h-5" />
         </button>
-        <div className="hidden sm:block flex-1 min-w-0">
+        <div className="flex-1 min-w-0">
           <GlobalSearch />
         </div>
       </div>

@@ -1,4 +1,5 @@
 import { useMemo, useState } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import { createPortal } from 'react-dom';
 import clsx from 'clsx';
 import {
@@ -199,8 +200,9 @@ const timeOf = (d) => formatTime(d.toTimeString().slice(0, 8));
 export default function AuditLogs() {
   const { toast } = useToast();
 
+  const [urlParams] = useSearchParams();
   const [filters, setFilters] = useState({
-    search: '',
+    search: urlParams.get('search') || '',
     service: '',
     from: '',
     to: '',
