@@ -30,15 +30,17 @@ import { kioskService } from '../../services/kioskService';
 import { didAttend, isPresentGroup } from '../../utils/constants';
 import { weekWithRecords, dayTick, weekRangeLabel } from '../../utils/today';
 import { formatDate } from '../../utils/helpers';
-import { downloadCsv } from '../../utils/export';
+import { openAttendanceReport } from '../../utils/attendanceReport';
+import Modal from '../../components/ui/Modal';
 
-// How far back the export reaches. Every option is inside the 35 days of attendance this page
-// already loads (see the fetch below), so choosing one re-reads what is already in memory instead
+// How far back the report reaches, in whole weeks. Every option is inside the 35 days of attendance this
+// page already loads (see the fetch below), so choosing one re-reads what is already in memory instead
 // of asking the server again - the range costs no request and no wait.
 const RANGE_OPTIONS = [
-  { days: 7, label: '7 days' },
-  { days: 14, label: '14 days' },
-  { days: 30, label: '30 days' },
+  { days: 7, label: '7 days', sub: '1 week' },
+  { days: 14, label: '14 days', sub: '2 weeks' },
+  { days: 21, label: '21 days', sub: '3 weeks' },
+  { days: 28, label: '28 days', sub: '4 weeks' },
 ];
 
 // The one overall workforce score, as a ring. An SVG circle rather than a Recharts radial bar
@@ -125,9 +127,9 @@ export default function Dashboard() {
   // scheduled days) - one source of truth, so the number here can never quietly disagree with the
   // card that states its formula.
   const [workforceRate, setWorkforceRate] = useState(null);
-  // How far back the trend card and the CSV reach. 30 days is the default because that is the span
-  // the page has always been showing, so opening the dashboard looks the same as it did yesterday.
-  const [rangeDays, setRangeDays] = useState(30);
+  // How far back the exported report reaches (chosen in the Export dialog - it changes nothing else on this page).
+  const [rangeDays, setRangeDays] = useState(7);
+  const [exportOpen, setExportOpen] = useState(false);
   // Things waiting for a decision from the administrator, other than leave (which is already loaded)
   // These arrive on their own now, so they start as null - "unknown" - rather than 0. Saying zero when
   // the answer has not loaded yet would tell the administrator they are all caught up when they are not.
@@ -263,43 +265,14 @@ export default function Dashboard() {
   }, [attendance, today, rangeDays]);
 
   const exportRange = () => {
-    // The daily rows, plus a total row: a spreadsheet of 30 lines with no bottom line makes someone
-    // add it up by hand, and get it subtly wrong.
-    const rows = dailyRange.map((r) => ({
-      Date: r.key,
-      Records: r.records,
-      'On time': r.onTime,
-      Late: r.late,
-      'Early leave': r.earlyLeave,
-      Absent: r.absent,
-      'On leave': r.onLeave,
-      'Attendance rate %': r.rate,
-    }));
-    const total = dailyRange.reduce(
-      (acc, r) => ({
-        records: acc.records + r.records,
-        onTime: acc.onTime + r.onTime,
-        late: acc.late + r.late,
-        earlyLeave: acc.earlyLeave + r.earlyLeave,
-        absent: acc.absent + r.absent,
-        onLeave: acc.onLeave + r.onLeave,
-        attended: acc.attended + r.attended,
-      }),
-      { records: 0, onTime: 0, late: 0, earlyLeave: 0, absent: 0, onLeave: 0, attended: 0 }
-    );
-    rows.push({
-      Date: 'Total',
-      Records: total.records,
-      'On time': total.onTime,
-      Late: total.late,
-      'Early leave': total.earlyLeave,
-      Absent: total.absent,
-      'On leave': total.onLeave,
-      'Attendance rate %': total.records ? Math.round((total.attended / total.records) * 1000) / 10 : 0,
-    });
-
-    downloadCsv(`attendance-${rangeDays}d-${today}.csv`, rows);
-    toast.success('Export ready', `Attendance for the last ${rangeDays} days has been downloaded.`);
+    // The daily rows come from the same records as the cards above, so the report and the screen agree.
+    const opened = openAttendanceReport({ rows: dailyRange, days: rangeDays, preparedBy: user?.firstName ? `${user.firstName} ${user.lastName || ''}`.trim() : '' });
+    if (!opened) {
+      toast.error('Pop-up blocked', 'Allow pop-ups for this site, then try the export again.');
+      return;
+    }
+    setExportOpen(false);
+    toast.success('Report ready', `Attendance for the last ${rangeDays} days opened - choose “Save as PDF”.`);
   };
 
   const kpi = useMemo(() => {
@@ -461,25 +434,8 @@ export default function Dashboard() {
             <Calendar className="w-4 h-4 text-gray-400" />
             <span className="font-medium">{formatDate(today)}</span>
           </div>
-          {/* The presets and the button belong together: this range is what the export covers, and
-              the button says so on its face rather than leaving a control that quietly changes
-              something. The weekly-trend card below is fed by the analytics endpoint over its own
-              window, so it is deliberately left alone rather than made to disagree with its own data. */}
-          <div className="flex items-center gap-1 bg-white p-1 rounded-xl border border-gray-100 shadow-sm">
-            {RANGE_OPTIONS.map((o) => (
-              <button
-                key={o.days}
-                onClick={() => setRangeDays(o.days)}
-                className={`px-3 py-1.5 pointer-coarse:py-2.5 rounded-lg text-xs font-medium transition-colors ${
-                  rangeDays === o.days ? 'bg-blue-50 text-blue-700' : 'text-gray-500 hover:bg-gray-50'
-                }`}
-              >
-                {o.label}
-              </button>
-            ))}
-          </div>
-          <Button variant="outline" size="md" icon={Download} onClick={exportRange}>
-            Export CSV ({rangeDays} days)
+          <Button variant="outline" size="md" icon={Download} onClick={() => setExportOpen(true)}>
+            Export report
           </Button>
         </div>
       </div>
@@ -758,6 +714,44 @@ export default function Dashboard() {
           </div>
         </div>
       </div>
+
+      {/* Export report: the range is chosen here and applies to the report only. */}
+      <Modal isOpen={exportOpen} onClose={() => setExportOpen(false)} title="Export attendance report" size="md">
+        <div className="space-y-5">
+          <p className="text-sm text-gray-600">
+            Pick how far back the report goes. It opens as a designed PDF with a summary, a daily chart and a day-by-day table.
+          </p>
+          <div className="grid grid-cols-2 gap-3" role="radiogroup" aria-label="Report range">
+            {RANGE_OPTIONS.map((o) => (
+              <button
+                key={o.days}
+                type="button"
+                role="radio"
+                aria-checked={rangeDays === o.days}
+                onClick={() => setRangeDays(o.days)}
+                className={`text-left rounded-xl border px-4 py-3 transition-all ${
+                  rangeDays === o.days ? 'border-blue-500 bg-blue-50 ring-2 ring-blue-500/20' : 'border-gray-200 hover:border-gray-300 hover:bg-gray-50'
+                }`}
+              >
+                <span className={`block text-base font-semibold ${rangeDays === o.days ? 'text-blue-700' : 'text-gray-900'}`}>{o.label}</span>
+                <span className="block text-xs text-gray-500">{o.sub}</span>
+              </button>
+            ))}
+          </div>
+          <div className="rounded-xl bg-gray-50 border border-gray-100 px-4 py-3 text-sm text-gray-700">
+            <span className="text-gray-500">Covers </span>
+            <span className="font-semibold">
+              {formatDate(toDateKey((() => { const d = new Date(today); d.setDate(d.getDate() - (rangeDays - 1)); return d; })()))}
+            </span>
+            <span className="text-gray-500"> to </span>
+            <span className="font-semibold">{formatDate(today)}</span>
+          </div>
+          <div className="flex justify-end gap-2 pt-1">
+            <Button variant="outline" onClick={() => setExportOpen(false)}>Cancel</Button>
+            <Button icon={Download} onClick={exportRange}>Create PDF report</Button>
+          </div>
+        </div>
+      </Modal>
     </div>
   );
 }
