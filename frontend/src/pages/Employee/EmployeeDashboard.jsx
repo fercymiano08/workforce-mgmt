@@ -1,4 +1,4 @@
-﻿import { useMemo, useState } from 'react';
+﻿import { useEffect, useMemo, useRef, useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import {
   Clock, CalendarDays, CalendarCheck, Hourglass,
@@ -139,6 +139,14 @@ export default function EmployeeDashboard() {
       .sort((a, b) => b.date.localeCompare(a.date)),
     [schedules, employeeId]
   );
+  const shiftListRef = useRef(null);
+  // The list is newest-first, so upcoming shifts sit above today: open it scrolled to today's shift.
+  useEffect(() => {
+    const box = shiftListRef.current;
+    const row = box?.querySelector('[data-today="true"]');
+    if (box && row) box.scrollTop += row.getBoundingClientRect().top - box.getBoundingClientRect().top;
+  }, [loadingSchedules, loadingShiftDefs, mySchedule.length]);
+
   const attendanceByDate = useMemo(() => {
     const map = {};
     (attendanceRecords || []).forEach((a) => { if (a.employeeId === employeeId && !map[a.date]) map[a.date] = a; });
@@ -378,7 +386,7 @@ export default function EmployeeDashboard() {
             <h3 className="text-base font-semibold text-gray-900 tracking-tight">My Shift</h3>
             <Badge variant="primary" size="sm">{mySchedule.length} shifts</Badge>
           </div>
-          <div className="divide-y divide-gray-100/70 flex-1 overflow-y-auto overflow-x-hidden">
+          <div ref={shiftListRef} className="divide-y divide-gray-100/70 flex-1 overflow-y-auto overflow-x-hidden">
             {scheduleLoading ? (
               <div className="px-6 py-4"><SkeletonList rows={3} /></div>
             ) : (
@@ -389,7 +397,7 @@ export default function EmployeeDashboard() {
             {mySchedule.map((entry) => {
               const shift = (shiftDefs || []).find((s) => s.id === entry.shiftId);
               return (
-                <div key={entry.id} className={`px-6 py-3.5 flex items-center gap-3 hover:bg-gray-50 transition-colors ${todayRowClass(entry.date)}`}>
+                <div key={entry.id} data-today={entry.date === todayDay ? 'true' : undefined} className={`px-6 py-3.5 flex items-center gap-3 hover:bg-gray-50 transition-colors ${todayRowClass(entry.date)}`}>
                   <div className="w-9 h-9 rounded-lg flex items-center justify-center shrink-0 bg-blue-50">
                     <Briefcase className="w-4 h-4 text-blue-500" />
                   </div>
