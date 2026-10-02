@@ -341,21 +341,6 @@ function AdminTimesheetsView() {
   const overtimeHours = base.reduce((s, t) => s + (t.overtimeHours || 0), 0);
   const paidOt = base.reduce((s, t) => s + (t.paidOtHours || 0), 0);
 
-  // How well the process is running (all timesheets that were submitted).
-  const compliance = useMemo(() => {
-    const sent = data.filter((t) => t.submittedAt);
-    const onTime = sent.filter((t) => !t.autoSubmitted && new Date(t.submittedAt) <= new Date(t.dueAt)).length;
-    const reviewed = data.filter((t) => t.submittedAt && t.reviewedAt);
-    const avgHours = reviewed.length ? reviewed.reduce((s, t) => s + (new Date(t.reviewedAt) - new Date(t.submittedAt)) / 3600000, 0) / reviewed.length : null;
-    return {
-      onTimePct: sent.length ? Math.round((onTime / sent.length) * 100) : null,
-      onTime, sent: sent.length,
-      auto: sent.filter((t) => t.autoSubmitted).length,
-      avgHours,
-    };
-  }, [data]);
-  const avgApproval = compliance.avgHours == null ? '—' : compliance.avgHours < 1 ? '< 1 h' : compliance.avgHours < 48 ? `${Math.round(compliance.avgHours)} h` : `${(compliance.avgHours / 24).toFixed(1)} days`;
-
   const readyForPayroll = data.filter((t) => t.status === 'Approved' && !t.exportedAt);
   const attention = [
     { id: 'pending', label: 'Waiting for review', n: data.filter((t) => t.status === 'Submitted').length, icon: Clock, tone: 'amber', apply: () => { setFlag(''); setStatusFilter('Submitted'); } },
@@ -462,24 +447,6 @@ function AdminTimesheetsView() {
         <KpiCard label="Approved" value={count('Approved')} icon={CheckCircle} accent="emerald" noBar subtext={`of ${base.length} timesheet${base.length === 1 ? '' : 's'}`} to="/timesheets?status=Approved" />
         <KpiCard label="Hours counted" value={hoursText(totalHours)} icon={Timer} accent="blue" noBar subtext={`${hoursText(regularHours)} regular · ${hoursText(overtimeHours)} overtime`} />
         <KpiCard label="Overtime paid" value={hoursText(paidOt)} icon={TrendingUp} accent="purple" noBar subtext={`${base.filter((t) => (t.paidOtHours || 0) > 0).length} employee-week(s)`} />
-      </div>
-
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-        <div className="rounded-2xl border border-gray-100 bg-white p-4">
-          <p className="text-xs font-semibold uppercase tracking-wide text-gray-400">On-time submissions</p>
-          <p className="text-2xl font-bold text-gray-900 mt-1">{compliance.onTimePct == null ? '—' : `${compliance.onTimePct}%`}</p>
-          <p className="text-xs text-gray-400 mt-1">{compliance.onTime} of {compliance.sent} submitted by the employee before the deadline</p>
-        </div>
-        <div className="rounded-2xl border border-gray-100 bg-white p-4">
-          <p className="text-xs font-semibold uppercase tracking-wide text-gray-400">Average time to review</p>
-          <p className="text-2xl font-bold text-gray-900 mt-1">{avgApproval}</p>
-          <p className="text-xs text-gray-400 mt-1">From submitted to approved or rejected</p>
-        </div>
-        <div className="rounded-2xl border border-gray-100 bg-white p-4">
-          <p className="text-xs font-semibold uppercase tracking-wide text-gray-400">Submitted automatically</p>
-          <p className="text-2xl font-bold text-gray-900 mt-1">{compliance.auto}</p>
-          <p className="text-xs text-gray-400 mt-1">The employee missed the deadline</p>
-        </div>
       </div>
 
       <div className="flex flex-wrap gap-2">
