@@ -127,90 +127,13 @@ function CompanySection({ settingsData, onSaved }) {
 }
 
 // Everything about how the clock treats a working day: how late is still "on time,"
-// the unpaid lunch, and the early clock-out policy. One place for HR to tune all three.
+// and the unpaid lunch. The early clock-out policy is intentionally NOT editable
+// here - it stays enforced by EarlyLeavePolicy on its own fixed defaults
+// (30-day window, 2 free early outs, 2 sick outs, 48h certificate).
 function TimeManagerSection({ settingsData, onSaved }) {
-  const { toast } = useToast();
-  const system = settingsData.system || {};
-  const [form, setForm] = useState({
-    early_leave_window_days: system.early_leave_window_days ?? 30,
-    early_leave_allowed_count: system.early_leave_allowed_count ?? 2,
-    early_leave_sick_cert_threshold: system.early_leave_sick_cert_threshold ?? 2,
-    early_leave_certificate_hours: system.early_leave_certificate_hours ?? 48,
-  });
-
-  const handleChange = (field, value) => {
-    setForm((prev) => ({ ...prev, [field]: value }));
-  };
-
-  const handleSave = async () => {
-    try {
-      // 'system' is replaced wholesale by the API, so merge the new threshold
-      // keys into the values that already exist on the row (date/time formats).
-      await settingsService.update({ system: { ...system, ...form } });
-      applySystemSettings({ dateFormat: system.dateFormat, timeFormat: system.timeFormat });
-      toast.success('Early leave policy updated', 'New thresholds apply to all future classifications.');
-      onSaved?.();
-    } catch {
-      toast.error('Error', 'Failed to save early leave policy.');
-    }
-  };
-
   return (
     <div className="space-y-6">
       <GracePeriodCard settingsData={settingsData} onSaved={onSaved} />
-
-      <Card>
-        <CardHeader>
-          <div>
-            <CardTitle>Early Clock-Out Policy</CardTitle>
-            <CardDescription>Rules that auto-classify early clock-outs for the whole workforce</CardDescription>
-          </div>
-        </CardHeader>
-
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-5">
-          <Input
-            label="Rolling Window (days)"
-            type="number"
-            min={1}
-            value={form.early_leave_window_days}
-            onChange={(e) => handleChange('early_leave_window_days', Number(e.target.value))}
-            icon={TimerOff}
-          />
-          <Input
-            label="Free Early Outs in Window"
-            type="number"
-            min={1}
-            value={form.early_leave_allowed_count}
-            onChange={(e) => handleChange('early_leave_allowed_count', Number(e.target.value))}
-          />
-          <Input
-            label="Sick Outs Before Certificate"
-            type="number"
-            min={1}
-            value={form.early_leave_sick_cert_threshold}
-            onChange={(e) => handleChange('early_leave_sick_cert_threshold', Number(e.target.value))}
-          />
-          <Input
-            label="Certificate Deadline (hours)"
-            type="number"
-            min={1}
-            value={form.early_leave_certificate_hours}
-            onChange={(e) => handleChange('early_leave_certificate_hours', Number(e.target.value))}
-          />
-        </div>
-
-        <InfoNote>
-          Each employee gets the free early outs above within the rolling window; the NEXT one is unexcused (Unpaid)
-          automatically at the kiosk, with no need to wait for HR (admins can still override per record). Every early
-          clock-out alerts the admins. A SICK claim can't be verified at the kiosk, so it needs a medical certificate
-          within the deadline above - otherwise it becomes unexcused automatically. Excusing a sick early out
-          generates a pending Sick leave draft for approval.
-        </InfoNote>
-
-        <div className="flex justify-end mt-6">
-          <Button icon={Save} onClick={handleSave}>Save Changes</Button>
-        </div>
-      </Card>
 
       <LunchBreakCard settingsData={settingsData} onSaved={onSaved} />
     </div>
