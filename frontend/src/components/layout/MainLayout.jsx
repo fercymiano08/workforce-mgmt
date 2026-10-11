@@ -88,9 +88,15 @@ export default function MainLayout({ children }) {
             deliberate column instead of a stretched one.
 
             max-w is only reached on genuinely wide screens - a phone is always under it, so the
-            phone layout is exactly what it was, just reliably aligned.
+            phone layout is exactly what it was, just reliably aligned. The cap itself was 1400px; a
+            panel review read the admin screens as closer to a phone app than professional desktop
+            software, and a narrow centred column with wide empty margins on an ordinary 1920px
+            monitor is exactly that impression (most back-office/admin tools fill the width instead).
+            1680px keeps a genuinely wide/ultrawide monitor from stretching tables and charts absurdly
+            far apart, while using most of a common 1920px screen instead of leaving a quarter of it
+            empty on each side.
           */}
-          <div className="mx-auto w-full max-w-[1400px]">
+          <div className="mx-auto w-full max-w-[1680px]">
             <Breadcrumbs />
             {children}
           </div>
