@@ -290,14 +290,40 @@ class AuthController extends Controller
     }
 
     /**
-     * Step-up check before something sensitive (exporting reports or the audit log): the signed-in person
-     * types their password again. A stolen-but-unlocked session cannot walk data out. The confirmation is
-     * written to the audit log with what it was for.
+     * Step-up check before something sensitive (exporting a report): the signed-in person types their
+     * password again. A stolen-but-unlocked session cannot walk payroll/personal data out this way.
+     * The confirmation (and any failed attempt) is written to the audit log with what it was for.
+     *
+     * This was removed once already, on the reasoning that it guarded nothing and made printing feel
+     * broken on a phone. A panel review brought it back for Reports specifically: those exports can
+     * carry salary and personal data, so a second check before they leave the system is worth the one
+     * extra tap. It stays off the Audit Log export, which only re-reads rows an administrator can
+     * already see on screen.
      */
-    // There used to be a confirmPassword() here, which made the person re-type their password before
-    // every print and every report export. It was removed on purpose: it guarded nothing, because the
-    // person was already signed in and already allowed to see the thing being exported, and it made
-    // printing feel broken on a phone. The audit trail already records exports on their own.
+    public function confirmPassword(Request $request): JsonResponse
+    {
+        $data = $request->validate([
+            'password' => 'required|string',
+            'purpose' => 'nullable|string|max:120',
+        ]);
+
+        $user = $request->user();
+        $key = 'confirm:'.$user->id;
+        if (RateLimiter::tooManyAttempts($key, 5)) {
+            throw ValidationException::withMessages(['password' => ['Too many attempts. Please wait a minute and try again.']]);
+        }
+
+        if (! Hash::check($data['password'], $user->password)) {
+            RateLimiter::hit($key, 60);
+            $this->audit('auth.confirm_failed', (string) $user->id, $user, ['purpose' => $data['purpose'] ?? null]);
+            throw ValidationException::withMessages(['password' => ['That password is not correct.']]);
+        }
+
+        RateLimiter::clear($key);
+        $this->audit('auth.export_confirmed', (string) $user->id, $user, ['purpose' => $data['purpose'] ?? null]);
+
+        return response()->json(['success' => true]);
+    }
 
     /** Sign-in and password events are part of the audit trail; a failure to write one never blocks the person. */
     private function audit(string $event, ?string $entityId, ?User $user, array $meta = []): void

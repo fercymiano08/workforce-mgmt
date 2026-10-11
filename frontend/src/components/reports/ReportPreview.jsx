@@ -4,6 +4,7 @@ import {
   CartesianGrid, Tooltip, Legend, ResponsiveContainer,
 } from 'recharts';
 import BrandLogo from '../ui/BrandLogo';
+import { useConfirmPassword } from '../../hooks/useConfirmPassword';
 import useApiData from '../../hooks/useApiData';
 import { settingsService } from '../../services/api';
 import { downloadCSV, downloadFile, toHTMLTable } from '../../utils/export';
@@ -66,14 +67,15 @@ const escapeHtml = (value) => String(value).replace(/&/g, '&amp;').replace(/</g,
 
 export default function ReportPreview({ report }) {
   const { toast } = useToast();
+  const { askPassword, passwordModal } = useConfirmPassword();
   // The company name on the report comes from Settings > Company Information
   const { data: settingsData } = useApiData(() => settingsService.get(), []);
   const companyName = (settingsData?.company?.name || 'Archon Nell Incorporated').trim();
   if (!report) return null;
 
-  // Exports and printing run straight away. This used to be wrapped in a re-type-your-password
-  // prompt, which had to be repeated for every single report and made printing feel broken.
-  const requestExport = (format) => handleExport(format);
+  // Reports can carry salary and other personal data, so the password is re-checked once per
+  // export/print rather than trusting that the tab is still the same person who signed in.
+  const requestExport = (format) => askPassword(`Export report "${report.title || 'report'}"`, () => handleExport(format));
 
   const handleExport = (format) => {
     const rows = report.rows.map((r) => {
@@ -402,6 +404,7 @@ export default function ReportPreview({ report }) {
           </div>
         </div>
       </div>
+      {passwordModal}
     </div>
   );
 }

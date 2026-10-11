@@ -67,6 +67,8 @@ const EVENT_NAMES = {
   'auth.password_changed': 'Password changed',
   'auth.password_reset_requested': 'Password reset code requested',
   'auth.password_reset': 'Password reset',
+  'auth.export_confirmed': 'Password re-confirmed for export',
+  'auth.confirm_failed': 'Password re-confirmation failed',
 };
 
 const RANGES = [
@@ -169,6 +171,8 @@ const sentenceOf = (e) => {
     case 'auth.password_changed': return 'changed their password';
     case 'auth.password_reset_requested': return 'asked for a password reset code';
     case 'auth.password_reset': return 'reset their password with an emailed code';
+    case 'auth.export_confirmed': return `re-confirmed their password${e.meta?.purpose ? ` to ${e.meta.purpose.toLowerCase()}` : ''}`;
+    case 'auth.confirm_failed': return `failed to re-confirm their password${e.meta?.purpose ? ` to ${e.meta.purpose.toLowerCase()}` : ''}`;
     default: return `${eventName(e.event).toLowerCase()}${person ? ` (${person})` : ''}`;
   }
 };

@@ -446,7 +446,8 @@ export const profileService = {
 export const authService = {
   // Sent while an employee is really using the system, so their (3-minute idle) login stays alive.
   keepAlive: async () => http.post('/auth/keep-alive'),
-  // Password check before exporting data; the server records it in the audit log with the purpose.
+  // Password check before exporting a report; the server records it in the audit log with the purpose.
+  confirmPassword: async (password, purpose) => http.post('/auth/confirm-password', { password, purpose }),
   changePassword: async (payload) => {
     const { data } = await http.post('/auth/change-password', payload);
     return data;

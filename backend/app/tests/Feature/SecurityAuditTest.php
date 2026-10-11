@@ -28,16 +28,21 @@ class SecurityAuditTest extends TestCase
         $this->assertSame(1, AuditEvent::where('event', 'auth.login')->count());
     }
 
-    public function test_printing_and_exporting_do_not_ask_for_the_password_again(): void
+    public function test_exporting_a_report_asks_for_the_password_again_and_the_check_is_audited(): void
     {
-        // The re-type-your-password step was removed: it guarded nothing (the person was already
-        // signed in and allowed to see the export) and it made printing feel broken on a phone.
-        // This test exists so it cannot quietly come back.
-        $this->actingAs($this->admin())
-            ->postJson('/api/auth/confirm-password', ['password' => 'Passw0rd!x'])
-            ->assertStatus(404);
+        // Brought back on a panel reviewer's request: report exports can carry salary and personal
+        // data, so re-typing the password once before an export leaves a server-side, auditable check
+        // that the open session is still the same person.
+        $session = $this->actingAs($this->admin());
 
-        $this->assertSame(0, AuditEvent::whereIn('event', ['auth.export_confirmed', 'auth.confirm_failed'])->count());
+        $session->postJson('/api/auth/confirm-password', ['password' => 'wrong', 'purpose' => 'Export report "Payroll"'])
+            ->assertStatus(422);
+        $this->assertSame(1, AuditEvent::where('event', 'auth.confirm_failed')->count());
+
+        $session->postJson('/api/auth/confirm-password', ['password' => 'Passw0rd!x', 'purpose' => 'Export report "Payroll"'])
+            ->assertOk()
+            ->assertJson(['success' => true]);
+        $this->assertSame(1, AuditEvent::where('event', 'auth.export_confirmed')->count());
     }
 
     public function test_changing_the_password_is_recorded(): void
