@@ -81,7 +81,7 @@ class DemoSeeder extends Seeder
             'phone' => $row['phone'] ?? null,
             'department' => $row['department'] ?? null,
             'position' => $row['position'] ?? null,
-            'employment_type' => $row['employment_type'] ?? 'Full-time',
+            'employment_type' => $row['employment_type'] ?? 'Regular',
             'status' => $row['status'] ?? 'Active',
             'hire_date' => $row['hire_date'] ?? null,
             'avatar' => $row['avatar'] ?? null,   // no picture: the app shows the initials

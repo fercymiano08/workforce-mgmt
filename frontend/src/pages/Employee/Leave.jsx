@@ -1,5 +1,5 @@
 import { useState, useMemo, useEffect, useCallback } from 'react';
-import { Calendar, CheckCircle, Clock, FileText, Plus, XCircle, Palmtree, Heart, AlertTriangle, Star, Flower2, Wallet, Hourglass, ThumbsUp, ThumbsDown, ChevronRight } from 'lucide-react';
+import { Calendar, CheckCircle, Clock, FileText, Plus, XCircle, Palmtree, Heart, Star, Flower2, Wallet, Hourglass, ThumbsUp, ThumbsDown, ChevronRight, Baby, HeartHandshake } from 'lucide-react';
 import Card from '../../components/ui/Card';
 import Button from '../../components/ui/Button';
 import TodayBadge from '../../components/common/TodayBadge';
@@ -30,26 +30,41 @@ const statusVariant = {
 const leaveTypeVariant = {
   Vacation: 'primary',
   Sick: 'danger',
-  Emergency: 'warning',
   Special: 'purple',
-  Funeral: 'indigo',
+  Bereavement: 'indigo',
+  Maternity: 'pink',
+  Paternity: 'info',
   Unpaid: 'teal',
-  // Retained for display only. 'Half Day' is not one of the six canonical types and can no longer
-  // be filed, but approved requests carrying it already exist in the data, and a historical row
-  // still has to render as a labelled badge rather than falling through to a blank cell.
-  'Half Day': 'info',
+  // Retained for display only. 'Half Day' and 'Emergency' are not canonical types and can no
+  // longer be filed, but approved requests carrying them already exist in the data, and a
+  // historical row still has to render as a labelled badge rather than falling through blank.
+  'Half Day': 'default',
+  Emergency: 'warning',
 };
 
 const leaveBalanceStyle = {
   Vacation: { text: 'text-blue-600', barBg: 'bg-blue-100', color: 'bg-blue-500', icon: Palmtree, iconBg: 'bg-blue-50' },
   Sick: { text: 'text-red-600', barBg: 'bg-red-100', color: 'bg-red-500', icon: Heart, iconBg: 'bg-red-50' },
-  Emergency: { text: 'text-amber-600', barBg: 'bg-amber-100', color: 'bg-amber-500', icon: AlertTriangle, iconBg: 'bg-amber-50' },
   Special: { text: 'text-purple-600', barBg: 'bg-purple-100', color: 'bg-purple-500', icon: Star, iconBg: 'bg-purple-50' },
-  Funeral: { text: 'text-indigo-600', barBg: 'bg-indigo-100', color: 'bg-indigo-500', icon: Flower2, iconBg: 'bg-indigo-50' },
+  Bereavement: { text: 'text-indigo-600', barBg: 'bg-indigo-100', color: 'bg-indigo-500', icon: Flower2, iconBg: 'bg-indigo-50' },
+  Maternity: { text: 'text-pink-600', barBg: 'bg-pink-100', color: 'bg-pink-500', icon: Baby, iconBg: 'bg-pink-50' },
+  Paternity: { text: 'text-sky-600', barBg: 'bg-sky-100', color: 'bg-sky-500', icon: HeartHandshake, iconBg: 'bg-sky-50' },
   Unpaid: { text: 'text-teal-600', barBg: 'bg-teal-100', color: 'bg-teal-500', icon: Wallet, iconBg: 'bg-teal-50' },
 };
 
-const leaveTypes = ['Vacation', 'Sick', 'Emergency', 'Special', 'Funeral', 'Unpaid'];
+const leaveTypes = ['Vacation', 'Sick', 'Special', 'Bereavement', 'Maternity', 'Paternity', 'Unpaid'];
+
+// Shown under the Leave Type dropdown so the rule is known before the server has to refuse the
+// request - every rule here is also enforced on the server, this is just the plain-language version.
+const LEAVE_TYPE_NOTE = {
+  Vacation: 'Must be filed at least 7 days before the start date, and is not available while still on probation.',
+  Sick: 'Can be filed for today or for up to 7 days in the past - nobody can predict being sick.',
+  Special: 'For personal circumstances that do not fit another type. Not available while still on probation.',
+  Bereavement: 'For the death of an immediate family member.',
+  Maternity: 'Available to female employees.',
+  Paternity: 'Available to male employees.',
+  Unpaid: 'An approved absence with no salary for those days - you remain employed and return to work afterward.',
+};
 
 // A leave type the server adds later still has to render as a real row rather than a blank space,
 // so both the phone list and the card grid fall back to the same neutral styling.
@@ -616,13 +631,16 @@ export default function Leave() {
               <option key={t} value={t}>{t} Leave</option>
             ))}
           </Select>
+          {LEAVE_TYPE_NOTE[applyForm.leaveType] && (
+            <p className="text-xs text-gray-500 -mt-1">{LEAVE_TYPE_NOTE[applyForm.leaveType]}</p>
+          )}
           <div className="grid grid-cols-2 gap-4">
             <Input
               label="Start Date"
               type="date"
               required
               value={applyForm.startDate}
-              min={todayKey()}
+              min={applyForm.leaveType === 'Sick' ? toDateKey(new Date(Date.now() - 7 * 86400000)) : todayKey()}
               onChange={(e) => {
                 const startDate = e.target.value;
                 setApplyForm((f) => ({

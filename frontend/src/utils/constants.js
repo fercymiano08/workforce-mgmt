@@ -8,7 +8,10 @@ export const isPresentGroup = (status) => status === 'Present' || status === 'La
 export const ATTENDED_STATUSES = ['Present', 'Late', 'Early Leave', 'Half Day'];
 export const didAttend = (status) => ATTENDED_STATUSES.includes(status);
 
-export const EMPLOYMENT_TYPES = ['Full-time', 'Part-time', 'Contract'];
+// "Probationary" is not in this list on purpose: it is a status derived from how recently someone
+// was hired (see the probationary flag the API returns on an employee), not a type anyone picks -
+// that way it can never go stale against the hire date it is supposed to describe.
+export const EMPLOYMENT_TYPES = ['Regular', 'Contractual', 'Part-time'];
 
 export const EARLY_CLOCKOUT_REASON_OPTIONS = [
   { value: 'SICK', label: 'Feeling Unwell' },

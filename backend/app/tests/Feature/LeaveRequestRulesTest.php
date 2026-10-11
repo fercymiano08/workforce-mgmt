@@ -61,8 +61,93 @@ class LeaveRequestRulesTest extends TestCase
     {
         $today = Carbon::now('Asia/Manila')->toDateString();
 
+        // Not Vacation here - Vacation needs 7 days' notice (see the test below), so "starting
+        // today" is exercised through a type that has no advance-notice rule of its own.
         $this->actingAs($this->otpEmployeeUser())
+            ->postJson('/api/leaves', $this->payload($today, $today, ['leaveType' => 'Special']))
+            ->assertCreated();
+    }
+
+    public function test_vacation_leave_needs_7_days_notice(): void
+    {
+        $employee = $this->otpEmployeeUser();
+        $today = Carbon::now('Asia/Manila')->toDateString();
+        $sixDays = Carbon::now('Asia/Manila')->addDays(6)->toDateString();
+        $sevenDays = Carbon::now('Asia/Manila')->addDays(7)->toDateString();
+
+        $this->actingAs($employee)
             ->postJson('/api/leaves', $this->payload($today, $today))
+            ->assertStatus(422)
+            ->assertJsonValidationErrors('startDate');
+
+        $this->actingAs($employee)
+            ->postJson('/api/leaves', $this->payload($sixDays, $sixDays))
+            ->assertStatus(422);
+
+        $this->actingAs($employee)
+            ->postJson('/api/leaves', $this->payload($sevenDays, $sevenDays))
+            ->assertCreated();
+    }
+
+    public function test_sick_leave_can_be_filed_for_today_or_up_to_7_days_in_the_past(): void
+    {
+        $employee = $this->otpEmployeeUser();
+        $today = Carbon::now('Asia/Manila')->toDateString();
+        $sevenDaysAgo = Carbon::now('Asia/Manila')->subDays(7)->toDateString();
+        $eightDaysAgo = Carbon::now('Asia/Manila')->subDays(8)->toDateString();
+
+        $this->actingAs($employee)
+            ->postJson('/api/leaves', $this->payload($today, $today, ['leaveType' => 'Sick']))
+            ->assertCreated();
+
+        $this->actingAs($employee)
+            ->postJson('/api/leaves', $this->payload($sevenDaysAgo, $sevenDaysAgo, ['leaveType' => 'Sick']))
+            ->assertCreated();
+
+        $this->actingAs($employee)
+            ->postJson('/api/leaves', $this->payload($eightDaysAgo, $eightDaysAgo, ['leaveType' => 'Sick']))
+            ->assertStatus(422)
+            ->assertJsonValidationErrors('startDate');
+    }
+
+    public function test_maternity_and_paternity_are_gender_checked(): void
+    {
+        $employee = $this->otpEmployeeUser();
+        Employee::create([
+            'id' => 'EMP-OTP', 'first_name' => 'Juan', 'last_name' => 'Dela Cruz',
+            'email' => 'juan@example.com', 'gender' => 'Male', 'status' => 'Active',
+        ]);
+        $sevenDays = Carbon::now('Asia/Manila')->addDays(7)->toDateString();
+
+        $this->actingAs($employee)
+            ->postJson('/api/leaves', $this->payload($sevenDays, $sevenDays, ['leaveType' => 'Maternity']))
+            ->assertStatus(422)
+            ->assertJsonValidationErrors('leaveType');
+
+        $this->actingAs($employee)
+            ->postJson('/api/leaves', $this->payload($sevenDays, $sevenDays, ['leaveType' => 'Paternity']))
+            ->assertCreated();
+    }
+
+    public function test_vacation_and_special_are_blocked_while_on_probation(): void
+    {
+        $employee = $this->otpEmployeeUser();
+        Employee::create([
+            'id' => 'EMP-OTP', 'first_name' => 'Juan', 'last_name' => 'Dela Cruz',
+            'email' => 'juan@example.com', 'gender' => 'Male', 'status' => 'Active',
+            'hire_date' => Carbon::now('Asia/Manila')->subDays(10)->toDateString(),
+        ]);
+        $sevenDays = Carbon::now('Asia/Manila')->addDays(7)->toDateString();
+        $today = Carbon::now('Asia/Manila')->toDateString();
+
+        $this->actingAs($employee)
+            ->postJson('/api/leaves', $this->payload($sevenDays, $sevenDays, ['leaveType' => 'Vacation']))
+            ->assertStatus(422)
+            ->assertJsonValidationErrors('leaveType');
+
+        // Sick is not gated by probation - a new hire can still get sick.
+        $this->actingAs($employee)
+            ->postJson('/api/leaves', $this->payload($today, $today, ['leaveType' => 'Sick']))
             ->assertCreated();
     }
 
@@ -170,7 +255,7 @@ class LeaveRequestRulesTest extends TestCase
         $types = Employee::leaveTypes();
         $entitlements = Employee::defaultLeaveBalances();
 
-        $this->assertSame(['Vacation', 'Sick', 'Emergency', 'Special', 'Funeral', 'Unpaid'], $types);
+        $this->assertSame(['Vacation', 'Sick', 'Special', 'Bereavement', 'Maternity', 'Paternity', 'Unpaid'], $types);
         // The allowance map is the single source of truth: no type allowed through validation is
         // missing an entitlement, and no entitlement lacks a validation entry.
         $this->assertSame([], array_diff($types, array_keys($entitlements)));

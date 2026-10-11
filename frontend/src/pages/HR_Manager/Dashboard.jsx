@@ -73,8 +73,8 @@ const ScoreRing = ({ score, size = 160, stroke = 14, color = '#3B82F6', track = 
 const leaveTypeBadge = (type) => {
   // Same variants as leaveTypeVariant in pages/Employee/Leave.jsx, which the badge-only pages use.
   const map = {
-    Vacation: 'primary', Sick: 'danger', Emergency: 'warning',
-    Special: 'purple', Funeral: 'indigo', Unpaid: 'teal',
+    Vacation: 'primary', Sick: 'danger', Special: 'purple', Bereavement: 'indigo',
+    Maternity: 'pink', Paternity: 'info', Unpaid: 'teal', Emergency: 'warning', 'Half Day': 'default',
   };
   return map[type] || 'default';
 };

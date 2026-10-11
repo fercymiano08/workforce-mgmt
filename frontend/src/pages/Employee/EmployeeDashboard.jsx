@@ -27,7 +27,10 @@ import { chartTheme } from '../../constants/chartTheme';
 
 
 const leaveTypeBadge = (type) => {
-  const map = { Vacation: 'primary', Sick: 'success', Emergency: 'warning', Special: 'purple' };
+  const map = {
+    Vacation: 'primary', Sick: 'success', Special: 'purple', Bereavement: 'indigo',
+    Maternity: 'pink', Paternity: 'info', Unpaid: 'teal', Emergency: 'warning',
+  };
   return map[type] || 'default';
 };
 
@@ -36,13 +39,6 @@ const statusBadge = (status) => {
   return map[status] || 'default';
 };
 
-// Still in their first 30 days - shown so a manager glancing at the dashboard knows not to treat
-// them the same as someone with a year of tenure (probation rules, leave eligibility, etc.).
-const isNewHire = (hireDate) => {
-  if (!hireDate) return false;
-  const days = (Date.now() - new Date(hireDate).getTime()) / 86400000;
-  return days >= 0 && days <= 30;
-};
 
 const EmptyChart = ({ message }) => (
   <div className="h-full flex flex-col items-center justify-center text-center px-4">
@@ -323,9 +319,9 @@ export default function EmployeeDashboard() {
                   {profile.employmentType}
                 </span>
               )}
-              {isNewHire(profile?.hireDate) && (
+              {profile?.probationary && (
                 <span className="inline-flex items-center gap-1.5 text-[11px] font-semibold px-2.5 py-1 rounded-full bg-amber-50 text-amber-700">
-                  New Hire
+                  Probationary
                 </span>
               )}
               <span className="inline-flex items-center gap-1.5 text-[11px] font-semibold px-2.5 py-1 rounded-full bg-emerald-50 text-emerald-700">

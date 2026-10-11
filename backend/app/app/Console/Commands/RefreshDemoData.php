@@ -341,12 +341,15 @@ class RefreshDemoData extends Command
         return $reasons[crc32($employeeId.'|early-reason') % count($reasons)];
     }
 
+    // 'Emergency' was folded into 'Special' and 'Funeral' was renamed 'Bereavement' when the leave
+    // types were overhauled (see Employee::defaultLeaveBalances()); their reasons moved here too.
+    // 'Maternity'/'Paternity' are deliberately not generated here - this pool is picked without
+    // checking the employee's gender, and a mismatched demo record would be an obvious tell.
     private const LEAVE_REASONS = [
         'Vacation' => ['Family trip out of town', 'Rest days with family', 'Long weekend getaway', 'Personal time off'],
         'Sick' => ['Fever and cough, advised to rest', 'Medical check-up', 'Stomach flu', 'Migraine, rested at home'],
-        'Emergency' => ['Family emergency', 'Urgent repairs at home', 'Accompanied a relative to the hospital'],
-        'Funeral' => ['Attending the wake and burial of a relative'],
-        'Special' => ['Wedding of a close relative', 'Birthday leave', 'School event of my child'],
+        'Special' => ['Family emergency', 'Urgent repairs at home', 'Accompanied a relative to the hospital', 'Wedding of a close relative', 'Birthday leave', 'School event of my child'],
+        'Bereavement' => ['Attending the wake and burial of a relative'],
     ];
 
     private const OVERTIME_REASONS = [
@@ -388,7 +391,7 @@ class RefreshDemoData extends Command
      */
     private function rollingLeave(array $ids, string $from, string $to, WorkingDays $workingDays): void
     {
-        $types = ['Vacation', 'Sick', 'Emergency', 'Funeral', 'Special'];
+        $types = ['Vacation', 'Sick', 'Bereavement', 'Special'];
         $leaveNo = $this->maxNumber(Leave::class, 'LVE');
         $toDate = Carbon::parse($to);
 
@@ -443,7 +446,7 @@ class RefreshDemoData extends Command
         $toDate = Carbon::parse($to);
         $windowStart = $toDate->copy()->subDays(9)->toDateString();
         $leaveNo = $this->maxNumber(Leave::class, 'LVE');
-        $types = ['Vacation', 'Sick', 'Emergency'];
+        $types = ['Vacation', 'Sick', 'Special'];
 
         $guaranteed = 0;
         foreach (Employee::whereIn('id', $ids)->orderBy('id')->get(['id', 'first_name', 'last_name']) as $employee) {

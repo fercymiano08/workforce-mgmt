@@ -99,14 +99,38 @@ class LeaveController extends Controller
             $data['status'] = 'Pending';
             $data['approved_by'] = null;
 
-            // Employees cannot file leave for days that have already begun. (An
-            // Administrator may still record a past absence on someone's behalf.)
             $today = Carbon::now('Asia/Manila')->toDateString();
-            if (Carbon::parse($data['start_date'])->toDateString() < $today) {
+            $startDate = Carbon::parse($data['start_date'])->toDateString();
+
+            if ($data['leave_type'] === 'Sick') {
+                // Nobody can predict being sick - filed for today, the future, or the past 7 days,
+                // the same window Overtime already allows for the same reason.
+                $earliestSick = Carbon::now('Asia/Manila')->subDays(7)->toDateString();
+                if ($startDate < $earliestSick) {
+                    throw ValidationException::withMessages([
+                        'startDate' => ['Sick leave can only be filed for today, the future, or the past 7 days. Please contact HR for older dates.'],
+                    ]);
+                }
+            } elseif ($startDate < $today) {
+                // Every other type still cannot start in the past. (An Administrator may still
+                // record a past absence on someone's behalf.)
                 throw ValidationException::withMessages([
                     'startDate' => ['Leave cannot start in the past. Choose today or a later date.'],
                 ]);
             }
+
+            // Vacation is planned time off, not a same-day decision - it needs lead time so the
+            // schedule can actually absorb it.
+            if ($data['leave_type'] === 'Vacation') {
+                $earliestVacation = Carbon::now('Asia/Manila')->addDays(7)->toDateString();
+                if ($startDate < $earliestVacation) {
+                    throw ValidationException::withMessages([
+                        'startDate' => ['Vacation leave must be filed at least 7 days before the start date.'],
+                    ]);
+                }
+            }
+
+            $this->assertEligibleForType($data['employee_id'], $data['leave_type']);
         }
 
         if (Carbon::parse($data['end_date'])->lt(Carbon::parse($data['start_date']))) {
@@ -181,6 +205,39 @@ class LeaveController extends Controller
         $this->assertSelfOrAdmin($request, $data['employeeId']);
 
         return response()->json(['data' => (new WorkingDays())->count($data['employeeId'], $data['startDate'], $data['endDate'])]);
+    }
+
+    /**
+     * Type-specific eligibility, enforced only for an employee's own request - an Administrator may
+     * still record any type on someone's behalf (e.g. logging a maternity leave already taken, or a
+     * probationary employee's approved exception), the same latitude the past-date rule above gives.
+     */
+    private function assertEligibleForType(string $employeeId, string $leaveType): void
+    {
+        $employee = Employee::find($employeeId);
+        if (! $employee) {
+            return;
+        }
+
+        if ($leaveType === 'Maternity' && $employee->gender !== 'Female') {
+            throw ValidationException::withMessages([
+                'leaveType' => ['Maternity leave is only available to female employees.'],
+            ]);
+        }
+
+        if ($leaveType === 'Paternity' && $employee->gender !== 'Male') {
+            throw ValidationException::withMessages([
+                'leaveType' => ['Paternity leave is only available to male employees.'],
+            ]);
+        }
+
+        // Vacation and Special are discretionary leave - a new hire has not earned either yet.
+        // Sick, Bereavement, Maternity, Paternity and Unpaid stay available regardless of tenure.
+        if (in_array($leaveType, ['Vacation', 'Special'], true) && $employee->isProbationary()) {
+            throw ValidationException::withMessages([
+                'leaveType' => ["{$leaveType} leave is not available until probation ends on {$employee->probationEndsAt()}."],
+            ]);
+        }
     }
 
     private function assertSufficientBalance(string $employeeId, string $leaveType, float|int $requested): void

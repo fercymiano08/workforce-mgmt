@@ -6,15 +6,20 @@
 // legibility floor of 15). Badges never touch, so they keep the nicer purple. The badge variants
 // live in pages/Employee/Leave.jsx (leaveTypeVariant) and the badge styles in leaveBalanceStyle.
 //
-// The six keys here are exactly the six in Employee::defaultLeaveBalances(). An earlier copy of this
+// The keys here are exactly the ones in Employee::defaultLeaveBalances(). An earlier copy of this
 // map was missing Funeral and Unpaid and carried a 'Half Day' that does not exist, so both real
 // types fell through to the same fallback purple and rendered identically in the pie.
+//
+// 'Emergency' was removed (folded into 'Special' - a panel review called it redundant with Sick),
+// 'Funeral' was renamed 'Bereavement' (clearer wording, same reviewer), and 'Maternity'/'Paternity'
+// were added as their own types rather than vague "Special" requests.
 export const LEAVE_TYPE_CHART_COLORS = {
   Vacation: '#3B82F6',
   Sick: '#EF4444',
-  Emergency: '#F59E0B',
   Special: '#F43F5E',
-  Funeral: '#6366F1',
+  Bereavement: '#6366F1',
+  Maternity: '#EC4899',
+  Paternity: '#0EA5E9',
   Unpaid: '#14B8A6',
 };
 
@@ -28,9 +33,10 @@ export const leaveTypeChartColor = (type) => LEAVE_TYPE_CHART_COLORS[type] ?? '#
 const LEAVE_TYPE_CHART_COLORS_DARK = {
   Vacation: '#5B8FD6',
   Sick: '#D9646B',
-  Emergency: '#C99A3F',
   Special: '#D4738A',
-  Funeral: '#6E7BD6',
+  Bereavement: '#6E7BD6',
+  Maternity: '#D97EB0',
+  Paternity: '#4FAEDB',
   Unpaid: '#3FA0A8',
 };
 

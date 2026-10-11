@@ -22,9 +22,12 @@ class LeaveWorkingDaysTest extends TestCase
         $friday = $this->nextWeekday(5);
         $monday = $friday->copy()->addDays(3);
 
+        // 'Special' here, not 'Vacation': this test is about working-day counting, and Vacation's
+        // 7-day advance-notice rule would otherwise make it fail or pass depending on what weekday
+        // the suite happens to run on.
         $this->actingAs($this->otpEmployeeUser())
             ->postJson('/api/leaves', [
-                'employeeId' => 'EMP-OTP', 'employeeName' => 'Juan Dela Cruz', 'leaveType' => 'Vacation',
+                'employeeId' => 'EMP-OTP', 'employeeName' => 'Juan Dela Cruz', 'leaveType' => 'Special',
                 'startDate' => $friday->toDateString(), 'endDate' => $monday->toDateString(),
                 'reason' => 'Long weekend', 'status' => 'Pending', 'appliedDate' => '2030-01-01',
             ])
@@ -40,7 +43,7 @@ class LeaveWorkingDaysTest extends TestCase
 
         $this->actingAs($this->otpEmployeeUser())
             ->postJson('/api/leaves', [
-                'employeeId' => 'EMP-OTP', 'employeeName' => 'Juan Dela Cruz', 'leaveType' => 'Vacation',
+                'employeeId' => 'EMP-OTP', 'employeeName' => 'Juan Dela Cruz', 'leaveType' => 'Special',
                 'startDate' => $saturday->toDateString(), 'endDate' => $saturday->copy()->addDay()->toDateString(),
                 'reason' => 'Weekend', 'status' => 'Pending', 'appliedDate' => '2030-01-01',
             ])

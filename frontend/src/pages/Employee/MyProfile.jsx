@@ -318,6 +318,7 @@ export default function MyProfile() {
               <Badge variant="primary" size="xs"><span className="font-mono">{employee.id}</span></Badge>
               {employee.status && <Badge variant={statusVariant[employee.status] || 'default'} dot size="xs">{employee.status}</Badge>}
               {employee.employmentType && <Badge variant="info" size="xs">{employee.employmentType}</Badge>}
+              {employee.probationary && <Badge variant="warning" size="xs">Probationary</Badge>}
             </div>
             <div className="flex flex-wrap items-center gap-3 mt-3">
               <button type="button" onClick={() => fileInputRef.current?.click()} className="text-xs font-semibold text-blue-600 hover:text-blue-700">
@@ -361,6 +362,9 @@ export default function MyProfile() {
             <ReadOnlyField label="Position" value={employee.position} />
             <ReadOnlyField label="Employment type" value={employee.employmentType} />
             <ReadOnlyField label="Hire date" value={employee.hireDate ? formatDate(employee.hireDate) : ''} />
+            {employee.probationary && (
+              <ReadOnlyField label="Probationary until" value={employee.probationEndsAt ? formatDate(employee.probationEndsAt) : ''} />
+            )}
             <ReadOnlyField label="Manager" value={employee.manager} />
           </div>
         </Card>

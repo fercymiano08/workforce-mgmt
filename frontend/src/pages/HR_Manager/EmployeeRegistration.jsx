@@ -48,7 +48,7 @@ const createEmptyForm = (suggestedId = '') => ({
   phone: '',
   department: '',
   position: '',
-  employmentType: 'Full-time',
+  employmentType: 'Regular',
   dateHired: '',
   dateOfBirth: '',
   gender: '',
@@ -300,9 +300,17 @@ export default function EmployeeRegistration() {
                 </div>
                 <div>
                   <p className="text-xs text-gray-400">Employment</p>
-                  <p className="mt-0.5 font-medium text-gray-700">{createdEmployee.employmentType || '—'}</p>
+                  <p className="mt-0.5 font-medium text-gray-700 flex items-center gap-1.5">
+                    {createdEmployee.employmentType || '—'}
+                    {createdEmployee.probationary && <Badge variant="warning" size="xs">Probationary</Badge>}
+                  </p>
                 </div>
               </div>
+              {createdEmployee.probationary && createdEmployee.probationEndsAt && (
+                <p className="mt-3 text-xs text-gray-400">
+                  Probationary status ends {createdEmployee.probationEndsAt} - the system flags this automatically from the hire date, nobody has to set it by hand.
+                </p>
+              )}
             </div>
 
             <div className="mt-6 flex flex-col sm:flex-row gap-3">

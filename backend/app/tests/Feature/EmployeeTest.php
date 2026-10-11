@@ -27,7 +27,7 @@ class EmployeeTest extends TestCase
             'phone' => '+63 912 345 6789',
             'department' => 'IT & Systems',
             'position' => 'Software Developer',
-            'employmentType' => 'Full-time',
+            'employmentType' => 'Regular',
             'status' => 'Active',
             'hireDate' => '2026-07-01',
             'manager' => '',
@@ -88,6 +88,33 @@ class EmployeeTest extends TestCase
             ->postJson('/api/employees', $this->employeePayload(['firstName' => 'Pedro']))
             ->assertStatus(422)
             ->assertJsonValidationErrors('email');
+    }
+
+    public function test_employment_type_must_be_one_of_the_canonical_values(): void
+    {
+        // "Full-time"/"Contract" were the old wording; a panel review asked for the Philippine
+        // terminology (Regular/Contractual/Part-time) instead - the old values are refused now.
+        $this->actingAs($this->user)
+            ->postJson('/api/employees', $this->employeePayload(['employmentType' => 'Full-time']))
+            ->assertStatus(422)
+            ->assertJsonValidationErrors('employmentType');
+
+        $this->actingAs($this->user)
+            ->postJson('/api/employees', $this->employeePayload(['employmentType' => 'Contractual']))
+            ->assertCreated();
+    }
+
+    public function test_a_recently_hired_employee_is_flagged_probationary(): void
+    {
+        $recent = $this->actingAs($this->user)
+            ->postJson('/api/employees', $this->employeePayload(['email' => 'new.hire@example.com', 'hireDate' => now()->toDateString()]))
+            ->assertCreated();
+        $this->assertTrue($recent->json('data.probationary'));
+
+        $veteran = $this->actingAs($this->user)
+            ->postJson('/api/employees', $this->employeePayload(['email' => 'veteran@example.com', 'hireDate' => now()->subYear()->toDateString()]))
+            ->assertCreated();
+        $this->assertFalse($veteran->json('data.probationary'));
     }
 
     public function test_position_must_belong_to_the_selected_department(): void

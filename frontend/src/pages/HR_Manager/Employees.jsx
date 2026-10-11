@@ -23,6 +23,7 @@ import { SkeletonPage } from '../../components/ui/LoadingSkeleton';
 import FaceCaptureModal from '../../components/employees/FaceCaptureModal';
 import { departmentService, employeeService, roleService, shiftService } from '../../services/api';
 import { formatDate, formatTime } from '../../utils/helpers';
+import { EMPLOYMENT_TYPES } from '../../utils/constants';
 import useUrlSearch from '../../hooks/useUrlSearch';
 import { todayKey } from '../../utils/today';
 import { useToast } from '../../context/ToastContext';
@@ -157,7 +158,7 @@ export default function Employees() {
     const pool = deptFilter === 'All' ? employeesData : employeesData.filter(e => e.department === deptFilter);
     return ['All', ...new Set(pool.map(e => e.position).filter(Boolean))].sort((a, b) => (a === 'All' ? -1 : b === 'All' ? 1 : a.localeCompare(b)));
   }, [employeesData, deptFilter]);
-  const types = ['All', 'Full-time', 'Part-time', 'Contract'];
+  const types = ['All', ...EMPLOYMENT_TYPES];
 
   const rolesForDepartment = useCallback(
     (name) => orgRoles.filter((r) => r.departmentName === name),
@@ -477,7 +478,12 @@ export default function Employees() {
                     </td>
                     <td className="px-4 py-3.5 text-sm text-gray-700">{emp.department}</td>
                     <td className="px-4 py-3.5 text-sm text-gray-700">{emp.position}</td>
-                    <td className="px-4 py-3.5 text-sm text-gray-700">{emp.employmentType}</td>
+                    <td className="px-4 py-3.5 text-sm text-gray-700">
+                      <span className="flex items-center gap-1.5">
+                        {emp.employmentType}
+                        {emp.probationary && <Badge variant="warning" size="xs">Probationary</Badge>}
+                      </span>
+                    </td>
                     <td className="px-4 py-3.5 text-sm text-gray-700">{shiftLabel(emp.id)}</td>
                     <td className="px-4 py-3.5"><Badge variant={statusVariant[emp.status]} dot size="xs">{emp.status}</Badge></td>
                     <td className="px-4 py-3.5">
@@ -656,7 +662,11 @@ export default function Employees() {
                 <h4 className="font-semibold text-gray-900 mb-3">Employment Details</h4>
                 <div className="space-y-2">
                   <div className="flex items-center gap-2 text-sm text-gray-600"><Building className="w-4 h-4 text-gray-400" />{selectedEmployee.department}</div>
-                  <div className="flex items-center gap-2 text-sm text-gray-600"><Briefcase className="w-4 h-4 text-gray-400" />{selectedEmployee.employmentType}</div>
+                  <div className="flex items-center gap-2 text-sm text-gray-600">
+                    <Briefcase className="w-4 h-4 text-gray-400" />
+                    {selectedEmployee.employmentType}
+                    {selectedEmployee.probationary && <Badge variant="warning" size="xs">Probationary until {formatDate(selectedEmployee.probationEndsAt)}</Badge>}
+                  </div>
                   <div className="flex items-center gap-2 text-sm text-gray-600"><Clock className="w-4 h-4 text-gray-400" />{shiftLabel(selectedEmployee.id)}</div>
                   <div className="flex items-center gap-2 text-sm text-gray-600"><Calendar className="w-4 h-4 text-gray-400" />Hired {formatDate(selectedEmployee.hireDate)}</div>
                 </div>
