@@ -25,9 +25,16 @@ class TimesheetController extends Controller
     {
     }
 
+    /**
+     * A Draft timesheet is still the employee's own in-progress week - not yet submitted, and not
+     * the admin's to look at. A panel review called this out directly: the admin seeing live,
+     * unfinished hours before the employee has chosen to submit them reads as unfair. Every method
+     * below that the admin can browse (index, byEmployee, show) excludes Draft rows for them; the
+     * employee viewing their own timesheet is unaffected.
+     */
     public function index(): JsonResponse
     {
-        $records = Timesheet::orderBy('week_end', 'desc')->orderBy('id')->get();
+        $records = Timesheet::where('status', '!=', 'Draft')->orderBy('week_end', 'desc')->orderBy('id')->get();
 
         return response()->json(['data' => $this->present($records)]);
     }
@@ -41,6 +48,11 @@ class TimesheetController extends Controller
 
         $this->assertSelfOrAdmin($request, $record->employee_id);
 
+        $isAdmin = $request->user()?->role === 'Administrator';
+        if ($isAdmin && $record->status === 'Draft') {
+            return response()->json(['message' => 'Timesheet not found'], 404);
+        }
+
         return response()->json(['data' => $this->present(collect([$record]))[0]]);
     }
 
@@ -48,7 +60,10 @@ class TimesheetController extends Controller
     {
         $this->assertSelfOrAdmin($request, $employeeId);
 
-        $records = Timesheet::where('employee_id', $employeeId)->orderBy('week_end', 'desc')->get();
+        $isAdmin = $request->user()?->role === 'Administrator';
+        $records = Timesheet::where('employee_id', $employeeId)
+            ->when($isAdmin, fn ($q) => $q->where('status', '!=', 'Draft'))
+            ->orderBy('week_end', 'desc')->get();
 
         return response()->json(['data' => $this->present($records)]);
     }

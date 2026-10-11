@@ -286,12 +286,12 @@ class TimesheetWorkflowTest extends TestCase
 
     public function test_the_admin_sees_warnings_for_zero_hours_missing_clock_outs_and_unpaid_overtime(): void
     {
-        $this->worker();
+        $employee = $this->worker();
         $this->workDay('2030-01-14', 8, null);        // clocked in, never clocked out
         $this->workDay('2030-01-15');
         Attendance::where('id', 'ATT-2030-01-15')->update(['overtime' => 2, 'total_hours' => 10]);
-        $sheet = $this->sheet();
-        $this->at('2030-01-21 09:00:00');
+        // Submitted, not Draft: the admin list no longer shows a still-in-progress timesheet at all.
+        $sheet = $this->submitted($employee);
 
         $flags = collect($this->actingAs($this->adminUser())->getJson('/api/timesheets')->assertOk()->json('data'))->firstWhere('id', $sheet->id)['flags'];
 

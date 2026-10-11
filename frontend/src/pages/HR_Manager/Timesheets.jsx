@@ -487,7 +487,10 @@ function AdminTimesheetsView() {
                 onChange={(v) => { setStatusFilter(v); resetPage(); }}
                 options={[
                   { value: 'All', label: 'All' },
-                  ...['Draft', 'Submitted', 'Approved', 'Rejected'].map((s) => ({ value: s, label: s === 'Draft' ? 'In progress' : s, count: count(s) })),
+                  // Not 'Draft': a still-in-progress timesheet is the employee's own, not yet
+                  // submitted, and the admin API no longer returns it at all (a panel review
+                  // called seeing it early unfair) - so this filter would only ever show 0.
+                  ...['Submitted', 'Approved', 'Rejected'].map((s) => ({ value: s, label: s, count: count(s) })),
                 ]}
               />
               <FilterMenu
