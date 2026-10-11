@@ -1,15 +1,15 @@
 import { useMemo, useState } from 'react';
 import clsx from 'clsx';
-import { LogIn, LogOut, KeyRound, ShieldCheck, Power, Wrench, Search, Activity, AlertTriangle } from 'lucide-react';
+import { LogIn, LogOut, KeyRound, ShieldCheck, Power, Wrench, Search, Activity, AlertTriangle, Eye } from 'lucide-react';
 import { LOG_TYPES } from '../../services/kioskService';
 
-const ICONS = { 'clock-in': LogIn, 'clock-out': LogOut, mode: Power, pin: KeyRound, security: ShieldCheck, maintenance: Wrench };
+const ICONS = { 'clock-in': LogIn, 'clock-out': LogOut, mode: Power, pin: KeyRound, security: ShieldCheck, maintenance: Wrench, liveness: Eye };
 
 const FILTERS = [
   { id: 'all', label: 'All', match: () => true },
   { id: 'clock', label: 'Clock-ins & outs', match: (l) => l.type === 'clock-in' || l.type === 'clock-out' },
   { id: 'security', label: 'Security', match: (l) => l.type === 'security' },
-  { id: 'system', label: 'System', match: (l) => ['mode', 'pin', 'maintenance'].includes(l.type) },
+  { id: 'system', label: 'System', match: (l) => ['mode', 'pin', 'maintenance', 'liveness'].includes(l.type) },
 ];
 
 // A wrong PIN or a face that did not match is an alert; a successful unlock is only a security-log entry

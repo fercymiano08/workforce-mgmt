@@ -70,9 +70,11 @@ class KioskFaceVerificationTest extends TestCase
         return [$this->near($face, $noise, 901), $this->near($face, $noise, 902), $this->near($face, $noise, 903)];
     }
 
-    private function verify(string $id, array $frames)
+    private function verify(string $id, array $frames, ?array $earSamples = null)
     {
-        return $this->postJson('/api/kiosk/verify-face', ['employeeId' => $id, 'descriptors' => $frames]);
+        return $this->postJson('/api/kiosk/verify-face', array_filter([
+            'employeeId' => $id, 'descriptors' => $frames, 'earSamples' => $earSamples,
+        ], fn ($v) => $v !== null));
     }
 
     private function clockIn(string $id, ?string $ticket)
@@ -126,6 +128,52 @@ class KioskFaceVerificationTest extends TestCase
         // A fresh scan does
         $out = $this->verify(self::EMP, $this->scan($juan))->assertOk()->json('data.faceTicket');
         $this->putJson('/api/kiosk/attendance/'.$id, ['clockOut' => '17:00:00', 'faceTicket' => $out])->assertOk();
+    }
+
+    // --- Liveness (blink check) -------------------------------------------------
+
+    public function test_a_genuine_blink_reads_as_live_and_the_punch_still_succeeds(): void
+    {
+        $juan = $this->face(1);
+        $this->enroll(self::EMP, $juan);
+
+        // A real blink: clearly open, then clearly closed, then open again.
+        $this->verify(self::EMP, $this->scan($juan), [0.32, 0.30, 0.18, 0.31, 0.33])
+            ->assertOk()
+            ->assertJsonPath('data.liveness', 'Live');
+    }
+
+    public function test_eyes_that_never_close_is_not_detected_but_still_lets_the_punch_through(): void
+    {
+        $juan = $this->face(1);
+        $this->enroll(self::EMP, $juan);
+
+        // A held-up photo: the "eyes" never move - no reading ever drops to a closed value.
+        $this->verify(self::EMP, $this->scan($juan), [0.30, 0.31, 0.29, 0.30, 0.30])
+            ->assertOk()
+            ->assertJsonPath('data.liveness', 'Not Detected')
+            ->assertJsonPath('data.status', 'Verified'); // advisory only - never blocks the punch
+    }
+
+    public function test_no_ear_samples_sent_is_reported_as_not_checked_not_a_guess(): void
+    {
+        $juan = $this->face(1);
+        $this->enroll(self::EMP, $juan);
+
+        $this->verify(self::EMP, $this->scan($juan))
+            ->assertOk()
+            ->assertJsonPath('data.liveness', 'Not Checked');
+    }
+
+    public function test_an_undetected_liveness_check_is_logged_but_not_a_security_event(): void
+    {
+        $juan = $this->face(1);
+        $this->enroll(self::EMP, $juan);
+
+        $this->verify(self::EMP, $this->scan($juan), [0.30, 0.31, 0.29])->assertOk();
+
+        $this->assertSame(0, SecurityEvent::count());
+        $this->assertSame('liveness', $this->kioskLogs()[0]['type'] ?? null);
     }
 
     public function test_a_scan_cannot_be_saved_for_later(): void

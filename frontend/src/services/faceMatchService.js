@@ -206,6 +206,21 @@ function frameMeanLuminance(canvas) {
   }
 }
 
+// Eye Aspect Ratio (Soukupova & Cech, 2016): the standard, cheap way to tell an open eye from a
+// closed one from 2D landmarks alone. face-api's getLeftEye()/getRightEye() each return exactly
+// the 6 ibug-68 eye points in the fixed order this formula expects (outer corner, two upper lid
+// points, inner corner, two lower lid points) - a closed eye collapses the vertical distances
+// towards zero while the horizontal (corner-to-corner) one barely changes, so EAR drops sharply.
+function dist(a, b) {
+  return Math.hypot(a.x - b.x, a.y - b.y);
+}
+function eyeAspectRatio(points) {
+  if (!points || points.length !== 6) return null;
+  const horizontal = dist(points[0], points[3]);
+  if (horizontal <= 0) return null;
+  return (dist(points[1], points[5]) + dist(points[2], points[4])) / (2 * horizontal);
+}
+
 async function detectOnce(source, inputSize) {
   try {
     const detection = await faceapi
@@ -219,7 +234,11 @@ async function detectOnce(source, inputSize) {
     if (!descriptor || descriptor.length !== 128) return null;
     if (descriptor.some((value) => !Number.isFinite(value))) return null;
 
-    return Array.from(descriptor);
+    const left = eyeAspectRatio(detection.landmarks?.getLeftEye());
+    const right = eyeAspectRatio(detection.landmarks?.getRightEye());
+    const ear = left != null && right != null ? (left + right) / 2 : null;
+
+    return { descriptor: Array.from(descriptor), ear };
   } catch {
     return null;
   }
@@ -240,6 +259,16 @@ async function detectOnce(source, inputSize) {
  * clear centered face is still found on the first (fast) pass.
  */
 export async function getFaceDescriptor(mediaElement) {
+  const sample = await getFaceSample(mediaElement);
+  return sample ? sample.descriptor : null;
+}
+
+/**
+ * Same detection as getFaceDescriptor(), but also returns the eye-aspect-ratio (ear) reading
+ * from that frame - used to tell a live blink apart from a static photo across a short burst of
+ * frames (see FaceRecognitionModal's liveness check). null when no face/landmarks were usable.
+ */
+export async function getFaceSample(mediaElement) {
   await loadModels();
 
   if (!mediaElement) return null;
@@ -256,8 +285,8 @@ export async function getFaceDescriptor(mediaElement) {
   for (const source of sources) {
     if (!source) continue;
     for (const inputSize of DETECTOR_INPUT_SIZES) {
-      const descriptor = await detectOnce(source, inputSize);
-      if (descriptor) return descriptor;
+      const sample = await detectOnce(source, inputSize);
+      if (sample) return sample;
     }
   }
 
@@ -298,4 +327,4 @@ export function loadImageFileToCanvas(file) {
   });
 }
 
-export const faceMatchService = { loadModels, preloadFaceModels, getFaceDescriptor, loadImageFileToCanvas };
+export const faceMatchService = { loadModels, preloadFaceModels, getFaceDescriptor, getFaceSample, loadImageFileToCanvas };

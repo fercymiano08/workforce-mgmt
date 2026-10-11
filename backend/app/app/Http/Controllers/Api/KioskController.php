@@ -70,6 +70,21 @@ class KioskController extends Controller
     // the claimed employee, the scan cannot tell the two apart (siblings, twins, look-alikes) and is refused.
     private const FACE_AMBIGUITY_MARGIN = 0.08;
 
+    /**
+     * Liveness: a cheap, honest answer to "what if someone just holds up a photo?" A held-up photo
+     * cannot blink - its eyes are frozen open (or closed) for the whole scan - while a person asked
+     * to blink produces a brief dip in Eye Aspect Ratio (Soukupova & Cech, 2016) followed by a
+     * recovery. "Live" needs BOTH a clearly-open reading and a clearly-closed one somewhere in the
+     * burst of frames the browser sends; anything else (no dip, or landmarks the browser could not
+     * read) is reported as not detected - deliberately a soft signal (logged, never blocking the
+     * punch): these thresholds are a reasonable starting point, not something tuned against real
+     * faces on real cameras, and a device that cannot read eye landmarks well should never be able
+     * to lock someone out of clocking in.
+     */
+    private const EAR_OPEN = 0.28;
+
+    private const EAR_CLOSED = 0.22;
+
     /** The activity log (employee names, clock times, security attempts): Administrator only. */
     public function logs(): JsonResponse
     {
@@ -281,11 +296,11 @@ class KioskController extends Controller
     /**
      * Real face matching (client-side face-api.js computes a 128-value
      * descriptor from the live camera frame; this compares it against the
-     * descriptor captured at registration via Euclidean distance).
-     *
-     * This is not a liveness/anti-spoofing check - that would need
-     * blink/motion detection, which isn't implemented here. Only identity
-     * matching is real; the response says so plainly rather than pretending.
+     * descriptor captured at registration via Euclidean distance), plus a
+     * blink-based liveness check (see EAR_OPEN/EAR_CLOSED above) - a held-up
+     * photo cannot blink on command. Liveness is advisory: it is logged, but
+     * it never blocks the punch, since a camera that reads eye landmarks
+     * poorly is a device problem, not the employee's.
      */
     public function verifyFace(Request $request): JsonResponse
     {
@@ -294,6 +309,10 @@ class KioskController extends Controller
             'descriptors' => 'required|array|min:1|max:5',
             'descriptors.*' => 'required|array|size:128',
             'descriptors.*.*' => 'numeric',
+            // The eye-aspect-ratio reading from each frame the browser sampled while asking the
+            // person to blink - optional so an older cached kiosk build still works unchanged.
+            'earSamples' => 'nullable|array|max:20',
+            'earSamples.*' => 'nullable|numeric|between:0,1',
         ]);
 
         // Checked before anything else: while the reader is paused, every scan is refused without
@@ -388,17 +407,41 @@ class KioskController extends Controller
         // left one mistake away from a lockout for the rest of the day.
         KioskFaceLockout::clear();
 
+        $liveness = $this->livenessResult($request->input('earSamples'));
+        if ($liveness === 'Not Detected') {
+            // Advisory only - an 'info' log, not 'security': this never creates a SecurityEvent or
+            // touches the AI health score, both tuned around confirmed violations, not an unproven
+            // heuristic. It is still visible to HR on the Kiosk Logs screen.
+            $this->appendLog('liveness', "No blink detected during face verification for {$name} ({$employee->id})",
+                null, $employee->id);
+        }
+
         return response()->json([
             'ok' => true,
             'data' => [
                 'status' => 'Verified',
                 'confidence' => $confidence,
-                'liveness' => 'Not Checked',
+                'liveness' => $liveness,
                 'approval' => 'Successful',
                 'faceRegistered' => true,
                 'faceTicket' => app(KioskFaceTicket::class)->issue($employee->id),
             ],
         ]);
+    }
+
+    /**
+     * 'Live' needs an open-eye reading AND a closed-eye reading somewhere in the burst (a genuine
+     * blink); 'Not Checked' is an honest "no usable data" rather than a guess, for an older kiosk
+     * build or a frame where the browser could not read eye landmarks at all.
+     */
+    private function livenessResult(mixed $earSamples): string
+    {
+        $samples = array_values(array_filter((array) $earSamples, fn ($v) => is_numeric($v)));
+        if (count($samples) < 2) {
+            return 'Not Checked';
+        }
+
+        return min($samples) < self::EAR_CLOSED && max($samples) > self::EAR_OPEN ? 'Live' : 'Not Detected';
     }
 
     /**

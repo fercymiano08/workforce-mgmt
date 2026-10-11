@@ -16,10 +16,13 @@ const STEP_DURATION_MS = 110;
 // Runs the verification flow against the backend. Real identity matching
 // happens server-side (POST /api/kiosk/verify-face), comparing several live
 // descriptors (computed locally by face-api.js, one per camera frame) against
-// the one captured at registration, and against every other enrolled face. The step animation is a client-side affordance shown while
-// the request is in flight - it does not represent separate real checks.
+// the one captured at registration, and against every other enrolled face.
+// earSamples (eye-aspect-ratio readings from a "blink now" prompt, see
+// FaceRecognitionModal) drive a real liveness read there too - advisory only,
+// it never fails the request. The step animation itself is a client-side
+// affordance shown while the request is in flight; it does not gate anything.
 // Returns { ok: true, data } on success or { ok: false, message } on failure.
-export async function verifyFace({ employeeId, descriptors, signal, onStep }) {
+export async function verifyFace({ employeeId, descriptors, earSamples, signal, onStep }) {
   let currentStep = 0;
 
   const tick = () => {
@@ -42,7 +45,7 @@ export async function verifyFace({ employeeId, descriptors, signal, onStep }) {
   }
 
   try {
-    const response = await http.post('/kiosk/verify-face', { employeeId, descriptors }, { signal });
+    const response = await http.post('/kiosk/verify-face', { employeeId, descriptors, earSamples }, { signal });
     return { ok: true, data: response.data };
   } catch (error) {
     if (signal?.aborted) return { ok: false, aborted: true };

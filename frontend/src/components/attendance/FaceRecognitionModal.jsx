@@ -13,11 +13,16 @@ import {
   FACE_VERIFICATION_STEPS,
   verifyFace,
 } from '../../services/faceVerificationService';
-import { getFaceDescriptor, loadModels } from '../../services/faceMatchService';
+import { getFaceDescriptor, getFaceSample, loadModels } from '../../services/faceMatchService';
 
 // Frames sent per scan (the server needs them all to agree), and how many tries to get them.
 const SCAN_FRAMES = 3;
 const SCAN_ATTEMPTS = 6;
+// A short, dedicated window just for the liveness check, after identity frames are captured: long
+// enough that a person who actually blinks on cue almost certainly gets caught doing it, short
+// enough that it is not a noticeable delay added to clocking in.
+const LIVENESS_FRAMES = 8;
+const LIVENESS_INTERVAL_MS = 120;
 // How long the "Verified" result stays up: long enough for the person to SEE that their face was
 // checked and whose it matched (at 0.2 s it was invisible, and people thought no scan had happened).
 const RESULT_HOLD_MS = 1500;
@@ -184,9 +189,25 @@ export default function FaceRecognitionModal({ isOpen, employeeName, employeeId,
           return;
         }
 
+        // Liveness: a dedicated beat asking the person to blink. A held-up photo cannot do this on
+        // command - its "eyes" stay frozen for the whole window - while a real blink shows up as a
+        // dip in eye-aspect-ratio between two open readings. Advisory only (see the server): a
+        // camera that cannot read eye landmarks well must never be the reason someone cannot clock in.
+        setPhase('liveness');
+        const earSamples = [];
+        for (let i = 0; i < LIVENESS_FRAMES; i += 1) {
+          if (cancelled) return;
+          const sample = await getFaceSample(videoRef.current);
+          if (sample?.ear != null) earSamples.push(sample.ear);
+          await new Promise((resolve) => setTimeout(resolve, LIVENESS_INTERVAL_MS));
+        }
+        if (cancelled) return;
+        setPhase('verifying');
+
         const verification = await verifyFace({
           employeeId,
           descriptors,
+          earSamples,
           signal: controller.signal,
           onStep: (index) => {
             if (!cancelled) setStepIndex(index);
@@ -316,7 +337,7 @@ export default function FaceRecognitionModal({ isOpen, employeeName, employeeId,
                   <div className="absolute right-4 bottom-4 w-8 h-8 border-r-2 border-b-2 border-blue-400 rounded-br-lg" />
                   {isActive && (
                     <FaceScanOverlay
-                      state={phase === 'result' && result ? 'success' : phase === 'verifying' ? 'scanning' : 'idle'}
+                      state={phase === 'result' && result ? 'success' : (phase === 'verifying' || phase === 'liveness') ? 'scanning' : 'idle'}
                     />
                   )}
                   {phase === 'preparing' && (
@@ -327,6 +348,17 @@ export default function FaceRecognitionModal({ isOpen, employeeName, employeeId,
                       </p>
                       <p className="text-[11px] text-white/70 text-center px-6 leading-snug">
                         Look at the camera and center your face
+                      </p>
+                    </div>
+                  )}
+                  {phase === 'liveness' && (
+                    <div className="absolute inset-0 flex flex-col items-center justify-center gap-2 bg-[#0B1F3A]/55 animate-fadeIn">
+                      <Fingerprint className="w-7 h-7 text-blue-300 animate-pulse" />
+                      <p className="text-base font-semibold text-white tracking-wide text-center px-6">
+                        Blink now
+                      </p>
+                      <p className="text-[11px] text-white/70 text-center px-6 leading-snug">
+                        Confirms you're really there, not a photo
                       </p>
                     </div>
                   )}
@@ -421,7 +453,11 @@ export default function FaceRecognitionModal({ isOpen, employeeName, employeeId,
                     </div>
                     <div className="rounded-xl bg-white border border-emerald-100 p-3 text-center">
                       <p className="text-[10px] font-semibold uppercase tracking-wider text-gray-400">Liveness</p>
-                      <p className={clsx('text-lg font-bold mt-1', result.liveness === 'Not Checked' ? 'text-gray-400' : 'text-emerald-600')}>{result.liveness}</p>
+                      <p className={clsx('text-lg font-bold mt-1', {
+                        'text-emerald-600': result.liveness === 'Live',
+                        'text-amber-500': result.liveness === 'Not Detected',
+                        'text-gray-400': result.liveness === 'Not Checked',
+                      })}>{result.liveness}</p>
                     </div>
                     <div className="rounded-xl bg-white border border-emerald-100 p-3 text-center">
                       <p className="text-[10px] font-semibold uppercase tracking-wider text-gray-400">Approval</p>

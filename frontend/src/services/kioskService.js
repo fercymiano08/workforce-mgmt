@@ -260,6 +260,7 @@ export const LOG_TYPES = {
   pin: { label: 'PIN', color: 'text-purple-600', bg: 'bg-purple-50' },
   security: { label: 'Security', color: 'text-red-600', bg: 'bg-red-50' },
   maintenance: { label: 'Maintenance', color: 'text-gray-600', bg: 'bg-gray-100' },
+  liveness: { label: 'Liveness', color: 'text-amber-600', bg: 'bg-amber-50' },
 };
 
 export const TIMEZONES = [
