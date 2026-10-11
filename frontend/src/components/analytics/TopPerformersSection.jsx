@@ -6,8 +6,10 @@ import Avatar from '../ui/Avatar';
 import TableShell from '../ui/TableShell';
 import EmptyState from '../ui/EmptyState';
 import { SkeletonTable } from '../ui/LoadingSkeleton';
+import { Pagination } from '../ui/Table';
 
 const MEDAL_TONE = ['bg-amber-50 text-amber-600', 'bg-gray-100 text-gray-500', 'bg-orange-50 text-orange-600'];
+const PAGE_SIZE = 10;
 
 const COLUMNS = [
   { key: 'rank', label: '#', numeric: true },
@@ -42,18 +44,17 @@ export default function TopPerformersSection({ data, loading, periodLabel, onSel
 
   const top3 = useMemo(() => [...ranked].sort((a, b) => a.rank - b.rank).slice(0, 3), [ranked]);
 
-  // Split the sorted list down the middle - first half left, second half right - so a roster of
-  // ~20 people reads as two short columns instead of one long scroll. Whatever column it is
-  // currently sorted by, the split is just "first half of the list / second half", which is still
-  // top-to-bottom reading order either way. A short roster (10 or fewer) stays a single table -
-  // splitting it would just leave two mostly-empty columns.
-  const isSplit = sorted.length > 10;
-  const splitAt = Math.ceil(sorted.length / 2);
-  const leftRows = isSplit ? sorted.slice(0, splitAt) : sorted;
-  const rightRows = isSplit ? sorted.slice(splitAt) : [];
+  // One table, paged 10 rows at a time, instead of one long scroll - page 1 is #1-10, page 2 is
+  // #11-20, and so on. Clamped against totalPages (same trick Timesheets.jsx uses) so switching to
+  // a period with fewer people never leaves the view stranded on a now-empty page.
+  const [currentPage, setCurrentPage] = useState(1);
+  const totalPages = Math.max(1, Math.ceil(sorted.length / PAGE_SIZE));
+  const page = Math.min(currentPage, totalPages);
+  const pageRows = sorted.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE);
 
   const toggleSort = (key) => {
     setSort((prev) => (prev.key === key ? { key, dir: prev.dir === 'asc' ? 'desc' : 'asc' } : { key, dir: ['name', 'department', 'rank'].includes(key) ? 'asc' : 'desc' }));
+    setCurrentPage(1);
   };
 
   const sortIcon = (key) => {
@@ -128,53 +129,48 @@ export default function TopPerformersSection({ data, loading, periodLabel, onSel
           </div>
 
           {/* The full ranking - every column sorts, so this is a real data grid, not another chart.
-              Past 10 people it splits into two side-by-side halves (left: first half of the sorted
-              list, right: second half) so the roster reads as two short columns instead of one long
-              scroll - each half keeps its own header so either side can still be resorted. */}
-          <div className={isSplit ? 'grid grid-cols-1 lg:grid-cols-2 gap-4' : ''}>
-            {[leftRows, ...(isSplit ? [rightRows] : [])].map((rows, half) => (
-              <Card key={half} padding={false}>
-                <TableShell minWidth="min-w-[560px]">
-                  <table className="w-full">
-                    <thead>
-                      <tr className="border-b border-gray-100 bg-gray-50/50">
-                        {COLUMNS.map((col) => (
-                          <th key={col.key} className={`px-4 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wider ${col.numeric ? 'text-right' : 'text-left'}`}>
-                            <button type="button" onClick={() => toggleSort(col.key)} className={`inline-flex items-center gap-1 hover:text-gray-700 ${col.numeric ? 'flex-row-reverse' : ''}`}>
-                              {col.label} {sortIcon(col.key)}
-                            </button>
-                          </th>
-                        ))}
-                      </tr>
-                    </thead>
-                    <tbody className="divide-y divide-gray-50">
-                      {rows.map((p) => (
-                        <tr key={p.employeeId} onClick={() => onSelectEmployee(p.employeeId)} className="hover:bg-gray-50/50 transition-colors cursor-pointer">
-                          <td className="px-4 py-3.5 text-sm font-semibold text-gray-500 text-right">#{p.rank}</td>
-                          <td className="px-4 py-3.5">
-                            <div className="flex items-center gap-3">
-                              <Avatar firstName={p.name.split(' ')[0]} lastName={p.name.split(' ')[1]} src={p.avatar} size="sm" />
-                              <div className="min-w-0">
-                                <p className="font-medium text-sm text-gray-900 truncate flex items-center gap-1.5">
-                                  {p.name}
-                                  {p.probationary && <Badge variant="warning" size="xs">Probationary</Badge>}
-                                </p>
-                                <Badge variant={p.tone} size="xs">{p.label}</Badge>
-                              </div>
-                            </div>
-                          </td>
-                          <td className="px-4 py-3.5 text-sm text-gray-600 whitespace-nowrap">{p.department || '—'}</td>
-                          <td className="px-4 py-3.5 text-sm text-gray-700 text-right tabular-nums">{p.attendanceRate}%</td>
-                          <td className="px-4 py-3.5 text-sm text-gray-700 text-right tabular-nums">{p.punctualityRate}%</td>
-                          <td className="px-4 py-3.5 text-sm font-bold text-gray-900 text-right tabular-nums">{p.score}</td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </TableShell>
-              </Card>
-            ))}
-          </div>
+              Paged 10 at a time rather than scrolling the whole roster in one go. */}
+          <Card padding={false}>
+            <TableShell minWidth="min-w-[720px]">
+              <table className="w-full">
+                <thead>
+                  <tr className="border-b border-gray-100 bg-gray-50/50">
+                    {COLUMNS.map((col) => (
+                      <th key={col.key} className={`px-4 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wider ${col.numeric ? 'text-right' : 'text-left'}`}>
+                        <button type="button" onClick={() => toggleSort(col.key)} className={`inline-flex items-center gap-1 hover:text-gray-700 ${col.numeric ? 'flex-row-reverse' : ''}`}>
+                          {col.label} {sortIcon(col.key)}
+                        </button>
+                      </th>
+                    ))}
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-gray-50">
+                  {pageRows.map((p) => (
+                    <tr key={p.employeeId} onClick={() => onSelectEmployee(p.employeeId)} className="hover:bg-gray-50/50 transition-colors cursor-pointer">
+                      <td className="px-4 py-3.5 text-sm font-semibold text-gray-500 text-right">#{p.rank}</td>
+                      <td className="px-4 py-3.5">
+                        <div className="flex items-center gap-3">
+                          <Avatar firstName={p.name.split(' ')[0]} lastName={p.name.split(' ')[1]} src={p.avatar} size="sm" />
+                          <div className="min-w-0">
+                            <p className="font-medium text-sm text-gray-900 truncate flex items-center gap-1.5">
+                              {p.name}
+                              {p.probationary && <Badge variant="warning" size="xs">Probationary</Badge>}
+                            </p>
+                            <Badge variant={p.tone} size="xs">{p.label}</Badge>
+                          </div>
+                        </div>
+                      </td>
+                      <td className="px-4 py-3.5 text-sm text-gray-600 whitespace-nowrap">{p.department || '—'}</td>
+                      <td className="px-4 py-3.5 text-sm text-gray-700 text-right tabular-nums">{p.attendanceRate}%</td>
+                      <td className="px-4 py-3.5 text-sm text-gray-700 text-right tabular-nums">{p.punctualityRate}%</td>
+                      <td className="px-4 py-3.5 text-sm font-bold text-gray-900 text-right tabular-nums">{p.score}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </TableShell>
+            <Pagination currentPage={page} totalPages={totalPages} onPageChange={setCurrentPage} />
+          </Card>
 
           <p className="flex items-start gap-1.5 text-xs text-gray-400">
             <Info className="w-3.5 h-3.5 shrink-0 mt-0.5" /> {data?.meta?.note}
