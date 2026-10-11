@@ -21,7 +21,7 @@ class AuditEvent extends Model
 
     protected $fillable = [
         'service', 'event', 'entity_type', 'entity_id',
-        'actor', 'actor_id', 'before', 'after', 'meta',
+        'actor', 'actor_id', 'ip_address', 'user_agent', 'before', 'after', 'meta',
     ];
 
     protected function casts(): array

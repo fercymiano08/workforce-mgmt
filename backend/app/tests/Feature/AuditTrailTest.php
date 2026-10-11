@@ -31,6 +31,21 @@ class AuditTrailTest extends TestCase
         $this->assertNotEmpty($response->json('data.0.createdAt'), 'the time of the event must be returned');
     }
 
+    /** A professional audit log records where an action came from, not just who and what. */
+    public function test_a_recorded_event_captures_the_requests_ip_address(): void
+    {
+        $user = User::factory()->create(['role' => 'Administrator', 'password' => 'Passw0rd!x']);
+        Sanctum::actingAs($user);
+
+        $this->postJson('/api/auth/change-password', [
+            'current_password' => 'Passw0rd!x', 'new_password' => 'Newpassw0rd!', 'new_password_confirmation' => 'Newpassw0rd!',
+        ])->assertOk();
+
+        $event = \App\Models\AuditEvent::where('event', 'auth.password_changed')->first();
+        $this->assertNotNull($event);
+        $this->assertNotEmpty($event->ip_address, 'the IP address must be captured automatically');
+    }
+
     public function test_an_employee_cannot_read_the_audit_trail(): void
     {
         Sanctum::actingAs(User::factory()->create(['role' => 'Employee']));

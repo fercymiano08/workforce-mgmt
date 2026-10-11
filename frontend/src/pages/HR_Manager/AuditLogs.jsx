@@ -288,6 +288,7 @@ export default function AuditLogs() {
       'What happened': eventName(e.event),
       About: subjectOf(e),
       'Record ID': e.entityId,
+      'IP Address': e.ipAddress || '',
       Changes: summaryOf(e),
     }));
     downloadCsv(`audit-log-export-${toDateKey(new Date())}.csv`, rows);
@@ -393,51 +394,63 @@ export default function AuditLogs() {
         )}
       </div>
 
-      {/* Timeline */}
+      {/* A real table - who did what, when, in which area, and from which IP address. */}
       {error ? (
         <EmptyState icon={ScrollText} title="Could not load the audit log" description={error} />
       ) : !res ? (
         <SkeletonTable rows={8} cols={6} />
       ) : logs.length ? (
-        <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
-          {groups.map((g) => (
-            <section key={g.label}>
-              <div className="px-5 py-2 bg-gray-50 border-y border-gray-100 first:border-t-0 text-[11px] font-semibold uppercase tracking-wide text-gray-500">
-                {g.label} <span className="text-gray-400 font-medium normal-case tracking-normal">· {g.items.length} {g.items.length === 1 ? 'event' : 'events'}</span>
-              </div>
-              <ul className="divide-y divide-gray-50">
+        <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden overflow-x-auto">
+          <table className="w-full text-sm">
+            <thead>
+              <tr className="bg-gray-50 border-b border-gray-100 text-left text-[11px] font-semibold uppercase tracking-wide text-gray-500">
+                <th className="px-5 py-2.5 font-semibold">Action</th>
+                <th className="px-5 py-2.5 font-semibold">Done by</th>
+                <th className="px-5 py-2.5 font-semibold">Area</th>
+                <th className="px-5 py-2.5 font-semibold">IP Address</th>
+                <th className="px-5 py-2.5 font-semibold whitespace-nowrap">Time</th>
+                <th className="px-5 py-2.5 font-semibold sr-only">View</th>
+              </tr>
+            </thead>
+            {groups.map((g) => (
+              <tbody key={g.label} className="divide-y divide-gray-50">
+                <tr>
+                  <td colSpan={6} className="px-5 py-2 bg-gray-50/70 border-y border-gray-100 text-[11px] font-semibold uppercase tracking-wide text-gray-500">
+                    {g.label} <span className="text-gray-400 font-medium normal-case tracking-normal">· {g.items.length} {g.items.length === 1 ? 'event' : 'events'}</span>
+                  </td>
+                </tr>
                 {g.items.map(({ e, d }) => {
                   const style = KIND_STYLE[kindOf(e)] || KIND_STYLE.updated;
                   const Icon = style.icon;
                   const summary = summaryOf(e);
                   return (
-                    <li key={e.id}>
-                      <button
-                        type="button"
-                        onClick={() => setShowDetail(e)}
-                        className="w-full flex items-center gap-4 px-5 py-3.5 text-left hover:bg-blue-50/40 transition-colors"
-                      >
-                        <span className={clsx('w-10 h-10 rounded-xl flex items-center justify-center shrink-0', style.box)}>
-                          <Icon className="w-[18px] h-[18px]" />
-                        </span>
-                        <span className="min-w-0 flex-1">
-                          <span className="block text-sm text-gray-800">
-                            <span className="font-semibold text-gray-900">{e.actor || 'System'}</span> {sentenceOf(e)}
+                    <tr key={e.id} className="hover:bg-blue-50/40 transition-colors cursor-pointer" onClick={() => setShowDetail(e)}>
+                      <td className="px-5 py-3 min-w-0">
+                        <div className="flex items-center gap-3">
+                          <span className={clsx('w-9 h-9 rounded-xl flex items-center justify-center shrink-0', style.box)}>
+                            <Icon className="w-4 h-4" />
                           </span>
-                          <span className="mt-1 flex flex-wrap items-center gap-2">
-                            <Badge variant={SERVICE_COLORS[e.service] || 'default'} size="xs">{areaName(e.service)}</Badge>
-                            {summary && <span className="text-xs text-gray-500 truncate max-w-full">{summary}</span>}
-                          </span>
-                        </span>
-                        <span className="text-xs text-gray-400 whitespace-nowrap shrink-0">{d ? timeOf(d) : '—'}</span>
-                        <ChevronRight className="w-4 h-4 text-gray-300 shrink-0" />
-                      </button>
-                    </li>
+                          <div className="min-w-0">
+                            <p className="text-sm text-gray-800 truncate">{eventName(e.event)}</p>
+                            {summary && <p className="text-xs text-gray-500 truncate max-w-[22rem]">{summary}</p>}
+                          </div>
+                        </div>
+                      </td>
+                      <td className="px-5 py-3 text-sm text-gray-700 whitespace-nowrap">{e.actor || 'System'}</td>
+                      <td className="px-5 py-3"><Badge variant={SERVICE_COLORS[e.service] || 'default'} size="xs">{areaName(e.service)}</Badge></td>
+                      <td className="px-5 py-3 text-xs text-gray-500 font-mono whitespace-nowrap">{e.ipAddress || '—'}</td>
+                      <td className="px-5 py-3 text-xs text-gray-400 whitespace-nowrap">{d ? timeOf(d) : '—'}</td>
+                      <td className="px-5 py-3 text-right">
+                        <button type="button" onClick={() => setShowDetail(e)} aria-label="View details" className="p-1 rounded-lg text-gray-300 hover:text-blue-600 hover:bg-blue-50">
+                          <ChevronRight className="w-4 h-4" />
+                        </button>
+                      </td>
+                    </tr>
                   );
                 })}
-              </ul>
-            </section>
-          ))}
+              </tbody>
+            ))}
+          </table>
 
           <div className="flex items-center justify-between gap-3 flex-wrap px-5 py-3 border-t border-gray-100 bg-gray-50/60">
             <div className="flex items-center gap-3">
@@ -511,6 +524,8 @@ export default function AuditLogs() {
                       </dd>
                     </div>
                     <div className="flex items-center justify-between gap-4 px-4 py-2.5"><dt className="text-gray-500">Area</dt><dd><Badge variant={SERVICE_COLORS[e.service] || 'default'} size="sm">{areaName(e.service)}</Badge></dd></div>
+                    <div className="flex items-center justify-between gap-4 px-4 py-2.5"><dt className="text-gray-500">IP address</dt><dd className="font-mono text-gray-800">{e.ipAddress || '—'}</dd></div>
+                    {e.userAgent && <div className="flex items-start justify-between gap-4 px-4 py-2.5"><dt className="text-gray-500 shrink-0">Device</dt><dd className="font-medium text-gray-800 text-right break-words">{e.userAgent}</dd></div>}
                     <div className="flex items-center justify-between gap-4 px-4 py-2.5"><dt className="text-gray-500">About</dt><dd className="font-medium text-gray-800 text-right">{subjectOf(e)}</dd></div>
                     {e.entityId && <div className="flex items-center justify-between gap-4 px-4 py-2.5"><dt className="text-gray-500">Record number</dt><dd className="font-medium text-gray-800">{e.entityId}</dd></div>}
                     {e.meta?.status && <div className="flex items-center justify-between gap-4 px-4 py-2.5"><dt className="text-gray-500">Decision</dt><dd className="font-semibold text-gray-900">{e.meta.status}</dd></div>}
