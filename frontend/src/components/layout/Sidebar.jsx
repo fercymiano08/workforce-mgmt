@@ -41,7 +41,7 @@ const adminMenuGroups = [
   {
     label: 'nav.group.analytics',
     items: [
-      // AI Insights & Decisions lives inside Analytics now (its own tab) rather than a separate
+      // AI Decision Support lives inside Analytics now (its own tab) rather than a separate
       // page, so the unresolved-insights badge moves here too.
       { path: '/analytics', key: 'nav.analytics', icon: BarChart3, badgeName: 'ai' },
       { path: '/reports', key: 'nav.reports', icon: FileBarChart },

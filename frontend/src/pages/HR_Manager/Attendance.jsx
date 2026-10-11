@@ -51,7 +51,7 @@ export default function Attendance() {
   const [employees, setEmployees] = useState([]);
   // Corrections waiting for a decision: shown as a badge on the tab, and refreshed after each decision
   const { data: pendingCorrections, refresh: refreshPendingCorrections } = useApiData(() => adjustmentService.getAll({ status: 'Pending' }), []);
-  // Links from the AI Insights & Decisions tab open this page already filtered (?search=Name&status=Late&period=Today)
+  // Links from the AI Decision Support tab open this page already filtered (?search=Name&status=Late&period=Today)
   const [search, setSearch] = useState(searchParams.get('search') || '');
   const [statusFilter, setStatusFilter] = useState(searchParams.get('status') || 'All');
   // A date range, picked on a calendar. This was a row of period buckets ("All", "Today", "This Week",

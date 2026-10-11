@@ -69,7 +69,7 @@ function fmtTime(iso) {
   return new Date(iso).toLocaleString('en-US', { timeZone: 'Asia/Manila', month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' });
 }
 
-// The AI Insights & Decisions tab inside Workforce Analytics - moved here from its own page (a
+// The AI Decision Support tab inside Workforce Analytics - moved here from its own page (a
 // panel review asked for the two to work together rather than live apart). Unchanged otherwise:
 // same health score, "Do First" list, Decision Queue and AI Insights sub-tabs as before.
 export default function AIInsightsPanel() {

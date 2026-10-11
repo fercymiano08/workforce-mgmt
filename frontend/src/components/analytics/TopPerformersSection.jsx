@@ -1,20 +1,11 @@
 import { useMemo, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
-import { Trophy, Info, ArrowUp, ArrowDown, ArrowUpDown } from 'lucide-react';
-import Card, { CardHeader, CardTitle, CardDescription } from '../ui/Card';
+import { Trophy, Info, Search, ArrowUp, ArrowDown, ArrowUpDown } from 'lucide-react';
+import Card from '../ui/Card';
 import Badge from '../ui/Badge';
 import Avatar from '../ui/Avatar';
 import TableShell from '../ui/TableShell';
 import EmptyState from '../ui/EmptyState';
-import useApiData from '../../hooks/useApiData';
-import { analyticsService } from '../../services/api';
 import { SkeletonTable } from '../ui/LoadingSkeleton';
-
-const PERIODS = [
-  { key: 'week', label: 'This Week' },
-  { key: 'month', label: 'This Month' },
-  { key: 'year', label: 'This Year' },
-];
 
 const MEDAL_TONE = ['bg-amber-50 text-amber-600', 'bg-gray-100 text-gray-500', 'bg-orange-50 text-orange-600'];
 
@@ -28,19 +19,15 @@ const COLUMNS = [
 ];
 
 /**
- * The "Top Performer" view a panel review named directly as missing: Workforce Analytics only ever
- * showed company-wide charts ("puro graph"), never who actually stands out. Every active employee,
- * ranked by the same punctuality-based read the By Employee tab gives one person at a time - a real
- * sortable table (click a header to resort), not another chart, and a row opens that person's own
- * By Employee tab.
+ * The "Top Performer" view a panel review named directly as missing - folded into Overview itself
+ * (not its own tab) per a later review: every active employee ranked by attendance + punctuality,
+ * the top 3 highlighted, the rest a real sortable table (click a header to resort). A row opens
+ * that person in a popup instead of a separate page, so comparing people never means navigating
+ * away from the charts.
  */
-export default function TopPerformers() {
-  const navigate = useNavigate();
-  const [period, setPeriod] = useState('month');
+export default function TopPerformersSection({ data, loading, periodLabel, onSelectEmployee, onLookup }) {
   const [sort, setSort] = useState({ key: 'rank', dir: 'asc' });
-
-  const { data, loading } = useApiData(() => analyticsService.getTopPerformers(period), [period]);
-  const ranked = data?.ranked || [];
+  const ranked = useMemo(() => data?.ranked || [], [data]);
 
   const sorted = useMemo(() => {
     const list = [...ranked];
@@ -64,36 +51,29 @@ export default function TopPerformers() {
     return sort.dir === 'asc' ? <ArrowUp className="w-3 h-3 text-blue-600" /> : <ArrowDown className="w-3 h-3 text-blue-600" />;
   };
 
-  const openEmployee = (employeeId) => navigate(`/analytics?tab=employee&employeeId=${employeeId}`);
-
   return (
-    <div className="space-y-6">
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+    <div className="space-y-4 print:hidden">
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
         <div className="flex items-center gap-3">
           <div className="w-9 h-9 rounded-xl bg-amber-50 flex items-center justify-center shrink-0">
             <Trophy className="w-4.5 h-4.5 text-amber-500" />
           </div>
           <div>
             <h2 className="text-base font-semibold text-gray-900">Top Performer</h2>
-            <p className="text-[13px] text-gray-500 mt-0.5">Ranked by attendance and punctuality · {data?.period?.label || ''}</p>
+            <p className="text-[13px] text-gray-500 mt-0.5">Ranked by attendance and punctuality · {periodLabel}</p>
           </div>
         </div>
-        <div className="flex bg-gray-100 rounded-xl p-1">
-          {PERIODS.map(({ key, label }) => (
-            <button
-              key={key}
-              type="button"
-              onClick={() => setPeriod(key)}
-              className={`px-3 sm:px-4 py-1.5 text-sm font-medium rounded-lg transition-all ${period === key ? 'bg-white text-gray-900 shadow-sm' : 'text-gray-500 hover:text-gray-700'}`}
-            >
-              {label}
-            </button>
-          ))}
-        </div>
+        <button
+          type="button"
+          onClick={onLookup}
+          className="inline-flex items-center gap-1.5 self-start sm:self-auto px-3 py-1.5 text-xs font-semibold text-blue-600 bg-blue-50 rounded-lg hover:bg-blue-100 transition-colors"
+        >
+          <Search className="w-3.5 h-3.5" /> Look up an employee
+        </button>
       </div>
 
       {loading ? (
-        <SkeletonTable rows={6} cols={6} />
+        <SkeletonTable rows={5} cols={6} />
       ) : ranked.length === 0 ? (
         <EmptyState
           icon={Trophy}
@@ -109,7 +89,7 @@ export default function TopPerformers() {
               <button
                 key={p.employeeId}
                 type="button"
-                onClick={() => openEmployee(p.employeeId)}
+                onClick={() => onSelectEmployee(p.employeeId)}
                 className="text-left bg-white rounded-2xl border border-gray-100 shadow-sm p-5 hover:shadow-md hover:border-gray-200 hover:-translate-y-0.5 transition-all"
               >
                 <div className="flex items-center justify-between">
@@ -154,7 +134,7 @@ export default function TopPerformers() {
                 </thead>
                 <tbody className="divide-y divide-gray-50">
                   {sorted.map((p) => (
-                    <tr key={p.employeeId} onClick={() => openEmployee(p.employeeId)} className="hover:bg-gray-50/50 transition-colors cursor-pointer">
+                    <tr key={p.employeeId} onClick={() => onSelectEmployee(p.employeeId)} className="hover:bg-gray-50/50 transition-colors cursor-pointer">
                       <td className="px-4 py-3.5 text-sm font-semibold text-gray-500 text-right">#{p.rank}</td>
                       <td className="px-4 py-3.5">
                         <div className="flex items-center gap-3">

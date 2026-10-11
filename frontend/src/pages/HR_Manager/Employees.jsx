@@ -683,7 +683,7 @@ export default function Employees() {
               </div>
             )}
             <div className="flex justify-end pt-2 border-t border-gray-100">
-              <Button variant="outline" icon={BarChart3} onClick={() => navigate(`/analytics?tab=employee&employeeId=${selectedEmployee.id}`)}>
+              <Button variant="outline" icon={BarChart3} onClick={() => navigate(`/analytics?employeeId=${selectedEmployee.id}`)}>
                 View Analytics
               </Button>
             </div>

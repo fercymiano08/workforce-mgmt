@@ -7,7 +7,7 @@ use App\Models\OvertimeRequest;
 
 /**
  * Leave/overtime actions triggered from outside their own controllers
- * (the early clock-out auto-draft, and the AI Insights & Decisions tab's resolve actions).
+ * (the early clock-out auto-draft, and the AI Decision Support tab's resolve actions).
  */
 class TimeOffActions
 {

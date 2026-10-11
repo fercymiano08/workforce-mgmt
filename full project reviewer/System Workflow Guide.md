@@ -158,7 +158,7 @@ There are three roles. Each role logs in through the same login page but lands o
 | 9 | Shifts `HR_Manager/Shifts.jsx` | Admin | Manage shift templates + build weekly schedules |
 | 10 | Timesheets `HR_Manager/Timesheets.jsx` | Admin | Review each employee's week (summary cards, quick filters, sortable table), open a side panel with the day-by-day attendance, then approve or reject |
 | 11 | Reports `HR_Manager/Reports.jsx` | Admin | Build printable/CSV reports from live data |
-| 12-13 | Analytics `HR_Manager/Analytics.jsx` | Admin | Four tabs in one page: Overview (deep charts - trends, punctuality, productivity), Top Performer (`components/analytics/TopPerformers.jsx` - every active employee ranked by attendance+punctuality, a sortable table, not a chart), AI Insights & Decisions (`components/analytics/AIInsightsPanel.jsx` - AI-generated insights + one-click decision queue, moved here from its own page), By Employee (`components/analytics/EmployeeAnalytics.jsx` - the same read for one person) |
+| 12-13 | Analytics `HR_Manager/Analytics.jsx` | Admin | Two tabs: **Analytics Overview** (deep charts, a Top Performer ranking built in - `components/analytics/TopPerformersSection.jsx` - rather than a tab of its own, and a per-employee popup - `components/analytics/EmployeeDetailModal.jsx` - opened from a click instead of a "By Employee" destination) and **AI Decision Support** (`components/analytics/AIInsightsPanel.jsx` - AI-generated insights + one-click decision queue, moved here from its own page) |
 | 14 | Settings `HR_Manager/Settings.jsx` | Admin | Company info, kiosk configuration, system options |
 | 15 | Employee Dashboard `Employee/EmployeeDashboard.jsx` | Employee | Personal home: today's status, quick stats, ID card header |
 | 16 | My Attendance `Employee/MyAttendance.jsx` | Employee | Own clock history and hours |
@@ -195,7 +195,7 @@ Every API call goes to the **single backend** through the **Vite dev proxy** (no
 
 > **How the backend checks "who are you":** the single Laravel app owns the `users` table and validates every bearer token **in-process** (Sanctum against `personal_access_tokens`) — there is no separate identity service to ask over HTTP. This is the biggest simplification the consolidation bought: what used to be a network round-trip per request to `core` is now a local database lookup.
 
-> **`intelligence`'s AI actions write straight into the same app:** approving a leave, approving overtime, or resolving a security event from the AI Insights & Decisions queue used to require a hop through `core` or an internal API to another service. Now the domain boundaries are folders in one codebase, so the AI path calls the same service classes the manual path uses — with the same "must still be Pending" status checks. `/api/analytics/ai/actions` is just another route in `routes/services/intelligence.php`, full stop.
+> **`intelligence`'s AI actions write straight into the same app:** approving a leave, approving overtime, or resolving a security event from the AI Decision Support queue used to require a hop through `core` or an internal API to another service. Now the domain boundaries are folders in one codebase, so the AI path calls the same service classes the manual path uses — with the same "must still be Pending" status checks. `/api/analytics/ai/actions` is just another route in `routes/services/intelligence.php`, full stop.
 
 > **Debugging rule of thumb:** find the URL prefix in `backend/app/routes/api.php` → read the matching `routes/services/<domain>.php` → read that controller, usually delegating to a `Services/` class. That chain explains 95% of any behavior you see. There are no replicas anymore — every table you see is the live one.
 
@@ -509,14 +509,14 @@ the Workforce Admin has been alerted.
 The server (from the kiosk log call) does TWO things:
   1. writes a security event: type = 'face_mismatch', status = 'Open', employee_id attached
   2. sends every Workforce Admin a HIGH-priority notification
-     (type 'security_face_mismatch', "Face Mismatch at Kiosk", deep-links to the AI Insights & Decisions tab)
+     (type 'security_face_mismatch', "Face Mismatch at Kiosk", deep-links to the AI Decision Support tab)
         │
         ▼
 Strike counter increases (kept on the server, per kiosk). After 5 wrong faces
 the reader stops for 60 seconds (countdown shown).
 ```
 
-Every one of these events also surfaces in the **Security Events** area of the AI Insights & Decisions tab for HR to resolve or escalate (Module 15).
+Every one of these events also surfaces in the **Security Events** area of the AI Decision Support tab for HR to resolve or escalate (Module 15).
 
 ### The Kiosk's Popup Catalog (Every Warning In One Place)
 
@@ -769,7 +769,7 @@ Endpoints: `POST /api/attendance/adjustments` (file), `GET /api/attendance/adjus
 | **2. Shift & date** | The **shift is always the Standard Shift** (8:00 AM – 5:00 PM) - shown, not chosen - and one **date**. |
 | **3. Assign Shift** | `POST /api/shifts/schedules/bulk` checks each selected employee **independently**: active, **not on approved leave** that day, **not already scheduled** that day. One person's conflict only skips them - it never fails the whole batch - and the result says who was skipped and why (e.g. "On approved Vacation leave that day"). Everyone who could be booked is; each gets their own notification; every created row is audited. |
 
-**A saved schedule stays true.** Changes made afterwards update it by themselves (only shifts from today on that nobody has clocked in for; a worked day is never rewritten): a leave is **approved** (from any screen, including the AI Insights & Decisions tab) → the person's shifts on the leave days are removed; an employee is set **Inactive** → their upcoming shifts are removed.
+**A saved schedule stays true.** Changes made afterwards update it by themselves (only shifts from today on that nobody has clocked in for; a worked day is never rewritten): a leave is **approved** (from any screen, including the AI Decision Support tab) → the person's shifts on the leave days are removed; an employee is set **Inactive** → their upcoming shifts are removed.
 
 Single rows can also be edited (`PUT /api/shifts/schedules/{id}`) or removed (`DELETE .../{id}`) one at a time. Every change is written to the audit log (schedule assigned / moved / deleted).
 
@@ -841,7 +841,7 @@ Cancel path: while still Pending, the employee can cancel it via `PATCH /api/lea
 
 | Step | What happens |
 |------|--------------|
-| 1 | Pending queue on Leave Management (and inside the AI Insights & Decisions tab's decision queue) |
+| 1 | Pending queue on Leave Management (and inside the AI Decision Support tab's decision queue) |
 | 2 | HR clicks Approve or Reject → `PATCH /api/leaves/{id}/status` or `PUT /api/leaves/{id}` |
 | 3 | **If Approved:** backend deducts the days from `employees.leave_balances` (JSON column holding per-type remaining days) |
 | 4 | Row updated: `status`, `approved_by`, `comments` |
@@ -1058,7 +1058,7 @@ No writes happen here. Reports are a lens over the same tables everything else u
 
 ---
 
-## Module 14 — AI Insights & Decisions (Rules Decide, Gemini Explains)
+## Module 14 — AI Decision Support (Rules Decide, Gemini Explains)
 
 > Lives inside **Analytics** as its second tab (`components/analytics/AIInsightsPanel.jsx`), not a page of its own - a panel review asked for the two to work together rather than live apart. Everything below is unchanged otherwise: same health score, Decision Queue and AI Insights.
 
@@ -1174,7 +1174,7 @@ high-priority notification (bell + Notifications page, type
 wait until someone opens the security section
         │
         ▼
-Surfaces in the AI Insights & Decisions tab's security section
+Surfaces in the AI Decision Support tab's security section
 (counts feed the health score too)
         │
         ├── Resolve  → status Resolved + who/when stamped
@@ -1217,7 +1217,7 @@ Open events raise the system's concern level; resolving them restores the score.
 | Early clock-outs past the free allowance / sick certificate overdue | Employee **and** HR (`early_leave_auto_unpaid`) |
 | A SICK early clock-out needs proof | Employee (`early_leave_certificate_required`, with the deadline); HR when the proof is uploaded (`early_leave_proof_submitted`) |
 | 3 employees leave early the same day with the same reason | HR (`early_clock_out_pattern`, high priority) |
-| **Face mismatch at the kiosk** (someone clocking in as another person) | HR — all admins, **high priority** (`security_face_mismatch`, deep-links to the AI Insights & Decisions tab) |
+| **Face mismatch at the kiosk** (someone clocking in as another person) | HR — all admins, **high priority** (`security_face_mismatch`, deep-links to the AI Decision Support tab) |
 | No-show / un-closed clock-in / unauthorized overtime / staffing shortage (dashboard alert scan) | HR — all admins (`attendance_absent`, `attendance_incomplete`, `attendance_unauthorized_ot`, `staff_shortage`) |
 
 > **A late clock-in cancels its own no-show alert.** The moment an employee clocks in — even late — `NotificationService::retractNoShowAlert()` deletes any "possible no-show" (`attendance_absent`) alert already sent for that employee for today. HR's inbox never ends up showing a "clocked in late" notice sitting next to a now-false "possible no-show" for the same person on the same day.
@@ -1336,7 +1336,7 @@ Which tables each module touches (R = read, W = write). This map is logical — 
 | Timesheets | | R | R | | | | R | | | R | RW | RW | | | |
 | Dashboard/Analytics | | R | R | | | | R | | R | R | | | | | RW |
 | Reports | | R | | | | | R | | R | R | R | | | | |
-| AI Insights & Decisions (Analytics tab) | | R | | | | | R | | RW | RW | | W | RW | RW | R |
+| AI Decision Support (Analytics tab) | | R | | | | | R | | RW | RW | | W | RW | RW | R |
 | Security Events | | R | | | | | | | | | | W | RW | | |
 | Notifications | | | | | | | | | | | | RW | | | |
 | Settings/Profile | W | RW | | | | | | | | | | | | RW | |

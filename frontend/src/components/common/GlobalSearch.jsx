@@ -22,7 +22,7 @@ const ADMIN_PAGES = [
   { key: 'shifts', labelKey: 'nav.shifts', path: '/shifts', icon: Clock, terms: 'shifts schedule scheduling roster' },
   { key: 'timesheets', labelKey: 'nav.timesheets', path: '/timesheets', icon: ClipboardList, terms: 'timesheets timesheet hours payroll week' },
   { key: 'leave', labelKey: 'nav.leave', path: '/leave', icon: CalendarDays, terms: 'leave leaves requests vacation sick approval' },
-  // AI Insights & Decisions lives inside Analytics now (its own tab), not a separate page.
+  // AI Decision Support lives inside Analytics now (its own tab), not a separate page.
   { key: 'analytics', labelKey: 'nav.analytics', path: '/analytics', icon: BarChart3, terms: 'analytics workforce charts statistics trends dashboard ai insights decisions support' },
   { key: 'reports', labelKey: 'nav.reports', path: '/reports', icon: FileBarChart, terms: 'reports report export pdf csv' },
   { key: 'audit', labelKey: 'nav.auditLogs', path: '/audit-logs', icon: ShieldCheck, terms: 'audit logs activity trail security' },

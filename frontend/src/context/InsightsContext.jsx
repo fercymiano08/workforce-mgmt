@@ -5,8 +5,8 @@ import { useAuth } from './AuthContext';
 const InsightsContext = createContext(null);
 
 // Loads the unresolved AI insight count once so the sidebar badge always knows
-// how many problems still need HR attention - even before the AI Insights &
-// Decisions tab (inside Analytics) has been visited. That tab calls refresh()
+// how many problems still need HR attention - even before the AI Decision
+// Support tab (inside Analytics) has been visited. That tab calls refresh()
 // whenever it resolves/restores an insight so the badge stays in sync.
 export function InsightsProvider({ children }) {
   const { isAdmin, isAuthenticated } = useAuth();

@@ -85,6 +85,10 @@ const ROWS_PER_PAGE = 6;
 // earliest - a leave request for a day that has already begun is meaningless.
 const todayKey = () => toDateKey(new Date());
 
+// Sick leave's one exception: nobody can predict being sick, so it can be filed up to 7 days
+// back (the same window Overtime already allows, for the same reason).
+const sickMinKey = () => toDateKey(new Date(Date.now() - 7 * 86400000));
+
 export default function Leave() {
   const { toast } = useToast();
   const { user: authUser } = useAuth();
@@ -640,7 +644,7 @@ export default function Leave() {
               type="date"
               required
               value={applyForm.startDate}
-              min={applyForm.leaveType === 'Sick' ? toDateKey(new Date(Date.now() - 7 * 86400000)) : todayKey()}
+              min={applyForm.leaveType === 'Sick' ? sickMinKey() : todayKey()}
               onChange={(e) => {
                 const startDate = e.target.value;
                 setApplyForm((f) => ({

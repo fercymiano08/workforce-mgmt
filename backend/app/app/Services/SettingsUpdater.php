@@ -6,7 +6,7 @@ use App\Models\Setting;
 
 /**
  * Writes to the single settings row from outside the Settings page: the kiosk config and which
- * insights an administrator has resolved/unresolved in the AI Insights & Decisions tab.
+ * insights an administrator has resolved/unresolved in the AI Decision Support tab.
  */
 class SettingsUpdater
 {
