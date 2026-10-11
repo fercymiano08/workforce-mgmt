@@ -29,7 +29,6 @@ const Reports = lazy(() => import('./pages/HR_Manager/Reports'));
 const HRSettings = lazy(() => import('./pages/HR_Manager/Settings'));
 const EmployeeSettings = lazy(() => import('./pages/Employee/Settings'));
 const MyProfile = lazy(() => import('./pages/Employee/MyProfile'));
-const AIDecisionSupport = lazy(() => import('./pages/HR_Manager/AIDecisionSupport'));
 const MyAttendance = lazy(() => import('./pages/Employee/MyAttendance'));
 const MySchedule = lazy(() => import('./pages/Employee/MySchedule'));
 const MyTimesheet = lazy(() => import('./pages/Employee/MyTimesheet'));
@@ -93,7 +92,6 @@ function AppRoutes() {
       <Route path="/my-schedule" element={<PrivateLayout><EmployeeRoute><MySchedule /></EmployeeRoute></PrivateLayout>} />
       <Route path="/analytics" element={<PrivateLayout adminOnly><Analytics /></PrivateLayout>} />
       <Route path="/reports" element={<PrivateLayout adminOnly><Reports /></PrivateLayout>} />
-      <Route path="/ai-decision-support" element={<PrivateLayout adminOnly><AIDecisionSupport /></PrivateLayout>} />
       <Route path="/audit-logs" element={<PrivateLayout adminOnly><AuditLogs /></PrivateLayout>} />
       <Route path="/my-profile" element={<PrivateLayout><EmployeeRoute><MyProfile /></EmployeeRoute></PrivateLayout>} />
       <Route path="/notifications" element={<PrivateLayout><Notifications /></PrivateLayout>} />

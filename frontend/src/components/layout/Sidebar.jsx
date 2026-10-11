@@ -4,7 +4,7 @@ import {
   LayoutDashboard, Users, Clock, Calendar, FileText,
   CalendarDays, BarChart3, FileBarChart, Settings,
   LogOut, AlertTriangle, Fingerprint, CalendarClock, FileClock,
-  Brain, SlidersHorizontal, ScrollText, User
+  SlidersHorizontal, ScrollText, User
 } from 'lucide-react';
 import clsx from 'clsx';
 import Avatar from '../ui/Avatar';
@@ -41,8 +41,9 @@ const adminMenuGroups = [
   {
     label: 'nav.group.analytics',
     items: [
-      { path: '/analytics', key: 'nav.analytics', icon: BarChart3 },
-      { path: '/ai-decision-support', key: 'nav.aiDecisionSupport', icon: Brain, badgeName: 'ai' },
+      // AI Insights & Decisions lives inside Analytics now (its own tab) rather than a separate
+      // page, so the unresolved-insights badge moves here too.
+      { path: '/analytics', key: 'nav.analytics', icon: BarChart3, badgeName: 'ai' },
       { path: '/reports', key: 'nav.reports', icon: FileBarChart },
     ],
   },

@@ -1,4 +1,5 @@
 import { useMemo, useState } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import {
   BarChart, Bar, Cell, PieChart, Pie, LineChart, Line,
   XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend
@@ -7,6 +8,8 @@ import { Printer, TrendingUp, Percent, Clock, Trophy, CalendarDays } from 'lucid
 import Card, { CardHeader, CardTitle, CardDescription } from '../../components/ui/Card';
 import Button from '../../components/ui/Button';
 import FormulaInfo from '../../components/analytics/FormulaInfo';
+import AIInsightsPanel from '../../components/analytics/AIInsightsPanel';
+import EmployeeAnalytics from '../../components/analytics/EmployeeAnalytics';
 import {
   lowercaseLeaveTypeColors, lowercaseLeaveTypeLabels,
 } from '../../constants/leaveTypes';
@@ -15,6 +18,15 @@ import useApiData from '../../hooks/useApiData';
 import { SkeletonPage } from '../../components/ui/LoadingSkeleton';
 import { useTheme } from '../../context/ThemeContext';
 import { chartTheme } from '../../constants/chartTheme';
+
+// AI Insights & Decisions used to be its own page; a panel review asked for it to live and work
+// together with Workforce Analytics instead, so it is now this page's second tab. "By Employee" is
+// new - the single-employee drill-down the same review asked for.
+const TABS = [
+  { key: 'overview', label: 'Overview' },
+  { key: 'ai', label: 'AI Insights & Decisions' },
+  { key: 'employee', label: 'By Employee' },
+];
 
 // Re-keyed from the shared palette rather than hand-written here, so this page, the dashboard
 // pie and the leave badges cannot drift apart. The API returns these types as lowercase keys.
@@ -106,7 +118,7 @@ function KpiTile({ label, value, icon: Icon, tone, hint }) {
  * drives all 6 cards together, and the printer button turns this same page into a self-contained
  * handout (every formula prints inline, see MainLayout's print:hidden chrome).
  */
-export default function Analytics() {
+function AnalyticsOverview() {
   const { isDark } = useTheme();
   const chart = chartTheme(isDark);
   const LEAVE_TYPE_COLORS = lowercaseLeaveTypeColors(isDark);
@@ -424,6 +436,38 @@ export default function Analytics() {
           )}
         </Card>
       </div>
+    </div>
+  );
+}
+
+/** The page shell: a tab bar over Overview (above), AI Insights & Decisions, and By Employee. */
+export default function Analytics() {
+  const [searchParams, setSearchParams] = useSearchParams();
+  const requested = searchParams.get('tab');
+  const tab = TABS.some((t) => t.key === requested) ? requested : 'overview';
+
+  const setTab = (key) => setSearchParams(key === 'overview' ? {} : { tab: key });
+
+  return (
+    <div className="space-y-6 animate-fadeIn">
+      <div className="flex items-center gap-1 border-b border-gray-200 print:hidden overflow-x-auto">
+        {TABS.map((t) => (
+          <button
+            key={t.key}
+            type="button"
+            onClick={() => setTab(t.key)}
+            className={`px-4 py-2.5 text-sm font-semibold whitespace-nowrap border-b-2 -mb-px transition-colors ${
+              tab === t.key ? 'border-blue-600 text-blue-600' : 'border-transparent text-gray-500 hover:text-gray-700'
+            }`}
+          >
+            {t.label}
+          </button>
+        ))}
+      </div>
+
+      {tab === 'overview' && <AnalyticsOverview />}
+      {tab === 'ai' && <AIInsightsPanel />}
+      {tab === 'employee' && <EmployeeAnalytics />}
     </div>
   );
 }

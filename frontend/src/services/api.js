@@ -409,6 +409,11 @@ export const analyticsService = {
     const { data } = await http.get('/analytics/workforce', { params: { period } });
     return data;
   },
+  // The "By Employee" tab - same This Week/Month/Year window as getWorkforce(), for one person.
+  getEmployeeCard: async (employeeId, period) => {
+    const { data } = await http.get(`/analytics/employee/${employeeId}`, { params: { period } });
+    return data;
+  },
   getAiInsights: async (fresh = false) => {
     const { data } = await http.get('/analytics/ai/insights', { params: fresh ? { refresh: 1 } : undefined });
     return data;

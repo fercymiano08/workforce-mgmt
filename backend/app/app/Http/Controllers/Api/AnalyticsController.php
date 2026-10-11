@@ -47,6 +47,19 @@ class AnalyticsController extends Controller
         return response()->json(['data' => $this->analytics->workforceCards($period)]);
     }
 
+    /** The "By Employee" tab inside Workforce Analytics - the same window as workforce(), for one person. */
+    public function employee(Request $request, string $employeeId): JsonResponse
+    {
+        if (! \App\Models\Employee::where('id', $employeeId)->exists()) {
+            return response()->json(['message' => 'Employee not found'], 404);
+        }
+
+        $period = $request->query('period');
+        $period = in_array($period, AnalyticsService::VALID_WORKFORCE_PERIODS, true) ? $period : 'month';
+
+        return response()->json(['data' => $this->analytics->employeeCard($employeeId, $period)]);
+    }
+
     public function section(Request $request, string $section): JsonResponse
     {
         $map = [

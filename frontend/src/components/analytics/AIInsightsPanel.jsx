@@ -69,7 +69,10 @@ function fmtTime(iso) {
   return new Date(iso).toLocaleString('en-US', { timeZone: 'Asia/Manila', month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' });
 }
 
-export default function AIDecisionSupport() {
+// The AI Insights & Decisions tab inside Workforce Analytics - moved here from its own page (a
+// panel review asked for the two to work together rather than live apart). Unchanged otherwise:
+// same health score, "Do First" list, Decision Queue and AI Insights sub-tabs as before.
+export default function AIInsightsPanel() {
   const { t } = useLanguage();
   const { toast } = useToast();
   const navigate = useNavigate();
@@ -522,18 +525,20 @@ export default function AIDecisionSupport() {
 
   return (
     <div className="space-y-6 animate-fadeIn">
+      {/* A section header, not a page header - Workforce Analytics' own <h1> is above this tab. */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div className="flex items-center gap-3">
-          <div className="w-10 h-10 rounded-xl bg-blue-50 flex items-center justify-center">
-            <Brain className="w-5 h-5 text-blue-600" />
+          <div className="w-9 h-9 rounded-xl bg-blue-50 flex items-center justify-center shrink-0">
+            <Brain className="w-4.5 h-4.5 text-blue-600" />
           </div>
           <div>
-            <h1 className="text-2xl font-bold text-gray-900">{t('aiDecisionSupport.title')}</h1>
-            <p className="text-[14px] text-gray-500 mt-1">{t('aiDecisionSupport.subtitle')}</p>
+            <h2 className="text-base font-semibold text-gray-900">{t('aiDecisionSupport.title')}</h2>
+            <p className="text-[13px] text-gray-500 mt-0.5">{t('aiDecisionSupport.subtitle')}</p>
           </div>
         </div>
         <Button
           variant="outline"
+          size="sm"
           onClick={() => { forceFresh.current = true; refresh(); insightsCtx?.refresh(); }}
           disabled={loading}
           className="sm:self-start"

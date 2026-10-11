@@ -5,7 +5,7 @@ import {
   Grid3X3, List, Mail, Phone, MapPin, User,
   Building, Briefcase, Calendar, Clock, Eye, Edit,
   Plus, Users, RefreshCw, Camera, CheckCircle2,
-  CheckCircle, ScanFace, Trash2, AlertTriangle
+  CheckCircle, ScanFace, Trash2, AlertTriangle, BarChart3
 } from 'lucide-react';
 import Card from '../../components/ui/Card';
 import Button from '../../components/ui/Button';
@@ -682,6 +682,11 @@ export default function Employees() {
                 </div>
               </div>
             )}
+            <div className="flex justify-end pt-2 border-t border-gray-100">
+              <Button variant="outline" icon={BarChart3} onClick={() => navigate(`/analytics?tab=employee&employeeId=${selectedEmployee.id}`)}>
+                View Analytics
+              </Button>
+            </div>
           </div>
         )}
       </Modal>

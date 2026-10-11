@@ -249,7 +249,7 @@ class KioskController extends Controller
                 'Face Mismatch at Kiosk',
                 "Someone tried to clock in as {$name}".($employeeId ? " (#{$employeeId})" : '').' but their face did not match the registered photo.',
                 'high',
-                '/ai-decision-support'
+                '/analytics?tab=ai'
             );
         }
     }

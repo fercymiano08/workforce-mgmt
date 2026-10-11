@@ -2,7 +2,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
   Search, Users, User, CalendarCheck, CalendarDays, Clock, ClipboardList, BarChart3, FileBarChart,
-  ShieldCheck, Settings, Bell, ScanFace, UserPlus, CornerDownLeft, Loader2, FileText, X, History,
+  ShieldCheck, Settings, Bell, ScanFace, UserPlus, CornerDownLeft, Loader2, X, History,
   Timer, LogOut, FileWarning, SearchX,
 } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
@@ -22,9 +22,9 @@ const ADMIN_PAGES = [
   { key: 'shifts', labelKey: 'nav.shifts', path: '/shifts', icon: Clock, terms: 'shifts schedule scheduling roster' },
   { key: 'timesheets', labelKey: 'nav.timesheets', path: '/timesheets', icon: ClipboardList, terms: 'timesheets timesheet hours payroll week' },
   { key: 'leave', labelKey: 'nav.leave', path: '/leave', icon: CalendarDays, terms: 'leave leaves requests vacation sick approval' },
-  { key: 'analytics', labelKey: 'nav.analytics', path: '/analytics', icon: BarChart3, terms: 'analytics workforce charts statistics trends dashboard' },
+  // AI Insights & Decisions lives inside Analytics now (its own tab), not a separate page.
+  { key: 'analytics', labelKey: 'nav.analytics', path: '/analytics', icon: BarChart3, terms: 'analytics workforce charts statistics trends dashboard ai insights decisions support' },
   { key: 'reports', labelKey: 'nav.reports', path: '/reports', icon: FileBarChart, terms: 'reports report export pdf csv' },
-  { key: 'ai', labelKey: 'nav.aiDecisionSupport', path: '/ai-decision-support', icon: FileText, terms: 'ai insights decisions support' },
   { key: 'audit', labelKey: 'nav.auditLogs', path: '/audit-logs', icon: ShieldCheck, terms: 'audit logs activity trail security' },
   { key: 'registration', labelKey: 'nav.employeeRegistration', path: '/employee-registration', icon: UserPlus, terms: 'registration register new employee onboarding' },
   { key: 'kiosk', labelKey: 'nav.kioskSetup', path: '/kiosk-setup', icon: ScanFace, terms: 'kiosk terminal tablet face setup' },

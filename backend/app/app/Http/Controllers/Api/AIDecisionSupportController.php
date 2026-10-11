@@ -72,7 +72,7 @@ class AIDecisionSupportController extends Controller
                 'Kiosk Security Alert',
                 'Escalated by '.($request->user()?->name ?? 'HR').": {$event->message}.",
                 'high',
-                '/ai-decision-support'
+                '/analytics?tab=ai'
             );
         } else {
             SecurityEvents::resolveSecurityEvent($id, $request->user()?->name);

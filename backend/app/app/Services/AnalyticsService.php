@@ -142,8 +142,8 @@ class AnalyticsService
         for ($i = 0; $i < 6; $i++) {
             $m = $start->copy()->addMonths($i);
             $months->put($m->format('Y-m'), [
-                'month' => $m->format('M Y'), 'vacation' => 0, 'sick' => 0, 'emergency' => 0,
-                'special' => 0, 'funeral' => 0, 'unpaid' => 0, 'total' => 0,
+                'month' => $m->format('M Y'), 'vacation' => 0, 'sick' => 0, 'special' => 0,
+                'bereavement' => 0, 'maternity' => 0, 'paternity' => 0, 'unpaid' => 0, 'total' => 0,
             ]);
         }
 
@@ -423,6 +423,111 @@ class AnalyticsService
     }
 
     /**
+     * The "By Employee" tab: the same This Week/Month/Year window as workforceCards() above, read
+     * for one person instead of the whole company - the drill-down a panel review asked Workforce
+     * Analytics to grow ("starting from a single employee to the entire system").
+     */
+    public function employeeCard(string $employeeId, string $period): array
+    {
+        $employee = Employee::find($employeeId);
+        $range = $this->periodRange($period);
+        $buckets = $this->subBuckets($range['key'], $range['start'], $range['containerEnd']);
+        $from = $range['start']->toDateString();
+        $to = $range['end']->toDateString();
+
+        $attendanceRows = Attendance::where('employee_id', $employeeId)
+            ->whereBetween('date', [$from, $to])
+            ->selectRaw('status, COUNT(*) as c')->groupBy('status')->pluck('c', 'status');
+        $onTime = (int) ($attendanceRows['Present'] ?? 0);
+        $late = (int) ($attendanceRows['Late'] ?? 0);
+        $earlyLeave = (int) ($attendanceRows['Early Leave'] ?? 0);
+        $absent = (int) ($attendanceRows['Absent'] ?? 0);
+        $totalRecords = $onTime + $late + $earlyLeave + $absent;
+        $presentDays = $onTime + $late + $earlyLeave;
+
+        $scheduledDays = ShiftSchedule::where('employee_id', $employeeId)->where('status', 'Scheduled')
+            ->whereBetween('date', [$from, $to])->count();
+        $attendanceRate = $scheduledDays > 0 ? round($presentDays / $scheduledDays * 100, 1) : 0.0;
+        $punctualityRate = $presentDays > 0 ? round($onTime / $presentDays * 100, 1) : 0.0;
+
+        // Same sub-buckets the system-wide cards use, so this trend reads the same way as theirs.
+        $punctualityTrend = array_map(function ($b) use ($employeeId) {
+            $rows = Attendance::where('employee_id', $employeeId)
+                ->whereBetween('date', [$b['from']->toDateString(), $b['to']->toDateString()])
+                ->selectRaw('status, COUNT(*) as c')->groupBy('status')->pluck('c', 'status');
+            $on = (int) ($rows['Present'] ?? 0);
+            $present = $on + (int) ($rows['Late'] ?? 0) + (int) ($rows['Early Leave'] ?? 0);
+
+            return ['label' => $b['label'], 'rate' => $present > 0 ? round($on / $present * 100, 1) : 0.0];
+        }, $buckets);
+
+        $leaveRows = Leave::where('employee_id', $employeeId)->where('status', 'Approved')
+            ->whereBetween('start_date', [$from, $to])
+            ->get(['leave_type', 'days']);
+        $leaveByType = $leaveRows->groupBy('leave_type')->map(fn ($rows) => round((float) $rows->sum('days'), 1))->all();
+
+        $overtimeHours = (float) Attendance::where('employee_id', $employeeId)
+            ->whereBetween('date', [$from, $to])->sum('overtime');
+
+        return [
+            'employee' => $employee ? [
+                'id' => $employee->id,
+                'name' => trim($employee->first_name.' '.$employee->last_name),
+                'department' => $employee->department,
+                'position' => $employee->position,
+                'avatar' => $employee->avatar,
+                'probationary' => $employee->isProbationary(),
+            ] : null,
+            'period' => ['key' => $range['key'], 'from' => $from, 'to' => $range['end']->toDateString(), 'label' => $range['label']],
+            'attendance' => [
+                'onTime' => $onTime, 'late' => $late, 'earlyLeave' => $earlyLeave, 'absent' => $absent,
+                'totalRecords' => $totalRecords, 'presentDays' => $presentDays, 'scheduledDays' => $scheduledDays,
+                'rate' => $attendanceRate,
+            ],
+            'punctuality' => ['rate' => $punctualityRate, 'trend' => $punctualityTrend],
+            'leave' => [
+                'daysUsed' => round((float) $leaveRows->sum('days'), 1),
+                'byType' => $leaveByType,
+                'balances' => $employee?->leaveBalances() ?? [],
+            ],
+            'overtime' => ['hours' => round($overtimeHours, 1)],
+            'performance' => $this->punctualityPerformance($punctualityRate, $attendanceRate, $totalRecords),
+        ];
+    }
+
+    /**
+     * A plain-language read of punctuality + attendance for this one person, nothing more. A panel
+     * review asked whether punctuality alone can call someone "a good performer" - it cannot, so
+     * this deliberately never claims to: it names only what it actually measures (showing up, and
+     * on time), and says so in its own note, leaving output, quality and peer feedback to an
+     * actual review.
+     */
+    private function punctualityPerformance(float $punctualityRate, float $attendanceRate, int $sampleSize): array
+    {
+        if ($sampleSize < 5) {
+            return [
+                'label' => 'Not enough data yet', 'tone' => 'default', 'score' => null,
+                'note' => 'Fewer than 5 attendance records in this period - too little to read anything from yet.',
+            ];
+        }
+
+        $score = round(($punctualityRate + $attendanceRate) / 2, 1);
+        [$label, $tone] = match (true) {
+            $score >= 90 => ['Consistently punctual and present', 'success'],
+            $score >= 75 => ['Generally punctual and present', 'info'],
+            $score >= 50 => ['Frequently late or absent', 'warning'],
+            default => ['Rarely on time or present', 'danger'],
+        };
+
+        return [
+            'label' => $label,
+            'tone' => $tone,
+            'score' => $score,
+            'note' => 'Based only on attendance and punctuality for this period - not a full performance review. Output, quality and peer feedback are not something this system tracks.',
+        ];
+    }
+
+    /**
      * Resolves week|month|year (anything else falls back to month) to a date window in the
      * company's own timezone. 'end' is capped at today - a card never asks about a day that
      * has not happened yet - while 'containerEnd' keeps the whole period's natural boundary
@@ -626,7 +731,7 @@ class AnalyticsService
     /** Card 3: "Leave Trends" - approved leave days (not requests), summed per type per sub-bucket. */
     private function leaveTrendForPeriod(array $range, array $buckets): array
     {
-        $types = ['vacation', 'sick', 'emergency', 'special', 'funeral', 'unpaid'];
+        $types = ['vacation', 'sick', 'special', 'bereavement', 'maternity', 'paternity', 'unpaid'];
 
         $rows = Leave::where('status', 'Approved')
             ->whereBetween('start_date', [$range['start']->toDateString(), $range['end']->toDateString()])
@@ -743,7 +848,7 @@ class AnalyticsService
     /** Card 6: "Leave Type Composition" - approved requests only; counted, not summed in days. */
     private function leaveComposition(array $range): array
     {
-        $types = ['vacation', 'sick', 'emergency', 'special', 'funeral', 'unpaid'];
+        $types = ['vacation', 'sick', 'special', 'bereavement', 'maternity', 'paternity', 'unpaid'];
 
         $rows = Leave::where('status', 'Approved')
             ->whereBetween('start_date', [$range['start']->toDateString(), $range['end']->toDateString()])
