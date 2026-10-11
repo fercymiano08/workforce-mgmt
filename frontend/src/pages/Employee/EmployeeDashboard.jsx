@@ -19,7 +19,7 @@ import Button from '../../components/ui/Button';
 import KpiCard from '../../components/dashboard/KpiCard';
 import { SkeletonList, SkeletonPage } from '../../components/ui/LoadingSkeleton';
 import useApiData from '../../hooks/useApiData';
-import { attendanceService, leaveService, shiftService, timesheetService } from '../../services/api';
+import { attendanceService, leaveService, shiftService, timesheetService, profileService } from '../../services/api';
 import { formatDate, formatTime } from '../../utils/helpers';
 import { didAttend } from '../../utils/constants';
 import { useTheme } from '../../context/ThemeContext';
@@ -34,6 +34,14 @@ const leaveTypeBadge = (type) => {
 const statusBadge = (status) => {
   const map = { Approved: 'success', Pending: 'warning', Rejected: 'danger' };
   return map[status] || 'default';
+};
+
+// Still in their first 30 days - shown so a manager glancing at the dashboard knows not to treat
+// them the same as someone with a year of tenure (probation rules, leave eligibility, etc.).
+const isNewHire = (hireDate) => {
+  if (!hireDate) return false;
+  const days = (Date.now() - new Date(hireDate).getTime()) / 86400000;
+  return days >= 0 && days <= 30;
 };
 
 const EmptyChart = ({ message }) => (
@@ -80,6 +88,10 @@ export default function EmployeeDashboard() {
   const { user } = useAuth();
   const navigate = useNavigate();
   const employeeId = user?.id || 'EMP001';
+
+  // The signed-in session only carries name/email/role - department, position and employment type
+  // live on the Employee record itself, same as My Profile reads them.
+  const { data: profile } = useApiData(() => profileService.get(), []);
 
   const { data: attendanceRecords, loading: loadingAttendance } = useApiData(
     () => attendanceService.getByEmployeeId(employeeId),
@@ -293,16 +305,27 @@ export default function EmployeeDashboard() {
             </div>
             <p className="text-sm text-gray-400 mt-1">Here's what's happening with your work today.</p>
             <div className="flex flex-wrap items-center gap-2 mt-3">
-              {user?.department && (
+              {profile?.department && (
                 <span className="inline-flex items-center gap-1.5 text-[11px] font-semibold px-2.5 py-1 rounded-full bg-gray-100 text-gray-600">
                   <Building2 className="w-3 h-3" />
-                  {user.department}
+                  {profile.department}
                 </span>
               )}
-              {user?.position && (
+              {profile?.position && (
                 <span className="inline-flex items-center gap-1.5 text-[11px] font-semibold px-2.5 py-1 rounded-full bg-gray-100 text-gray-600">
                   <Briefcase className="w-3 h-3" />
-                  {user.position}
+                  {profile.position}
+                </span>
+              )}
+              {profile?.employmentType && (
+                <span className="inline-flex items-center gap-1.5 text-[11px] font-semibold px-2.5 py-1 rounded-full bg-indigo-50 text-indigo-700">
+                  <BadgeCheck className="w-3 h-3" />
+                  {profile.employmentType}
+                </span>
+              )}
+              {isNewHire(profile?.hireDate) && (
+                <span className="inline-flex items-center gap-1.5 text-[11px] font-semibold px-2.5 py-1 rounded-full bg-amber-50 text-amber-700">
+                  New Hire
                 </span>
               )}
               <span className="inline-flex items-center gap-1.5 text-[11px] font-semibold px-2.5 py-1 rounded-full bg-emerald-50 text-emerald-700">
