@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Api;
 use App\Http\Controllers\Api\Concerns\AuthorizesEmployeeScope;
 use App\Http\Controllers\Api\Concerns\GeneratesSequentialIds;
 use App\Http\Controllers\Controller;
+use App\Models\Employee;
 use App\Models\Leave;
 use App\Models\ShiftDefinition;
 use App\Models\ShiftSchedule;
@@ -91,6 +92,95 @@ class ShiftController extends Controller
         AuditLogger::record('scheduling', 'schedule.created', 'ShiftSchedule', $record->id, actor: $request->user()?->name, after: $record->toApiArray(), meta: ['employeeId' => $record->employee_id]);
 
         return response()->json(['data' => $record->toApiArray()], 201);
+    }
+
+    /**
+     * Assign the same shift, on the same day, to several employees at once - replaces the automated
+     * scheduler (a panel review called it unnecessary busywork when the shift is always the Standard
+     * Shift anyway: easier to just let HR tick everyone who needs it and assign once).
+     *
+     * Each employee is checked independently; one person's conflict (already has a shift, or is on
+     * approved leave that day) skips only them rather than failing the whole batch, and the skipped
+     * list says why.
+     */
+    public function createScheduleBulk(Request $request): JsonResponse
+    {
+        $data = $request->validate([
+            'employeeIds' => 'required|array|min:1|max:500',
+            'employeeIds.*' => 'required|string|max:20',
+            'shiftId' => 'required|string|max:20|exists:shift_definitions,id',
+            'date' => 'required|date',
+            'status' => 'required|string|max:50',
+        ]);
+
+        $employees = Employee::whereIn('id', $data['employeeIds'])->get(['id', 'first_name', 'last_name'])->keyBy('id');
+        $definition = ShiftDefinition::find($data['shiftId']);
+        $scheduledDate = Carbon::parse($data['date'])->toDateString();
+
+        // Already-scheduled and already-on-leave people for this one day, fetched once rather than
+        // once per employee in the loop below.
+        $alreadyScheduled = ShiftSchedule::whereDate('date', $scheduledDate)
+            ->whereIn('employee_id', $data['employeeIds'])
+            ->pluck('employee_id')->flip();
+        $onApprovedLeave = Leave::where('status', 'Approved')
+            ->whereIn('employee_id', $data['employeeIds'])
+            ->whereDate('start_date', '<=', $scheduledDate)
+            ->whereDate('end_date', '>=', $scheduledDate)
+            ->get(['employee_id', 'leave_type'])->keyBy('employee_id');
+
+        $created = [];
+        $skipped = [];
+
+        foreach ($data['employeeIds'] as $employeeId) {
+            $employee = $employees->get($employeeId);
+            $employeeName = $employee ? trim($employee->first_name.' '.$employee->last_name) : $employeeId;
+
+            if (! $employee) {
+                $skipped[] = ['employeeId' => $employeeId, 'employeeName' => $employeeName, 'reason' => 'Employee not found.'];
+            } elseif ($alreadyScheduled->has($employeeId)) {
+                $skipped[] = ['employeeId' => $employeeId, 'employeeName' => $employeeName, 'reason' => 'Already has a shift that day.'];
+            } elseif ($onApprovedLeave->has($employeeId)) {
+                $skipped[] = ['employeeId' => $employeeId, 'employeeName' => $employeeName, 'reason' => 'On approved '.$onApprovedLeave[$employeeId]->leave_type.' leave that day.'];
+            } else {
+                try {
+                    $record = ShiftSchedule::create([
+                        'id' => $this->nextIdFor(ShiftSchedule::class, 'SCH'),
+                        'employee_id' => $employeeId,
+                        'employee_name' => $employeeName,
+                        'shift_id' => $data['shiftId'],
+                        'date' => $scheduledDate,
+                        'status' => $data['status'],
+                    ]);
+                } catch (\Illuminate\Database\UniqueConstraintViolationException) {
+                    $skipped[] = ['employeeId' => $employeeId, 'employeeName' => $employeeName, 'reason' => 'Already has a shift that day.'];
+                    continue;
+                }
+
+                AuditLogger::record('scheduling', 'schedule.created', 'ShiftSchedule', $record->id,
+                    actor: $request->user()?->name, after: $record->toApiArray(),
+                    meta: ['employeeId' => $employeeId, 'bulk' => true]);
+
+                NotificationService::notifyEmployee(
+                    $employeeId,
+                    'shift_assigned',
+                    'Shift Assigned',
+                    'You have been assigned a new shift ('.($definition->name ?? $data['shiftId']).') on '.Carbon::parse($scheduledDate)->format('M d, Y').'.',
+                    'low',
+                    '/my-schedule'
+                );
+
+                $created[] = $record->toApiArray();
+            }
+        }
+
+        if (count($created) === 0) {
+            return response()->json([
+                'message' => 'Nothing could be saved: every selected employee already has a conflict for this day.',
+                'data' => ['created' => $created, 'skipped' => $skipped],
+            ], 422);
+        }
+
+        return response()->json(['data' => ['created' => $created, 'skipped' => $skipped]], 201);
     }
 
     /**

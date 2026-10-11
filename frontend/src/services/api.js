@@ -290,21 +290,18 @@ export const shiftService = {
     const { data } = await http.post('/shifts/schedules', payload);
     return data;
   },
+  // Assign the same shift/date to several employees at once - one person's conflict only skips
+  // them, so the result is { created: [...], skipped: [{ employeeId, employeeName, reason }] }.
+  createScheduleBulk: async (payload) => {
+    const { data } = await http.post('/shifts/schedules/bulk', payload);
+    return data;
+  },
   updateSchedule: async (id, payload) => {
     const { data } = await http.put(`/shifts/schedules/${id}`, payload);
     return data;
   },
   deleteSchedule: async (id) => {
     const { data } = await http.delete(`/shifts/schedules/${id}`);
-    return data;
-  },
-  // Automated shift scheduling (admin): the rules build a draft (nothing is saved), HR approves it.
-  previewAutomated: async (payload) => {
-    const { data } = await http.post('/shifts/automated/preview', payload);
-    return data;
-  },
-  approveAutomated: async (payload) => {
-    const { data } = await http.post('/shifts/automated/approve', payload);
     return data;
   },
 };

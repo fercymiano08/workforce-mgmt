@@ -1,7 +1,7 @@
 import { useState, useMemo, useEffect } from 'react';
 import {
   CalendarDays, Clock, Edit, Check,
-  Zap, Search, FilterX, Trash2, AlertTriangle, Bot, UserPlus,
+  Zap, Search, FilterX, Trash2, AlertTriangle, UserPlus,
   Flame, ChevronLeft, ChevronRight, Users,
 } from 'lucide-react';
 import Card, { CardTitle, CardDescription } from '../../components/ui/Card';
@@ -11,7 +11,6 @@ import Badge from '../../components/ui/Badge';
 import Avatar from '../../components/ui/Avatar';
 import Modal from '../../components/ui/Modal';
 import EmployeePicker from '../../components/scheduling/EmployeePicker';
-import AutomatedShiftModal from '../../components/scheduling/AutomatedShiftModal';
 import Input, { Textarea } from '../../components/ui/Input';
 import { employeeService, shiftService } from '../../services/api';
 import { formatDate, formatTime } from '../../utils/helpers';
@@ -45,13 +44,13 @@ export default function Shifts() {
   const { data: shiftSchedules, refresh: refreshSchedules, loading: loadingShiftSchedules } = useApiData(() => shiftService.getSchedules(), []);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingSchedule, setEditingSchedule] = useState(null);
-  const [formData, setFormData] = useState({ employeeId: '', shiftId: '', date: '', notes: '' });
+  // employeeId (single) drives Edit; employeeIds (multi) drives a new Assign - never both.
+  const [formData, setFormData] = useState({ employeeId: '', employeeIds: [], shiftId: '', date: '', notes: '' });
   const [formErrors, setFormErrors] = useState({});
   const [searchQuery, setSearchQuery] = useUrlSearch();
   const [departmentFilter, setDepartmentFilter] = useState('');
   const [dateFilter, setDateFilter] = useState('');
   const [statusFilter, setStatusFilter] = useState('');
-  const [automationOpen, setAutomationOpen] = useState(false);
   const [deleteTarget, setDeleteTarget] = useState(null);
   const [deleting, setDeleting] = useState(false);
   const [calMonthOffset, setCalMonthOffset] = useState(0);
@@ -158,13 +157,13 @@ export default function Shifts() {
   const openAdd = (presetDate) => {
     if (noShiftTemplates()) return;
     setEditingSchedule(null);
-    setFormData({ employeeId: '', shiftId: standardShift?.id || '', date: presetDate || '', notes: '' });
+    setFormData({ employeeId: '', employeeIds: [], shiftId: standardShift?.id || '', date: presetDate || '', notes: '' });
     setFormErrors({});
     setIsModalOpen(true);
   };
   const openEdit = (schedule) => {
     setEditingSchedule(schedule);
-    setFormData({ employeeId: schedule.employeeId, shiftId: schedule.shiftId, date: schedule.date, notes: '' });
+    setFormData({ employeeId: schedule.employeeId, employeeIds: [], shiftId: schedule.shiftId, date: schedule.date, notes: '' });
     setFormErrors({});
     setIsModalOpen(true);
   };
@@ -186,7 +185,11 @@ export default function Shifts() {
 
   const validate = () => {
     const errs = {};
-    if (!formData.employeeId) errs.employeeId = 'Required';
+    if (editingSchedule) {
+      if (!formData.employeeId) errs.employeeId = 'Required';
+    } else if (!formData.employeeIds.length) {
+      errs.employeeId = 'Choose at least one employee';
+    }
     if (!formData.shiftId) errs.shiftId = 'Required';
     if (!formData.date) errs.date = 'Required';
     setFormErrors(errs);
@@ -195,25 +198,50 @@ export default function Shifts() {
 
   const handleSave = async () => {
     if (!validate()) return;
-    const employee = employees.find(e => e.id === formData.employeeId);
-    const employeeName = employee ? `${employee.firstName} ${employee.lastName}` : '';
-    const payload = { employeeId: formData.employeeId, employeeName, shiftId: formData.shiftId, date: formData.date, notes: formData.notes, status: 'Scheduled' };
-    try {
-      if (editingSchedule) {
-        await shiftService.updateSchedule(editingSchedule.id, payload);
+
+    if (editingSchedule) {
+      const employee = employees.find(e => e.id === formData.employeeId);
+      const employeeName = employee ? `${employee.firstName} ${employee.lastName}` : '';
+      try {
+        await shiftService.updateSchedule(editingSchedule.id, {
+          employeeId: formData.employeeId, employeeName, shiftId: formData.shiftId, date: formData.date, status: 'Scheduled',
+        });
         await refreshSchedules();
         toast.success('Shift Updated', `${employeeName}'s assignment was updated.`);
+      } catch (err) {
+        // Keep the form open (nothing typed is lost) and show the server's reason,
+        // e.g. "already has a shift on that day".
+        const data = err?.response?.data;
+        const firstFieldError = data?.errors ? Object.values(data.errors).flat()[0] : null;
+        toast.error('Could not save schedule', firstFieldError || data?.message || 'The server did not respond. Please try again.');
+        return;
+      }
+      setIsModalOpen(false);
+      return;
+    }
+
+    // New assignment: always bulk, even for one person picked - each employee is checked on
+    // their own, so one person's conflict only skips them instead of failing everyone.
+    try {
+      const { created = [], skipped = [] } = await shiftService.createScheduleBulk({
+        employeeIds: formData.employeeIds, shiftId: formData.shiftId, date: formData.date, status: 'Scheduled',
+      });
+      await refreshSchedules();
+      if (skipped.length) {
+        toast.success(
+          `Assigned ${created.length} of ${created.length + skipped.length}`,
+          `Skipped: ${skipped.map(s => `${s.employeeName} (${s.reason})`).join('; ')}`
+        );
       } else {
-        await shiftService.createSchedule(payload);
-        await refreshSchedules();
-        toast.success('Shift Assigned', `${employeeName} was scheduled for ${formData.date}.`);
+        toast.success('Shift Assigned', `${created.length} employee${created.length === 1 ? '' : 's'} scheduled for ${formData.date}.`);
       }
     } catch (err) {
-      // Keep the form open (nothing typed is lost) and show the server's reason,
-      // e.g. "already has a shift on that day".
       const data = err?.response?.data;
-      const firstFieldError = data?.errors ? Object.values(data.errors).flat()[0] : null;
-      toast.error('Could not save schedule', firstFieldError || data?.message || 'The server did not respond. Please try again.');
+      const skipped = data?.data?.skipped || [];
+      toast.error(
+        'Nothing could be saved',
+        skipped.length ? skipped.map(s => `${s.employeeName}: ${s.reason}`).join('; ') : (data?.message || 'The server did not respond. Please try again.')
+      );
       return;
     }
     setIsModalOpen(false);
@@ -418,9 +446,7 @@ export default function Shifts() {
               <CardDescription>Assign, review, and manage employee schedules</CardDescription>
             </div>
             <div className="flex items-center gap-2">
-              {/* Automated: the rules build a draft for a period, you review and approve it. Standard: you assign one shift to one person by hand. */}
-              <Button variant="outline" icon={Bot} onClick={() => setAutomationOpen(true)} title="Let the system build a schedule from your rules, then review and approve it">+ Automated Shift</Button>
-              <Button icon={UserPlus} onClick={() => openAdd()} title="Assign one shift to one person by hand">Standard Shift Assign</Button>
+              <Button icon={UserPlus} onClick={() => openAdd()} title="Pick one or more employees and assign the same shift to all of them">Assign Shift</Button>
             </div>
           </div>
 
@@ -522,27 +548,43 @@ export default function Shifts() {
       </Card>
 
       {/* Assign / Edit Modal */}
-      <Modal isOpen={isModalOpen} onClose={() => setIsModalOpen(false)} title={editingSchedule ? 'Edit Shift Assignment' : 'Standard Shift Assign'} size="xl">
+      <Modal isOpen={isModalOpen} onClose={() => setIsModalOpen(false)} title={editingSchedule ? 'Edit Shift Assignment' : 'Assign Shift'} size="xl">
         <div className="grid grid-cols-1 lg:grid-cols-5 gap-6">
           <div className="lg:col-span-3 space-y-2 min-w-0">
-            <span className="text-[13px] font-semibold text-gray-700 block">Who is this for?</span>
-            <EmployeePicker mode="single" employees={employees} value={formData.employeeId} onChange={(id) => setFormData({ ...formData, employeeId: id })} error={formErrors.employeeId} listHeight="max-h-[46vh]" />
-            {formErrors.employeeId && <p className="text-xs text-red-500">Choose an employee</p>}
+            <span className="text-[13px] font-semibold text-gray-700 block">{editingSchedule ? 'Who is this for?' : 'Who is this for? (pick one or several)'}</span>
+            {editingSchedule ? (
+              <EmployeePicker mode="single" employees={employees} value={formData.employeeId} onChange={(id) => setFormData({ ...formData, employeeId: id })} error={formErrors.employeeId} listHeight="max-h-[46vh]" />
+            ) : (
+              <EmployeePicker mode="multi" employees={employees} value={formData.employeeIds} onChange={(ids) => setFormData({ ...formData, employeeIds: ids })} error={formErrors.employeeId} listHeight="max-h-[46vh]" />
+            )}
+            {formErrors.employeeId && <p className="text-xs text-red-500">{formErrors.employeeId}</p>}
           </div>
 
           <div className="lg:col-span-2 space-y-5">
             <div>
-              <span className="text-[13px] font-semibold text-gray-700 block mb-1.5">Selected employee</span>
-              {selectedEmployee ? (
-                <div className="flex items-center gap-3 px-4 py-3 bg-blue-50/60 border border-blue-100 rounded-xl">
-                  <Avatar firstName={selectedEmployee.firstName} lastName={selectedEmployee.lastName} size="md" src={selectedEmployee.avatar} />
-                  <div className="flex-1 min-w-0">
-                    <p className="text-sm font-semibold text-gray-900 truncate">{selectedEmployee.firstName} {selectedEmployee.lastName}</p>
-                    <p className="text-xs text-gray-500 truncate">{selectedEmployee.department} · {selectedEmployee.position}</p>
+              <span className="text-[13px] font-semibold text-gray-700 block mb-1.5">{editingSchedule ? 'Selected employee' : 'Selected'}</span>
+              {editingSchedule ? (
+                selectedEmployee ? (
+                  <div className="flex items-center gap-3 px-4 py-3 bg-blue-50/60 border border-blue-100 rounded-xl">
+                    <Avatar firstName={selectedEmployee.firstName} lastName={selectedEmployee.lastName} size="md" src={selectedEmployee.avatar} />
+                    <div className="flex-1 min-w-0">
+                      <p className="text-sm font-semibold text-gray-900 truncate">{selectedEmployee.firstName} {selectedEmployee.lastName}</p>
+                      <p className="text-xs text-gray-500 truncate">{selectedEmployee.department} · {selectedEmployee.position}</p>
+                    </div>
+                    <Badge variant="success" size="xs">{selectedEmployee.status}</Badge>
                   </div>
-                  <Badge variant="success" size="xs">{selectedEmployee.status}</Badge>
+                ) : <p className="text-xs text-gray-400 px-1">Pick someone from the list on the left.</p>
+              ) : formData.employeeIds.length ? (
+                <div className="flex items-center gap-3 px-4 py-3 bg-blue-50/60 border border-blue-100 rounded-xl">
+                  <div className="w-10 h-10 rounded-xl bg-blue-100 text-blue-700 flex items-center justify-center shrink-0 font-semibold text-sm">
+                    {formData.employeeIds.length}
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <p className="text-sm font-semibold text-gray-900">{formData.employeeIds.length} employee{formData.employeeIds.length === 1 ? '' : 's'} selected</p>
+                    <p className="text-xs text-gray-500 truncate">Each gets the same shift and date</p>
+                  </div>
                 </div>
-              ) : <p className="text-xs text-gray-400 px-1">Pick someone from the list on the left.</p>}
+              ) : <p className="text-xs text-gray-400 px-1">Tick one or more people from the list on the left.</p>}
             </div>
 
             <div>
@@ -579,8 +621,6 @@ export default function Shifts() {
           <Button onClick={handleSave}>{editingSchedule ? 'Save Changes' : 'Assign Shift'}</Button>
         </div>
       </Modal>
-
-      <AutomatedShiftModal isOpen={automationOpen} onClose={() => setAutomationOpen(false)} employees={employees} shiftDefs={shiftDefs || []} onChanged={() => refreshSchedules()} />
 
       {/* Delete Confirmation */}
       <Modal isOpen={!!deleteTarget} onClose={closeDeleteSchedule} title="Delete Shift Assignment" size="sm">

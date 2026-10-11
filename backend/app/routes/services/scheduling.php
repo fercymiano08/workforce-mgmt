@@ -6,12 +6,11 @@
 |--------------------------------------------------------------------------
 | Domain  : shifts & schedules
 | Owns    : shift_definitions, shift_schedules, schedule_settings, holidays
-| Exposes : shift templates (read), schedule management, and automated shift scheduling
-|           (build a draft by the rules, then approve it)
+| Exposes : shift templates (read) and schedule management (single or bulk
+|           assign - see ShiftController::createScheduleBulk)
 |----------------------------------------------------------------------------
 */
 
-use App\Http\Controllers\Api\AutomatedShiftController;
 use App\Http\Controllers\Api\ShiftController;
 use Illuminate\Support\Facades\Route;
 
@@ -22,12 +21,9 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::middleware('admin')->group(function () {
             Route::get('/schedules', [ShiftController::class, 'schedules']);
             Route::post('/schedules', [ShiftController::class, 'createSchedule']);
+            Route::post('/schedules/bulk', [ShiftController::class, 'createScheduleBulk']);
             Route::put('/schedules/{id}', [ShiftController::class, 'updateSchedule']);
             Route::delete('/schedules/{id}', [ShiftController::class, 'destroySchedule']);
-
-            // Automated shift scheduling: the rules build a draft (preview), HR approves it (approve).
-            Route::post('/automated/preview', [AutomatedShiftController::class, 'preview']);
-            Route::post('/automated/approve', [AutomatedShiftController::class, 'approve']);
         });
         Route::get('/schedules/employee/{employeeId}', [ShiftController::class, 'schedulesByEmployee']);
     });
