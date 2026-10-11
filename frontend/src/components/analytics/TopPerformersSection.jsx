@@ -89,7 +89,7 @@ export default function TopPerformersSection({ data, loading, periodLabel, onSel
         <EmptyState
           icon={Trophy}
           title="Nothing to rank yet"
-          description={data?.meta?.notEnoughDataCount ? `${data.meta.notEnoughDataCount} employee(s) have too few attendance records this period to rank fairly.` : 'Fills in once attendance is recorded for this period.'}
+          description="Fills in once attendance is recorded for this period."
         />
       ) : (
         <>
@@ -174,7 +174,7 @@ export default function TopPerformersSection({ data, loading, periodLabel, onSel
 
           <p className="flex items-start gap-1.5 text-xs text-gray-400">
             <Info className="w-3.5 h-3.5 shrink-0 mt-0.5" /> {data?.meta?.note}
-            {data?.meta?.notEnoughDataCount > 0 && ` ${data.meta.notEnoughDataCount} employee(s) left off this list for that reason.`}
+            {data?.meta?.limitedDataCount > 0 && ` ${data.meta.limitedDataCount} employee(s) ranked on limited data (fewer than 5 attendance records this period).`}
           </p>
         </>
       )}

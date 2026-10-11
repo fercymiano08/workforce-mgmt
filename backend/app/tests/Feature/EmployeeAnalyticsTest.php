@@ -182,7 +182,7 @@ class EmployeeAnalyticsTest extends TestCase
         $this->assertSame('Consistently punctual and present', $ranked[0]['label']);
     }
 
-    public function test_an_employee_with_too_few_records_is_left_off_the_ranking(): void
+    public function test_an_employee_with_too_few_records_is_still_ranked_but_flagged(): void
     {
         Carbon::setTestNow('2026-06-15 10:00:00');
         $admin = $this->admin();
@@ -194,8 +194,11 @@ class EmployeeAnalyticsTest extends TestCase
             ->getJson('/api/analytics/top-performers?period=year')
             ->assertOk()->json('data');
 
-        $this->assertSame([], $data['ranked']);
-        $this->assertSame(1, $data['meta']['notEnoughDataCount']);
+        $this->assertCount(1, $data['ranked']);
+        $this->assertSame(1, $data['ranked'][0]['rank']);
+        $this->assertTrue($data['ranked'][0]['limitedData']);
+        $this->assertSame('Limited data so far', $data['ranked'][0]['label']);
+        $this->assertSame(1, $data['meta']['limitedDataCount']);
     }
 
     public function test_a_terminated_employee_is_never_ranked(): void

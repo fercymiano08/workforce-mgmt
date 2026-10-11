@@ -559,26 +559,34 @@ class AnalyticsService
             ->pluck('scheduled_days', 'employee_id');
 
         $ranked = [];
-        $notEnoughData = 0;
+        $limitedDataCount = 0;
 
+        // Every active employee gets a row - leaving someone off a roster of real accounts just
+        // because they haven't clocked in five times yet means the "Top 20" never actually has 20
+        // people in it. Fewer than 5 records still gets ranked, just flagged "Limited data" instead
+        // of a confident label, so it is honest about the roster being thin, not absent from it.
         foreach (Employee::where('status', 'Active')->orderBy('id')->get(['id', 'first_name', 'last_name', 'department', 'position', 'avatar', 'hire_date']) as $employee) {
             $att = $attendanceByEmployee->get($employee->id);
             $totalRecords = (int) ($att->total_records ?? 0);
-
-            if ($totalRecords < 5) {
-                // Too little data to read anything from (same floor punctualityPerformance()
-                // uses) - left out of the ranking entirely rather than ranked on noise.
-                $notEnoughData++;
-                continue;
-            }
-
             $presentDays = (int) ($att->present_days ?? 0);
             $onTime = (int) ($att->on_time ?? 0);
             $scheduledDays = (int) ($scheduledByEmployee->get($employee->id) ?? 0);
 
             $attendanceRate = $scheduledDays > 0 ? round($presentDays / $scheduledDays * 100, 1) : 0.0;
             $punctualityRate = $presentDays > 0 ? round($onTime / $presentDays * 100, 1) : 0.0;
-            $performance = $this->punctualityPerformance($punctualityRate, $attendanceRate, $totalRecords);
+            $limitedData = $totalRecords < 5;
+
+            if ($limitedData) {
+                $limitedDataCount++;
+                $label = 'Limited data so far';
+                $tone = 'default';
+                $score = round(($punctualityRate + $attendanceRate) / 2, 1);
+            } else {
+                $performance = $this->punctualityPerformance($punctualityRate, $attendanceRate, $totalRecords);
+                $label = $performance['label'];
+                $tone = $performance['tone'];
+                $score = $performance['score'];
+            }
 
             $ranked[] = [
                 'employeeId' => $employee->id,
@@ -590,9 +598,10 @@ class AnalyticsService
                 'attendanceRate' => $attendanceRate,
                 'punctualityRate' => $punctualityRate,
                 'records' => $totalRecords,
-                'score' => $performance['score'],
-                'label' => $performance['label'],
-                'tone' => $performance['tone'],
+                'score' => $score,
+                'label' => $label,
+                'tone' => $tone,
+                'limitedData' => $limitedData,
             ];
         }
 
@@ -607,8 +616,8 @@ class AnalyticsService
             'ranked' => $ranked,
             'meta' => [
                 'rankedCount' => count($ranked),
-                'notEnoughDataCount' => $notEnoughData,
-                'note' => 'Ranked by the same punctuality-based read as the By Employee tab (attendance + punctuality only) - not a full performance review. Employees with fewer than 5 attendance records this period are left off the list rather than ranked on too little data.',
+                'limitedDataCount' => $limitedDataCount,
+                'note' => 'Ranked by the same punctuality-based read as the By Employee tab (attendance + punctuality only) - not a full performance review. Everyone active is ranked; anyone with fewer than 5 attendance records this period is flagged "Limited data so far" rather than left off.',
             ],
         ];
     }
