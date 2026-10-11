@@ -528,6 +528,92 @@ class AnalyticsService
     }
 
     /**
+     * Ranks every active employee by the same punctuality-based read employeeCard() gives one
+     * person - a panel review asked directly for a "Top Performer" view, naming it as the thing
+     * missing from a page that was otherwise "puro graph" (all charts, nothing you can act on).
+     * One sortable table instead of picking people one at a time to find out who stands out.
+     *
+     * Two grouped queries cover every employee at once (not one query per person), the same shape
+     * employeeCard() uses for one: attendance counts per employee, and scheduled-day counts per
+     * employee, both narrowed to the period.
+     */
+    public function topPerformers(string $period): array
+    {
+        $range = $this->periodRange($period);
+        $from = $range['start']->toDateString();
+        $to = $range['end']->toDateString();
+
+        $attendanceByEmployee = Attendance::whereBetween('date', [$from, $to])
+            ->selectRaw("employee_id,
+                SUM(CASE WHEN status = 'Present' THEN 1 ELSE 0 END) as on_time,
+                SUM(CASE WHEN status IN ('Present','Late','Early Leave') THEN 1 ELSE 0 END) as present_days,
+                COUNT(*) as total_records")
+            ->groupBy('employee_id')
+            ->get()
+            ->keyBy('employee_id');
+
+        $scheduledByEmployee = ShiftSchedule::where('status', 'Scheduled')
+            ->whereBetween('date', [$from, $to])
+            ->selectRaw('employee_id, COUNT(*) as scheduled_days')
+            ->groupBy('employee_id')
+            ->pluck('scheduled_days', 'employee_id');
+
+        $ranked = [];
+        $notEnoughData = 0;
+
+        foreach (Employee::where('status', 'Active')->orderBy('id')->get(['id', 'first_name', 'last_name', 'department', 'position', 'avatar', 'hire_date']) as $employee) {
+            $att = $attendanceByEmployee->get($employee->id);
+            $totalRecords = (int) ($att->total_records ?? 0);
+
+            if ($totalRecords < 5) {
+                // Too little data to read anything from (same floor punctualityPerformance()
+                // uses) - left out of the ranking entirely rather than ranked on noise.
+                $notEnoughData++;
+                continue;
+            }
+
+            $presentDays = (int) ($att->present_days ?? 0);
+            $onTime = (int) ($att->on_time ?? 0);
+            $scheduledDays = (int) ($scheduledByEmployee->get($employee->id) ?? 0);
+
+            $attendanceRate = $scheduledDays > 0 ? round($presentDays / $scheduledDays * 100, 1) : 0.0;
+            $punctualityRate = $presentDays > 0 ? round($onTime / $presentDays * 100, 1) : 0.0;
+            $performance = $this->punctualityPerformance($punctualityRate, $attendanceRate, $totalRecords);
+
+            $ranked[] = [
+                'employeeId' => $employee->id,
+                'name' => trim($employee->first_name.' '.$employee->last_name),
+                'department' => $employee->department,
+                'position' => $employee->position,
+                'avatar' => $employee->avatar,
+                'probationary' => $employee->isProbationary(),
+                'attendanceRate' => $attendanceRate,
+                'punctualityRate' => $punctualityRate,
+                'records' => $totalRecords,
+                'score' => $performance['score'],
+                'label' => $performance['label'],
+                'tone' => $performance['tone'],
+            ];
+        }
+
+        usort($ranked, fn ($a, $b) => $b['score'] <=> $a['score']);
+        foreach ($ranked as $i => &$row) {
+            $row['rank'] = $i + 1;
+        }
+        unset($row);
+
+        return [
+            'period' => ['key' => $range['key'], 'from' => $from, 'to' => $range['end']->toDateString(), 'label' => $range['label']],
+            'ranked' => $ranked,
+            'meta' => [
+                'rankedCount' => count($ranked),
+                'notEnoughDataCount' => $notEnoughData,
+                'note' => 'Ranked by the same punctuality-based read as the By Employee tab (attendance + punctuality only) - not a full performance review. Employees with fewer than 5 attendance records this period are left off the list rather than ranked on too little data.',
+            ],
+        ];
+    }
+
+    /**
      * Resolves week|month|year (anything else falls back to month) to a date window in the
      * company's own timezone. 'end' is capped at today - a card never asks about a day that
      * has not happened yet - while 'containerEnd' keeps the whole period's natural boundary

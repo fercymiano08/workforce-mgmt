@@ -414,6 +414,11 @@ export const analyticsService = {
     const { data } = await http.get(`/analytics/employee/${employeeId}`, { params: { period } });
     return data;
   },
+  // The "Top Performer" tab - every active employee ranked by the same read as getEmployeeCard().
+  getTopPerformers: async (period) => {
+    const { data } = await http.get('/analytics/top-performers', { params: { period } });
+    return data;
+  },
   getAiInsights: async (fresh = false) => {
     const { data } = await http.get('/analytics/ai/insights', { params: fresh ? { refresh: 1 } : undefined });
     return data;

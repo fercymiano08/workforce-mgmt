@@ -10,6 +10,7 @@ import Button from '../../components/ui/Button';
 import FormulaInfo from '../../components/analytics/FormulaInfo';
 import AIInsightsPanel from '../../components/analytics/AIInsightsPanel';
 import EmployeeAnalytics from '../../components/analytics/EmployeeAnalytics';
+import TopPerformers from '../../components/analytics/TopPerformers';
 import {
   lowercaseLeaveTypeColors, lowercaseLeaveTypeLabels,
 } from '../../constants/leaveTypes';
@@ -20,10 +21,12 @@ import { useTheme } from '../../context/ThemeContext';
 import { chartTheme } from '../../constants/chartTheme';
 
 // AI Insights & Decisions used to be its own page; a panel review asked for it to live and work
-// together with Workforce Analytics instead, so it is now this page's second tab. "By Employee" is
-// new - the single-employee drill-down the same review asked for.
+// together with Workforce Analytics instead, so it is now this page's tab. "By Employee" and "Top
+// Performer" are new - a second review called the page "puro graph" (all charts, nothing you act
+// on) and named a ranked Top Performer view directly as what was missing.
 const TABS = [
   { key: 'overview', label: 'Overview' },
+  { key: 'top-performers', label: 'Top Performer' },
   { key: 'ai', label: 'AI Insights & Decisions' },
   { key: 'employee', label: 'By Employee' },
 ];
@@ -466,6 +469,7 @@ export default function Analytics() {
       </div>
 
       {tab === 'overview' && <AnalyticsOverview />}
+      {tab === 'top-performers' && <TopPerformers />}
       {tab === 'ai' && <AIInsightsPanel />}
       {tab === 'employee' && <EmployeeAnalytics />}
     </div>

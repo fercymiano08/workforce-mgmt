@@ -3,7 +3,7 @@
 > ## 10-second summary (say this if the panel asks "what is your project?")
 > We built **AI-Enhanced Workforce Management** for **Archon Nell Inc.**: a web app with
 > **Facial Recognition clock-in**, **Shift Scheduling**, **Leave Management**, **Weekly Timesheets**,
-> **Workforce Analytics** with built-in **AI Insights & Decisions** and a per-employee drill-down. Built with **React + Laravel + PostgreSQL**.
+> **Workforce Analytics** with built-in **AI Insights & Decisions**, a ranked **Top Performer** view, and a per-employee drill-down. Built with **React + Laravel + PostgreSQL**.
 > Users: Workforce Admin, Employees, and an entrance Clock-In kiosk device. Team of 5 under client **Junar Love Olarte**.
 > Deployed live on Render — see Deployment below for the links — alongside the usual local/Docker setup.
 

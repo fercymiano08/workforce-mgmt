@@ -47,6 +47,15 @@ class AnalyticsController extends Controller
         return response()->json(['data' => $this->analytics->workforceCards($period)]);
     }
 
+    /** The "Top Performer" tab: every active employee ranked by the same read "By Employee" gives one. */
+    public function topPerformers(Request $request): JsonResponse
+    {
+        $period = $request->query('period');
+        $period = in_array($period, AnalyticsService::VALID_WORKFORCE_PERIODS, true) ? $period : 'month';
+
+        return response()->json(['data' => $this->analytics->topPerformers($period)]);
+    }
+
     /** The "By Employee" tab inside Workforce Analytics - the same window as workforce(), for one person. */
     public function employee(Request $request, string $employeeId): JsonResponse
     {

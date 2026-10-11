@@ -19,6 +19,7 @@ Route::middleware('auth:sanctum')->prefix('analytics')->group(function () {
     Route::middleware('admin')->group(function () {
         Route::get('/', [AnalyticsController::class, 'getAll']);
         Route::get('/workforce', [AnalyticsController::class, 'workforce']);
+        Route::get('/top-performers', [AnalyticsController::class, 'topPerformers']);
         // The "By Employee" tab - declared before the single-segment {section} wildcard below so it
         // is never swallowed by it (not that it could be: {section} only ever matches one segment).
         Route::get('/employee/{employeeId}', [AnalyticsController::class, 'employee']);

@@ -151,4 +151,75 @@ class EmployeeAnalyticsTest extends TestCase
 
         $this->getJson('/api/analytics/employee/'.$e->id)->assertUnauthorized();
     }
+
+    // --- Top Performers --------------------------------------------------------------------------
+
+    public function test_employees_are_ranked_best_first_and_each_has_a_rank(): void
+    {
+        Carbon::setTestNow('2026-06-15 10:00:00');
+        $admin = $this->admin();
+        $star = $this->employee('EMP001');
+        $struggling = $this->employee('EMP002');
+
+        foreach (['2026-06-01', '2026-06-02', '2026-06-03', '2026-06-04', '2026-06-05'] as $date) {
+            $this->roster($star, $date);
+            $this->punch($star, $date, 'Present');
+            $this->roster($struggling, $date);
+            $this->punch($struggling, $date, 'Late');
+        }
+        // One extra absence for the struggling employee, so their attendance rate is also lower.
+        $this->roster($struggling, '2026-06-08');
+
+        $ranked = $this->actingAs($admin)
+            ->getJson('/api/analytics/top-performers?period=year')
+            ->assertOk()->json('data.ranked');
+
+        $this->assertSame('EMP001', $ranked[0]['employeeId']);
+        $this->assertSame(1, $ranked[0]['rank']);
+        $this->assertSame('EMP002', $ranked[1]['employeeId']);
+        $this->assertSame(2, $ranked[1]['rank']);
+        $this->assertGreaterThan($ranked[1]['score'], $ranked[0]['score']);
+        $this->assertSame('Consistently punctual and present', $ranked[0]['label']);
+    }
+
+    public function test_an_employee_with_too_few_records_is_left_off_the_ranking(): void
+    {
+        Carbon::setTestNow('2026-06-15 10:00:00');
+        $admin = $this->admin();
+        $e = $this->employee();
+        $this->roster($e, '2026-06-01');
+        $this->punch($e, '2026-06-01', 'Present');
+
+        $data = $this->actingAs($admin)
+            ->getJson('/api/analytics/top-performers?period=year')
+            ->assertOk()->json('data');
+
+        $this->assertSame([], $data['ranked']);
+        $this->assertSame(1, $data['meta']['notEnoughDataCount']);
+    }
+
+    public function test_a_terminated_employee_is_never_ranked(): void
+    {
+        Carbon::setTestNow('2026-06-15 10:00:00');
+        $admin = $this->admin();
+        $e = $this->employee();
+        $e->update(['status' => 'Terminated']);
+        foreach (['2026-06-01', '2026-06-02', '2026-06-03', '2026-06-04', '2026-06-05'] as $date) {
+            $this->roster($e, $date);
+            $this->punch($e, $date, 'Present');
+        }
+
+        $ranked = $this->actingAs($admin)
+            ->getJson('/api/analytics/top-performers?period=year')
+            ->assertOk()->json('data.ranked');
+
+        $this->assertSame([], $ranked);
+    }
+
+    public function test_an_employee_cannot_read_the_ranking(): void
+    {
+        $employeeUser = User::factory()->create(['role' => 'Employee', 'employee_id' => $this->employee()->id]);
+
+        $this->actingAs($employeeUser)->getJson('/api/analytics/top-performers')->assertForbidden();
+    }
 }

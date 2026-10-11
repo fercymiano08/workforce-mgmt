@@ -158,7 +158,7 @@ There are three roles. Each role logs in through the same login page but lands o
 | 9 | Shifts `HR_Manager/Shifts.jsx` | Admin | Manage shift templates + build weekly schedules |
 | 10 | Timesheets `HR_Manager/Timesheets.jsx` | Admin | Review each employee's week (summary cards, quick filters, sortable table), open a side panel with the day-by-day attendance, then approve or reject |
 | 11 | Reports `HR_Manager/Reports.jsx` | Admin | Build printable/CSV reports from live data |
-| 12-13 | Analytics `HR_Manager/Analytics.jsx` | Admin | Three tabs in one page: Overview (deep charts - trends, punctuality, productivity), AI Insights & Decisions (`components/analytics/AIInsightsPanel.jsx` - AI-generated insights + one-click decision queue, moved here from its own page), By Employee (`components/analytics/EmployeeAnalytics.jsx` - the same read for one person) |
+| 12-13 | Analytics `HR_Manager/Analytics.jsx` | Admin | Four tabs in one page: Overview (deep charts - trends, punctuality, productivity), Top Performer (`components/analytics/TopPerformers.jsx` - every active employee ranked by attendance+punctuality, a sortable table, not a chart), AI Insights & Decisions (`components/analytics/AIInsightsPanel.jsx` - AI-generated insights + one-click decision queue, moved here from its own page), By Employee (`components/analytics/EmployeeAnalytics.jsx` - the same read for one person) |
 | 14 | Settings `HR_Manager/Settings.jsx` | Admin | Company info, kiosk configuration, system options |
 | 15 | Employee Dashboard `Employee/EmployeeDashboard.jsx` | Employee | Personal home: today's status, quick stats, ID card header |
 | 16 | My Attendance `Employee/MyAttendance.jsx` | Employee | Own clock history and hours |
