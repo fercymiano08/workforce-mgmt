@@ -292,12 +292,18 @@ class AIDecisionSupportTest extends TestCase
             'type' => 'leave_approved',
         ]);
 
-        $reject = $this->actingAs($admin)
+        // A rejection always needs a reason - a bare id is refused.
+        $this->actingAs($admin)
             ->postJson('/api/analytics/ai/actions', ['action' => 'reject_leave', 'id' => 'LV002'])
+            ->assertStatus(422);
+
+        $reject = $this->actingAs($admin)
+            ->postJson('/api/analytics/ai/actions', ['action' => 'reject_leave', 'id' => 'LV002', 'reason' => 'No coverage available that week.'])
             ->assertOk()
             ->assertJson(['success' => true, 'action' => 'rejected', 'id' => 'LV002']);
 
         $this->assertSame('Rejected', Leave::find('LV002')?->status);
+        $this->assertSame('No coverage available that week.', Leave::find('LV002')?->comments);
         $this->assertDatabaseHas('notifications', [
             'employee_id' => $employee->id,
             'type' => 'leave_rejected',

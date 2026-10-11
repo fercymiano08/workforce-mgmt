@@ -9,6 +9,7 @@ import {
 import Card from '../../components/ui/Card';
 import Button from '../../components/ui/Button';
 import Modal from '../../components/ui/Modal';
+import { Textarea } from '../../components/ui/Input';
 import { SkeletonCard } from '../../components/ui/LoadingSkeleton';
 import { analyticsService } from '../../services/api';
 import useApiData from '../../hooks/useApiData';
@@ -80,6 +81,9 @@ export default function AIDecisionSupport() {
   const [queueFilter, setQueueFilter] = useState('all');
   const [pending, setPending] = useState(null);
   const [running, setRunning] = useState(false);
+  // A rejection from this queue needs a reason too - same rule as everywhere else a request can be rejected.
+  const [rejectReason, setRejectReason] = useState('');
+  const [rejectReasonError, setRejectReasonError] = useState('');
   const [showHandled, setShowHandled] = useState(false);
   const [applyPending, setApplyPending] = useState(null);
   // "Regenerate" asks Gemini again; everything else (opening the page, the sidebar badge) may reuse its recent wording
@@ -196,12 +200,19 @@ export default function AIDecisionSupport() {
     successMessage: resolve ? 'This problem is marked as handled.' : 'The insight is visible again.',
   });
 
+  const isRejection = pending?.action === 'reject_leave' || pending?.action === 'reject_overtime';
+
   const handleAction = async () => {
     if (!pending) return;
+    if (isRejection && rejectReason.trim().length < 5) {
+      setRejectReasonError('Please explain why this request is being rejected (at least a few words).');
+      return;
+    }
     const { action, payload, resolveKey, successTitle, successMessage } = pending;
+    const fullPayload = isRejection ? { ...payload, reason: rejectReason.trim() } : payload;
     setRunning(true);
     try {
-      const res = await analyticsService.runAiAction(action, payload);
+      const res = await analyticsService.runAiAction(action, fullPayload);
       if (res.queue) {
         setData((prev) => (prev ? { ...prev, queue: res.queue } : prev));
       } else if (resolveKey) {
@@ -427,7 +438,7 @@ export default function AIDecisionSupport() {
               variant="dangerOutline"
               size="sm"
               icon={XCircle}
-              onClick={() => setPending(queueDecision('reject', category, item))}
+              onClick={() => { setRejectReason(''); setRejectReasonError(''); setPending(queueDecision('reject', category, item)); }}
               disabled={running}
             >
               Reject
@@ -1071,6 +1082,17 @@ export default function AIDecisionSupport() {
                 <p className="text-xs text-gray-500 mt-1">{pending.note}</p>
               </div>
             </div>
+            {isRejection && (
+              <Textarea
+                label="Reason for rejection"
+                placeholder="Tell the employee why this request is being rejected..."
+                rows={3}
+                autoFocus
+                value={rejectReason}
+                onChange={(e) => { setRejectReason(e.target.value); setRejectReasonError(''); }}
+                error={rejectReasonError}
+              />
+            )}
             <div className="flex justify-end gap-2 pt-2 border-t border-gray-100">
               <Button variant="outline" onClick={() => setPending(null)} disabled={running}>Cancel</Button>
               <Button

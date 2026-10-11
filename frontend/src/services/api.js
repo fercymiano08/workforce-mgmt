@@ -263,8 +263,8 @@ export const leaveService = {
     const { data } = await http.put(`/leaves/${id}`, payload);
     return data;
   },
-  updateStatus: async (id, status, approvedBy) => {
-    const { data } = await http.patch(`/leaves/${id}/status`, { status, approvedBy });
+  updateStatus: async (id, status, approvedBy, comments) => {
+    const { data } = await http.patch(`/leaves/${id}/status`, { status, approvedBy, comments });
     return data;
   },
   delete: async (id) => {

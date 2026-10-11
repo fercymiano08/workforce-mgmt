@@ -11,15 +11,19 @@ use App\Models\OvertimeRequest;
  */
 class TimeOffActions
 {
-    public static function resolveLeave(string $id, string $status, ?string $approvedBy): void
+    public static function resolveLeave(string $id, string $status, ?string $approvedBy, ?string $reason = null): void
     {
         $record = Leave::find($id);
         if ($record) {
-            $record->update(['status' => $status, 'approved_by' => $approvedBy]);
+            $record->update([
+                'status' => $status,
+                'approved_by' => $approvedBy,
+                'comments' => $reason !== null ? $reason : $record->comments,
+            ]);
         }
     }
 
-    public static function resolveOvertime(string $id, string $status, ?string $approvedBy): void
+    public static function resolveOvertime(string $id, string $status, ?string $approvedBy, ?string $reason = null): void
     {
         $record = OvertimeRequest::find($id);
         if ($record) {
@@ -28,6 +32,7 @@ class TimeOffActions
                 'approved_by' => $approvedBy,
                 'approved_hours' => $status === 'Approved' ? $record->expected_hours : null,
                 'approved_at' => $status === 'Approved' ? now() : null,
+                'comments' => $reason !== null ? $reason : $record->comments,
             ]);
         }
     }

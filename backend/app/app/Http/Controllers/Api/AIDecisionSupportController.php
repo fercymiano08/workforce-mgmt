@@ -29,7 +29,15 @@ class AIDecisionSupportController extends Controller
             'action' => 'required|string|max:60',
             'id' => 'nullable|string|max:30',
             'key' => 'nullable|string|max:160',
+            'reason' => 'nullable|string|max:1000',
         ]);
+
+        // A rejection is never self-evident, so - same rule as the Leave Management and Dashboard
+        // reject flows - it always needs a reason, even from this quick-triage queue.
+        if (in_array($request->input('action'), ['reject_leave', 'reject_overtime'], true)
+            && mb_strlen(trim((string) $request->input('reason', ''))) < 5) {
+            return response()->json(['message' => 'Please explain why this request is being rejected (at least a few words).'], 422);
+        }
 
         return match ($request->input('action')) {
             'approve_leave' => $this->resolveLeave($request, 'Approved'),
@@ -104,8 +112,9 @@ class AIDecisionSupportController extends Controller
             return response()->json(['message' => 'Leave request not found or already resolved.'], 404);
         }
 
+        $reason = trim((string) $request->input('reason', '')) ?: null;
         $before = $record->toApiArray();
-        TimeOffActions::resolveLeave($id, $status, $request->user()?->name);
+        TimeOffActions::resolveLeave($id, $status, $request->user()?->name, $reason);
         $this->audit($request, 'leave.status_changed', 'Leave', $record->id, $before, $record->fresh()->toApiArray(),
             ['status' => $status, 'employeeId' => $record->employee_id, 'via' => 'AI Decision Support']);
 
@@ -123,7 +132,7 @@ class AIDecisionSupportController extends Controller
                 $record->employee_id,
                 'leave_rejected',
                 'Leave Rejected',
-                "Your {$record->leave_type} leave (".$record->start_date->format('M d').' – '.$record->end_date->format('M d').') has been rejected.',
+                "Your {$record->leave_type} leave (".$record->start_date->format('M d').' – '.$record->end_date->format('M d').') has been rejected: '.$reason,
                 'high',
                 '/leave'
             );
@@ -149,8 +158,9 @@ class AIDecisionSupportController extends Controller
             return response()->json(['message' => 'Overtime request not found or already resolved.'], 404);
         }
 
+        $reason = trim((string) $request->input('reason', '')) ?: null;
         $before = $record->toApiArray();
-        TimeOffActions::resolveOvertime($id, $status, $request->user()?->name);
+        TimeOffActions::resolveOvertime($id, $status, $request->user()?->name, $reason);
         $this->audit($request, 'overtime.status_changed', 'OvertimeRequest', $record->id, $before, $record->fresh()->toApiArray(),
             ['status' => $status, 'employeeId' => $record->employee_id, 'was' => 'Pending', 'via' => 'AI Decision Support']);
 
@@ -168,7 +178,7 @@ class AIDecisionSupportController extends Controller
                 $record->employee_id,
                 'overtime_rejected',
                 'Overtime Rejected',
-                'Your overtime request for '.$record->date->format('M d, Y').' has been rejected.',
+                'Your overtime request for '.$record->date->format('M d, Y').' has been rejected: '.$reason,
                 'high',
                 '/attendance'
             );

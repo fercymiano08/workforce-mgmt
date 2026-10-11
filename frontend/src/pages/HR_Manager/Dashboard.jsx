@@ -32,6 +32,7 @@ import { weekWithRecords, dayTick, weekRangeLabel } from '../../utils/today';
 import { formatDate } from '../../utils/helpers';
 import { openAttendanceReport } from '../../utils/attendanceReport';
 import Modal from '../../components/ui/Modal';
+import { Textarea } from '../../components/ui/Input';
 
 // How far back the report reaches, in whole weeks. Every option is inside the 35 days of attendance this
 // page already loads (see the fetch below), so choosing one re-reads what is already in memory instead
@@ -370,11 +371,11 @@ export default function Dashboard() {
     [leaves, employees]
   );
 
-  const handleLeaveDecision = async (requestId, status) => {
+  const handleLeaveDecision = async (requestId, status, comments) => {
     const approvedBy = user ? `${user.firstName} ${user.lastName}` : 'HR Admin';
     try {
-      await leaveService.updateStatus(requestId, status, approvedBy);
-      setLeaves((prev) => prev.map((l) => (l.id === requestId ? { ...l, status, approvedBy } : l)));
+      await leaveService.updateStatus(requestId, status, approvedBy, comments);
+      setLeaves((prev) => prev.map((l) => (l.id === requestId ? { ...l, status, approvedBy, comments } : l)));
       toast.success(
         status === 'Approved' ? 'Leave Approved' : 'Leave Rejected',
         `Leave request has been ${status.toLowerCase()}.`
@@ -382,6 +383,25 @@ export default function Dashboard() {
     } catch {
       toast.error('Error', `Failed to ${status === 'Approved' ? 'approve' : 'reject'} leave request.`);
     }
+  };
+
+  // Rejecting always needs a reason - same rule as Leave Management, enforced here too so a quick
+  // rejection from the Dashboard can never skip it.
+  const [rejectTarget, setRejectTarget] = useState(null);
+  const [rejectReason, setRejectReason] = useState('');
+  const [rejectError, setRejectError] = useState('');
+  const openReject = (request) => {
+    setRejectTarget(request);
+    setRejectReason('');
+    setRejectError('');
+  };
+  const confirmReject = async () => {
+    if (rejectReason.trim().length < 5) {
+      setRejectError('Please explain why this request is being rejected (at least a few words).');
+      return;
+    }
+    await handleLeaveDecision(rejectTarget.id, 'Rejected', rejectReason.trim());
+    setRejectTarget(null);
   };
 
   const todaySchedule = useMemo(() => {
@@ -661,7 +681,7 @@ export default function Dashboard() {
                     <Button variant="success" size="xs" icon={Check} onClick={() => handleLeaveDecision(request.id, 'Approved')}>
                       {t('dashboard.approve')}
                     </Button>
-                    <Button variant="dangerOutline" size="xs" icon={X} onClick={() => handleLeaveDecision(request.id, 'Rejected')}>
+                    <Button variant="dangerOutline" size="xs" icon={X} onClick={() => openReject(request)}>
                       {t('dashboard.reject')}
                     </Button>
                   </div>
@@ -751,6 +771,30 @@ export default function Dashboard() {
             <Button icon={Download} onClick={exportRange}>Create PDF report</Button>
           </div>
         </div>
+      </Modal>
+
+      {/* Reject reason: required, same rule as Leave Management - a rejection must say why. */}
+      <Modal isOpen={!!rejectTarget} onClose={() => setRejectTarget(null)} title="Reject leave request" size="sm">
+        {rejectTarget && (
+          <div className="space-y-4">
+            <p className="text-sm text-gray-600">
+              Rejecting <span className="font-semibold text-gray-900">{rejectTarget.name}</span>'s {rejectTarget.type} leave request ({rejectTarget.dates}).
+            </p>
+            <Textarea
+              label="Reason for rejection"
+              placeholder="Tell the employee why this request is being rejected..."
+              rows={3}
+              autoFocus
+              value={rejectReason}
+              onChange={(e) => { setRejectReason(e.target.value); setRejectError(''); }}
+              error={rejectError}
+            />
+            <div className="flex justify-end gap-2 pt-1">
+              <Button variant="outline" onClick={() => setRejectTarget(null)}>Cancel</Button>
+              <Button variant="danger" icon={X} onClick={confirmReject}>Reject Request</Button>
+            </div>
+          </div>
+        )}
       </Modal>
     </div>
   );

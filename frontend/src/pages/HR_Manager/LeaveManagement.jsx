@@ -73,6 +73,7 @@ export default function LeaveManagement() {
   const [isDetailOpen, setIsDetailOpen] = useState(false);
   const [selectedLeave, setSelectedLeave] = useState(null);
   const [actionComment, setActionComment] = useState('');
+  const [commentError, setCommentError] = useState('');
 
   const pendingCount = useMemo(() => (leaves || []).filter((l) => l.status === 'Pending').length, [leaves]);
 
@@ -136,13 +137,19 @@ export default function LeaveManagement() {
   const openDetail = (leave) => {
     setSelectedLeave(leave);
     setActionComment('');
+    setCommentError('');
     setIsDetailOpen(true);
   };
 
   const handleDecision = async (leave, status) => {
+    // A rejection with no explanation is the exact thing a panel flags as risky - require one.
+    if (status === 'Rejected' && actionComment.trim().length < 5) {
+      setCommentError('Please explain why this request is being rejected (at least a few words).');
+      return;
+    }
     const approvedBy = user ? `${user.firstName} ${user.lastName}`.trim() : 'HR Admin';
     try {
-      await leaveService.updateStatus(leave.id, status, approvedBy);
+      await leaveService.updateStatus(leave.id, status, approvedBy, actionComment.trim());
       setLeaves((prev) =>
         prev.map((l) =>
           l.id === leave.id
@@ -465,11 +472,12 @@ export default function LeaveManagement() {
             {selectedLeave.status === 'Pending' && (
               <div className="space-y-4 pt-4 border-t border-gray-100">
                 <Textarea
-                  label="Comments (optional)"
-                  placeholder="Add a comment for this action..."
+                  label="Comments (required to reject)"
+                  placeholder="Add a comment for this action - required if you reject..."
                   rows={2}
                   value={actionComment}
-                  onChange={(e) => setActionComment(e.target.value)}
+                  onChange={(e) => { setActionComment(e.target.value); setCommentError(''); }}
+                  error={commentError}
                 />
                 <div className="flex justify-end gap-3">
                   <Button

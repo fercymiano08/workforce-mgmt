@@ -278,6 +278,7 @@ class LeaveController extends Controller
         $request->validate([
             'status' => 'required|string|max:50',
             'approvedBy' => 'nullable|string|max:150',
+            'comments' => 'nullable|string|max:1000',
         ]);
 
         $status = $request->input('status');
@@ -294,9 +295,20 @@ class LeaveController extends Controller
             }
         }
 
+        // A rejection with no explanation leaves the employee (and whoever audits the decision later)
+        // guessing why. Unlike approval, it is never self-evident, so it is the one decision that must
+        // always carry a reason.
+        $comments = trim((string) $request->input('comments', ''));
+        if ($isAdmin && $status === 'Rejected' && mb_strlen($comments) < 5) {
+            throw ValidationException::withMessages([
+                'comments' => ['Please tell the employee why this leave request is being rejected (at least a few words).'],
+            ]);
+        }
+
         $record->update([
             'status' => $status,
             'approved_by' => $request->input('approvedBy', $record->approved_by),
+            'comments' => $request->has('comments') ? ($comments ?: null) : $record->comments,
         ]);
 
         AuditLogger::record('timeoff', 
@@ -323,7 +335,7 @@ class LeaveController extends Controller
                 $record->employee_id,
                 'leave_rejected',
                 'Leave Rejected',
-                "Your {$record->leave_type} leave (".$record->start_date->format('M d').' – '.$record->end_date->format('M d').') has been rejected.',
+                "Your {$record->leave_type} leave (".$record->start_date->format('M d').' – '.$record->end_date->format('M d').') has been rejected: '.$record->comments,
                 'high',
                 '/leave'
             );
