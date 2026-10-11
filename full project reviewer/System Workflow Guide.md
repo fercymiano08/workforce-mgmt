@@ -158,8 +158,7 @@ There are three roles. Each role logs in through the same login page but lands o
 | 9 | Shifts `HR_Manager/Shifts.jsx` | Admin | Manage shift templates + build weekly schedules |
 | 10 | Timesheets `HR_Manager/Timesheets.jsx` | Admin | Review each employee's week (summary cards, quick filters, sortable table), open a side panel with the day-by-day attendance, then approve or reject |
 | 11 | Reports `HR_Manager/Reports.jsx` | Admin | Build printable/CSV reports from live data |
-| 12 | Analytics `HR_Manager/Analytics.jsx` | Admin | Deep charts: trends, punctuality, productivity |
-| 13 | AI Decision Support `HR_Manager/AIDecisionSupport.jsx` | Admin | AI-generated insights + one-click decision queue |
+| 12-13 | Analytics `HR_Manager/Analytics.jsx` | Admin | Three tabs in one page: Overview (deep charts - trends, punctuality, productivity), AI Insights & Decisions (`components/analytics/AIInsightsPanel.jsx` - AI-generated insights + one-click decision queue, moved here from its own page), By Employee (`components/analytics/EmployeeAnalytics.jsx` - the same read for one person) |
 | 14 | Settings `HR_Manager/Settings.jsx` | Admin | Company info, kiosk configuration, system options |
 | 15 | Employee Dashboard `Employee/EmployeeDashboard.jsx` | Employee | Personal home: today's status, quick stats, ID card header |
 | 16 | My Attendance `Employee/MyAttendance.jsx` | Employee | Own clock history and hours |
@@ -196,7 +195,7 @@ Every API call goes to the **single backend** through the **Vite dev proxy** (no
 
 > **How the backend checks "who are you":** the single Laravel app owns the `users` table and validates every bearer token **in-process** (Sanctum against `personal_access_tokens`) — there is no separate identity service to ask over HTTP. This is the biggest simplification the consolidation bought: what used to be a network round-trip per request to `core` is now a local database lookup.
 
-> **`intelligence`'s AI actions write straight into the same app:** approving a leave, approving overtime, or resolving a security event from the AI Decision Support queue used to require a hop through `core` or an internal API to another service. Now the domain boundaries are folders in one codebase, so the AI path calls the same service classes the manual path uses — with the same "must still be Pending" status checks. `/api/analytics/ai/actions` is just another route in `routes/services/intelligence.php`, full stop.
+> **`intelligence`'s AI actions write straight into the same app:** approving a leave, approving overtime, or resolving a security event from the AI Insights & Decisions queue used to require a hop through `core` or an internal API to another service. Now the domain boundaries are folders in one codebase, so the AI path calls the same service classes the manual path uses — with the same "must still be Pending" status checks. `/api/analytics/ai/actions` is just another route in `routes/services/intelligence.php`, full stop.
 
 > **Debugging rule of thumb:** find the URL prefix in `backend/app/routes/api.php` → read the matching `routes/services/<domain>.php` → read that controller, usually delegating to a `Services/` class. That chain explains 95% of any behavior you see. There are no replicas anymore — every table you see is the live one.
 
@@ -510,14 +509,14 @@ the Workforce Admin has been alerted.
 The server (from the kiosk log call) does TWO things:
   1. writes a security event: type = 'face_mismatch', status = 'Open', employee_id attached
   2. sends every Workforce Admin a HIGH-priority notification
-     (type 'security_face_mismatch', "Face Mismatch at Kiosk", deep-links to AI Decision Support)
+     (type 'security_face_mismatch', "Face Mismatch at Kiosk", deep-links to the AI Insights & Decisions tab)
         │
         ▼
 Strike counter increases (kept on the server, per kiosk). After 5 wrong faces
 the reader stops for 60 seconds (countdown shown).
 ```
 
-Every one of these events also surfaces in the **Security Events** area of AI Decision Support for HR to resolve or escalate (Module 15).
+Every one of these events also surfaces in the **Security Events** area of the AI Insights & Decisions tab for HR to resolve or escalate (Module 15).
 
 ### The Kiosk's Popup Catalog (Every Warning In One Place)
 
@@ -744,7 +743,7 @@ Endpoints: `POST /api/attendance/adjustments` (file), `GET /api/attendance/adjus
 
 **What it is:** two connected pieces — the **templates** (what a shift is) and the **assignments** (who works which template on which day).
 
-**Files:** `HR_Manager/Shifts.jsx`, `components/scheduling/EmployeePicker.jsx` (Department → Role → Employee picker), `components/scheduling/AutomatedShiftModal.jsx`, backend `ShiftController.php`, `AutomatedShiftController.php`, `ShiftPlanner.php`, `ScheduleCleanup.php`
+**Files:** `HR_Manager/Shifts.jsx`, `components/scheduling/EmployeePicker.jsx` (Department → Role → Employee picker, single or multi), backend `ShiftController.php`, `ScheduleCleanup.php`
 
 ### The Active Shift Templates (`shift_definitions`)
 
@@ -760,32 +759,21 @@ Endpoints: `POST /api/attendance/adjustments` (file), `GET /api/attendance/adjus
 >
 > **One shift per person per day.** Assigning a second shift to someone who already has one that day is refused with a message naming the existing assignment; the automated generator skips anyone who already has a shift that day, so generating over an existing schedule only fills the gaps.
 
-### Flow A — Automated Shift Scheduling (rules build a draft, HR approves it)
+### Flow A — Assign Shift (one person, or several at once)
 
-**Shifts → + Automated Shift.** "Automated" here means **rule-based automation, not AI**: fixed business rules do the tedious work (who is eligible, who goes first, who is already booked), and a person reviews and approves the result. Nothing runs by itself and nothing is saved until **Approve**. One engine: `ShiftPlanner` (`plan()` builds the draft and writes nothing; `commit()` saves what HR approved).
+**Shifts → Assign Shift.** There used to be a separate "Automated Shift Scheduling" wizard here (fixed rules building a multi-week draft for HR to review and approve). A panel review called it unnecessary: the company only ever has the one Standard Shift, so a rules engine choosing *who* goes on it was solving a problem that does not exist - the real, recurring task is just "assign these N people the same shift on the same day," which a multi-select does directly. The wizard, its screens and its endpoints (`/api/shifts/automated/*`) are removed.
 
 | Step | What happens |
 |------|--------------|
-| **1. Period** | HR picks a **start date** (from tomorrow on), a **duration** (1–4 weeks; the **end date** is worked out), and the **work days** (Mon–Sat by default; holidays are skipped automatically). |
-| **2. Requirement** | **Employees required per day**, an optional **department** and **position** filter, and the **max paid hours per week** per employee (48 by default). The **shift is always the Standard Shift** (8:00 AM – 5:00 PM), the only shift the company works: it is shown, not chosen, and a request cannot pick or create another. The screen shows how many employees match the filters and warns when fewer people match than are needed. **Generate Schedule** builds the draft. |
-| **3. The system builds the draft** | For each working day: **(a) the eligible pool** — active, matches the department / position, **not on approved leave** that day, **not already scheduled** that day, and **still under the weekly hours limit** (hours already scheduled that Monday–Sunday week count, paid hours = shift length minus the unpaid lunch); **(b) fairness ranking** — the person with the **fewest shifts so far in this draft** goes first (ties: fewest hours already that week, then employee id, so the same input always gives the same draft); **(c) assign the top N** (N = employees required) and count them, so nobody is booked twice in a day. |
-| **4. Review** | A wide window with a table of every eligible employee against each working day (one week at a time for longer periods): **assigned** shifts, **On leave** days, days they **already have a shift**, **Max hrs** days (the weekly hours limit was reached), and a *n / N* count under each day, plus each person's shifts and paid hours. The header shows **Eligible employees**, **Needed per day**, **Working days**, **Total assignments** and **Paid hours**. A side panel explains the draft: **Fairness** (each person works between X and Y shifts), **Coverage by day** for the whole period, and **Why some people are not scheduled** (who is on leave, who is at the hours limit, who already has a shift, which holidays were skipped). |
-| **5. HR decision** | **Approve Schedule** saves it, or **Edit Schedule** lets HR click any cell to assign or remove someone first (leave days and existing shifts can't be changed). |
-| **6. Done** | Approving (`POST /api/shifts/automated/approve`) creates the shifts, re-checks each one (someone may have got leave approved while the draft was open — that assignment is skipped and reported), saves them all as the Standard Shift, sends each employee **one** notification for the whole schedule, and writes an **audit** entry. The shifts show in each employee's **My Schedule** and can be changed later like any other shift. |
+| **1. Who** | HR picks **one or more** employees from the Department → Role → Employee picker (the same `EmployeePicker` component, in multi-select mode for a new assignment; editing an existing row stays single-select). |
+| **2. Shift & date** | The **shift is always the Standard Shift** (8:00 AM – 5:00 PM) - shown, not chosen - and one **date**. |
+| **3. Assign Shift** | `POST /api/shifts/schedules/bulk` checks each selected employee **independently**: active, **not on approved leave** that day, **not already scheduled** that day. One person's conflict only skips them - it never fails the whole batch - and the result says who was skipped and why (e.g. "On approved Vacation leave that day"). Everyone who could be booked is; each gets their own notification; every created row is audited. |
 
-**Who works what.** A shift is only ever created for a **working day** (the chosen work days minus holidays), for someone who is **active**, **not on approved leave** and **not already scheduled** that day. Because only N people are picked per day, employees who are not picked have no shift that day — and the kiosk refuses a clock-in without a shift.
+**A saved schedule stays true.** Changes made afterwards update it by themselves (only shifts from today on that nobody has clocked in for; a worked day is never rewritten): a leave is **approved** (from any screen, including the AI Insights & Decisions tab) → the person's shifts on the leave days are removed; an employee is set **Inactive** → their upcoming shifts are removed.
 
-**A saved schedule stays true.** Two changes made afterwards update it by themselves (only shifts from today on that nobody has clocked in for; a worked day is never rewritten), and the employee is told: a leave is **approved** (from any screen, including AI Decision Support) → the person's shifts on the leave days are removed; an employee is set **Inactive** → their upcoming shifts are removed.
+Single rows can also be edited (`PUT /api/shifts/schedules/{id}`) or removed (`DELETE .../{id}`) one at a time. Every change is written to the audit log (schedule assigned / moved / deleted).
 
-To give **one person** a shift by hand, use **Standard Shift Assign** instead (Flow B).
-
-Every one of these changes is written to the audit log (schedule assigned / moved / deleted, generation, undo, rule changes).
-
-### Flow B — Manual Adjustments
-
-Single rows can be created (`POST /api/shifts/schedules`), edited (`PUT .../{id}`), or removed (`DELETE .../{id}`). A shift is changed by editing its row.
-
-### Flow C — Employee Sees Their Schedule
+### Flow B — Employee Sees Their Schedule
 
 `GET /api/shifts/schedules/employee/{employeeId}` → My Schedule page renders upcoming shifts joined with template names/times/colors.
 
@@ -853,7 +841,7 @@ Cancel path: while still Pending, the employee can cancel it via `PATCH /api/lea
 
 | Step | What happens |
 |------|--------------|
-| 1 | Pending queue on Leave Management (and inside AI Decision Support's decision queue) |
+| 1 | Pending queue on Leave Management (and inside the AI Insights & Decisions tab's decision queue) |
 | 2 | HR clicks Approve or Reject → `PATCH /api/leaves/{id}/status` or `PUT /api/leaves/{id}` |
 | 3 | **If Approved:** backend deducts the days from `employees.leave_balances` (JSON column holding per-type remaining days) |
 | 4 | Row updated: `status`, `approved_by`, `comments` |
@@ -1070,7 +1058,9 @@ No writes happen here. Reports are a lens over the same tables everything else u
 
 ---
 
-## Module 14 — AI Decision Support (Rules Decide, Gemini Explains)
+## Module 14 — AI Insights & Decisions (Rules Decide, Gemini Explains)
+
+> Lives inside **Analytics** as its second tab (`components/analytics/AIInsightsPanel.jsx`), not a page of its own - a panel review asked for the two to work together rather than live apart. Everything below is unchanged otherwise: same health score, Decision Queue and AI Insights.
 
 **What it is:** the flagship module. It reads the last 30 days of real workforce activity and produces a health score, findings with recommendations, and a decision queue. **The rules decide what is a problem and what the score is; Google Gemini only writes the explanation in plain language.** Every number comes from the database, and the page works with or without Gemini.
 
@@ -1184,7 +1174,7 @@ high-priority notification (bell + Notifications page, type
 wait until someone opens the security section
         │
         ▼
-Surfaces in AI Decision Support security section
+Surfaces in the AI Insights & Decisions tab's security section
 (counts feed the health score too)
         │
         ├── Resolve  → status Resolved + who/when stamped
@@ -1227,7 +1217,7 @@ Open events raise the system's concern level; resolving them restores the score.
 | Early clock-outs past the free allowance / sick certificate overdue | Employee **and** HR (`early_leave_auto_unpaid`) |
 | A SICK early clock-out needs proof | Employee (`early_leave_certificate_required`, with the deadline); HR when the proof is uploaded (`early_leave_proof_submitted`) |
 | 3 employees leave early the same day with the same reason | HR (`early_clock_out_pattern`, high priority) |
-| **Face mismatch at the kiosk** (someone clocking in as another person) | HR — all admins, **high priority** (`security_face_mismatch`, deep-links to AI Decision Support) |
+| **Face mismatch at the kiosk** (someone clocking in as another person) | HR — all admins, **high priority** (`security_face_mismatch`, deep-links to the AI Insights & Decisions tab) |
 | No-show / un-closed clock-in / unauthorized overtime / staffing shortage (dashboard alert scan) | HR — all admins (`attendance_absent`, `attendance_incomplete`, `attendance_unauthorized_ot`, `staff_shortage`) |
 
 > **A late clock-in cancels its own no-show alert.** The moment an employee clocks in — even late — `NotificationService::retractNoShowAlert()` deletes any "possible no-show" (`attendance_absent`) alert already sent for that employee for today. HR's inbox never ends up showing a "clocked in late" notice sitting next to a now-false "possible no-show" for the same person on the same day.
@@ -1346,7 +1336,7 @@ Which tables each module touches (R = read, W = write). This map is logical — 
 | Timesheets | | R | R | | | | R | | | R | RW | RW | | | |
 | Dashboard/Analytics | | R | R | | | | R | | R | R | | | | | RW |
 | Reports | | R | | | | | R | | R | R | R | | | | |
-| AI Decision Support | | R | | | | | R | | RW | RW | | W | RW | RW | R |
+| AI Insights & Decisions (Analytics tab) | | R | | | | | R | | RW | RW | | W | RW | RW | R |
 | Security Events | | R | | | | | | | | | | W | RW | | |
 | Notifications | | | | | | | | | | | | RW | | | |
 | Settings/Profile | W | RW | | | | | | | | | | | | RW | |

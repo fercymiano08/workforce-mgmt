@@ -136,11 +136,13 @@ Browser (frontend) → sends a request to `/api/...` → forwarded to the one La
 ## Flow 4 - The "brain": Analytics + AI decision support (HR only)
 
 **Plain story:**
-1. The **Workforce Analytics** page has one filter - **This Week / This Month / This Year** - and that one choice drives 6 cards: Attendance Summary, Attendance Rate, Leave Trends, Overtime Hours, Department Punctuality, and Leave Type Composition. Every card has a small ⓘ in the corner that states, in plain words, exactly where its numbers came from and the formula used to get them - so if a panelist points at a number and asks "where did that come from?", you tap the ⓘ and the card answers for you. There's also an Export/Print button that turns the page into a handout, formulas and all.
-2. The **AI Decision Support** page looks at the last 30 days and gives HR **findings and recommendations** (e.g. "3 late arrivals in 30 days", "overtime above 1 hour a day"). **Fixed rules decide the findings and the Workforce Health Score** (the page shows how the score is calculated).
+0. Workforce Analytics is one page with three tabs: **Overview**, **AI Insights & Decisions**, and **By Employee**. AI Decision Support used to be its own separate page; a panel review asked for the two to work together instead, so it moved in as a tab rather than living apart.
+1. The **Overview** tab has one filter - **This Week / This Month / This Year** - and that one choice drives 6 cards: Attendance Summary, Attendance Rate, Leave Trends, Overtime Hours, Department Punctuality, and Leave Type Composition. Every card has a small ⓘ in the corner that states, in plain words, exactly where its numbers came from and the formula used to get them - so if a panelist points at a number and asks "where did that come from?", you tap the ⓘ and the card answers for you. There's also an Export/Print button that turns the page into a handout, formulas and all.
+2. The **AI Insights & Decisions** tab looks at the last 30 days and gives HR **findings and recommendations** (e.g. "3 late arrivals in 30 days", "overtime above 1 hour a day"). **Fixed rules decide the findings and the Workforce Health Score** (the tab shows how the score is calculated).
 3. When online, **Google Gemini writes the explanation** in plain language. It cannot add, drop or re-rate a finding, and a sentence with a number that is not in the data is thrown away.
 4. When **Gemini is unavailable** (no internet, no key, Google busy, or the free daily limit used up), the rules' own wording is shown: **the same findings and the same score**, with a banner saying why.
 5. HR can also act directly ("approve this leave", "resolve this security event") in one click - the intelligence domain performs the real action with the same in-process service classes the manual path uses (approving a leave checks the real `Leave` is still Pending, then updates it, in one database), then reports back.
+6. The **By Employee** tab is the same idea as Overview, read for one person instead of the whole company: pick an employee, see their own attendance rate, punctuality trend, leave usage/balances and overtime for the period. It also gives a punctuality-based read ("Consistently punctual and present", etc.) - deliberately **not** called a performance evaluation, and its own note says why: the system has no visibility into output, quality or peer feedback, only attendance and punctuality.
 
 ---
 
@@ -160,8 +162,7 @@ Use these as quick talking points. Say each in ONE breath.
 - **Employees / Registration** - "The company directory. HR adds, edits, and removes employees, and each one automatically gets a login account."
 - **Face Registration** - "Turns a person's face into a 128-number face print so the kiosk can recognize them."
 - **Departments & Roles** - "The org chart - what departments exist and what job titles belong to them."
-- **Analytics** - "One filter - This Week/Month/Year - driving 6 cards (attendance, attendance rate, leave, overtime, department punctuality, leave mix), and every card states its own data source and formula so nobody has to take the number on faith."
-- **AI Decision Support** - "An assistant that points out problems in the data and lets HR act on them."
+- **Analytics** - "Three tabs: Overview (one filter - This Week/Month/Year - driving 6 cards, each stating its own data source and formula so nobody has to take the number on faith), AI Insights & Decisions (an assistant that points out problems in the data and lets HR act on them), and By Employee (the same read, for one person)."
 - **Reports** - "Printable documents - weekly timesheet summaries, attendance summaries, and more."
 - **Kiosk Setup/Controls** - "Configure the door device: name, location, PIN, active on/off."
 
@@ -229,8 +230,8 @@ These are the exact things the panel may probe. Say them confidently.
 **2-minute tour (pick the extras that fit your demo):**
 1. Log in as **Workforce Admin** → show the dashboard.
 2. Open **Employees** → show the directory, note each employee has a login account.
-3. Open **Analytics** → "this summarizes everything".
-4. Open **AI Decision Support** → "the assistant flags problems in the data; HR can act in one click".
+3. Open **Analytics** → "this summarizes everything" (Overview tab).
+4. Switch to the **AI Insights & Decisions** tab → "the assistant flags problems in the data; HR can act in one click".
 5. Switch to **Employee** login → show "My Attendance", "My Schedule", "My Leave", and My Timesheet → click **"This Week"** to show the live popup and the history list beneath it.
 6. Optional: open the **Kiosk** screen → walk through face/PIN clock-in.
 
@@ -400,9 +401,10 @@ Use this as a rapid-fire review. One line = one idea. Cover the right column, th
 | **Shifts/Schedules** | Who works when | Templates + generated/edited assignments in `shift_schedules` | Drives kiosk validation, Late/Present math, coverage analysis |
 | **Timesheets** | Weekly hour summaries + a live "This Week" popup + full history | Auto-generated from attendance → "This Week" opens a live per-day breakdown; employee submits (or auto-submitted Monday noon) → HR approves / rejects with a reason → sent to payroll once; hours freeze after submitting | Payroll-friendly, auditable, no manual summing |
 | **Dashboard** | Today's numbers at a glance | Reads cached aggregates + live counts | Manager sees the company in 5 seconds |
-| **Analytics** | Deep trend charts, each one self-explaining | One This Week/Month/Year filter drives 6 cards (Attendance Summary, Attendance Rate, Leave Trends, Overtime Hours, Department Punctuality, Leave Type Composition); `AnalyticsService` computes each card's numbers AND its plain-English data-source/formula text, shown via an ⓘ popover and printed inline on export | A panelist asking "where did this number come from?" gets an immediate, confident answer straight off the card |
+| **Analytics - Overview** | Deep trend charts, each one self-explaining | One This Week/Month/Year filter drives 6 cards (Attendance Summary, Attendance Rate, Leave Trends, Overtime Hours, Department Punctuality, Leave Type Composition); `AnalyticsService` computes each card's numbers AND its plain-English data-source/formula text, shown via an ⓘ popover and printed inline on export | A panelist asking "where did this number come from?" gets an immediate, confident answer straight off the card |
+| **Analytics - By Employee** | Same cards as Overview, for one person | Pick an employee → their own attendance rate, punctuality trend, leave usage/balances, overtime for the period, plus a punctuality-based read | "From a single employee to the entire system" in one page |
 | **Reports** | Printable/CSV outputs | Reads live data + formats via `reportHelpers.js` | Proof and paperwork done from one button |
-| **AI Decision Support** | AI insights + one-click actions | Rules build the findings and the score from 30 days of data → Gemini only words them (rule wording if it is unavailable) → decision queue | Flags problems HR would miss; actions reuse normal endpoints |
+| **Analytics - AI Insights & Decisions** | AI insights + one-click actions | Rules build the findings and the score from 30 days of data → Gemini only words them (rule wording if it is unavailable) → decision queue | Flags problems HR would miss; actions reuse normal endpoints |
 | **Security Events** | Log of suspicious kiosk activity | `face_mismatch`/`pin_failed` stored Open → HR resolves/escalates | Buddy-punching is caught and reviewable |
 | **Notifications** | In-app bell messages | Backend INSERTs a row; bell refreshes every 30 s while the tab is visible (newest 200) and the badge number is read from the server's unread-count endpoint; a nightly job prunes anything older than 30 days | People learn of approvals/leaves/SO immediately, and the number only ever means "actionable now" |
 | **Kiosk Setup** | Configures the door device | PIN hash, location, verification method stored in `settings.kiosk` | The entrance behaves exactly how HR wants |

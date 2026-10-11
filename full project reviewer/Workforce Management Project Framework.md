@@ -3,7 +3,7 @@
 > ## 10-second summary (say this if the panel asks "what is your project?")
 > We built **AI-Enhanced Workforce Management** for **Archon Nell Inc.**: a web app with
 > **Facial Recognition clock-in**, **Shift Scheduling**, **Leave Management**, **Weekly Timesheets**,
-> **Workforce Analytics**, and an **AI Decision Support** module. Built with **React + Laravel + PostgreSQL**.
+> **Workforce Analytics** with built-in **AI Insights & Decisions** and a per-employee drill-down. Built with **React + Laravel + PostgreSQL**.
 > Users: Workforce Admin, Employees, and an entrance Clock-In kiosk device. Team of 5 under client **Junar Love Olarte**.
 > Deployed live on Render — see Deployment below for the links — alongside the usual local/Docker setup.
 
@@ -22,8 +22,8 @@ Workforce Analytics
 Features:
 -Employee ID + Facial Recognition-Based Clock In (shift-aware: Present within 15 min of the shift start, Late warning afterwards, reason required for early clock-out, admin alert on a face mismatch — all enforced by the server)
 -Optional Two-Factor Sign-In (employee-toggled in My Profile; a six-digit emailed code after password, off by default, separate from the forgot-password OTP)
--AI Decision Support (rules decide the findings and score; the AI API only words them, with a rule-based fallback)
--Automated Logic/Rule-Based Shift Scheduling (rules build a draft, HR reviews and approves it; the Standard Shift only)
+-AI Insights & Decisions, inside Workforce Analytics (rules decide the findings and score; the AI API only words them, with a rule-based fallback)
+-Bulk Shift Assignment (pick one or several employees, assign the Standard Shift to all of them at once; each is checked independently)
 -Attendance Corrections (worked past shift / kiosk failure, with photo proof; the admin makes the manual entry)
 -Timesheet Generation (Weekly)
 -Leave Management

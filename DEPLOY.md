@@ -35,8 +35,8 @@ php artisan key:generate --show
 Copy the whole line, including the `base64:` prefix. Keep it in a text file - you paste it once.
 
 **c) Optional: a free Gemini key** from <https://aistudio.google.com> (no card). Paste it in the
-same Apply screen. Leave it blank and the AI Decision Support module quietly uses its rule-based
-fallback instead, so nothing breaks.
+same Apply screen. Leave it blank and the AI Insights & Decisions tab (inside Workforce Analytics)
+quietly uses its rule-based fallback instead, so nothing breaks.
 
 ---
 

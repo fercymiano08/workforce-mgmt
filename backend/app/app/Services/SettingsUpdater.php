@@ -5,8 +5,8 @@ namespace App\Services;
 use App\Models\Setting;
 
 /**
- * Writes to the single settings row from outside the Settings page: the kiosk config and
- * which AI Decision Support insights an administrator has resolved/unresolved.
+ * Writes to the single settings row from outside the Settings page: the kiosk config and which
+ * insights an administrator has resolved/unresolved in the AI Insights & Decisions tab.
  */
 class SettingsUpdater
 {
