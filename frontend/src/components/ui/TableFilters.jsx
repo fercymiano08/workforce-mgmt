@@ -1,4 +1,4 @@
-import { Filter, X } from 'lucide-react';
+import { ChevronDown, Filter, X } from 'lucide-react';
 import clsx from 'clsx';
 import SearchBar from './SearchBar';
 
@@ -58,7 +58,7 @@ export default function TableFilters({
         {filters.length > 0 && (
           <div className="grid grid-cols-2 sm:flex sm:items-center gap-2">
             {filters.map((f) => (
-              <label key={f.key} className="min-w-0">
+              <label key={f.key} className="relative min-w-0">
                 <span className="sr-only">{f.label}</span>
                 <select
                   value={f.value}
@@ -78,6 +78,13 @@ export default function TableFilters({
                     </option>
                   ))}
                 </select>
+                {/* appearance-none above removes the browser's own arrow so the select can take the
+                    blue "active filter" colouring - without this it was never replaced, so every
+                    dropdown here lost its down-arrow entirely. */}
+                <ChevronDown className={clsx(
+                  'pointer-events-none absolute right-2.5 top-1/2 -translate-y-1/2 w-4 h-4',
+                  f.value !== f.options[0]?.value ? 'text-blue-500' : 'text-gray-400'
+                )} />
               </label>
             ))}
           </div>
