@@ -23,6 +23,18 @@ class AIDecisionSupportController extends Controller
         return response()->json(['data' => app(AIDecisionSupportService::class)->insights($request->boolean('refresh'))]);
     }
 
+    /** The cheap, non-AI half of insights() - safe for a dashboard tile to poll every few seconds. */
+    public function healthScore(): JsonResponse
+    {
+        $result = app(AIDecisionSupportService::class)->healthScoreOnly();
+
+        return response()->json(['data' => [
+            'healthScore' => $result['score'],
+            'scoreBreakdown' => $result['breakdown'],
+            'generatedAt' => now()->toISOString(),
+        ]]);
+    }
+
     public function action(Request $request): JsonResponse
     {
         $request->validate([

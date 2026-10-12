@@ -118,10 +118,11 @@ export default function Sidebar({ isOpen, onClose }) {
 
   return (
     <>
-      {/* Mobile overlay */}
+      {/* Overlay, at every width - the drawer is summoned and dismissed the same way on desktop as
+          on a phone, rather than being permanently docked above lg. */}
       {isOpen && (
         <div
-          className="fixed inset-0 bg-black/50 z-40 lg:hidden backdrop-blur-sm"
+          className="fixed inset-0 bg-black/50 z-40 backdrop-blur-sm"
           onClick={onClose}
         />
       )}
@@ -129,7 +130,6 @@ export default function Sidebar({ isOpen, onClose }) {
       <aside
         className={clsx(
           'fixed left-0 top-0 bottom-0 w-[260px] bg-[#0B1F3A] flex flex-col z-50 transition-transform duration-300 ease-in-out',
-          'lg:translate-x-0',
           isOpen ? 'translate-x-0' : '-translate-x-full'
         )}
         style={{

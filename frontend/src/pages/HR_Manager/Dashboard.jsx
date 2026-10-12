@@ -1,11 +1,12 @@
-﻿import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import {
-  Users, CheckCircle, CalendarOff, Clock, TrendingUp,
-  Calendar, Briefcase, Check, X, ArrowRight, Inbox, FileText, LogOut, CheckCircle2, Download,
+  Users, CheckCircle, CalendarOff, Clock, Calendar, Briefcase, Check, X, ArrowRight, Inbox,
+  FileText, LogOut, CheckCircle2, Download, ChevronLeft, ChevronRight, Activity, Smartphone,
+  Database, Sparkles, Eye, Building2, Gift, Fingerprint, CalendarDays, FileBarChart,
 } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import {
-  BarChart, Bar, PieChart, Pie, Cell, LineChart, Line,
+  BarChart, Bar, PieChart, Pie, Cell, LineChart, Line, AreaChart, Area,
   XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
   Legend,
 } from 'recharts';
@@ -28,7 +29,7 @@ import {
 import { toDateKey } from '../../services/attendanceService';
 import { kioskService } from '../../services/kioskService';
 import { didAttend, isPresentGroup } from '../../utils/constants';
-import { weekWithRecords, dayTick, weekRangeLabel } from '../../utils/today';
+import { weekOf, dayTick, weekRangeLabel } from '../../utils/today';
 import { formatDate } from '../../utils/helpers';
 import { openAttendanceReport } from '../../utils/attendanceReport';
 import Modal from '../../components/ui/Modal';
@@ -42,6 +43,20 @@ const RANGE_OPTIONS = [
   { days: 14, label: '14 days', sub: '2 weeks' },
   { days: 21, label: '21 days', sub: '3 weeks' },
   { days: 28, label: '28 days', sub: '4 weeks' },
+];
+
+// Only 35 days of attendance are loaded below, so the week navigator cannot honestly go back
+// further than that - 4 weeks back is the oldest week that chart has any data to draw.
+const MAX_WEEKS_BACK = 4;
+
+// App-icon shortcuts, same tile pattern the Employee dashboard already uses for its Quick Actions.
+const QUICK_ACTIONS = [
+  { label: 'Employees', hint: 'Roster & profiles', path: '/employees', icon: Users, tile: 'from-blue-500 to-blue-600 shadow-blue-500/25' },
+  { label: 'Attendance', hint: 'Clock-ins & hours', path: '/attendance', icon: Fingerprint, tile: 'from-emerald-500 to-emerald-600 shadow-emerald-500/25' },
+  { label: 'Schedule', hint: 'Shifts & coverage', path: '/shifts', icon: CalendarDays, tile: 'from-amber-500 to-orange-500 shadow-amber-500/25' },
+  { label: 'Leave', hint: 'Requests & balances', path: '/leave', icon: Calendar, tile: 'from-purple-500 to-purple-600 shadow-purple-500/25' },
+  { label: 'Timesheets', hint: 'Review & approve', path: '/timesheets', icon: FileText, tile: 'from-sky-500 to-cyan-600 shadow-sky-500/25' },
+  { label: 'Reports', hint: 'Export & analyze', path: '/reports', icon: FileBarChart, tile: 'from-slate-500 to-slate-600 shadow-slate-500/25' },
 ];
 
 // The one overall workforce score, as a ring. An SVG circle rather than a Recharts radial bar
@@ -108,6 +123,22 @@ const countDays = (start, end) => {
   return Math.max(1, Math.round(ms / 86400000) + 1);
 };
 
+// Days until the next occurrence of a month/day (a birthday or a hire-date anniversary), plus how
+// many full years will have passed by then. Used for the "Upcoming Birthdays & Anniversaries" card.
+const nextAnniversary = (dateStr, todayKeyStr) => {
+  if (!dateStr) return null;
+  const [origY, m, d] = dateStr.split('-').map(Number);
+  const [ty, tm, td] = todayKeyStr.split('-').map(Number);
+  const todayUtc = Date.UTC(ty, tm - 1, td);
+  let targetYear = ty;
+  let next = Date.UTC(ty, m - 1, d);
+  if (next < todayUtc) {
+    targetYear = ty + 1;
+    next = Date.UTC(targetYear, m - 1, d);
+  }
+  return { days: Math.round((next - todayUtc) / 86400000), years: targetYear - origY };
+};
+
 export default function Dashboard() {
   const { t } = useLanguage();
   const { user } = useAuth();
@@ -123,6 +154,7 @@ export default function Dashboard() {
   const [leaves, setLeaves] = useState([]);
   const [schedules, setSchedules] = useState([]);
   const [shiftDefs, setShiftDefs] = useState([]);
+  const [timesheets, setTimesheets] = useState([]);
   const [analytics, setAnalytics] = useState(null);
   // The same This Week figure Workforce Analytics itself shows and explains (present days ÷
   // scheduled days) - one source of truth, so the number here can never quietly disagree with the
@@ -136,6 +168,18 @@ export default function Dashboard() {
   // the answer has not loaded yet would tell the administrator they are all caught up when they are not.
   const [waiting, setWaiting] = useState({ overtime: null, early: null, timesheets: null });
   const [pendingReady, setPendingReady] = useState(false);
+
+  // Which week the attendance overview chart shows - 0 is the current Mon-Sun week.
+  const [weeksBack, setWeeksBack] = useState(0);
+
+  // The live "System Health" KPI - the cheap, non-AI half of the Decision Support score, polled on
+  // its own interval so the tile keeps moving without depending on the rest of the page's loads.
+  const [healthScore, setHealthScore] = useState(null);
+  // A rolling window of Postgres round-trip times for the Database Health graph - never persisted,
+  // just the last ~30 polls kept in memory so the line has something to draw.
+  const [dbHealth, setDbHealth] = useState([]);
+  const [kioskSettings, setKioskSettings] = useState(kioskService.getSettings());
+  const [aiInsights, setAiInsights] = useState(null);
 
   useEffect(() => {
     let active = true;
@@ -167,7 +211,7 @@ export default function Dashboard() {
     };
 
     load(employeeService.getAll(), (res) => { setEmployees(res); criticalDone(); }, []);
-    // The dashboard only shows today and the last 7 days.
+    // The dashboard only shows today and the last 35 days.
     load(
       attendanceService.getAll({ from: (() => { const d = kioskService.now(); d.setDate(d.getDate() - 35); return toDateKey(d); })() }),
       (res) => { setAttendance(res); criticalDone(); },
@@ -199,6 +243,7 @@ export default function Dashboard() {
     load(
       timesheetService.getAll(),
       (sheets) => {
+        setTimesheets(sheets || []);
         setWaiting((w) => ({ ...w, timesheets: (sheets || []).filter((s) => s.status === 'Submitted').length }));
         pendingDone();
       },
@@ -212,10 +257,40 @@ export default function Dashboard() {
       .then(() => refreshNotifications())
       .catch(() => {});
 
+    kioskService.load().then((settings) => { if (active) setKioskSettings(settings); });
+    analyticsService.getAiInsights().then((res) => { if (active) setAiInsights(res?.data || null); }).catch(() => {});
+
     return () => {
       active = false;
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  // The System Health tile: the cheap, non-AI score, re-asked every 30s so the number on screen is
+  // genuinely live rather than a single snapshot from page load.
+  useEffect(() => {
+    let active = true;
+    const poll = () => analyticsService.getHealthScore()
+      .then((res) => { if (active) setHealthScore(res?.data || null); })
+      .catch(() => {});
+    poll();
+    const id = setInterval(poll, 30000);
+    return () => { active = false; clearInterval(id); };
+  }, []);
+
+  // The Database Health graph: a fresh round trip every ~3.5s, each one appended to a capped
+  // rolling window so the line scrolls the way a Task Manager graph does.
+  useEffect(() => {
+    let active = true;
+    const poll = () => analyticsService.getDbHealth()
+      .then((res) => {
+        if (!active || !res?.data) return;
+        setDbHealth((prev) => [...prev.slice(-29), { ...res.data, t: Date.now() }]);
+      })
+      .catch(() => {});
+    poll();
+    const id = setInterval(poll, 3500);
+    return () => { active = false; clearInterval(id); };
   }, []);
 
   const today = kioskService.today();
@@ -280,60 +355,41 @@ export default function Dashboard() {
     // Present = everyone who came in, split into On Time and Late. Early Leave is counted on its own.
     const onTimeToday = todaysAttendance.filter((a) => a.status === 'Present').length;
     const presentToday = todaysAttendance.filter((a) => isPresentGroup(a.status)).length;
-    const attendedToday = todaysAttendance.filter((a) => didAttend(a.status)).length;
     const lateToday = todaysAttendance.filter((a) => a.status === 'Late').length;
-    const attendanceRate = employees.length
-      ? Math.round((attendedToday / employees.length) * 1000) / 10
-      : 0;
 
-    return {
-      totalEmployees: employees.length,
-      presentToday,
-      onTimeToday,
-      lateToday,
-      attendanceRate,
-    };
+    return { totalEmployees: employees.length, presentToday, onTimeToday, lateToday };
   }, [employees, todaysAttendance]);
 
-  // Seven days exactly, Monday through Sunday, in the kiosk's time zone - never more, so the bars
-  // stay wide enough to read instead of collapsing into sticks.
-  //
-  // The current week is used whenever it holds a single record. If it holds none - the week has not
-  // started yet, or the last clock-in was the previous Saturday - it walks back one week at a time
-  // to the most recent week that does. Anchoring on today alone left the card completely empty
-  // whenever today happened to have no attendance yet, which is the whole card, not a column.
-  // The badge then names the week it fell back to instead of claiming "This Week".
+  // Seven days, Monday through Sunday, for whichever week weeksBack points at (0 = current week) -
+  // bounded by MAX_WEEKS_BACK since that is as far back as the attendance fetch above actually reaches.
   const attendanceOverview = useMemo(() => {
-    // weekWithRecords picks the current Monday-Sunday week when it holds a record, otherwise the most
-    // recent one that does, so the overview is never an empty card. It is the same helper the
-    // employee's own chart uses, which is what keeps the two cards identical in shape.
-    const week = weekWithRecords(attendance.map((a) => a.date));
-    const rowsByDate = new Map();
+    const [y, m, d] = weekOf(today).start.split('-').map(Number);
+    const monday = new Date(Date.UTC(y, m - 1, d - 7 * weeksBack));
+    const weekDays = Array.from({ length: 7 }, (_, i) => new Date(monday.getTime() + i * 86400000).toISOString().slice(0, 10));
+
+    const byDate = new Map();
     attendance.forEach((a) => {
-      if (!rowsByDate.has(a.date)) rowsByDate.set(a.date, []);
-      rowsByDate.get(a.date).push(a);
+      if (!byDate.has(a.date)) byDate.set(a.date, []);
+      byDate.get(a.date).push(a);
     });
 
-    const days = week.days.map((key) => {
-      const rows = rowsByDate.get(key) || [];
+    const rows = weekDays.map((key) => {
+      const recs = byDate.get(key) || [];
       return {
         key,
         day: dayTick(key),
-        onTime: rows.filter((a) => a.status === 'Present').length,
-        late: rows.filter((a) => a.status === 'Late').length,
-        earlyLeave: rows.filter((a) => a.status === 'Early Leave').length,
-        absent: rows.filter((a) => a.status === 'Absent').length,
+        onTime: recs.filter((a) => a.status === 'Present').length,
+        late: recs.filter((a) => a.status === 'Late').length,
+        earlyLeave: recs.filter((a) => a.status === 'Early Leave').length,
+        absent: recs.filter((a) => a.status === 'Absent').length,
       };
     });
 
-    return { days, isCurrentWeek: week.weeksBack === 0, rangeLabel: weekRangeLabel(week.start, week.end) };
-  }, [attendance]);
+    return { rows, isCurrentWeek: weeksBack === 0, rangeLabel: weekRangeLabel(weekDays[0], weekDays[6]) };
+  }, [attendance, today, weeksBack]);
 
-  const attendanceOverviewData = attendanceOverview.days;
-
-  const hasAttendanceData = attendanceOverviewData.some(
-    (d) => d.onTime || d.late || d.earlyLeave || d.absent
-  );
+  const attendanceOverviewData = attendanceOverview.rows;
+  const hasAttendanceData = attendanceOverviewData.some((d) => d.onTime || d.late || d.earlyLeave || d.absent);
 
   const leaveStatisticsData = useMemo(() => {
     const byType = {};
@@ -404,6 +460,59 @@ export default function Dashboard() {
     setRejectTarget(null);
   };
 
+  // Pending timesheets: a short list with a "View" action, rather than instant accept/reject - a
+  // panel review asked for a proper confirmation step before either decision commits.
+  const pendingTimesheetsAll = useMemo(() => timesheets.filter((ts) => ts.status === 'Submitted'), [timesheets]);
+  const pendingTimesheets = pendingTimesheetsAll.slice(0, 5);
+  const approvedTimesheetsCount = useMemo(() => timesheets.filter((ts) => ts.status === 'Approved').length, [timesheets]);
+
+  const [tsViewTarget, setTsViewTarget] = useState(null);
+  const [tsRejecting, setTsRejecting] = useState(false);
+  const [tsReason, setTsReason] = useState('');
+  const [tsReasonError, setTsReasonError] = useState('');
+  const [tsBusy, setTsBusy] = useState(false);
+
+  const openTimesheetView = (ts) => {
+    setTsViewTarget(ts);
+    setTsRejecting(false);
+    setTsReason('');
+    setTsReasonError('');
+  };
+  const closeTimesheetView = () => setTsViewTarget(null);
+
+  const approveTimesheet = async () => {
+    const approvedBy = user ? `${user.firstName} ${user.lastName}` : 'HR Admin';
+    setTsBusy(true);
+    try {
+      await timesheetService.updateStatus(tsViewTarget.id, 'Approved', approvedBy);
+      setTimesheets((prev) => prev.map((ts) => (ts.id === tsViewTarget.id ? { ...ts, status: 'Approved' } : ts)));
+      toast.success('Timesheet Approved', `${tsViewTarget.employeeName}'s timesheet has been approved.`);
+      closeTimesheetView();
+    } catch {
+      toast.error('Error', 'Failed to approve timesheet.');
+    } finally {
+      setTsBusy(false);
+    }
+  };
+
+  const confirmRejectTimesheet = async () => {
+    if (tsReason.trim().length < 5) {
+      setTsReasonError('Please explain why this timesheet is being rejected (at least a few words).');
+      return;
+    }
+    setTsBusy(true);
+    try {
+      await timesheetService.updateStatus(tsViewTarget.id, 'Rejected', undefined, tsReason.trim());
+      setTimesheets((prev) => prev.map((ts) => (ts.id === tsViewTarget.id ? { ...ts, status: 'Rejected' } : ts)));
+      toast.success('Timesheet Rejected', `${tsViewTarget.employeeName}'s timesheet has been rejected.`);
+      closeTimesheetView();
+    } catch {
+      toast.error('Error', 'Failed to reject timesheet.');
+    } finally {
+      setTsBusy(false);
+    }
+  };
+
   const todaySchedule = useMemo(() => {
     const defById = Object.fromEntries(shiftDefs.map((s) => [s.id, s]));
     return schedules
@@ -419,12 +528,51 @@ export default function Dashboard() {
       });
   }, [schedules, shiftDefs, today]);
 
+  // Every active employee's department, as a share of headcount - reuses the roster already loaded
+  // for the KPI cards, no new request.
+  const departmentDistribution = useMemo(() => {
+    const counts = {};
+    employees.forEach((e) => {
+      if (e.department) counts[e.department] = (counts[e.department] || 0) + 1;
+    });
+    const total = employees.length || 1;
+    return Object.entries(counts)
+      .map(([name, count]) => ({ name, count, pct: Math.round((count / total) * 1000) / 10 }))
+      .sort((a, b) => b.count - a.count);
+  }, [employees]);
+
+  // Birthdays and hire-date anniversaries landing in the next two weeks, soonest first.
+  const upcomingEvents = useMemo(() => {
+    const events = [];
+    employees.forEach((e) => {
+      const name = `${e.firstName || ''} ${e.lastName || ''}`.trim();
+      const birthday = nextAnniversary(e.dateOfBirth, today);
+      if (birthday && birthday.days <= 14) {
+        events.push({ id: `b-${e.id}`, name, avatar: e.avatar, label: 'Birthday', days: birthday.days });
+      }
+      const anniversary = nextAnniversary(e.hireDate, today);
+      if (anniversary && anniversary.days <= 14 && anniversary.years > 0) {
+        events.push({ id: `a-${e.id}`, name, avatar: e.avatar, label: `${anniversary.years}-year anniversary`, days: anniversary.days });
+      }
+    });
+    return events.sort((a, b) => a.days - b.days).slice(0, 5);
+  }, [employees, today]);
+
   // Each card links to the screen the number describes, so the figure and the next action are the
+  // same click. Replaces the old Total Employees / Late Employees / Attendance Rate set - a panel
+  // review asked these to surface what needs a decision and how healthy the workforce looks right now.
   const kpiCards = [
-    { labelKey: 'dashboard.totalEmployees', value: kpi.totalEmployees, icon: Users, change: null, accent: 'blue', to: '/employees' },
-    { labelKey: 'dashboard.presentToday', value: kpi.presentToday, icon: CheckCircle, change: null, accent: 'emerald', subtext: `${kpi.onTimeToday} on time · ${kpi.lateToday} late`, to: '/attendance' },
-    { labelKey: 'dashboard.lateEmployees', value: kpi.lateToday, icon: Clock, change: null, accent: 'red', to: '/attendance?status=Late' },
-    { labelKey: 'dashboard.attendanceRate', value: `${kpi.attendanceRate}%`, icon: TrendingUp, change: null, accent: 'purple', to: '/reports' },
+    { label: 'Pending Leave Requests', value: pendingLeaveRequests.length, icon: Calendar, accent: 'blue', to: '/leave' },
+    { label: 'Timesheets Approved', value: approvedTimesheetsCount, icon: FileText, accent: 'emerald', to: '/timesheets?status=Approved' },
+    { label: t('dashboard.presentToday'), value: kpi.presentToday, icon: CheckCircle, accent: 'purple', subtext: `${kpi.onTimeToday} on time · ${kpi.lateToday} late`, to: '/attendance' },
+    {
+      label: 'System Health',
+      value: healthScore ? `${healthScore.healthScore}%` : '—',
+      icon: Activity,
+      accent: healthScore && healthScore.healthScore < 50 ? 'red' : 'emerald',
+      subtext: healthScore ? 'Live · updates every 30s' : 'Loading…',
+      to: '/analytics?tab=ai',
+    },
   ];
 
   const attention = [
@@ -436,6 +584,19 @@ export default function Dashboard() {
 
   const visibleLeaveRequests = pendingLeaveRequests.slice(0, 5);
   const visibleSchedule = todaySchedule.slice(0, 5);
+
+  // Database Health: colour and label follow the most recent reading, same status-colour convention
+  // (emerald/amber/red) used everywhere else on this page.
+  const latestDbHealth = dbHealth[dbHealth.length - 1];
+  const dbHealthColor = !latestDbHealth || !latestDbHealth.connected
+    ? COLORS.red
+    : latestDbHealth.latencyMs < 30 ? COLORS.emerald : latestDbHealth.latencyMs < 100 ? COLORS.amber : COLORS.red;
+  const dbHealthLabel = !latestDbHealth
+    ? 'Measuring…'
+    : !latestDbHealth.connected ? 'Disconnected' : latestDbHealth.latencyMs < 30 ? 'Healthy' : latestDbHealth.latencyMs < 100 ? 'Elevated' : 'Slow';
+  const dbHealthBadgeVariant = !latestDbHealth
+    ? 'default'
+    : !latestDbHealth.connected ? 'danger' : latestDbHealth.latencyMs < 30 ? 'success' : latestDbHealth.latencyMs < 100 ? 'warning' : 'danger';
 
   if (loading) {
     return <SkeletonPage kpiCount={kpiCards.length} />;
@@ -454,6 +615,17 @@ export default function Dashboard() {
             <Calendar className="w-4 h-4 text-gray-400" />
             <span className="font-medium">{formatDate(today)}</span>
           </div>
+          {/* Kiosk status, at a glance - the pulsing dot is the "is it really on" cue, not just the label. */}
+          <Link
+            to="/kiosk-setup"
+            className={`flex items-center gap-2 text-sm px-4 py-2.5 rounded-xl border shadow-sm transition-colors ${
+              kioskSettings.active ? 'bg-emerald-50 border-emerald-100 text-emerald-700 hover:bg-emerald-100' : 'bg-gray-50 border-gray-100 text-gray-500 hover:bg-gray-100'
+            }`}
+          >
+            <Smartphone className="w-4 h-4" />
+            <span className={`w-1.5 h-1.5 rounded-full ${kioskSettings.active ? 'bg-emerald-500 animate-pulse' : 'bg-gray-400'}`} />
+            <span className="font-medium">{kioskSettings.active ? 'Kiosk Active' : 'Kiosk Inactive'}</span>
+          </Link>
           <Button variant="outline" size="md" icon={Download} onClick={() => setExportOpen(true)}>
             Export report
           </Button>
@@ -463,7 +635,7 @@ export default function Dashboard() {
       {/* Row 1: KPI Cards */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
         {kpiCards.map((card) => (
-          <KpiCard key={card.labelKey} {...card} label={t(card.labelKey)} />
+          <KpiCard key={card.label} {...card} />
         ))}
       </div>
 
@@ -507,15 +679,55 @@ export default function Dashboard() {
         </div>
       </div>
 
-      {/* Row 2: Charts - Attendance Overview (2/3, the wide one) + Leave Statistics */}
+      {/* Quick actions - the same phone-app-icon tiles the Employee dashboard uses, so Employees,
+          Attendance, Schedule, Leave, Timesheets and Reports are each one tap away. */}
+      <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-5">
+        <h2 className="text-base font-semibold text-gray-900 mb-4">Quick Actions</h2>
+        <div className="grid grid-cols-3 sm:grid-cols-6 gap-3">
+          {QUICK_ACTIONS.map((action) => (
+            <Link
+              key={action.label}
+              to={action.path}
+              className="group flex flex-col items-center justify-center gap-1.5 p-3 rounded-2xl border border-gray-100 bg-gray-50/60 hover:bg-white hover:border-blue-200 hover:shadow-md hover:-translate-y-0.5 active:translate-y-0 transition-all duration-200 text-center"
+            >
+              <span className={`w-11 h-11 rounded-xl bg-gradient-to-br ${action.tile} shadow-md flex items-center justify-center group-hover:scale-105 transition-transform duration-200`}>
+                <action.icon className="w-5 h-5 text-white" />
+              </span>
+              <span className="text-[13px] font-semibold text-gray-900 leading-tight">{action.label}</span>
+              <span className="text-[10px] text-gray-400 leading-tight hidden sm:block">{action.hint}</span>
+            </Link>
+          ))}
+        </div>
+      </div>
+
+      {/* Row: Attendance Overview (2/3, with a week navigator) + Leave Statistics (1/3) */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        <ChartCard
-          title={t('dashboard.attendanceOverview')}
-          badge={attendanceOverview.isCurrentWeek ? t('dashboard.thisWeek') : attendanceOverview.rangeLabel}
-          badgeVariant="primary"
-          className="lg:col-span-2"
-        >
-          <div className="h-[340px]">
+        <div className="lg:col-span-2 bg-white rounded-2xl border border-gray-100 shadow-sm p-6 overflow-hidden h-[380px] flex flex-col">
+          <div className="flex items-center justify-between gap-3 mb-3 shrink-0">
+            <h3 className="text-base font-semibold text-gray-900 tracking-tight">{t('dashboard.attendanceOverview')}</h3>
+            <div className="flex items-center gap-1.5">
+              <button
+                type="button"
+                aria-label="Previous week"
+                disabled={weeksBack >= MAX_WEEKS_BACK}
+                onClick={() => setWeeksBack((w) => w + 1)}
+                className="w-7 h-7 rounded-lg border border-gray-200 text-gray-500 hover:bg-gray-50 disabled:opacity-40 disabled:hover:bg-transparent flex items-center justify-center"
+              >
+                <ChevronLeft className="w-4 h-4" />
+              </button>
+              <Badge variant="primary" size="sm">{attendanceOverview.isCurrentWeek ? `${t('dashboard.thisWeek')} · ${attendanceOverview.rangeLabel}` : attendanceOverview.rangeLabel}</Badge>
+              <button
+                type="button"
+                aria-label="Next week"
+                disabled={weeksBack === 0}
+                onClick={() => setWeeksBack((w) => Math.max(0, w - 1))}
+                className="w-7 h-7 rounded-lg border border-gray-200 text-gray-500 hover:bg-gray-50 disabled:opacity-40 disabled:hover:bg-transparent flex items-center justify-center"
+              >
+                <ChevronRight className="w-4 h-4" />
+              </button>
+            </div>
+          </div>
+          <div className="flex-1 min-h-0">
             {!hasAttendanceData ? (
               <EmptyState message={t('dashboard.noData')} />
             ) : (
@@ -541,10 +753,10 @@ export default function Dashboard() {
               </ResponsiveContainer>
             )}
           </div>
-        </ChartCard>
+        </div>
 
-        <ChartCard title={t('dashboard.leaveStatistics')} badge={t('dashboard.allTypes')} badgeVariant="info">
-          <div className="h-[340px]">
+        <ChartCard title={t('dashboard.leaveStatistics')} badge={t('dashboard.allTypes')} badgeVariant="info" className="h-[380px]">
+          <div className="h-[300px]">
             {leaveStatisticsData.length === 0 ? (
               <EmptyState message={t('dashboard.noData')} />
             ) : (
@@ -591,22 +803,30 @@ export default function Dashboard() {
         </ChartCard>
       </div>
 
-      {/* Row 3: Charts - Weekly Trend + Productivity */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        <ChartCard title={t('dashboard.weeklyTrend')} badge={t('dashboard.overall')} badgeVariant="success">
-          <div className="h-[320px]">
+      {/* Row: Monthly Trend (text, not a chart) + Attendance Rate ring + Decision Support overview */}
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        <ChartCard title="Monthly Attendance Trend" badge={t('dashboard.overall')} badgeVariant="success">
+          <div className="h-[320px] overflow-y-auto">
             {monthlyAttendanceData.length === 0 ? (
               <EmptyState message={t('dashboard.noData')} />
             ) : (
-              <ResponsiveContainer width="100%" height="100%">
-                <BarChart data={monthlyAttendanceData} barSize={28} margin={{ top: 8, right: 8, left: -12, bottom: 0 }}>
-                  <CartesianGrid strokeDasharray="3 3" stroke={chart.grid} vertical={false} />
-                  <XAxis dataKey="week" axisLine={false} tickLine={false} tick={{ fontSize: 12, fill: chart.axis }} />
-                  <YAxis domain={[0, 100]} axisLine={false} tickLine={false} tick={{ fontSize: 12, fill: chart.axis }} />
-                  <Tooltip content={<CustomTooltip />} cursor={{ fill: '#F1F5F9' }} />
-                  <Bar dataKey="percentage" name="percentage" fill={COLORS.blue} radius={[6, 6, 0, 0]} />
-                </BarChart>
-              </ResponsiveContainer>
+              <div className="space-y-4 py-1">
+                {monthlyAttendanceData.map((row) => (
+                  <div key={row.week} className="flex items-center gap-4">
+                    <span className="w-14 text-sm font-medium text-gray-500 shrink-0">{row.week}</span>
+                    <div className="flex-1 h-2.5 bg-gray-100 rounded-full overflow-hidden">
+                      <div
+                        className="h-full rounded-full"
+                        style={{
+                          width: `${Math.min(100, row.percentage)}%`,
+                          backgroundColor: row.percentage >= 90 ? COLORS.emerald : row.percentage >= 75 ? COLORS.blue : row.percentage >= 50 ? COLORS.amber : COLORS.red,
+                        }}
+                      />
+                    </div>
+                    <span className="w-12 text-right text-sm font-bold text-gray-900 tabular-nums">{row.percentage}%</span>
+                  </div>
+                ))}
+              </div>
             )}
           </div>
         </ChartCard>
@@ -636,12 +856,51 @@ export default function Dashboard() {
             )}
           </div>
         </ChartCard>
+
+        {/* Decision Support overview - the cheap score plus the top open findings, with everything
+            else (the queue, the full briefing) left to the AI Decision Support tab itself. */}
+        <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-6 overflow-hidden h-[386px] flex flex-col">
+          <div className="flex items-center justify-between gap-3 mb-4 shrink-0">
+            <div className="flex items-center gap-3">
+              <div className="w-9 h-9 rounded-xl bg-violet-50 flex items-center justify-center shrink-0">
+                <Sparkles className="w-4.5 h-4.5 text-violet-500" />
+              </div>
+              <h3 className="text-base font-semibold text-gray-900 tracking-tight">Decision Support</h3>
+            </div>
+            <Link to="/analytics?tab=ai" className="text-xs font-semibold text-blue-600 hover:text-blue-700 inline-flex items-center gap-1 shrink-0">
+              View all <ArrowRight className="w-3.5 h-3.5" />
+            </Link>
+          </div>
+          {!aiInsights ? (
+            <div className="flex-1 flex items-center justify-center">
+              <SkeletonLine className="h-24 w-24 rounded-full" />
+            </div>
+          ) : (
+            <>
+              <div className="flex items-center gap-4 mb-4 shrink-0">
+                <ScoreRing score={aiInsights.healthScore} size={88} stroke={9} color={aiInsights.healthScore < 50 ? COLORS.red : COLORS.emerald} track={chart.grid} suffixLabel="Health" />
+                <p className="text-xs text-gray-500 flex-1">{aiInsights.summary}</p>
+              </div>
+              <div className="flex-1 min-h-0 overflow-y-auto space-y-2">
+                {(aiInsights.insights || []).filter((i) => i.severity !== 'success').slice(0, 3).map((i) => (
+                  <div key={i.id} className="flex items-start gap-2.5 rounded-xl bg-gray-50/70 border border-gray-100 px-3 py-2.5">
+                    <Badge variant={i.severity === 'critical' ? 'danger' : i.severity === 'warning' ? 'warning' : 'info'} size="xs">{i.severity}</Badge>
+                    <p className="text-xs text-gray-700 leading-snug">{i.title}</p>
+                  </div>
+                ))}
+                {(aiInsights.insights || []).filter((i) => i.severity !== 'success').length === 0 && (
+                  <p className="text-xs text-gray-400 text-center py-4">Nothing flagged right now.</p>
+                )}
+              </div>
+            </>
+          )}
+        </div>
       </div>
 
-      {/* Row 4: Pending Leave Requests (2fr) + Today's Schedule (1fr) */}
+      {/* Row: Pending Leave Requests + Pending Timesheets + Today's Schedule */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 items-stretch">
-        {/* Pending Leave Requests - wider */}
-        <div className="lg:col-span-2 bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden flex flex-col h-[560px]">
+        {/* Pending Leave Requests */}
+        <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden flex flex-col h-[560px]">
           <div className="flex items-center justify-between gap-3 px-6 pt-6 pb-3 flex-shrink-0">
             <h3 className="text-base font-semibold text-gray-900 tracking-tight">{t('dashboard.pendingLeave')}</h3>
             <div className="flex items-center gap-3">
@@ -691,7 +950,44 @@ export default function Dashboard() {
           </div>
         </div>
 
-        {/* Today's Schedule - narrower */}
+        {/* Pending Timesheets - View opens a modal with Approve / Reject, rather than deciding instantly */}
+        <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden flex flex-col h-[560px]">
+          <div className="flex items-center justify-between gap-3 px-6 pt-6 pb-3 flex-shrink-0">
+            <h3 className="text-base font-semibold text-gray-900 tracking-tight">Pending Timesheets</h3>
+            <div className="flex items-center gap-3">
+              {pendingTimesheetsAll.length > 5 && (
+                <Link
+                  to="/timesheets"
+                  className="inline-flex items-center gap-1 text-xs font-semibold text-blue-600 hover:text-blue-700 transition-colors"
+                >
+                  {t('dashboard.viewAll')}
+                  <ArrowRight className="w-3.5 h-3.5" />
+                </Link>
+              )}
+              <Badge variant="warning" size="sm">{pendingTimesheetsAll.length} pending</Badge>
+            </div>
+          </div>
+          <div className="divide-y divide-gray-100/70 flex-1 overflow-y-auto overflow-x-hidden">
+            {pendingTimesheets.length === 0 ? (
+              <EmptyState message="No timesheets waiting for review." />
+            ) : (
+              pendingTimesheets.map((ts) => (
+                <div key={ts.id} className="px-6 py-4 hover:bg-gray-50 transition-colors flex items-center justify-between gap-3">
+                  <div className="min-w-0">
+                    <p className="text-[15px] font-semibold text-gray-900 truncate">{ts.employeeName}</p>
+                    <p className="text-xs text-gray-500 mt-1">{formatDate(ts.weekStart)} – {formatDate(ts.weekEnd)}</p>
+                    <p className="text-xs text-gray-400 mt-0.5">{Number(ts.totalHours || 0).toFixed(1)}h total</p>
+                  </div>
+                  <Button variant="outline" size="xs" icon={Eye} onClick={() => openTimesheetView(ts)} className="shrink-0">
+                    View
+                  </Button>
+                </div>
+              ))
+            )}
+          </div>
+        </div>
+
+        {/* Today's Schedule */}
         <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden flex flex-col h-[560px]">
           <div className="flex items-center justify-between gap-3 px-6 pt-6 pb-3 flex-shrink-0">
             <h3 className="text-base font-semibold text-gray-900 tracking-tight">{t('dashboard.todaySchedule')}</h3>
@@ -730,6 +1026,108 @@ export default function Dashboard() {
                   </Badge>
                 </div>
               ))
+            )}
+          </div>
+        </div>
+      </div>
+
+      {/* Row: Database Health (live graph, 2/3) + Department Headcount & Upcoming Events (1/3) */}
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 items-stretch">
+        <div className="lg:col-span-2 bg-white rounded-2xl border border-gray-100 shadow-sm p-6 overflow-hidden h-[320px] flex flex-col">
+          <div className="flex items-center justify-between gap-3 mb-3 shrink-0">
+            <div className="flex items-center gap-3">
+              <div className="w-9 h-9 rounded-xl bg-blue-50 flex items-center justify-center shrink-0">
+                <Database className="w-4.5 h-4.5 text-blue-500" />
+              </div>
+              <div>
+                <h3 className="text-base font-semibold text-gray-900 tracking-tight">Database Health</h3>
+                <p className="text-xs text-gray-400 mt-0.5">Live Postgres round-trip time</p>
+              </div>
+            </div>
+            <Badge variant={dbHealthBadgeVariant} size="sm" dot>{dbHealthLabel}</Badge>
+          </div>
+          <div className="flex-1 min-h-0">
+            {dbHealth.length < 2 ? (
+              <EmptyState message="Measuring…" />
+            ) : (
+              <ResponsiveContainer width="100%" height="100%">
+                <AreaChart data={dbHealth} margin={{ top: 8, right: 8, left: 8, bottom: 0 }}>
+                  <defs>
+                    <linearGradient id="dbHealthFill" x1="0" y1="0" x2="0" y2="1">
+                      <stop offset="0%" stopColor={dbHealthColor} stopOpacity={0.35} />
+                      <stop offset="100%" stopColor={dbHealthColor} stopOpacity={0} />
+                    </linearGradient>
+                  </defs>
+                  <CartesianGrid strokeDasharray="3 3" stroke={chart.grid} vertical={false} />
+                  <YAxis hide domain={[0, (max) => Math.max(40, Math.ceil(max * 1.2))]} />
+                  <Tooltip
+                    content={({ active, payload }) => {
+                      if (active && payload && payload.length) {
+                        const p = payload[0].payload;
+                        return (
+                          <div className="bg-white rounded-xl shadow-lg border border-gray-100 p-3">
+                            <p className="text-sm font-semibold text-gray-900">{p.connected ? `${p.latencyMs}ms` : 'Disconnected'}</p>
+                            <p className="text-xs text-gray-500">{new Date(p.t).toLocaleTimeString()}</p>
+                          </div>
+                        );
+                      }
+                      return null;
+                    }}
+                  />
+                  <Area type="monotone" dataKey="latencyMs" stroke={dbHealthColor} strokeWidth={2} fill="url(#dbHealthFill)" dot={false} animationDuration={300} />
+                </AreaChart>
+              </ResponsiveContainer>
+            )}
+          </div>
+        </div>
+
+        <div className="flex flex-col gap-6">
+          <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-6">
+            <div className="flex items-center gap-3 mb-4">
+              <div className="w-9 h-9 rounded-xl bg-indigo-50 flex items-center justify-center shrink-0">
+                <Building2 className="w-4.5 h-4.5 text-indigo-500" />
+              </div>
+              <h3 className="text-base font-semibold text-gray-900 tracking-tight">Department Headcount</h3>
+            </div>
+            {departmentDistribution.length === 0 ? (
+              <EmptyState message={t('dashboard.noData')} />
+            ) : (
+              <div className="space-y-3">
+                {departmentDistribution.map((d) => (
+                  <div key={d.name} className="flex items-center gap-3">
+                    <span className="w-24 text-xs text-gray-600 truncate" title={d.name}>{d.name}</span>
+                    <div className="flex-1 h-2 bg-gray-100 rounded-full overflow-hidden">
+                      <div className="h-full bg-blue-500 rounded-full" style={{ width: `${d.pct}%` }} />
+                    </div>
+                    <span className="w-6 text-right text-xs font-semibold text-gray-900">{d.count}</span>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+
+          <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-6">
+            <div className="flex items-center gap-3 mb-4">
+              <div className="w-9 h-9 rounded-xl bg-pink-50 flex items-center justify-center shrink-0">
+                <Gift className="w-4.5 h-4.5 text-pink-500" />
+              </div>
+              <h3 className="text-base font-semibold text-gray-900 tracking-tight">Upcoming Birthdays &amp; Anniversaries</h3>
+            </div>
+            {upcomingEvents.length === 0 ? (
+              <EmptyState message="Nothing in the next two weeks." />
+            ) : (
+              <div className="space-y-3">
+                {upcomingEvents.map((ev) => (
+                  <div key={ev.id} className="flex items-center gap-3">
+                    <Avatar firstName={ev.name.split(' ')[0]} lastName={ev.name.split(' ')[1]} src={ev.avatar} size="sm" />
+                    <div className="min-w-0 flex-1">
+                      <p className="text-sm font-medium text-gray-900 truncate">{ev.name}</p>
+                      <p className="text-xs text-gray-500">{ev.label}</p>
+                    </div>
+                    <span className="text-xs font-semibold text-gray-400 shrink-0">{ev.days === 0 ? 'Today' : `${ev.days}d`}</span>
+                  </div>
+                ))}
+              </div>
             )}
           </div>
         </div>
@@ -793,6 +1191,60 @@ export default function Dashboard() {
               <Button variant="outline" onClick={() => setRejectTarget(null)}>Cancel</Button>
               <Button variant="danger" icon={X} onClick={confirmReject}>Reject Request</Button>
             </div>
+          </div>
+        )}
+      </Modal>
+
+      {/* Timesheet: View opens here, Approve is immediate, Reject reveals the required-reason step
+          in place rather than a second modal. */}
+      <Modal isOpen={!!tsViewTarget} onClose={closeTimesheetView} title="Timesheet request" size="sm">
+        {tsViewTarget && (
+          <div className="space-y-4">
+            <div className="flex items-center gap-3">
+              <Avatar firstName={(tsViewTarget.employeeName || '').split(' ')[0]} lastName={(tsViewTarget.employeeName || '').split(' ')[1]} size="sm" />
+              <div>
+                <p className="text-sm font-semibold text-gray-900">{tsViewTarget.employeeName}</p>
+                <p className="text-xs text-gray-500">{formatDate(tsViewTarget.weekStart)} – {formatDate(tsViewTarget.weekEnd)}</p>
+              </div>
+            </div>
+            <div className="grid grid-cols-3 gap-3 text-center">
+              <div className="rounded-xl bg-gray-50 border border-gray-100 py-3">
+                <p className="text-lg font-bold text-gray-900">{Number(tsViewTarget.regularHours || 0).toFixed(1)}h</p>
+                <p className="text-[11px] text-gray-500 mt-0.5">Regular</p>
+              </div>
+              <div className="rounded-xl bg-gray-50 border border-gray-100 py-3">
+                <p className="text-lg font-bold text-gray-900">{Number(tsViewTarget.overtimeHours || 0).toFixed(1)}h</p>
+                <p className="text-[11px] text-gray-500 mt-0.5">Overtime</p>
+              </div>
+              <div className="rounded-xl bg-gray-50 border border-gray-100 py-3">
+                <p className="text-lg font-bold text-gray-900">{Number(tsViewTarget.totalHours || 0).toFixed(1)}h</p>
+                <p className="text-[11px] text-gray-500 mt-0.5">Total</p>
+              </div>
+            </div>
+
+            {tsRejecting ? (
+              <>
+                <Textarea
+                  label="Reason for rejection"
+                  placeholder="Tell the employee why this timesheet is being rejected..."
+                  rows={3}
+                  autoFocus
+                  value={tsReason}
+                  onChange={(e) => { setTsReason(e.target.value); setTsReasonError(''); }}
+                  error={tsReasonError}
+                />
+                <div className="flex justify-end gap-2 pt-1">
+                  <Button variant="outline" onClick={() => setTsRejecting(false)} disabled={tsBusy}>Back</Button>
+                  <Button variant="danger" icon={X} onClick={confirmRejectTimesheet} loading={tsBusy}>Reject Timesheet</Button>
+                </div>
+              </>
+            ) : (
+              <div className="flex justify-end gap-2 pt-1">
+                <Button variant="outline" onClick={closeTimesheetView} disabled={tsBusy}>Cancel</Button>
+                <Button variant="dangerOutline" icon={X} onClick={() => setTsRejecting(true)} disabled={tsBusy}>Reject</Button>
+                <Button variant="success" icon={Check} onClick={approveTimesheet} loading={tsBusy}>Approve</Button>
+              </div>
+            )}
           </div>
         )}
       </Modal>

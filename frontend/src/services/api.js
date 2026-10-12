@@ -426,6 +426,18 @@ export const analyticsService = {
   runAiAction: async (action, payload = {}) => {
     return http.post('/analytics/ai/actions', { action, ...payload });
   },
+  // The dashboard's live "System Health" tile - the same score insights() computes, with none of
+  // the AI prose, so it's cheap enough to poll every 30s.
+  getHealthScore: async () => {
+    const { data } = await http.get('/analytics/ai/health-score');
+    return data;
+  },
+  // A raw Postgres round-trip time, for the dashboard's live DB-health graph. Polled every few
+  // seconds, so this is deliberately not cached anywhere.
+  getDbHealth: async () => {
+    const { data } = await http.get('/system/db-health');
+    return data;
+  },
 };
 
 export const settingsService = {

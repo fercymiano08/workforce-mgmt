@@ -57,6 +57,21 @@ class AIDecisionSupportService
 
     private const SEVERITY_ORDER = ['critical' => 0, 'warning' => 1, 'info' => 2, 'success' => 3];
 
+    /**
+     * Just the Workforce Health Score, none of the Gemini prose - for a dashboard tile that polls
+     * every few seconds. insights() below computes the same score, but also calls (or serves a
+     * 6-hour cache of) Gemini for the written briefing, which this never needs to do.
+     *
+     * @return array{score: int, breakdown: array}
+     */
+    public function healthScoreOnly(): array
+    {
+        $facts = $this->facts();
+        $items = $this->findings($facts);
+
+        return $this->score($facts, $items);
+    }
+
     public function insights(bool $fresh = false): array
     {
         $facts = $this->facts();

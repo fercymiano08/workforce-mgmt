@@ -117,6 +117,19 @@ class EmployeeTest extends TestCase
         $this->assertFalse($veteran->json('data.probationary'));
     }
 
+    public function test_a_recently_hired_employee_is_flagged_newly_hired(): void
+    {
+        $recent = $this->actingAs($this->user)
+            ->postJson('/api/employees', $this->employeePayload(['email' => 'new.hire2@example.com', 'hireDate' => now()->toDateString()]))
+            ->assertCreated();
+        $this->assertTrue($recent->json('data.newlyHired'));
+
+        $overAMonth = $this->actingAs($this->user)
+            ->postJson('/api/employees', $this->employeePayload(['email' => 'settled@example.com', 'hireDate' => now()->subDays(31)->toDateString()]))
+            ->assertCreated();
+        $this->assertFalse($overAMonth->json('data.newlyHired'));
+    }
+
     public function test_position_must_belong_to_the_selected_department(): void
     {
         $this->actingAs($this->user)

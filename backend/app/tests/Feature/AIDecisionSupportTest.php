@@ -78,6 +78,20 @@ class AIDecisionSupportTest extends TestCase
 
         $this->actingAs($user)->getJson('/api/analytics/ai/insights')->assertForbidden();
         $this->actingAs($user)->postJson('/api/analytics/ai/actions', ['action' => 'approve_leave', 'id' => 'LV001'])->assertForbidden();
+        $this->actingAs($user)->getJson('/api/analytics/ai/health-score')->assertForbidden();
+    }
+
+    /** The dashboard's pollable tile: the same score insights() computes, with no Gemini call involved. */
+    public function test_health_score_matches_insights_without_calling_the_ai(): void
+    {
+        $admin = $this->adminUser();
+
+        $insights = $this->actingAs($admin)->getJson('/api/analytics/ai/insights')->assertOk()->json('data');
+        $response = $this->actingAs($admin)->getJson('/api/analytics/ai/health-score')->assertOk();
+
+        $response->assertJsonStructure(['data' => ['healthScore', 'scoreBreakdown', 'generatedAt']]);
+        $this->assertSame($insights['healthScore'], $response->json('data.healthScore'));
+        $this->assertSame('rule-based', $insights['source']);
     }
 
     public function test_returns_a_well_shaped_response_even_with_no_data(): void

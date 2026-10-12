@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers\Api;
 
+use App\Http\Controllers\Api\Concerns\AuthorizesEmployeeScope;
 use App\Http\Controllers\Controller;
 use App\Services\AnalyticsService;
 use Illuminate\Http\Request;
@@ -9,6 +10,8 @@ use Illuminate\Http\JsonResponse;
 
 class AnalyticsController extends Controller
 {
+    use AuthorizesEmployeeScope;
+
     public function __construct(private readonly AnalyticsService $analytics) {}
 
     /**
@@ -59,6 +62,8 @@ class AnalyticsController extends Controller
     /** The "By Employee" tab inside Workforce Analytics - the same window as workforce(), for one person. */
     public function employee(Request $request, string $employeeId): JsonResponse
     {
+        $this->assertSelfOrAdmin($request, $employeeId);
+
         if (! \App\Models\Employee::where('id', $employeeId)->exists()) {
             return response()->json(['message' => 'Employee not found'], 404);
         }

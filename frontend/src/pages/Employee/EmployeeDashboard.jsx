@@ -5,22 +5,25 @@ import {
   Briefcase, Plus,
   Fingerprint, FileText, CalendarClock, Calendar, ArrowRight,
   Shield, Building2, BadgeCheck, DoorOpen, User, Settings, Inbox, ChevronLeft, ChevronRight,
+  Sparkles, Bell, Info,
 } from 'lucide-react';
 import {
   BarChart, Bar, Cell, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
 } from 'recharts';
 import { useAuth } from '../../context/AuthContext';
+import { useNotifications } from '../../context/NotificationContext';
 import TodayBadge from '../../components/common/TodayBadge';
 import { todayKey, todayRowClass, coversToday, thisWeek, weekOf, dayTick, weekRangeLabel } from '../../utils/today';
 import { scheduleOutcome, SCHEDULE_BADGE } from '../../utils/scheduleOutcome';
+import { notificationTypeConfig } from '../../constants/notificationTypes';
 import Badge from '../../components/ui/Badge';
 import Avatar from '../../components/ui/Avatar';
 import Button from '../../components/ui/Button';
 import KpiCard from '../../components/dashboard/KpiCard';
 import { SkeletonList, SkeletonPage } from '../../components/ui/LoadingSkeleton';
 import useApiData from '../../hooks/useApiData';
-import { attendanceService, leaveService, shiftService, timesheetService, profileService } from '../../services/api';
-import { formatDate, formatTime } from '../../utils/helpers';
+import { attendanceService, leaveService, shiftService, timesheetService, profileService, overtimeService, analyticsService } from '../../services/api';
+import { formatDate, formatTime, getRelativeTime } from '../../utils/helpers';
 import { didAttend } from '../../utils/constants';
 import { useTheme } from '../../context/ThemeContext';
 import { chartTheme } from '../../constants/chartTheme';
@@ -117,6 +120,18 @@ export default function EmployeeDashboard() {
     () => attendanceService.getEarlyClockOutsByEmployee(employeeId),
     [employeeId]
   );
+  const { data: overtimeRecords } = useApiData(
+    () => overtimeService.getByEmployeeId(employeeId),
+    [employeeId]
+  );
+  // The same punctuality-based read admins see in the Top Performer popup, scoped to this employee's
+  // own record - reads only attendance + punctuality, same as there, so it is never confused for a
+  // full performance review.
+  const { data: myCard } = useApiData(
+    () => analyticsService.getEmployeeCard(employeeId, 'month'),
+    [employeeId]
+  );
+  const { notifications } = useNotifications();
 
   // Only the two requests the numbers are actually worked out from hold the page. The rest of the
   // sections below draw themselves as their own data lands, instead of the whole screen waiting on
@@ -208,6 +223,24 @@ export default function EmployeeDashboard() {
 
   const isCurrentAttendanceWeek = weeksBack === 0;
   const attendanceRangeLabel = weekRangeLabel(attendanceWeek.start, attendanceWeek.end);
+
+  // Overtime hours requested, by week, the last 6 weeks (oldest to newest) - every week appears even
+  // with nothing filed, so a quiet month reads as "0h" rather than a missing bar.
+  const otWeeks = useMemo(() => {
+    const records = (overtimeRecords || []).filter((r) => r.employeeId === employeeId);
+    const base = weekOf(todayKey()).start.split('-').map(Number);
+    const weeks = [];
+    for (let back = 5; back >= 0; back--) {
+      const monday = new Date(Date.UTC(base[0], base[1] - 1, base[2] - 7 * back));
+      const start = monday.toISOString().slice(0, 10);
+      const end = new Date(monday.getTime() + 6 * 86400000).toISOString().slice(0, 10);
+      const hours = records
+        .filter((r) => r.date >= start && r.date <= end)
+        .reduce((sum, r) => sum + Number(r.expectedHours || 0), 0);
+      weeks.push({ label: `${monday.getUTCMonth() + 1}/${monday.getUTCDate()}`, hours: Math.round(hours * 10) / 10 });
+    }
+    return weeks;
+  }, [overtimeRecords, employeeId]);
 
 
   // This week = Monday to Sunday (ISO 8601); only days that are finished (clocked out) count
@@ -302,32 +335,19 @@ export default function EmployeeDashboard() {
             <p className="text-sm text-gray-400 mt-1">Here's what's happening with your work today.</p>
             <div className="flex flex-wrap items-center gap-2 mt-3">
               {profile?.department && (
-                <span className="inline-flex items-center gap-1.5 text-[11px] font-semibold px-2.5 py-1 rounded-full bg-gray-100 text-gray-600">
-                  <Building2 className="w-3 h-3" />
-                  {profile.department}
-                </span>
+                <Badge variant="default" size="xs"><Building2 className="w-3 h-3" />{profile.department}</Badge>
               )}
               {profile?.position && (
-                <span className="inline-flex items-center gap-1.5 text-[11px] font-semibold px-2.5 py-1 rounded-full bg-gray-100 text-gray-600">
-                  <Briefcase className="w-3 h-3" />
-                  {profile.position}
-                </span>
+                <Badge variant="default" size="xs"><Briefcase className="w-3 h-3" />{profile.position}</Badge>
               )}
               {profile?.employmentType && (
-                <span className="inline-flex items-center gap-1.5 text-[11px] font-semibold px-2.5 py-1 rounded-full bg-indigo-50 text-indigo-700">
-                  <BadgeCheck className="w-3 h-3" />
-                  {profile.employmentType}
-                </span>
+                <Badge variant="indigo" size="xs"><BadgeCheck className="w-3 h-3" />{profile.employmentType}</Badge>
               )}
-              {profile?.probationary && (
-                <span className="inline-flex items-center gap-1.5 text-[11px] font-semibold px-2.5 py-1 rounded-full bg-amber-50 text-amber-700">
-                  Probationary
-                </span>
-              )}
-              <span className="inline-flex items-center gap-1.5 text-[11px] font-semibold px-2.5 py-1 rounded-full bg-emerald-50 text-emerald-700">
-                <Shield className="w-3 h-3" />
-                Identity verified via facial recognition
-              </span>
+              {profile?.probationary && <Badge variant="warning" size="xs">Probationary</Badge>}
+              {/* Separate from Probationary - a short, deliberately shorter window (30 days) just to
+                  say "still settling in", not a statement about statutory employment status. */}
+              {profile?.newlyHired && <Badge variant="info" size="xs">New Hire</Badge>}
+              <Badge variant="success" size="xs"><Shield className="w-3 h-3" />Identity verified via facial recognition</Badge>
             </div>
           </div>
           <div className="flex items-center gap-2 text-sm text-gray-500 bg-gray-50 px-4 py-2.5 rounded-xl border border-gray-100 shrink-0">
@@ -538,6 +558,94 @@ export default function EmployeeDashboard() {
               </button>
             ))}
           </div>
+        </div>
+      </div>
+
+      {/* OT Requests + My Punctuality-Based Read */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-6 overflow-hidden h-[280px] flex flex-col">
+          <h3 className="text-base font-semibold text-gray-900 tracking-tight mb-3 shrink-0">OT Requests</h3>
+          <div className="flex-1 min-h-0">
+            {otWeeks.every((w) => w.hours === 0) ? (
+              <EmptyChart message="Overtime you request shows up here, by week." />
+            ) : (
+              <ResponsiveContainer width="100%" height="100%">
+                <BarChart data={otWeeks} barSize={28} margin={{ top: 8, right: 8, left: -12, bottom: 0 }}>
+                  <CartesianGrid strokeDasharray="3 3" stroke={chart.grid} vertical={false} />
+                  <XAxis dataKey="label" axisLine={false} tickLine={false} tick={{ fontSize: 12, fill: chart.axis }} />
+                  <YAxis axisLine={false} tickLine={false} tick={{ fontSize: 12, fill: chart.axis }} unit="h" allowDecimals={false} />
+                  <Tooltip cursor={{ fill: chart.cursor }} contentStyle={chart.tooltipStyle} formatter={(v) => [`${v}h`, 'Requested']} />
+                  <Bar dataKey="hours" fill={COLORS.purpleDark} radius={[6, 6, 0, 0]} />
+                </BarChart>
+              </ResponsiveContainer>
+            )}
+          </div>
+        </div>
+
+        {/* Deliberately not called "performance" - same single-signal read (attendance + punctuality
+            only) the Top Performer popup shows admins, scoped to this employee's own record. */}
+        <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-6 overflow-hidden h-[280px] flex flex-col">
+          <div className="flex items-center gap-3 mb-3 shrink-0">
+            <div className="w-9 h-9 rounded-xl bg-violet-50 flex items-center justify-center shrink-0">
+              <Sparkles className="w-4.5 h-4.5 text-violet-500" />
+            </div>
+            <h3 className="text-base font-semibold text-gray-900 tracking-tight">My Punctuality-Based Read</h3>
+          </div>
+          {!myCard ? (
+            <div className="flex-1 flex items-center justify-center text-sm text-gray-400">Loading…</div>
+          ) : (
+            <div className="flex-1 flex flex-col justify-center gap-3">
+              <div className="flex items-center gap-2 flex-wrap">
+                <Badge variant={myCard.performance.tone} size="md">{myCard.performance.label}</Badge>
+                {myCard.performance.score != null && <span className="text-xs text-gray-400">score {myCard.performance.score}</span>}
+              </div>
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <p className="text-[11px] text-gray-400">Attendance</p>
+                  <p className="text-xl font-bold text-gray-900 mt-0.5">{myCard.attendance.rate}%</p>
+                </div>
+                <div>
+                  <p className="text-[11px] text-gray-400">Punctuality</p>
+                  <p className="text-xl font-bold text-gray-900 mt-0.5">{myCard.punctuality.rate}%</p>
+                </div>
+              </div>
+              <p className="text-[11px] text-gray-400 flex items-start gap-1.5">
+                <Info className="w-3.5 h-3.5 shrink-0 mt-0.5" /> {myCard.performance.note}
+              </p>
+            </div>
+          )}
+        </div>
+      </div>
+
+      {/* Recent Notifications */}
+      <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
+        <div className="flex items-center justify-between gap-3 px-6 pt-6 pb-3">
+          <h3 className="text-base font-semibold text-gray-900 tracking-tight">Recent Notifications</h3>
+          <Link to="/notifications" className="inline-flex items-center gap-1 text-xs font-semibold text-blue-600 hover:text-blue-700 transition-colors">
+            View All <ArrowRight className="w-3.5 h-3.5" />
+          </Link>
+        </div>
+        <div className="divide-y divide-gray-100/70">
+          {notifications.length === 0 ? (
+            <p className="px-6 py-6 text-sm text-gray-400 text-center">Nothing yet - you're all caught up.</p>
+          ) : (
+            notifications.slice(0, 5).map((n) => {
+              const config = notificationTypeConfig[n.type] || notificationTypeConfig.system;
+              const NotifIcon = config.icon || Bell;
+              return (
+                <div key={n.id} className="px-6 py-3.5 flex items-start gap-3 hover:bg-gray-50 transition-colors">
+                  <div className="w-8 h-8 rounded-lg bg-gray-50 flex items-center justify-center shrink-0">
+                    <NotifIcon className="w-4 h-4 text-gray-400" />
+                  </div>
+                  <div className="min-w-0 flex-1">
+                    <p className={`text-sm truncate ${n.read ? 'text-gray-700' : 'font-semibold text-gray-900'}`}>{n.title}</p>
+                    <p className="text-xs text-gray-500 mt-0.5 line-clamp-1">{n.message}</p>
+                  </div>
+                  <span className="text-[11px] text-gray-400 shrink-0 mt-0.5">{getRelativeTime(n.timestamp)}</span>
+                </div>
+              );
+            })
+          )}
         </div>
       </div>
     </div>

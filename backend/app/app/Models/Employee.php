@@ -90,6 +90,23 @@ class Employee extends Model
     }
 
     /**
+     * How long, in days, an employee is shown as "newly hired" on their own dashboard and in the
+     * admin roster. No client policy document exists for this yet (unlike PROBATION_DAYS, which
+     * tracks a statutory minimum), so 30 days is used as a reasonable placeholder until one does.
+     */
+    public const NEWLY_HIRED_DAYS = 30;
+
+    /** Still within the first NEWLY_HIRED_DAYS since hireDate. Null hireDate is treated as "not new". */
+    public function isNewlyHired(): bool
+    {
+        if (! $this->hire_date) {
+            return false;
+        }
+
+        return $this->hire_date->copy()->startOfDay()->diffInDays(now()->startOfDay()) < self::NEWLY_HIRED_DAYS;
+    }
+
+    /**
      * Default annual leave entitlement per leave type (calendar days).
      *
      * A panel review walked through these one by one: "Emergency" was redundant with "Sick" (folded
@@ -213,6 +230,7 @@ class Employee extends Model
             'leaveBalances' => $this->leaveBalances(),
             'probationary' => $this->isProbationary(),
             'probationEndsAt' => $this->probationEndsAt(),
+            'newlyHired' => $this->isNewlyHired(),
         ]);
     }
 }

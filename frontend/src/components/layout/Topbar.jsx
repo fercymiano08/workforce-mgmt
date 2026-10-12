@@ -66,7 +66,8 @@ export default function Topbar({ onMenuToggle }) {
       <div className="flex items-center gap-3 flex-1 min-w-0">
         <button
           onClick={onMenuToggle}
-          className="p-2.5 rounded-xl hover:bg-gray-100 transition-colors text-gray-500 lg:hidden shrink-0"
+          className="p-2.5 rounded-xl hover:bg-gray-100 transition-colors text-gray-500 shrink-0"
+          aria-label="Toggle navigation menu"
         >
           <Menu className="w-5 h-5" />
         </button>

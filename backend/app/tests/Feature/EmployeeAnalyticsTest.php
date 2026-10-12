@@ -137,12 +137,30 @@ class EmployeeAnalyticsTest extends TestCase
             ->assertStatus(404);
     }
 
-    public function test_an_employee_cannot_read_it_even_their_own(): void
+    public function test_an_employee_can_read_their_own_card(): void
     {
+        Carbon::setTestNow('2026-06-15 10:00:00');
         $e = $this->employee();
+        foreach (['2026-06-01', '2026-06-02', '2026-06-03', '2026-06-04', '2026-06-05'] as $date) {
+            $this->roster($e, $date);
+            $this->punch($e, $date, 'Present');
+        }
         $employeeUser = User::factory()->create(['role' => 'Employee', 'employee_id' => $e->id]);
 
-        $this->actingAs($employeeUser)->getJson('/api/analytics/employee/'.$e->id)->assertForbidden();
+        $performance = $this->actingAs($employeeUser)
+            ->getJson('/api/analytics/employee/'.$e->id.'?period=year')
+            ->assertOk()->json('data.performance');
+
+        $this->assertSame('Consistently punctual and present', $performance['label']);
+    }
+
+    public function test_an_employee_cannot_read_someone_elses_card(): void
+    {
+        $e = $this->employee('EMP001');
+        $other = $this->employee('EMP002');
+        $employeeUser = User::factory()->create(['role' => 'Employee', 'employee_id' => $e->id]);
+
+        $this->actingAs($employeeUser)->getJson('/api/analytics/employee/'.$other->id)->assertForbidden();
     }
 
     public function test_an_anonymous_request_is_rejected(): void
