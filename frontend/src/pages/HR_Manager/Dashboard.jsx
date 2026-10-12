@@ -1171,12 +1171,12 @@ export default function Dashboard() {
                   </defs>
                   {/* Both axes drawn, both grid directions on - a Task Manager-style readout, not a
                       bare sparkline: you can actually read "when" and "how many ms" off it. */}
-                  <CartesianGrid strokeDasharray="3 3" stroke={chart.grid} />
+                  <CartesianGrid strokeDasharray="3 3" stroke={chart.axisStrong} strokeOpacity={0.35} />
                   <XAxis
                     dataKey="t"
                     type="number"
                     domain={['dataMin', 'dataMax']}
-                    tickFormatter={(t) => new Date(t).toLocaleTimeString([], { hour12: false, minute: '2-digit', second: '2-digit' })}
+                    tickFormatter={(t) => new Date(t).toLocaleTimeString([], { hour12: true, hour: 'numeric', minute: '2-digit', second: '2-digit' })}
                     axisLine={{ stroke: chart.axisStrong }}
                     tickLine={{ stroke: chart.axisStrong }}
                     tick={{ fontSize: 11, fill: chart.axis }}
