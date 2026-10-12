@@ -322,7 +322,7 @@ export default function Dashboard() {
         if (!active) return;
         misses = 0;
         setHealthScoreError(false);
-        setHealthScore(res?.data || null);
+        setHealthScore(res || null);
       })
       .catch(() => {
         if (!active) return;
@@ -347,10 +347,10 @@ export default function Dashboard() {
     let misses = 0;
     const poll = () => analyticsService.getDbHealth()
       .then((res) => {
-        if (!active || !res?.data) return;
+        if (!active || !res) return;
         misses = 0;
         setDbHealthError(false);
-        setDbHealth((prev) => [...prev.slice(-29), { ...res.data, t: Date.now() }]);
+        setDbHealth((prev) => [...prev.slice(-29), { ...res, t: Date.now() }]);
       })
       .catch(() => {
         if (!active) return;
