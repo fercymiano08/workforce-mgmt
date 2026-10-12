@@ -475,7 +475,10 @@ export default function Dashboard() {
 
   const monthlyAttendanceData = useMemo(() => {
     const trend = analytics?.attendanceTrend || [];
-    return trend.map((row) => ({ week: row.month, percentage: row.rate ?? 0 }));
+    // The backend returns this oldest-first (left-to-right chart order); reversed here because
+    // this widget is a list, not a chart - the most recent month is what you want to see first,
+    // not scrolled to the bottom of the stack.
+    return trend.map((row) => ({ week: row.month, percentage: row.rate ?? 0 })).reverse();
   }, [analytics]);
 
   const attendanceRate = workforceRate?.attendanceRate || null;
@@ -877,8 +880,8 @@ export default function Dashboard() {
         </ChartCard>
       </div>
 
-      {/* Row: Monthly Trend (text, not a chart) + Attendance Rate ring + Decision Support overview */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+      {/* Row: Monthly Trend (text, not a chart) + Attendance Rate ring */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         <ChartCard title="Monthly Attendance Trend" badge={t('dashboard.overall')} badgeVariant="success">
           <div className="h-[320px] overflow-y-auto">
             {monthlyAttendanceData.length === 0 ? (
@@ -931,50 +934,75 @@ export default function Dashboard() {
           </div>
         </ChartCard>
 
-        {/* Decision Support overview - the cheap score plus the top open findings (rule-based
-            wording, same facts, no Gemini call), with the AI-written briefing and the full queue
-            left to the AI Decision Support tab itself. */}
-        <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-6 overflow-hidden h-[386px] flex flex-col">
-          <div className="flex items-center justify-between gap-3 mb-4 shrink-0">
-            <div className="flex items-center gap-3">
-              <div className="w-9 h-9 rounded-xl bg-violet-50 flex items-center justify-center shrink-0">
-                <Sparkles className="w-4.5 h-4.5 text-violet-500" />
-              </div>
+      </div>
+
+      {/* Decision Support overview - full width, so the score ring and the findings both get real
+          room instead of being squeezed into a third of a three-column row. The cheap score plus
+          the top open findings (rule-based wording, same facts, no Gemini call); the AI-written
+          briefing and the full queue stay on the AI Decision Support tab itself. */}
+      <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-6">
+        <div className="flex items-center justify-between gap-3 mb-5">
+          <div className="flex items-center gap-3">
+            <div className="w-9 h-9 rounded-xl bg-violet-50 flex items-center justify-center shrink-0">
+              <Sparkles className="w-4.5 h-4.5 text-violet-500" />
+            </div>
+            <div>
               <h3 className="text-base font-semibold text-gray-900 tracking-tight">Decision Support</h3>
+              <p className="text-xs text-gray-400 mt-0.5">Workforce Health Score &amp; top open findings</p>
             </div>
-            <Link to="/analytics?tab=ai" className="text-xs font-semibold text-blue-600 hover:text-blue-700 inline-flex items-center gap-1 shrink-0">
-              View all <ArrowRight className="w-3.5 h-3.5" />
-            </Link>
           </div>
-          {healthScoreError && !healthScore ? (
-            <div className="flex-1 flex flex-col items-center justify-center text-center px-4">
-              <p className="text-sm font-semibold text-gray-900">Couldn't reach the server</p>
-              <p className="text-xs text-gray-400 mt-1">Retrying automatically every 30s.</p>
+          <Link to="/analytics?tab=ai" className="text-xs font-semibold text-blue-600 hover:text-blue-700 inline-flex items-center gap-1 shrink-0">
+            View all <ArrowRight className="w-3.5 h-3.5" />
+          </Link>
+        </div>
+        {healthScoreError && !healthScore ? (
+          <div className="h-[280px] flex flex-col items-center justify-center text-center px-4">
+            <p className="text-sm font-semibold text-gray-900">Couldn't reach the server</p>
+            <p className="text-xs text-gray-400 mt-1">Retrying automatically every 30s.</p>
+          </div>
+        ) : !healthScore ? (
+          <div className="h-[280px] flex items-center justify-center">
+            <SkeletonLine className="h-32 w-32 rounded-full" />
+          </div>
+        ) : (
+          <div className="grid grid-cols-1 lg:grid-cols-[auto_1fr] gap-8 items-center">
+            {/* Left: a real, big ring, with the headline read directly underneath it. */}
+            <div className="flex flex-col items-center gap-3 lg:w-[220px] shrink-0">
+              <ScoreRing
+                score={healthScore.healthScore}
+                size={176}
+                stroke={16}
+                color={healthScore.healthScore >= 75 ? COLORS.emerald : healthScore.healthScore >= 50 ? COLORS.amber : COLORS.red}
+                track={chart.grid}
+                suffix="%"
+              />
+              <p className="text-sm font-semibold text-gray-900">Workforce Health</p>
+              <p className="text-xs text-gray-500 text-center leading-relaxed">{healthScore.summary}</p>
             </div>
-          ) : !healthScore ? (
-            <div className="flex-1 flex items-center justify-center">
-              <SkeletonLine className="h-24 w-24 rounded-full" />
-            </div>
-          ) : (
-            <>
-              <div className="flex items-center gap-4 mb-4 shrink-0">
-                <ScoreRing score={healthScore.healthScore} size={88} stroke={9} color={healthScore.healthScore < 50 ? COLORS.red : COLORS.emerald} track={chart.grid} suffixLabel="Health" />
-                <p className="text-xs text-gray-500 flex-1">{healthScore.summary}</p>
-              </div>
-              <div className="flex-1 min-h-0 overflow-y-auto space-y-2">
-                {(healthScore.insights || []).filter((i) => i.severity !== 'success').slice(0, 3).map((i) => (
-                  <div key={i.id} className="flex items-start gap-2.5 rounded-xl bg-gray-50/70 border border-gray-100 px-3 py-2.5">
-                    <Badge variant={i.severity === 'critical' ? 'danger' : i.severity === 'warning' ? 'warning' : 'info'} size="xs">{i.severity}</Badge>
-                    <p className="text-xs text-gray-700 leading-snug">{i.title}</p>
+
+            {/* Right: the findings, as a proper grid of cards instead of a cramped scrolling list. */}
+            <div className="min-w-0">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                {(healthScore.insights || []).filter((i) => i.severity !== 'success').slice(0, 6).map((i) => (
+                  <div key={i.id} className="flex items-start gap-3 rounded-xl bg-gray-50/70 border border-gray-100 px-4 py-3">
+                    <Badge variant={i.severity === 'critical' ? 'danger' : i.severity === 'warning' ? 'warning' : 'info'} size="xs" className="mt-0.5 shrink-0">
+                      {i.severity}
+                    </Badge>
+                    <div className="min-w-0">
+                      <p className="text-sm font-medium text-gray-900 leading-snug">{i.title}</p>
+                      {i.metric && <p className="text-xs text-gray-400 mt-0.5">{i.metric}</p>}
+                    </div>
                   </div>
                 ))}
-                {(healthScore.insights || []).filter((i) => i.severity !== 'success').length === 0 && (
-                  <p className="text-xs text-gray-400 text-center py-4">Nothing flagged right now.</p>
-                )}
               </div>
-            </>
-          )}
-        </div>
+              {(healthScore.insights || []).filter((i) => i.severity !== 'success').length === 0 && (
+                <div className="h-[200px] flex items-center justify-center">
+                  <p className="text-sm text-gray-400">Nothing flagged right now.</p>
+                </div>
+              )}
+            </div>
+          </div>
+        )}
       </div>
 
       {/* Row: Pending Leave Requests + Pending Timesheets + Today's Schedule */}
@@ -1134,15 +1162,35 @@ export default function Dashboard() {
               <EmptyState message={dbHealthError ? "Couldn't reach the server - retrying automatically." : 'Measuring…'} />
             ) : (
               <ResponsiveContainer width="100%" height="100%">
-                <AreaChart data={dbHealth} margin={{ top: 8, right: 8, left: 8, bottom: 0 }}>
+                <AreaChart data={dbHealth} margin={{ top: 8, right: 16, left: 0, bottom: 0 }}>
                   <defs>
                     <linearGradient id="dbHealthFill" x1="0" y1="0" x2="0" y2="1">
-                      <stop offset="0%" stopColor={dbHealthColor} stopOpacity={0.35} />
+                      <stop offset="0%" stopColor={dbHealthColor} stopOpacity={0.3} />
                       <stop offset="100%" stopColor={dbHealthColor} stopOpacity={0} />
                     </linearGradient>
                   </defs>
-                  <CartesianGrid strokeDasharray="3 3" stroke={chart.grid} vertical={false} />
-                  <YAxis hide domain={[0, (max) => Math.max(40, Math.ceil(max * 1.2))]} />
+                  {/* Both axes drawn, both grid directions on - a Task Manager-style readout, not a
+                      bare sparkline: you can actually read "when" and "how many ms" off it. */}
+                  <CartesianGrid strokeDasharray="3 3" stroke={chart.grid} />
+                  <XAxis
+                    dataKey="t"
+                    type="number"
+                    domain={['dataMin', 'dataMax']}
+                    tickFormatter={(t) => new Date(t).toLocaleTimeString([], { hour12: false, minute: '2-digit', second: '2-digit' })}
+                    axisLine={{ stroke: chart.axisStrong }}
+                    tickLine={{ stroke: chart.axisStrong }}
+                    tick={{ fontSize: 11, fill: chart.axis }}
+                    minTickGap={50}
+                  />
+                  <YAxis
+                    axisLine={{ stroke: chart.axisStrong }}
+                    tickLine={{ stroke: chart.axisStrong }}
+                    tick={{ fontSize: 11, fill: chart.axis }}
+                    unit="ms"
+                    domain={[0, (max) => Math.max(40, Math.ceil(max * 1.2))]}
+                    allowDecimals={false}
+                    width={48}
+                  />
                   <Tooltip
                     content={({ active, payload }) => {
                       if (active && payload && payload.length) {
