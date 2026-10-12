@@ -229,60 +229,79 @@ export default function Dashboard() {
       if (active && pendingLeft === 0) setPendingReady(true);
     };
 
-    load(employeeService.getAll(), (res) => { setEmployees(res); criticalDone(); }, []);
-    // The dashboard only shows today and the last 35 days.
-    load(
-      attendanceService.getAll({ from: (() => { const d = kioskService.now(); d.setDate(d.getDate() - 35); return toDateKey(d); })() }),
-      (res) => { setAttendance(res); criticalDone(); },
-      []
-    );
-    load(leaveService.getAll(), (res) => { setLeaves(res); pendingDone(); }, []);
-    load(shiftService.getSchedules(), setSchedules, []);
-    load(shiftService.getAllShifts(), setShiftDefs, []);
+    // Still paints as each result lands rather than waiting on the slowest - but staggered into
+    // small waves instead of firing all 13 requests in the same instant. Measured directly against
+    // the real backend: firing them all at once queued one request past 12 seconds (the free plan
+    // runs PHP's built-in dev server, a handful of workers shared by everything the page loads at
+    // once) - long enough that a proxy in front of it can and does kill the connection outright
+    // (ERR_CONNECTION_CLOSED in devtools), not just feel slow. A few hundred ms of stagger costs
+    // nothing visible and gives the worker pool room to actually finish each wave before the next.
+    const wave = (fns, delay) => fns.forEach((fn) => setTimeout(() => { if (active) fn(); }, delay));
 
-    load(analyticsService.getAll(), setAnalytics, null);
-    // "This Week" is the freshest window, but a brand-new week (e.g. first thing Monday) genuinely
-    // has no scheduled days counted yet - fall back to the month so this card never opens on a
-    // guaranteed-empty window just because of what day it happens to be.
-    analyticsService.getWorkforce('week')
-      .then((res) => (res?.attendanceRate?.scheduledDays ? res : analyticsService.getWorkforce('month')))
-      .then((res) => { if (active) setWorkforceRate(res); })
-      .catch(() => { if (active) setWorkforceRate(null); });
-    load(
-      overtimeService.getAll(),
-      (ot) => {
-        setWaiting((w) => ({ ...w, overtime: (ot || []).filter((r) => r.status === 'Pending').length }));
-        pendingDone();
-      },
-      () => pendingDone()
-    );
-    // /attendance/early-outs/pending returns an object of the form { pending: N }
-    load(
-      attendanceService.getEarlyClockOutsPending(),
-      (early) => {
-        setWaiting((w) => ({ ...w, early: Number(early && typeof early === 'object' ? early.pending ?? 0 : 0) || 0 }));
-        pendingDone();
-      },
-      () => pendingDone()
-    );
-    load(
-      timesheetService.getAll(),
-      (sheets) => {
-        setTimesheets(sheets || []);
-        setWaiting((w) => ({ ...w, timesheets: (sheets || []).filter((s) => s.status === 'Submitted').length }));
-        pendingDone();
-      },
-      () => pendingDone()
-    );
+    wave([
+      () => load(employeeService.getAll(), (res) => { setEmployees(res); criticalDone(); }, []),
+      // The dashboard only shows today and the last 35 days.
+      () => load(
+        attendanceService.getAll({ from: (() => { const d = kioskService.now(); d.setDate(d.getDate() - 35); return toDateKey(d); })() }),
+        (res) => { setAttendance(res); criticalDone(); },
+        []
+      ),
+      () => load(leaveService.getAll(), (res) => { setLeaves(res); pendingDone(); }, []),
+    ], 0);
 
-    // Fire-and-forget: checks for no-shows, un-closed-out attendance, and
-    // staffing shortage risk, and creates notifications for any found. Never
-    // allowed to break the dashboard if it fails.
-    attendanceService.checkAlerts()
-      .then(() => refreshNotifications())
-      .catch(() => {});
+    wave([
+      () => load(shiftService.getSchedules(), setSchedules, []),
+      () => load(shiftService.getAllShifts(), setShiftDefs, []),
+      () => load(analyticsService.getAll(), setAnalytics, null),
+    ], 350);
 
-    kioskService.load().then((settings) => { if (active) setKioskSettings(settings); });
+    wave([
+      () => {
+        // "This Week" is the freshest window, but a brand-new week (e.g. first thing Monday)
+        // genuinely has no scheduled days counted yet - fall back to the month so this card never
+        // opens on a guaranteed-empty window just because of what day it happens to be.
+        analyticsService.getWorkforce('week')
+          .then((res) => (res?.attendanceRate?.scheduledDays ? res : analyticsService.getWorkforce('month')))
+          .then((res) => { if (active) setWorkforceRate(res); })
+          .catch(() => { if (active) setWorkforceRate(null); });
+      },
+      () => load(
+        overtimeService.getAll(),
+        (ot) => {
+          setWaiting((w) => ({ ...w, overtime: (ot || []).filter((r) => r.status === 'Pending').length }));
+          pendingDone();
+        },
+        () => pendingDone()
+      ),
+    ], 700);
+
+    wave([
+      // /attendance/early-outs/pending returns an object of the form { pending: N }
+      () => load(
+        attendanceService.getEarlyClockOutsPending(),
+        (early) => {
+          setWaiting((w) => ({ ...w, early: Number(early && typeof early === 'object' ? early.pending ?? 0 : 0) || 0 }));
+          pendingDone();
+        },
+        () => pendingDone()
+      ),
+      () => load(
+        timesheetService.getAll(),
+        (sheets) => {
+          setTimesheets(sheets || []);
+          setWaiting((w) => ({ ...w, timesheets: (sheets || []).filter((s) => s.status === 'Submitted').length }));
+          pendingDone();
+        },
+        () => pendingDone()
+      ),
+    ], 1050);
+
+    wave([
+      // Fire-and-forget: checks for no-shows, un-closed-out attendance, and staffing shortage risk,
+      // and creates notifications for any found. Never allowed to break the dashboard if it fails.
+      () => attendanceService.checkAlerts().then(() => refreshNotifications()).catch(() => {}),
+      () => kioskService.load().then((settings) => { if (active) setKioskSettings(settings); }),
+    ], 1400);
 
     return () => {
       active = false;
@@ -310,9 +329,11 @@ export default function Dashboard() {
         misses += 1;
         if (misses >= 2) setHealthScoreError(true);
       });
-    poll();
+    // Offset from the main load effect's first wave (0ms) so this doesn't stack another
+    // simultaneous request on top of it at the exact instant the page mounts.
+    const first = setTimeout(poll, 500);
     const id = setInterval(poll, 30000);
-    return () => { active = false; clearInterval(id); };
+    return () => { active = false; clearTimeout(first); clearInterval(id); };
   }, []);
 
   // The Database Health graph: a fresh round trip every ~10s, each one appended to a capped rolling
@@ -336,9 +357,10 @@ export default function Dashboard() {
         misses += 1;
         if (misses >= 2) setDbHealthError(true);
       });
-    poll();
+    // Same offset reasoning as the System Health poll just above.
+    const first = setTimeout(poll, 1050);
     const id = setInterval(poll, 10000);
-    return () => { active = false; clearInterval(id); };
+    return () => { active = false; clearTimeout(first); clearInterval(id); };
   }, []);
 
   const today = kioskService.today();
