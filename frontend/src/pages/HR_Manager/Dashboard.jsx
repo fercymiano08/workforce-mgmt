@@ -239,7 +239,13 @@ export default function Dashboard() {
     load(shiftService.getAllShifts(), setShiftDefs, []);
 
     load(analyticsService.getAll(), setAnalytics, null);
-    load(analyticsService.getWorkforce('week'), setWorkforceRate, null);
+    // "This Week" is the freshest window, but a brand-new week (e.g. first thing Monday) genuinely
+    // has no scheduled days counted yet - fall back to the month so this card never opens on a
+    // guaranteed-empty window just because of what day it happens to be.
+    analyticsService.getWorkforce('week')
+      .then((res) => (res?.attendanceRate?.scheduledDays ? res : analyticsService.getWorkforce('month')))
+      .then((res) => { if (active) setWorkforceRate(res); })
+      .catch(() => { if (active) setWorkforceRate(null); });
     load(
       overtimeService.getAll(),
       (ot) => {
@@ -847,7 +853,7 @@ export default function Dashboard() {
           </div>
         </ChartCard>
 
-        <ChartCard title={t('dashboard.attendanceRate')} badge={t('dashboard.thisWeek')} badgeVariant="purple">
+        <ChartCard title={t('dashboard.attendanceRate')} badge={workforceRate?.period?.label || t('dashboard.thisWeek')} badgeVariant="purple">
           <div className="h-[320px]">
             {!attendanceRate || attendanceRate.scheduledDays === 0 ? (
               <EmptyState message={t('dashboard.noData')} />
