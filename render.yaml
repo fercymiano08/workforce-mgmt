@@ -52,14 +52,13 @@ services:
         value: "false"
       - key: APP_URL
         value: https://workforce-api-nm7v.onrender.com
-      # Read by docker/backend-start.sh's `php -S`. The free plan's single instance has to answer
-      # every request a page fires at once (the dashboard alone fires over a dozen on load, plus its
-      # own live-tile polling on top) with PHP's built-in dev server, which has no real concurrency
-      # story of its own - raising the worker count is the one free, zero-risk lever available to
-      # reduce the queueing that caused under heavy concurrent load. Still not a substitute for a
-      # real app server (PHP-FPM behind nginx), just the cheapest mitigation on a $0 plan.
-      - key: PHP_CLI_SERVER_WORKERS
-        value: "8"
+      # NOT raised above backend-start.sh's own default (4). Each worker is a full separate PHP
+      # process (its own Laravel bootstrap, its own memory), and the free plan's container has a hard
+      # ~512MB ceiling - pushing this to 8 to help with request queueing instead got the whole
+      # container OOM-killed under real concurrent load (every endpoint returning 502, which the
+      # browser reports as a CORS error since a 502 carries no CORS header at all). An outage is a
+      # strictly worse failure mode than the queueing it was meant to fix, so this stays at the
+      # known-stable default rather than being tuned further without visibility into actual memory use.
       # Used for the link inside the "reset your password" email only.
       - key: FRONTEND_URL
         value: https://workforce-management-qty0.onrender.com
