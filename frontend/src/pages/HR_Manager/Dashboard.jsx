@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import {
   Users, CheckCircle, CalendarOff, Clock, Calendar, Briefcase, Check, X, ArrowRight, Inbox,
   FileText, LogOut, CheckCircle2, Download, ChevronLeft, ChevronRight, Activity, Smartphone,
@@ -29,7 +29,7 @@ import {
 import { toDateKey } from '../../services/attendanceService';
 import { kioskService } from '../../services/kioskService';
 import { didAttend, isPresentGroup } from '../../utils/constants';
-import { weekOf, dayTick, weekRangeLabel } from '../../utils/today';
+import { weekOf, weekWithRecords, dayTick, weekRangeLabel } from '../../utils/today';
 import { formatDate } from '../../utils/helpers';
 import { openAttendanceReport } from '../../utils/attendanceReport';
 import Modal from '../../components/ui/Modal';
@@ -169,8 +169,19 @@ export default function Dashboard() {
   const [waiting, setWaiting] = useState({ overtime: null, early: null, timesheets: null });
   const [pendingReady, setPendingReady] = useState(false);
 
-  // Which week the attendance overview chart shows - 0 is the current Mon-Sun week.
+  // Which week the attendance overview chart shows - 0 is the current Mon-Sun week. It starts
+  // wherever the chevrons leave it, but the very first paint lands on the most recent week that
+  // actually has a record (weekWithRecords) rather than always the current one - otherwise the
+  // chart opens empty every time the current week has not logged anything yet (e.g. first thing
+  // Monday morning), which used to be exactly what the auto-selecting version before this existed
+  // to avoid.
   const [weeksBack, setWeeksBack] = useState(0);
+  const weeksBackInitialized = useRef(false);
+  useEffect(() => {
+    if (weeksBackInitialized.current || attendance.length === 0) return;
+    weeksBackInitialized.current = true;
+    setWeeksBack(weekWithRecords(attendance.map((a) => a.date)).weeksBack);
+  }, [attendance]);
 
   // The live "System Health" KPI - the cheap, non-AI half of the Decision Support score, polled on
   // its own interval so the tile keeps moving without depending on the rest of the page's loads.
@@ -603,7 +614,7 @@ export default function Dashboard() {
   }
 
   return (
-    <div className="max-w-7xl mx-auto space-y-7">
+    <div className="space-y-7">
       {/* Page Header */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>

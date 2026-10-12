@@ -156,6 +156,17 @@ function AnalyticsOverview() {
   const { data: topData, loading: topLoading } = useApiData(() => analyticsService.getTopPerformers(period), [period]);
   const { data: employees } = useApiData(() => employeeService.getAll(), []);
 
+  // "This Week" opens first as the freshest view, but a brand-new week (e.g. first thing Monday
+  // morning) genuinely has zero records yet - rather than opening on a page that reads as broken,
+  // this bumps to This Month once, the first time that happens. Adjusted during render (React's own
+  // pattern for "react to a prop/state change once"), guarded by the flag itself so it cannot loop;
+  // a deliberate choice back to This Week afterward is left alone since the flag is already set.
+  const [weekFallbackApplied, setWeekFallbackApplied] = useState(false);
+  if (!weekFallbackApplied && !loading && data && period === 'week') {
+    setWeekFallbackApplied(true);
+    if (!data.attendanceSummary?.total) setPeriod('month');
+  }
+
   // A deep link (Employees' "View Analytics") opens straight to that person - once read, the
   // param is dropped so navigating away and back doesn't keep re-opening the same popup.
   useEffect(() => {

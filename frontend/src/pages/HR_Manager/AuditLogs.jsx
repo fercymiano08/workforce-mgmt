@@ -313,7 +313,7 @@ export default function AuditLogs() {
   }, [logs]);
 
   return (
-    <div className="max-w-6xl mx-auto space-y-6 animate-fadeIn">
+    <div className="space-y-6 animate-fadeIn">
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div className="flex items-center gap-3">

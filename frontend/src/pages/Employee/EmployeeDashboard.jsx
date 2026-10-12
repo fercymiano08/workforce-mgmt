@@ -13,7 +13,7 @@ import {
 import { useAuth } from '../../context/AuthContext';
 import { useNotifications } from '../../context/NotificationContext';
 import TodayBadge from '../../components/common/TodayBadge';
-import { todayKey, todayRowClass, coversToday, thisWeek, weekOf, dayTick, weekRangeLabel } from '../../utils/today';
+import { todayKey, todayRowClass, coversToday, thisWeek, weekOf, weekWithRecords, dayTick, weekRangeLabel } from '../../utils/today';
 import { scheduleOutcome, SCHEDULE_BADGE } from '../../utils/scheduleOutcome';
 import { notificationTypeConfig } from '../../constants/notificationTypes';
 import Badge from '../../components/ui/Badge';
@@ -186,6 +186,14 @@ export default function EmployeeDashboard() {
   // One Monday-to-Sunday week - the week the admin overview draws too - that the employee can page back
   // through (up to 12 weeks). Seven real days with a fixed bar width keep the shape identical for everyone.
   const [weeksBack, setWeeksBack] = useState(0);
+  // First paint lands on the most recent week with an actual record, not always the current one -
+  // otherwise the chart opens empty every Monday morning before today's first clock-in.
+  const weeksBackInitialized = useRef(false);
+  useEffect(() => {
+    if (weeksBackInitialized.current || myAttendance.length === 0) return;
+    weeksBackInitialized.current = true;
+    setWeeksBack(weekWithRecords(myAttendance.map((a) => a.date)).weeksBack);
+  }, [myAttendance]);
   const attendanceWeek = useMemo(() => {
     const [y, m, d] = weekOf(todayKey()).start.split('-').map(Number);
     const monday = new Date(Date.UTC(y, m - 1, d - 7 * weeksBack));
@@ -317,7 +325,7 @@ export default function EmployeeDashboard() {
   }
 
   return (
-    <div className="max-w-7xl mx-auto space-y-7">
+    <div className="space-y-7">
       {/* Page Header */}
       <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-6 animate-fadeIn">
         <div className="flex flex-col sm:flex-row sm:items-start gap-5">

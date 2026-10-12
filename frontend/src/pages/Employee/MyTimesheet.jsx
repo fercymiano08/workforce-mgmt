@@ -202,7 +202,7 @@ export default function MyTimesheet() {
 
   if (!loaded) {
     return (
-      <div className="max-w-7xl mx-auto space-y-6">
+      <div className="space-y-6">
         <SkeletonCard lines={2} />
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5">
           <SkeletonCard lines={1} />
@@ -216,7 +216,7 @@ export default function MyTimesheet() {
   }
 
   return (
-    <div className="max-w-7xl mx-auto space-y-6">
+    <div className="space-y-6">
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
           <h1 className="text-2xl font-bold text-gray-900">My Timesheet</h1>
