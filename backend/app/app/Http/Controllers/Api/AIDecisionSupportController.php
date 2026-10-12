@@ -23,7 +23,12 @@ class AIDecisionSupportController extends Controller
         return response()->json(['data' => app(AIDecisionSupportService::class)->insights($request->boolean('refresh'))]);
     }
 
-    /** The cheap, non-AI half of insights() - safe for a dashboard tile to poll every few seconds. */
+    /**
+     * The cheap, non-AI half of insights() - the score, the findings and a rule-based summary, with
+     * no Gemini call anywhere in it. Safe for a dashboard tile to poll every few seconds, and what
+     * the Decision Support overview widget reads for its "top findings" list, so opening the
+     * dashboard is never what pays for (or waits behind) a live model call.
+     */
     public function healthScore(): JsonResponse
     {
         $result = app(AIDecisionSupportService::class)->healthScoreOnly();
@@ -31,6 +36,8 @@ class AIDecisionSupportController extends Controller
         return response()->json(['data' => [
             'healthScore' => $result['score'],
             'scoreBreakdown' => $result['breakdown'],
+            'insights' => $result['items'],
+            'summary' => $result['summary'],
             'generatedAt' => now()->toISOString(),
         ]]);
     }

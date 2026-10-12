@@ -183,14 +183,20 @@ export default function Dashboard() {
     setWeeksBack(weekWithRecords(attendance.map((a) => a.date)).weeksBack);
   }, [attendance]);
 
-  // The live "System Health" KPI - the cheap, non-AI half of the Decision Support score, polled on
-  // its own interval so the tile keeps moving without depending on the rest of the page's loads.
+  // The live "System Health" KPI and the Decision Support overview both read this one poll - the
+  // cheap, non-AI half of the Workforce Health Score (score + findings + a rule-based summary, no
+  // Gemini call anywhere in it). Loading the dashboard used to also fetch the full, AI-backed
+  // /ai/insights endpoint, which can mean a live model call sharing the same small worker pool as
+  // everything else the page loads at once - that was the actual cause of the whole page (System
+  // Health, Decision Support, even the unrelated Database Health poll) feeling slow or stuck, not
+  // any one of those widgets individually. The full AI-written briefing still exists - it is what
+  // the AI Decision Support tab itself asks for - this dashboard just never needs to be the one
+  // that pays for or waits behind it.
   const [healthScore, setHealthScore] = useState(null);
   // A rolling window of Postgres round-trip times for the Database Health graph - never persisted,
   // just the last ~30 polls kept in memory so the line has something to draw.
   const [dbHealth, setDbHealth] = useState([]);
   const [kioskSettings, setKioskSettings] = useState(kioskService.getSettings());
-  const [aiInsights, setAiInsights] = useState(null);
 
   useEffect(() => {
     let active = true;
@@ -269,7 +275,6 @@ export default function Dashboard() {
       .catch(() => {});
 
     kioskService.load().then((settings) => { if (active) setKioskSettings(settings); });
-    analyticsService.getAiInsights().then((res) => { if (active) setAiInsights(res?.data || null); }).catch(() => {});
 
     return () => {
       active = false;
@@ -868,8 +873,9 @@ export default function Dashboard() {
           </div>
         </ChartCard>
 
-        {/* Decision Support overview - the cheap score plus the top open findings, with everything
-            else (the queue, the full briefing) left to the AI Decision Support tab itself. */}
+        {/* Decision Support overview - the cheap score plus the top open findings (rule-based
+            wording, same facts, no Gemini call), with the AI-written briefing and the full queue
+            left to the AI Decision Support tab itself. */}
         <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-6 overflow-hidden h-[386px] flex flex-col">
           <div className="flex items-center justify-between gap-3 mb-4 shrink-0">
             <div className="flex items-center gap-3">
@@ -882,24 +888,24 @@ export default function Dashboard() {
               View all <ArrowRight className="w-3.5 h-3.5" />
             </Link>
           </div>
-          {!aiInsights ? (
+          {!healthScore ? (
             <div className="flex-1 flex items-center justify-center">
               <SkeletonLine className="h-24 w-24 rounded-full" />
             </div>
           ) : (
             <>
               <div className="flex items-center gap-4 mb-4 shrink-0">
-                <ScoreRing score={aiInsights.healthScore} size={88} stroke={9} color={aiInsights.healthScore < 50 ? COLORS.red : COLORS.emerald} track={chart.grid} suffixLabel="Health" />
-                <p className="text-xs text-gray-500 flex-1">{aiInsights.summary}</p>
+                <ScoreRing score={healthScore.healthScore} size={88} stroke={9} color={healthScore.healthScore < 50 ? COLORS.red : COLORS.emerald} track={chart.grid} suffixLabel="Health" />
+                <p className="text-xs text-gray-500 flex-1">{healthScore.summary}</p>
               </div>
               <div className="flex-1 min-h-0 overflow-y-auto space-y-2">
-                {(aiInsights.insights || []).filter((i) => i.severity !== 'success').slice(0, 3).map((i) => (
+                {(healthScore.insights || []).filter((i) => i.severity !== 'success').slice(0, 3).map((i) => (
                   <div key={i.id} className="flex items-start gap-2.5 rounded-xl bg-gray-50/70 border border-gray-100 px-3 py-2.5">
                     <Badge variant={i.severity === 'critical' ? 'danger' : i.severity === 'warning' ? 'warning' : 'info'} size="xs">{i.severity}</Badge>
                     <p className="text-xs text-gray-700 leading-snug">{i.title}</p>
                   </div>
                 ))}
-                {(aiInsights.insights || []).filter((i) => i.severity !== 'success').length === 0 && (
+                {(healthScore.insights || []).filter((i) => i.severity !== 'success').length === 0 && (
                   <p className="text-xs text-gray-400 text-center py-4">Nothing flagged right now.</p>
                 )}
               </div>

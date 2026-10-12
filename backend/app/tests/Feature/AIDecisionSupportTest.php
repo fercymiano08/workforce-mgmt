@@ -89,9 +89,14 @@ class AIDecisionSupportTest extends TestCase
         $insights = $this->actingAs($admin)->getJson('/api/analytics/ai/insights')->assertOk()->json('data');
         $response = $this->actingAs($admin)->getJson('/api/analytics/ai/health-score')->assertOk();
 
-        $response->assertJsonStructure(['data' => ['healthScore', 'scoreBreakdown', 'generatedAt']]);
+        $response->assertJsonStructure(['data' => ['healthScore', 'scoreBreakdown', 'insights', 'summary', 'generatedAt']]);
         $this->assertSame($insights['healthScore'], $response->json('data.healthScore'));
         $this->assertSame('rule-based', $insights['source']);
+        // Same findings as insights() returns before Gemini's wording is laid on top of them.
+        $this->assertSame(
+            array_column($insights['insights'], 'id'),
+            array_column($response->json('data.insights'), 'id'),
+        );
     }
 
     public function test_returns_a_well_shaped_response_even_with_no_data(): void

@@ -58,18 +58,26 @@ class AIDecisionSupportService
     private const SEVERITY_ORDER = ['critical' => 0, 'warning' => 1, 'info' => 2, 'success' => 3];
 
     /**
-     * Just the Workforce Health Score, none of the Gemini prose - for a dashboard tile that polls
-     * every few seconds. insights() below computes the same score, but also calls (or serves a
-     * 6-hour cache of) Gemini for the written briefing, which this never needs to do.
+     * The score, the findings and a rule-based summary - everything insights() returns except the
+     * Gemini-written prose, which is the only slow part of it (a live model call, or a wait behind
+     * one, every time the 6-hour cache has expired). A dashboard tile polling every few seconds, or
+     * rendering a condensed "top findings" list, cannot afford to share a worker with that call -
+     * this never touches aiBriefing(), so it is always as fast as the plain DB queries it runs.
      *
-     * @return array{score: int, breakdown: array}
+     * @return array{score: int, breakdown: array, items: array, summary: string}
      */
     public function healthScoreOnly(): array
     {
         $facts = $this->facts();
         $items = $this->findings($facts);
+        ['score' => $score, 'breakdown' => $breakdown] = $this->score($facts, $items);
 
-        return $this->score($facts, $items);
+        return [
+            'score' => $score,
+            'breakdown' => $breakdown,
+            'items' => $this->withResolution($items),
+            'summary' => $this->summary($score, $facts, $items),
+        ];
     }
 
     public function insights(bool $fresh = false): array
