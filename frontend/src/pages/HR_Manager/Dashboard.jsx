@@ -300,8 +300,12 @@ export default function Dashboard() {
     return () => { active = false; clearInterval(id); };
   }, []);
 
-  // The Database Health graph: a fresh round trip every ~3.5s, each one appended to a capped
-  // rolling window so the line scrolls the way a Task Manager graph does.
+  // The Database Health graph: a fresh round trip every ~10s, each one appended to a capped rolling
+  // window so the line scrolls the way a Task Manager graph does. Slower than it reads as "live" -
+  // the free-tier backend runs PHP's built-in dev server with a handful of workers, shared with
+  // everything else the dashboard loads; polling any faster adds a standing request every few
+  // seconds for the life of the page, on top of the double-digit ones the page already fires on
+  // load, for no visible benefit (latency here does not meaningfully change second to second).
   useEffect(() => {
     let active = true;
     const poll = () => analyticsService.getDbHealth()
@@ -311,7 +315,7 @@ export default function Dashboard() {
       })
       .catch(() => {});
     poll();
-    const id = setInterval(poll, 3500);
+    const id = setInterval(poll, 10000);
     return () => { active = false; clearInterval(id); };
   }, []);
 
@@ -1056,7 +1060,10 @@ export default function Dashboard() {
 
       {/* Row: Database Health (live graph, 2/3) + Department Headcount & Upcoming Events (1/3) */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 items-stretch">
-        <div className="lg:col-span-2 bg-white rounded-2xl border border-gray-100 shadow-sm p-6 overflow-hidden h-[320px] flex flex-col">
+        {/* h-full, not a fixed height - items-stretch already makes this row as tall as the
+            Department Headcount + Upcoming Events column beside it; this card should fill that,
+            not stop short of it and leave empty card below the chart. */}
+        <div className="lg:col-span-2 bg-white rounded-2xl border border-gray-100 shadow-sm p-6 overflow-hidden h-full min-h-[320px] flex flex-col">
           <div className="flex items-center justify-between gap-3 mb-3 shrink-0">
             <div className="flex items-center gap-3">
               <div className="w-9 h-9 rounded-xl bg-blue-50 flex items-center justify-center shrink-0">
