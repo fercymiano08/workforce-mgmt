@@ -193,9 +193,11 @@ export default function Dashboard() {
   // the AI Decision Support tab itself asks for - this dashboard just never needs to be the one
   // that pays for or waits behind it.
   const [healthScore, setHealthScore] = useState(null);
+  const [healthScoreError, setHealthScoreError] = useState(false);
   // A rolling window of Postgres round-trip times for the Database Health graph - never persisted,
   // just the last ~30 polls kept in memory so the line has something to draw.
   const [dbHealth, setDbHealth] = useState([]);
+  const [dbHealthError, setDbHealthError] = useState(false);
   const [kioskSettings, setKioskSettings] = useState(kioskService.getSettings());
 
   useEffect(() => {
@@ -289,12 +291,25 @@ export default function Dashboard() {
   }, []);
 
   // The System Health tile: the cheap, non-AI score, re-asked every 30s so the number on screen is
-  // genuinely live rather than a single snapshot from page load.
+  // genuinely live rather than a single snapshot from page load. Two consecutive failures (not one -
+  // a single dropped request on a free-tier host is normal, not an outage) flip this to an explicit
+  // error state, so a real problem reads as "couldn't reach the server," never as a skeleton that
+  // quietly never resolves.
   useEffect(() => {
     let active = true;
+    let misses = 0;
     const poll = () => analyticsService.getHealthScore()
-      .then((res) => { if (active) setHealthScore(res?.data || null); })
-      .catch(() => {});
+      .then((res) => {
+        if (!active) return;
+        misses = 0;
+        setHealthScoreError(false);
+        setHealthScore(res?.data || null);
+      })
+      .catch(() => {
+        if (!active) return;
+        misses += 1;
+        if (misses >= 2) setHealthScoreError(true);
+      });
     poll();
     const id = setInterval(poll, 30000);
     return () => { active = false; clearInterval(id); };
@@ -308,12 +323,19 @@ export default function Dashboard() {
   // load, for no visible benefit (latency here does not meaningfully change second to second).
   useEffect(() => {
     let active = true;
+    let misses = 0;
     const poll = () => analyticsService.getDbHealth()
       .then((res) => {
         if (!active || !res?.data) return;
+        misses = 0;
+        setDbHealthError(false);
         setDbHealth((prev) => [...prev.slice(-29), { ...res.data, t: Date.now() }]);
       })
-      .catch(() => {});
+      .catch(() => {
+        if (!active) return;
+        misses += 1;
+        if (misses >= 2) setDbHealthError(true);
+      });
     poll();
     const id = setInterval(poll, 10000);
     return () => { active = false; clearInterval(id); };
@@ -595,8 +617,8 @@ export default function Dashboard() {
       label: 'System Health',
       value: healthScore ? `${healthScore.healthScore}%` : '—',
       icon: Activity,
-      accent: healthScore && healthScore.healthScore < 50 ? 'red' : 'emerald',
-      subtext: healthScore ? 'Live · updates every 30s' : 'Loading…',
+      accent: healthScoreError ? 'red' : healthScore && healthScore.healthScore < 50 ? 'red' : 'emerald',
+      subtext: healthScoreError ? "Couldn't reach the server - retrying" : healthScore ? 'Live · updates every 30s' : 'Loading…',
       to: '/analytics?tab=ai',
     },
   ];
@@ -617,12 +639,16 @@ export default function Dashboard() {
   const dbHealthColor = !latestDbHealth || !latestDbHealth.connected
     ? COLORS.red
     : latestDbHealth.latencyMs < 30 ? COLORS.emerald : latestDbHealth.latencyMs < 100 ? COLORS.amber : COLORS.red;
-  const dbHealthLabel = !latestDbHealth
-    ? 'Measuring…'
-    : !latestDbHealth.connected ? 'Disconnected' : latestDbHealth.latencyMs < 30 ? 'Healthy' : latestDbHealth.latencyMs < 100 ? 'Elevated' : 'Slow';
-  const dbHealthBadgeVariant = !latestDbHealth
-    ? 'default'
-    : !latestDbHealth.connected ? 'danger' : latestDbHealth.latencyMs < 30 ? 'success' : latestDbHealth.latencyMs < 100 ? 'warning' : 'danger';
+  const dbHealthLabel = dbHealthError && !latestDbHealth
+    ? "Can't reach server"
+    : !latestDbHealth
+      ? 'Measuring…'
+      : !latestDbHealth.connected ? 'Disconnected' : latestDbHealth.latencyMs < 30 ? 'Healthy' : latestDbHealth.latencyMs < 100 ? 'Elevated' : 'Slow';
+  const dbHealthBadgeVariant = dbHealthError && !latestDbHealth
+    ? 'danger'
+    : !latestDbHealth
+      ? 'default'
+      : !latestDbHealth.connected ? 'danger' : latestDbHealth.latencyMs < 30 ? 'success' : latestDbHealth.latencyMs < 100 ? 'warning' : 'danger';
 
   if (loading) {
     return <SkeletonPage kpiCount={kpiCards.length} />;
@@ -898,7 +924,12 @@ export default function Dashboard() {
               View all <ArrowRight className="w-3.5 h-3.5" />
             </Link>
           </div>
-          {!healthScore ? (
+          {healthScoreError && !healthScore ? (
+            <div className="flex-1 flex flex-col items-center justify-center text-center px-4">
+              <p className="text-sm font-semibold text-gray-900">Couldn't reach the server</p>
+              <p className="text-xs text-gray-400 mt-1">Retrying automatically every 30s.</p>
+            </div>
+          ) : !healthScore ? (
             <div className="flex-1 flex items-center justify-center">
               <SkeletonLine className="h-24 w-24 rounded-full" />
             </div>
@@ -1078,7 +1109,7 @@ export default function Dashboard() {
           </div>
           <div className="flex-1 min-h-0">
             {dbHealth.length < 2 ? (
-              <EmptyState message="Measuring…" />
+              <EmptyState message={dbHealthError ? "Couldn't reach the server - retrying automatically." : 'Measuring…'} />
             ) : (
               <ResponsiveContainer width="100%" height="100%">
                 <AreaChart data={dbHealth} margin={{ top: 8, right: 8, left: 8, bottom: 0 }}>
