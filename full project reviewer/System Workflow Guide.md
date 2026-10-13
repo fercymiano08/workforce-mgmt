@@ -143,6 +143,8 @@ There are three roles. Each role logs in through the same login page but lands o
 
 > Note: the system exposes exactly one operator role - the **Workforce Admin** (role value `Administrator`). All HR duties (employees, schedules, leave, overtime, payroll, kiosk, settings) are performed by that single account.
 
+> Note: the sidebar is closed by default and opens/closes with the hamburger icon at every screen width, the same way on desktop as on a phone. It used to stay permanently docked open above a certain width (always reserving 260px of every page); it is an overlay now, so closing it actually gives the page back that space rather than just being a mobile convenience.
+
 ### Page Map — Every Screen In The System
 
 | # | Screen (page file) | Role | One-line purpose |
@@ -150,7 +152,7 @@ There are three roles. Each role logs in through the same login page but lands o
 | 1 | Login `auth/Login.jsx` | Everyone | Enter email + password, get a session token |
 | 2 | Forgot Password `auth/ForgotPassword.jsx` | Everyone | Request a reset token |
 | 3 | Reset Password `auth/ResetPassword.jsx` | Everyone | Set a new password using that token |
-| 4 | HR Dashboard `HR_Manager/Dashboard.jsx` | Admin | Company overview: stats cards, charts, quick glance at everything |
+| 4 | HR Dashboard `HR_Manager/Dashboard.jsx` | Admin | Live KPIs (pending leave, timesheets approved, present today, a 30s-polling System Health %), quick-action tiles, a `< >` week-navigable attendance chart, a pending-timesheets View→Approve/Reject modal, a Decision Support summary, an animated Database Health graph, department headcount and upcoming birthdays/anniversaries |
 | 5 | Employees `HR_Manager/Employees.jsx` | Admin | Company directory: view, search, edit, archive employees |
 | 6 | Employee Registration `HR_Manager/EmployeeRegistration.jsx` | Admin | Add a brand-new employee + create their login account |
 | 7 | Attendance `HR_Manager/Attendance.jsx` | Admin | See and correct everyone's daily clock records; filter the history by a calendar date range |
@@ -160,11 +162,11 @@ There are three roles. Each role logs in through the same login page but lands o
 | 11 | Reports `HR_Manager/Reports.jsx` | Admin | Build printable/CSV reports from live data |
 | 12-13 | Analytics `HR_Manager/Analytics.jsx` | Admin | Two tabs: **Analytics Overview** (deep charts, a Top Performer ranking built in - `components/analytics/TopPerformersSection.jsx` - rather than a tab of its own, and a per-employee popup - `components/analytics/EmployeeDetailModal.jsx` - opened from a click instead of a "By Employee" destination) and **AI Decision Support** (`components/analytics/AIInsightsPanel.jsx` - AI-generated insights + one-click decision queue, moved here from its own page) |
 | 14 | Settings `HR_Manager/Settings.jsx` | Admin | Company info, kiosk configuration, system options |
-| 15 | Employee Dashboard `Employee/EmployeeDashboard.jsx` | Employee | Personal home: today's status, quick stats, ID card header |
+| 15 | Employee Dashboard `Employee/EmployeeDashboard.jsx` | Employee | Personal home: status badges (department, position, employment type, Probationary, a 30-day New Hire flag), a KPI row, a `< >` week-navigable attendance chart, quick-action tiles, an overtime-requests chart, a self-service Punctuality-Based Read, and a recent-notifications feed |
 | 16 | My Attendance `Employee/MyAttendance.jsx` | Employee | Own clock history and hours |
 | 17 | My Schedule `Employee/MySchedule.jsx` | Employee | Upcoming assigned shifts |
 | 18 | Leave `Employee/Leave.jsx` | Employee | Apply for leave, track status, see balances |
-| 19 | My Timesheet `Employee/MyTimesheet.jsx` | Employee | Review own weekly hours and submit them |
+| 19 | My Timesheet `Employee/MyTimesheet.jsx` | Employee | Review own weekly hours and submit them; the current week is a "Live"-badged **Ongoing Timesheet Record** recomputed from attendance (polled every 30s), not the saved snapshot a Draft row only gets resynced to on clock-in/out |
 | 20 | My Profile `Employee/MyProfile.jsx` | Employee | Identity, employment, leave balances, face registration status; edit own phone/address/emergency contact/photo |
 | 21 | Settings `Employee/Settings.jsx` | Employee | Change password (live requirements checklist) and font size (the Appearance section) |
 | 22 | Kiosk Setup `KIOSK/KioskSetup.jsx` | Admin (device) | Configure and lock the entrance tablet into kiosk mode |
@@ -611,14 +613,20 @@ A kiosk cannot tell whether "I'm sick" is true — and every employee sees the s
 
 | Element | Meaning |
 |---------|---------|
-| Header identity card | Avatar + big blue monospace **employee ID badge** + department/position chips + green badge "Identity verified via facial recognition" |
-| Today's status | Whether you've clocked in/out today, current hours |
-| Quick stats | Hours this week, pending requests, remaining leave days |
-| Shortcuts | Jump to My Attendance, Leave, Schedule, Timesheet |
+| Header identity card | Avatar + big blue monospace **employee ID badge** + real `Badge` chips (department, position, employment type, **Probationary** if under 180 days, a 30-day **New Hire** flag if freshly hired) + green badge "Identity verified via facial recognition" |
+| KPI row | Hours This Week, Leave Balance, Attendance Rate, Pending Requests |
+| My Attendance chart | Bar chart with `< >` week navigation (same pattern the admin dashboard's attendance chart now shares) - opens on the most recent week that actually has a record, not always the current one, so it is never blank just because the current week hasn't logged anything yet |
+| My Shift | Upcoming shifts, newest-first, auto-scrolled to today |
+| Quick Actions | Six app-icon tiles: My Attendance, Leave, My Timesheet, My Schedule, My Profile, Settings |
+| My Timesheet summary | This week's hours; the current week shows as a "Live"-badged **Ongoing Timesheet Record** |
+| My Leave Requests | Recent requests with type/status badges and an Apply Leave button |
+| OT Requests | Bar chart of overtime hours requested, by week, last 6 weeks |
+| My Punctuality-Based Read | The same attendance+punctuality read admins see per person in Top Performer, scoped to the signed-in employee's own record - reads their own, now-self-accessible `GET /api/analytics/employee/{employeeId}` |
+| Recent Notifications | Last 5 notifications, reusing the same context/badge the topbar bell already shows |
 
 ### Flow
 
-Opens → fires several parallel GET requests (own attendance history via `/api/attendance/employee/{id}`, own schedule via `/api/shifts/schedules/employee/{id}`, leave balances via `/api/leaves/balances/{id}`, unread notifications count) → renders. Nothing is written by this page; it's pure reading.
+Opens → fires several parallel GET requests (own attendance history via `/api/attendance/employee/{id}`, own schedule via `/api/shifts/schedules/employee/{id}`, leave balances via `/api/leaves/balances/{id}`, own overtime via `/api/overtime/employee/{id}`, own analytics card via `/api/analytics/employee/{id}`, unread notifications count) → renders. Nothing is written by this page; it's pure reading.
 
 > Administrators opening employee-style self pages get empty data — expected, because admins have **no employee record** by design.
 
@@ -974,6 +982,22 @@ SENT TO PAYROLL   (admin: "Send to payroll")
 
 **"Needs your attention"** sits at the top of the administrator's dashboard: four tiles (leave requests, overtime requests, early clock-outs, timesheets waiting for approval) with a count each and a link straight to the right page. When all four are zero it says "Nothing is waiting for you".
 
+### What You See On The HR Dashboard
+
+| Element | Meaning |
+|---------|---------|
+| KPI row | Pending Leave Requests, Timesheets Approved, Present Today, **System Health %** (live, polled every 30s, no AI call - links into the AI Decision Support tab) |
+| Needs your attention | 4 tiles as above |
+| Quick Actions | Six app-icon tiles: Employees, Attendance, Schedule, Leave, Timesheets, Reports |
+| Attendance Overview | Bar chart with `< >` week navigation - opens on the most recent week with a record, not always the current one |
+| Leave Statistics | Donut, approved leave by type |
+| Monthly Attendance Trend | Text rows (a number + a thin bar per month, most recent first), not another chart |
+| Attendance Rate | Ring + trend line, same formula as the Analytics card |
+| Decision Support | The cheap score + top open findings (rule-based wording, no Gemini call); the full AI-written briefing stays on the Analytics tab |
+| Pending Leave / Pending Timesheets / Today's Schedule | Three lists side by side; Pending Timesheets is **View → a modal with Approve / Reject**, not an instant decision |
+| Database Health | Live, animated Postgres-latency graph (Task-Manager style: visible grid, axis numbers, a line that changes colour with latency) - polled every ~10s |
+| Department Headcount / Upcoming Birthdays & Anniversaries | Two small widgets from data already on the page, no new requests |
+
 ### What Each Attendance Status Means (One Record = One Status)
 
 | Status | Meaning | Counts as "attended"? |
@@ -1010,11 +1034,15 @@ Why cached? The Dashboard loads often (every visit, every "Needs your attention"
 
 **The Analytics page does not use that cache at all.** It was rebuilt around a single filter and one endpoint computed fresh on every request: `AnalyticsService::workforceCards($period)`, called through `GET /api/analytics/workforce?period=week|month|year` (admin only). Nothing is pre-stored for it in the `analytics` table — whichever period is selected is queried live, so the numbers are always exactly current for that window, never a stale cached blob.
 
-### The Analytics Screen (`HR_Manager/Analytics.jsx`) — Rebuilt Around One Filter, Six Self-Explaining Cards
+**A third pattern now sits alongside those two: cheap-and-polled, deliberately never cached, never AI.** The Dashboard's System Health tile (`GET /api/analytics/ai/health-score`, polled every 30s) and Database Health graph (`GET /api/system/db-health`, a literal timed `SELECT 1`, polled every ~10s) both run a fresh, cheap calculation on every single request - no cache, because a cached "live" number would just be a flat line. System Health deliberately reuses the AI Decision Support service's score calculation (`findings()` + `score()`) while skipping the part that calls Gemini (`aiBriefing()`), for a concrete reason: the dashboard used to call the full AI-backed endpoint on every page load, and that one slow call sharing the free-tier server's small worker pool with everything else the page loads at once was enough to occasionally make the whole page time out - not an AI problem, a page-load-design problem, fixed by giving the dashboard its own cheap path instead of the expensive one.
 
-**One filter drives the whole page:** a **This Week / This Month / This Year** switch (This Week is selected by default, since it's the freshest view). Changing it re-fetches `GET /api/analytics/workforce?period=...` and every card below updates together — there is no longer a Month/Quarter/Year split with different cards per period.
+### The Analytics Screen (`HR_Manager/Analytics.jsx`) — Rebuilt Around One Filter, Five Self-Explaining Cards Plus A Named Ranking
 
-Above the six cards sits an **at-a-glance KPI strip** (4 tiles: Attendance Rate, Overtime Logged, Best On-Time Dept., Approved Leave Days) repeating the headline numbers the cards below explain in full, so a glance answers the common questions without reading every chart.
+**One filter drives the whole page:** a **This Week / This Month / This Year** switch (This Week is the initial default, but a one-time fallback bumps to This Month if the current week genuinely has zero records yet - e.g. first thing Monday morning - so the page never opens looking broken over what day it happens to be). Changing it re-fetches `GET /api/analytics/workforce?period=...` and every card below updates together.
+
+Above the cards sits an **at-a-glance KPI strip** (4 tiles: Attendance Rate, Overtime Logged, **Top Performer** - the #1-ranked employee's name, clickable straight into their own popup - and Approved Leave Days) repeating the headline numbers the cards below explain in full, so a glance answers the common questions without reading every chart. (This tile used to be "Best On-Time Dept." - a department average - before Top Performer existed as a named ranking to point to instead.)
+
+Right under the KPI strip sits **Top Performer**: every active employee ranked by attendance + punctuality, named, best first - not a chart, a real sortable data grid (`components/analytics/TopPerformersSection.jsx`), paged 10 at a time. Every active employee is ranked, full stop; anyone with fewer than 5 attendance records this period is labeled "Limited data so far" rather than being left off the list (an earlier version excluded them entirely, which meant the ranking's headcount didn't match the real headcount). Clicking anyone - a row, the KPI tile, or **Look up an employee** - opens them in a popup (`components/analytics/EmployeeDetailModal.jsx`) with their own attendance rate, punctuality trend, leave usage/balances, overtime, and the same punctuality-based read, deliberately never called a performance evaluation.
 
 **Every card carries its own data source and formula**, shown via a small ⓘ info popover in the card's header (`FormulaInfo`) — so nobody presenting this page has to remember a rule the code already states out loud. The same text prints inline (not as a hidden popover) when the page is exported via the **Export / Print** button (`window.print()`, with print-specific layout), so a handed-out copy is still self-explaining on paper.
 
@@ -1023,15 +1051,14 @@ Above the six cards sits an **at-a-glance KPI strip** (4 tiles: Attendance Rate,
 | 1 | Attendance Summary | Pie chart | Present (On Time) / Present (Late) / Early Leave / Absent for the whole period — green / amber / blue / red | Count of each status ÷ total attendance records × 100 |
 | 2 | Attendance Rate | Ring (headline %) + a small trend line across the period's sub-buckets | Out of all scheduled workdays, what % did employees actually show up for? | (Present days ÷ scheduled days) × 100 — days covered by **approved leave are excluded** from "scheduled days", so an excused absence never lowers the rate |
 | 3 | Leave Trends | Vertical stacked bar chart | Approved leave days by type, per sub-period (days for a week, weeks for a month, months for a year) | Each approved request's day count, summed per leave type per sub-bucket |
-| 4 | Overtime Hours | Dark-purple line/dot chart | Total overtime logged per sub-period | Sum of overtime hours (from attendance records) per sub-bucket — **grouped by time period now, not by department** |
-| 5 | Department Punctuality | Ranked horizontal bars, **by department only — never by individual employee name** | Which department clocks in on time the most | (On-time clock-ins ÷ total clock-ins) × 100, per department |
-| 6 | Leave Type Composition | Donut chart | Share of **approved** leave requests by type | Count of approved requests per type ÷ total approved × 100 — pending, rejected and cancelled requests are excluded; they never happened |
+| 4 | Overtime Hours | Dark-purple line/dot chart | Total overtime logged per sub-period | Sum of overtime hours (from attendance records) per sub-bucket — grouped by time period, not by department |
+| 5 | Leave Type Composition | Donut chart | Share of **approved** leave requests by type | Count of approved requests per type ÷ total approved × 100 — pending, rejected and cancelled requests are excluded; they never happened |
 
-> **What changed from the old design (good to know for the defense):** the page used to offer a Month/Quarter/Year filter with a different card mix per period, a "Punctuality Leaderboard" that ranked individual employees by name, an "Overtime by Department" chart, and no visible formula or data-source for any card. The rebuild replaced all of that: one filter for everything, department-only punctuality ranking (nobody is singled out by name), overtime grouped by time period instead of department, and every card stating its own source and formula so the numbers never have to be taken on faith.
+> **What changed from the old design (good to know for the defense):** the page used to offer a Month/Quarter/Year filter with a different card mix per period and no visible formula or data-source for any card - that became one filter for everything, with every card stating its own source and formula. A later revision replaced a sixth card, **Department Punctuality** (department-only bars, nobody named - deliberate at the time, to avoid a public "who's worst" leaderboard), with **Top Performer** above: a panel review asked directly for a real, named ranking instead, so the leaderboard risk is now handled by what the ranking actually measures and says about itself (attendance + punctuality only, explicitly not a performance evaluation) rather than by hiding names.
 
 ### Tech Trail
 
-- Endpoints: `GET /api/analytics/workforce?period=week|month|year` (admin, live — the Analytics page); `GET /api/analytics`, `GET /api/analytics/{section}` (admin, cached — the HR Dashboard and AI insights badge)
+- Endpoints: `GET /api/analytics/workforce?period=week|month|year` (admin, live — the Analytics page's 5 cards); `GET /api/analytics/top-performers?period=...` (admin, live — the Top Performer table); `GET /api/analytics/employee/{employeeId}?period=...` (self-or-admin - an employee may read their own card the same way an admin reads anyone's, same `assertSelfOrAdmin` guard `AttendanceController` already used — this is what powers the employee dashboard's own "Punctuality-Based Read" widget); `GET /api/analytics` , `GET /api/analytics/{section}` (admin, cached — the HR Dashboard and AI insights badge); `GET /api/analytics/ai/health-score` (admin, live, no AI call — the dashboard's System Health tile, reusing the same score `AI Decision Support` computes minus the Gemini-written prose); `GET /api/system/db-health` (admin, live — a timed `SELECT 1`, the dashboard's Database Health graph)
 - Tables: `analytics` (read/write cache, cached pattern only), `attendance`, `leaves`, `overtime_requests`, `shift_schedules`, `employees` — all read-only sources for the live Workforce Analytics cards
 
 ---

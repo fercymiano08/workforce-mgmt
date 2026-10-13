@@ -147,7 +147,7 @@ Some columns (like `settings.kiosk`) store flexible structured data as JSON inst
 |-------|---------|-------------|
 | `shift_definitions` | The single shift template (Standard Shift 08:00–17:00). Overtime is not a shift - it extends this one when an overtime request is approved | `id`, `name`, `start_time`, `end_time` |
 | `shift_schedules` | Who works which shift on which date | `id`, `employee_id` (FK), `shift_id` (FK), `date`, `status` |
-| `schedule_settings` | The one row of scheduling settings: the company's usual work days (Monday–Saturday by default; leave counting and the automated shift generator both start from them) and the most paid hours per week the generator may give one employee | `default_work_days` (ISO weekdays, 1 = Monday), `max_weekly_hours` |
+| `schedule_settings` | The one row of scheduling settings: the company's usual work days (Monday–Saturday by default), which leave-day counting reads (`WorkingDays` service). `max_weekly_hours` is a holdover from the removed "Automated Shift" wizard - still a real column, just not read by anything since Assign Shift's multi-select has no weekly-hours cap of its own | `default_work_days` (ISO weekdays, 1 = Monday), `max_weekly_hours` |
 | `holidays` | Days nobody is scheduled and leave is not counted for (starter list of Philippine holidays) | `date` (unique), `name` |
 
 #### System Support

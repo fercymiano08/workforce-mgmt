@@ -23,12 +23,14 @@ Features:
 -Employee ID + Facial Recognition-Based Clock In (shift-aware: Present within 15 min of the shift start, Late warning afterwards, reason required for early clock-out, admin alert on a face mismatch — all enforced by the server)
 -Optional Two-Factor Sign-In (employee-toggled in My Profile; a six-digit emailed code after password, off by default, separate from the forgot-password OTP)
 -AI Decision Support, inside Workforce Analytics (rules decide the findings and score; the AI API only words them, with a rule-based fallback)
+-Top Performer (every active employee ranked by attendance + punctuality, named and sortable, with a punctuality-based read per person - deliberately not called a performance evaluation)
 -Bulk Shift Assignment (pick one or several employees, assign the Standard Shift to all of them at once; each is checked independently)
 -Attendance Corrections (worked past shift / kiosk failure, with photo proof; the admin makes the manual entry)
--Timesheet Generation (Weekly)
+-Timesheet Generation (Weekly; the current week is a live "Ongoing Timesheet Record" recomputed from attendance, not a saved snapshot)
 -Leave Management
--Workforce Analytical View (one This Week/Month/Year filter driving 6 cards, each stating its own data source and formula; rankings are by department only, never by named employee)
+-Workforce Analytical View (one This Week/Month/Year filter driving the overview's charts, each stating its own data source and formula)
 -Report Generation
+-Live Workforce Admin dashboard (a polling System Health %, an animated Database Health graph, quick-action tiles, a navigable attendance chart) and a closable side navigation, used the same way on desktop as on a phone
 
 Techstack:
 React (Mainframe)
