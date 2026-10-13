@@ -1,4 +1,4 @@
-import { useMemo, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import {
   CalendarDays, Clock3, Timer, Coffee, Send, BarChart3, ChevronRight, Printer, AlertTriangle, Info,
 } from 'lucide-react';
@@ -55,10 +55,24 @@ export default function MyTimesheet() {
   const data = useTimesheets();
   const loaded = useTimesheetsLoaded();
 
-  const { data: attendance } = useApiData(
+  const { data: attendance, setData: setAttendance } = useApiData(
     () => attendanceService.getByEmployeeId(employeeId),
     [employeeId]
   );
+
+  // The ongoing week's hours have to come from actual clock-ins, not a database snapshot that
+  // only gets recomputed on certain triggers - polling both attendance and the timesheet record
+  // every 30s (silently, via setData rather than useApiData's own refresh(), so there is no
+  // loading-skeleton flash) is what makes "Live" here true rather than a label on stale data.
+  useEffect(() => {
+    let active = true;
+    const poll = () => {
+      attendanceService.getByEmployeeId(employeeId).then((res) => { if (active) setAttendance(res); }).catch(() => {});
+      refreshTimesheets().catch(() => {});
+    };
+    const id = setInterval(poll, 30000);
+    return () => { active = false; clearInterval(id); };
+  }, [employeeId, setAttendance]);
 
   const records = useMemo(
     () => data
@@ -142,21 +156,40 @@ export default function MyTimesheet() {
     [thisWeek, employeeId]
   );
 
-  // KPIs always render: the latest timesheet once it exists, otherwise this
-  // week's live attendance totals so the page never looks empty.
-  const kpis = latest
-    ? [
-        { label: 'Regular Hours', value: hours(latest.regularHours), icon: Clock3, accent: 'blue' },
-        { label: 'Overtime', value: hours(latest.overtimeHours), icon: Timer, accent: 'purple' },
-        { label: 'Break Hours', value: hours(latest.breakHours), icon: Coffee, accent: 'amber' },
-        { label: 'Total Hours', value: hours(latest.totalHours), icon: Clock3, accent: 'emerald' },
-      ]
-    : [
-        { label: 'Regular Hours · This Week', value: hours(thisWeek.regularHours), icon: Clock3, accent: 'blue' },
-        { label: 'Overtime · This Week', value: hours(thisWeek.overtimeHours), icon: Timer, accent: 'purple' },
-        { label: 'Break Hours · This Week', value: hours(thisWeek.breakHours), icon: Coffee, accent: 'amber' },
-        { label: 'Total Hours · This Week', value: hours(thisWeek.totalHours), icon: Clock3, accent: 'emerald' },
-      ];
+  // The saved Draft row for the current week (once the backend has created one) exists mainly
+  // for its workflow state - id, status, due date - not as the hour totals, which only get
+  // recomputed on whatever schedule the backend runs. While the week is still open, this is why
+  // the "ongoing" record used to look outdated: it was showing that saved snapshot instead of
+  // today's actual clock-ins. Keeping the real record's identity but swapping in thisWeek's live
+  // totals is what makes it both genuinely live AND still the right id/status to act on.
+  const current = useMemo(() => {
+    const matchesOngoingWeek = latest && !latest.weekFinished && latest.weekStart === toDateKey(thisWeek.monday);
+    if (matchesOngoingWeek) {
+      return {
+        ...latest,
+        isLive: true,
+        regularHours: thisWeek.regularHours,
+        overtimeHours: thisWeek.overtimeHours,
+        breakHours: thisWeek.breakHours,
+        totalHours: thisWeek.totalHours,
+      };
+    }
+    // No saved row for the current week yet (most recent one on file is an older, already-
+    // finished week) - the live current week, not that old record, is what "ongoing" means.
+    // Falling back to `latest` here was the other half of the "outdated" bug: a week that had
+    // already been submitted could sit there looking like today's summary.
+    return liveWeekRecord;
+  }, [latest, liveWeekRecord, thisWeek]);
+
+  // Always reads off `current` - the live-corrected record - so these never show a stale saved
+  // snapshot for a week that is still in progress.
+  const kpiSuffix = current.isLive ? ' · Live' : '';
+  const kpis = [
+    { label: `Regular Hours${kpiSuffix}`, value: hours(current.regularHours), icon: Clock3, accent: 'blue' },
+    { label: `Overtime${kpiSuffix}`, value: hours(current.overtimeHours), icon: Timer, accent: 'purple' },
+    { label: `Break Hours${kpiSuffix}`, value: hours(current.breakHours), icon: Coffee, accent: 'amber' },
+    { label: `Total Hours${kpiSuffix}`, value: hours(current.totalHours), icon: Clock3, accent: 'emerald' },
+  ];
 
   const handleSubmit = async (ts) => {
     if (!canSubmit(ts)) return;
@@ -228,7 +261,7 @@ export default function MyTimesheet() {
             <span className="font-medium">{formatDate(new Date().toISOString())}</span>
           </div>
           <Button variant="outline" size="md" icon={Printer} onClick={handlePrint}>Print / PDF</Button>
-          <Button variant="outline" size="md" icon={CalendarDays} onClick={() => setSelectedWeek(liveWeekRecord)}>
+          <Button variant="outline" size="md" icon={CalendarDays} onClick={() => setSelectedWeek(current)}>
             This Week
           </Button>
         </div>
@@ -279,29 +312,45 @@ export default function MyTimesheet() {
         </div>
       )}
 
-      {/* Single Summary Card */}
+      {/* Ongoing Timesheet Record - called out by name and a pulsing "Live" dot (the same live-
+          status pattern used for the kiosk indicator elsewhere) specifically so it never reads as
+          just another row of the history table: this one's numbers move as the week goes on,
+          where every other record below is a fixed, finished snapshot. */}
       <div
-        onClick={() => setSelectedWeek(latest || liveWeekRecord)}
-        className="bg-white rounded-2xl border border-gray-100 shadow-sm p-6 cursor-pointer hover:border-blue-300 hover:shadow-md transition-all"
+        onClick={() => setSelectedWeek(current)}
+        className={`bg-white rounded-2xl border shadow-sm p-6 cursor-pointer hover:shadow-md transition-all ${
+          current.isLive ? 'border-blue-200 hover:border-blue-400' : 'border-gray-100 hover:border-blue-300'
+        }`}
       >
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-4">
-            <div className="w-12 h-12 rounded-2xl bg-gradient-to-br from-blue-500 to-blue-600 flex items-center justify-center shadow-lg shadow-blue-500/20">
+        <div className="flex items-center justify-between gap-4">
+          <div className="flex items-center gap-4 min-w-0">
+            <div className={`w-12 h-12 rounded-2xl flex items-center justify-center shrink-0 shadow-lg ${
+              current.isLive ? 'bg-gradient-to-br from-emerald-500 to-emerald-600 shadow-emerald-500/25' : 'bg-gradient-to-br from-blue-500 to-blue-600 shadow-blue-500/20'
+            }`}>
               <BarChart3 className="w-6 h-6 text-white" />
             </div>
-            <div>
-              <p className="text-sm font-semibold text-gray-900">
-                {latest ? `${formatDate(latest.weekStart)} – ${formatDate(latest.weekEnd)}` : 'This Week'}
-              </p>
+            <div className="min-w-0">
+              <div className="flex items-center gap-2 flex-wrap">
+                <p className="text-sm font-semibold text-gray-900">
+                  {current.isLive ? 'Ongoing Timesheet Record' : `${formatDate(current.weekStart)} – ${formatDate(current.weekEnd)}`}
+                </p>
+                {current.isLive && (
+                  <span className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full bg-emerald-50 text-emerald-700 text-[11px] font-semibold">
+                    <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" /> Live
+                  </span>
+                )}
+              </div>
               <p className="text-xs text-gray-500 mt-0.5">
-                {latest ? `Regular ${Number(latest.regularHours || 0).toFixed(1)}h · OT ${Number(latest.overtimeHours || 0).toFixed(1)}h · Total ${Number(latest.totalHours || 0).toFixed(1)}h` : 'Automatically computed from your clock-in records'}
+                {current.isLive
+                  ? `${formatDate(current.weekStart)} – ${formatDate(current.weekEnd)} · Regular ${Number(current.regularHours || 0).toFixed(1)}h · OT ${Number(current.overtimeHours || 0).toFixed(1)}h · Total ${Number(current.totalHours || 0).toFixed(1)}h`
+                  : `Regular ${Number(current.regularHours || 0).toFixed(1)}h · OT ${Number(current.overtimeHours || 0).toFixed(1)}h · Total ${Number(current.totalHours || 0).toFixed(1)}h`}
               </p>
             </div>
           </div>
-          <div className="flex items-center gap-3">
-            {latest && (
-              <Badge variant={statusVariant[latest.status] || 'default'} size="sm">
-                {latest.status}
+          <div className="flex items-center gap-3 shrink-0">
+            {current.id && (
+              <Badge variant={statusVariant[current.status] || 'default'} size="sm">
+                {current.status}
               </Badge>
             )}
             <ChevronRight className="w-5 h-5 text-gray-400" />
@@ -369,7 +418,7 @@ export default function MyTimesheet() {
         isOpen={!!selectedWeek}
         onClose={() => setSelectedWeek(null)}
         title={selectedWeek?.isLive
-          ? `This Week · ${formatDate(selectedWeek.weekStart)} – ${formatDate(selectedWeek.weekEnd)}`
+          ? `Ongoing Timesheet Record · ${formatDate(selectedWeek.weekStart)} – ${formatDate(selectedWeek.weekEnd)}`
           : `Week of ${formatDate(selectedWeek?.weekStart)} – ${formatDate(selectedWeek?.weekEnd)}`}
         size="xl"
       >
@@ -377,11 +426,17 @@ export default function MyTimesheet() {
           <div className="space-y-6">
             {/* Status & Metadata */}
             <div className="flex items-center gap-3 flex-wrap">
+              {selectedWeek.isLive && (
+                <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-emerald-50 text-emerald-700 text-xs font-semibold">
+                  <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" /> Live
+                </span>
+              )}
               {selectedWeek.isLive ? (
-                <>
-                  <Badge variant="primary" size="sm">This Week · Auto</Badge>
-                  <span className="text-xs text-gray-500">Automatically computed from your clock-in records</span>
-                </>
+                selectedWeek.id ? (
+                  <StatusSteps status={selectedWeek.status} />
+                ) : (
+                  <span className="text-xs text-gray-500">Automatically computed from your clock-in records - updates every 30s</span>
+                )
               ) : (
                 <>
                   <StatusSteps status={selectedWeek.status} />
