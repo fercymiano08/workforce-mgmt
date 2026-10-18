@@ -4,6 +4,7 @@ namespace Tests\Feature;
 
 use App\Models\Employee;
 use App\Models\Leave;
+use App\Models\LeaveType;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Carbon;
 use Tests\TestCase;
@@ -124,8 +125,13 @@ class LeaveRequestRulesTest extends TestCase
             ->assertStatus(422)
             ->assertJsonValidationErrors('leaveType');
 
+        // Paternity requires proof for any length (proof_threshold_days = 0) - without it this
+        // would 422 on the documents field instead of exercising the gender check.
         $this->actingAs($employee)
-            ->postJson('/api/leaves', $this->payload($sevenDays, $sevenDays, ['leaveType' => 'Paternity']))
+            ->postJson('/api/leaves', $this->payload($sevenDays, $sevenDays, [
+                'leaveType' => 'Paternity',
+                'documents' => [['name' => 'birth-cert.pdf', 'dataUrl' => 'data:application/pdf;base64,AAAA']],
+            ]))
             ->assertCreated();
     }
 
@@ -145,9 +151,10 @@ class LeaveRequestRulesTest extends TestCase
             ->assertStatus(422)
             ->assertJsonValidationErrors('leaveType');
 
-        // Sick is not gated by probation - a new hire can still get sick.
+        // Sick is not gated by probation - a new hire can still get sick. (acceptSplit isolates
+        // that from the separate zero-ledger-balance check: this employee has no accrual history.)
         $this->actingAs($employee)
-            ->postJson('/api/leaves', $this->payload($today, $today, ['leaveType' => 'Sick']))
+            ->postJson('/api/leaves', $this->payload($today, $today, ['leaveType' => 'Sick', 'acceptSplit' => true]))
             ->assertCreated();
     }
 
@@ -249,63 +256,54 @@ class LeaveRequestRulesTest extends TestCase
         $this->assertSame('Vacation', $existing->fresh()->leave_type);
     }
 
-    /** The canonical list and the entitlement map are the same list, kept side by side. */
-    public function test_every_allowed_leave_type_has_an_allowance_and_nothing_more(): void
+    /** The canonical list is driven entirely by the admin-configurable leave_types table now. */
+    public function test_every_allowed_leave_type_matches_the_active_configured_types(): void
     {
         $types = Employee::leaveTypes();
-        $entitlements = Employee::defaultLeaveBalances();
 
         $this->assertSame(['Vacation', 'Sick', 'Special', 'Bereavement', 'Maternity', 'Paternity', 'Unpaid'], $types);
-        // The allowance map is the single source of truth: no type allowed through validation is
-        // missing an entitlement, and no entitlement lacks a validation entry.
-        $this->assertSame([], array_diff($types, array_keys($entitlements)));
-        $this->assertSame([], array_diff(array_keys($entitlements), $types));
+        $this->assertSame($types, LeaveType::activeCodes());
     }
 
     /**
-     * A type missing from an employee's stored allowance map used to skip the balance check
-     * entirely, so it could be filed for unlimited days. It now falls back to the default
-     * entitlement, which is what stops unlimited leave appearing to be allowed.
+     * Balance comes entirely from the ledger now - an employee with no accrual history for a
+     * balance-requiring type has zero balance, not a hidden default. A request against zero
+     * balance is not blocked outright; it comes back asking for split consent (LeavePayResolver).
      */
-    public function test_a_type_missing_from_a_employees_allowances_falls_back_to_the_default(): void
+    public function test_a_balance_requiring_type_with_no_ledger_history_offers_a_split_instead_of_blocking(): void
     {
         $user = $this->otpEmployeeUser();
-        // The employee's own map omits Sick, so there is no row for it to check against.
-        $employee = Employee::firstOrCreate(['id' => 'EMP-OTP'], [
+        Employee::firstOrCreate(['id' => 'EMP-OTP'], [
             'first_name' => 'Juan', 'last_name' => 'Dela Cruz', 'email' => 'jdc@x.com',
             'department' => 'IT & Systems', 'status' => 'Active',
         ]);
-        $employee->leave_balances = ['Vacation' => 20, 'Unpaid' => 30];
-        $employee->save();
-        $this->assertNull(
-            collect($employee->fresh()->leaveBalances())->firstWhere('type', 'Sick'),
-            'Sick must genuinely be absent from this employee\'s map for the fallback to be exercised.'
-        );
+        // No leave_balance_ledger rows exist for this employee at all - zero balance for Sick.
 
-        // Well over the default 10-day Sick entitlement, so the fallback limit must bite.
         $this->actingAs($user)
-            ->postJson('/api/leaves', $this->payload('2030-07-01', '2030-08-31', ['leaveType' => 'Sick']))
+            ->postJson('/api/leaves', $this->payload('2030-07-10', '2030-07-10', ['leaveType' => 'Sick']))
             ->assertStatus(422)
             ->assertJsonValidationErrors('leaveType');
 
         $this->assertSame(0, Leave::where('leave_type', 'Sick')->count());
     }
 
-    /** Inside the fallback entitlement the request is allowed, proving the fallback is a real limit. */
-    public function test_the_fallback_allowance_still_permits_a_request_within_it(): void
+    /** Accepting the offered split resubmits successfully, with the shortfall recorded as unpaid. */
+    public function test_accepting_the_split_consent_creates_the_request_as_partly_unpaid(): void
     {
         $user = $this->otpEmployeeUser();
-        $employee = Employee::firstOrCreate(['id' => 'EMP-OTP'], [
+        Employee::firstOrCreate(['id' => 'EMP-OTP'], [
             'first_name' => 'Juan', 'last_name' => 'Dela Cruz', 'email' => 'jdc@x.com',
             'department' => 'IT & Systems', 'status' => 'Active',
         ]);
-        $employee->leave_balances = ['Vacation' => 20, 'Unpaid' => 30];
-        $employee->save();
 
-        $this->actingAs($user)
-            ->postJson('/api/leaves', $this->payload('2030-07-10', '2030-07-10', ['leaveType' => 'Sick']))
+        $response = $this->actingAs($user)
+            ->postJson('/api/leaves', $this->payload('2030-07-10', '2030-07-10', [
+                'leaveType' => 'Sick', 'acceptSplit' => true,
+            ]))
             ->assertStatus(201);
 
-        $this->assertSame(1, Leave::where('leave_type', 'Sick')->count());
+        $response->assertJsonPath('data.payType', 'PaidWithBalance');
+        $response->assertJsonPath('data.paidDays', 0);
+        $response->assertJsonPath('data.unpaidDays', 1);
     }
 }

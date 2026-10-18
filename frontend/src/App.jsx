@@ -24,6 +24,7 @@ const Shifts = lazy(() => import('./pages/HR_Manager/Shifts'));
 const Timesheets = lazy(() => import('./pages/HR_Manager/Timesheets'));
 const Leave = lazy(() => import('./pages/Employee/Leave'));
 const LeaveManagement = lazy(() => import('./pages/HR_Manager/LeaveManagement'));
+const LeaveTypes = lazy(() => import('./pages/HR_Manager/LeaveTypes'));
 const Analytics = lazy(() => import('./pages/HR_Manager/Analytics'));
 const Reports = lazy(() => import('./pages/HR_Manager/Reports'));
 const HRSettings = lazy(() => import('./pages/HR_Manager/Settings'));
@@ -88,6 +89,7 @@ function AppRoutes() {
       <Route path="/timesheets" element={<PrivateLayout adminOnly><Timesheets /></PrivateLayout>} />
       <Route path="/my-timesheet" element={<PrivateLayout><EmployeeRoute><MyTimesheet /></EmployeeRoute></PrivateLayout>} />
       <Route path="/leave" element={<PrivateLayout><LeaveRoute /></PrivateLayout>} />
+      <Route path="/leave-types" element={<PrivateLayout adminOnly><LeaveTypes /></PrivateLayout>} />
       <Route path="/my-attendance" element={<PrivateLayout><EmployeeRoute><MyAttendance /></EmployeeRoute></PrivateLayout>} />
       <Route path="/my-schedule" element={<PrivateLayout><EmployeeRoute><MySchedule /></EmployeeRoute></PrivateLayout>} />
       <Route path="/analytics" element={<PrivateLayout adminOnly><Analytics /></PrivateLayout>} />

@@ -36,6 +36,7 @@ const adminMenuGroups = [
     label: 'nav.group.leave',
     items: [
       { path: '/leave', key: 'nav.leave', icon: Calendar },
+      { path: '/leave-types', key: 'nav.leaveTypes', icon: SlidersHorizontal },
     ],
   },
   {

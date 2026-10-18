@@ -12,7 +12,7 @@ import { SkeletonList } from '../../components/ui/LoadingSkeleton';
 import Input, { Select, Textarea } from '../../components/ui/Input';
 import Modal from '../../components/ui/Modal';
 import { Pagination } from '../../components/ui/Table';
-import { leaveService } from '../../services/api';
+import { leaveService, leaveTypeService } from '../../services/api';
 import { toDateKey } from '../../services/attendanceService';
 import { formatDate } from '../../utils/helpers';
 import { useToast } from '../../context/ToastContext';
@@ -52,18 +52,29 @@ const leaveBalanceStyle = {
   Unpaid: { text: 'text-teal-600', barBg: 'bg-teal-100', color: 'bg-teal-500', icon: Wallet, iconBg: 'bg-teal-50' },
 };
 
+// Static list kept only for the "Type" filter on the request list below (filtering EXISTING
+// records needs no eligibility data). The Apply form's dropdown is driven live by
+// leaveTypeService.getEligible() instead - see eligibleTypes below.
 const leaveTypes = ['Vacation', 'Sick', 'Special', 'Bereavement', 'Maternity', 'Paternity', 'Unpaid'];
 
-// Shown under the Leave Type dropdown so the rule is known before the server has to refuse the
-// request - every rule here is also enforced on the server, this is just the plain-language version.
-const LEAVE_TYPE_NOTE = {
-  Vacation: 'Must be filed at least 7 days before the start date, and is not available while still on probation.',
-  Sick: 'Can be filed for today or for up to 7 days in the past - nobody can predict being sick.',
-  Special: 'For personal circumstances that do not fit another type. Not available while still on probation.',
-  Bereavement: 'For the death of an immediate family member.',
-  Maternity: 'Available to female employees.',
-  Paternity: 'Available to male employees.',
-  Unpaid: 'An approved absence with no salary for those days - you remain employed and return to work afterward.',
+// Plain-language summary of a leave type's config, shown under the dropdown so the rule is known
+// before the server has to refuse the request - every rule here is also enforced server-side.
+const describeLeaveType = (type) => {
+  if (!type) return '';
+  const parts = [];
+  if (type.advanceNoticeDays > 0) parts.push(`must be filed at least ${type.advanceNoticeDays} day(s) before the start date`);
+  if (type.retroactiveAllowed) parts.push(`can be filed up to ${type.retroactiveWindowDays} day(s) after it starts`);
+  if (type.minTenureMonths > 0) parts.push(`requires at least ${type.minTenureMonths} month(s) of tenure`);
+  if (type.applicableGender !== 'Any') parts.push(`available to ${type.applicableGender.toLowerCase()} employees`);
+  if (type.maxConsecutiveDays) parts.push(`capped at ${type.maxConsecutiveDays} consecutive day(s)`);
+  if (type.requiresProof) {
+    parts.push(type.proofThresholdDays > 0
+      ? `needs supporting proof for requests longer than ${type.proofThresholdDays} day(s)`
+      : 'needs supporting proof');
+  }
+  if (type.payType === 'Unpaid') parts.push('unpaid - no salary for these days');
+  else if (type.payType === 'PaidWithoutBalance') parts.push('paid, not deducted from any balance');
+  return parts.length ? `${parts[0].charAt(0).toUpperCase()}${parts[0].slice(1)}${parts.slice(1).map((p) => `; ${p}`).join('')}.` : 'Paid from your balance; no special requirements.';
 };
 
 // A leave type the server adds later still has to render as a real row rather than a blank space,
@@ -85,9 +96,9 @@ const ROWS_PER_PAGE = 6;
 // earliest - a leave request for a day that has already begun is meaningless.
 const todayKey = () => toDateKey(new Date());
 
-// Sick leave's one exception: nobody can predict being sick, so it can be filed up to 7 days
-// back (the same window Overtime already allows, for the same reason).
-const sickMinKey = () => toDateKey(new Date(Date.now() - 7 * 86400000));
+// A type that allows retroactive filing (nobody can predict needing it in advance) can start up
+// to its configured window in the past - driven by the server's leave type config, not hardcoded.
+const retroMinKey = (windowDays) => toDateKey(new Date(Date.now() - (windowDays || 0) * 86400000));
 
 export default function Leave() {
   const { toast } = useToast();
@@ -99,6 +110,13 @@ export default function Leave() {
   // the page lives behind an Employee-only route, so it never renders for HR.
   const { data: leaves, setData: setLeaves, loading: leavesLoading } = useApiData(
     () => (currentUser.id ? leaveService.getByEmployeeId(currentUser.id) : Promise.resolve([])),
+    [currentUser.id]
+  );
+
+  // Every active leave type, annotated for this employee: eligible/ineligibilityReasons/balance.
+  // Drives the Apply form's dropdown instead of a hardcoded array.
+  const { data: eligibleTypes } = useApiData(
+    () => (currentUser.id ? leaveTypeService.getEligible(currentUser.id) : Promise.resolve([])),
     [currentUser.id]
   );
 
@@ -137,26 +155,35 @@ export default function Leave() {
   const [selectedLeave, setSelectedLeave] = useState(null);
 
   const [isApplyOpen, setIsApplyOpen] = useState(false);
-  const [applyForm, setApplyForm] = useState({ leaveType: 'Vacation', startDate: '', endDate: '', reason: '', proofFile: null });
+  const [applyForm, setApplyForm] = useState({ leaveType: 'Vacation', startDate: '', endDate: '', reason: '', proofFile: null, acceptSplit: false });
   const [applyErrors, setApplyErrors] = useState({});
   const [proofError, setProofError] = useState('');
-  // Live cost of the chosen dates (working days only), asked from the server as the person picks them
+  // Live cost of the chosen dates (working days, plus the pay/split breakdown for this type),
+  // asked from the server as the person picks them.
   const [preview, setPreview] = useState(null);
-  const { startDate: previewStart, endDate: previewEnd } = applyForm;
+  const { startDate: previewStart, endDate: previewEnd, leaveType: previewType } = applyForm;
   useEffect(() => {
     let cancelled = false;
     const startDate = previewStart;
     const endDate = previewEnd;
+    // A new date/type combination invalidates any split the person already accepted for a
+    // different shortfall - they have to see and accept the new number, not an old one.
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- resetting stale consent when the context it applied to has changed
+    setApplyForm((f) => (f.acceptSplit ? { ...f, acceptSplit: false } : f));
     if (!currentUser.id || !startDate || !endDate || endDate < startDate) {
-      // eslint-disable-next-line react-hooks/set-state-in-effect -- clearing a stale answer when the dates are incomplete
       setPreview(null);
       return undefined;
     }
-    leaveService.workingDays(currentUser.id, startDate, endDate)
+    leaveService.workingDays(currentUser.id, startDate, endDate, previewType)
       .then((r) => { if (!cancelled) setPreview(r); })
       .catch(() => { if (!cancelled) setPreview(null); });
     return () => { cancelled = true; };
-  }, [previewStart, previewEnd, currentUser.id]);
+  }, [previewStart, previewEnd, previewType, currentUser.id]);
+
+  const selectedType = useMemo(
+    () => (eligibleTypes || []).find((t) => t.code === applyForm.leaveType) || null,
+    [eligibleTypes, applyForm.leaveType]
+  );
 
   const MAX_PROOF_SIZE = 5 * 1024 * 1024; // 5MB
 
@@ -232,6 +259,11 @@ export default function Leave() {
       errs.endDate = 'End date must be after start date';
     }
     if (!applyForm.reason.trim()) errs.reason = 'Reason is required';
+    if (selectedType?.requiresProof && preview && preview.calendarDays > selectedType.proofThresholdDays && !applyForm.proofFile) {
+      errs.documents = selectedType.proofThresholdDays > 0
+        ? `Supporting proof is required for ${selectedType.name} requests longer than ${selectedType.proofThresholdDays} day(s).`
+        : `Supporting proof is required for ${selectedType.name}.`;
+    }
     setApplyErrors(errs);
     return Object.keys(errs).length === 0;
   };
@@ -240,6 +272,10 @@ export default function Leave() {
   // settles, so a slow server can't turn extra clicks into duplicate requests.
   const handleApplyLeave = async () => {
     if (!validateApply()) return;
+    if (preview?.requiresConsent && !applyForm.acceptSplit) {
+      toast.error('Balance too low', 'Accept the paid/unpaid split above, or choose different dates, before submitting.');
+      return;
+    }
     try {
       const documents = applyForm.proofFile ? [applyForm.proofFile] : [];
       const created = await leaveService.create({
@@ -252,6 +288,7 @@ export default function Leave() {
         status: 'Pending',
         appliedDate: new Date().toISOString().split('T')[0],
         documents,
+        acceptSplit: applyForm.acceptSplit,
       });
       setLeaves((prev) => [created, ...prev]);
       toast.success('Leave Applied', 'Your leave request has been submitted for approval.');
@@ -263,7 +300,7 @@ export default function Leave() {
       toast.error('Could not submit leave', firstFieldError || data?.message || 'The server did not respond. Please try again.');
       return;
     }
-    setApplyForm({ leaveType: 'Vacation', startDate: '', endDate: '', reason: '', proofFile: null });
+    setApplyForm({ leaveType: 'Vacation', startDate: '', endDate: '', reason: '', proofFile: null, acceptSplit: false });
     setApplyErrors({});
     setProofError('');
     setIsApplyOpen(false);
@@ -525,6 +562,17 @@ export default function Leave() {
               </span>
             </div>
 
+            {selectedLeave.payType && (
+              <div>
+                <p className="text-xs font-medium text-gray-500 uppercase tracking-wide mb-1">Pay Breakdown</p>
+                <div className="text-sm text-gray-700 bg-gray-50 rounded-xl p-4 flex flex-wrap gap-4">
+                  <span>Paid days: <strong>{selectedLeave.paidDays ?? 0}</strong></span>
+                  <span>Unpaid days: <strong>{selectedLeave.unpaidDays ?? 0}</strong></span>
+                  <span className="text-gray-500">({selectedLeave.payType})</span>
+                </div>
+              </div>
+            )}
+
             <div>
               <p className="text-xs font-medium text-gray-500 uppercase tracking-wide mb-1">Reason</p>
               <p className="text-sm text-gray-700 bg-gray-50 rounded-xl p-4">{selectedLeave.reason}</p>
@@ -629,14 +677,16 @@ export default function Leave() {
           <Select
             label="Leave Type"
             value={applyForm.leaveType}
-            onChange={(e) => setApplyForm((f) => ({ ...f, leaveType: e.target.value }))}
+            onChange={(e) => setApplyForm((f) => ({ ...f, leaveType: e.target.value, acceptSplit: false }))}
           >
-            {leaveTypes.map((t) => (
-              <option key={t} value={t}>{t} Leave</option>
+            {(eligibleTypes || []).map((t) => (
+              <option key={t.code} value={t.code} disabled={!t.eligible}>
+                {t.name}{!t.eligible && t.ineligibilityReasons[0] ? ` — ${t.ineligibilityReasons[0]}` : ''}
+              </option>
             ))}
           </Select>
-          {LEAVE_TYPE_NOTE[applyForm.leaveType] && (
-            <p className="text-xs text-gray-500 -mt-1">{LEAVE_TYPE_NOTE[applyForm.leaveType]}</p>
+          {selectedType && (
+            <p className="text-xs text-gray-500 -mt-1">{describeLeaveType(selectedType)}</p>
           )}
           <div className="grid grid-cols-2 gap-4">
             <Input
@@ -644,7 +694,7 @@ export default function Leave() {
               type="date"
               required
               value={applyForm.startDate}
-              min={applyForm.leaveType === 'Sick' ? sickMinKey() : todayKey()}
+              min={selectedType?.retroactiveAllowed ? retroMinKey(selectedType.retroactiveWindowDays) : todayKey()}
               onChange={(e) => {
                 const startDate = e.target.value;
                 setApplyForm((f) => ({
@@ -672,11 +722,42 @@ export default function Leave() {
             <div className={`rounded-lg border px-3 py-2 text-[13px] ${preview.days < 1 ? 'border-red-200 bg-red-50 text-red-700' : 'border-blue-200 bg-blue-50 text-blue-800'}`}>
               {preview.days < 1
                 ? 'These dates have no working days (weekend, holiday or day off). Pick different dates.'
-                : <>This will use <strong>{preview.days} working {preview.days === 1 ? 'day' : 'days'}</strong> of your balance
-                  {preview.calendarDays > preview.days && ` (${preview.calendarDays} calendar days; weekends, holidays and days off are not counted)`}.</>}
+                : <>
+                    This is <strong>{preview.days} working {preview.days === 1 ? 'day' : 'days'}</strong>
+                    {preview.calendarDays > preview.days && ` (${preview.calendarDays} calendar days; weekends, holidays and days off are not counted)`}.
+                    {!preview.requiresConsent && preview.payType === 'PaidWithBalance' && (
+                      <> Paid from your balance — balance after: <strong>{Math.max((preview.balanceBefore ?? 0) - preview.paidDays, 0)}</strong>.</>
+                    )}
+                    {!preview.requiresConsent && preview.payType === 'PaidWithoutBalance' && (
+                      <> Paid in full, not deducted from any balance.</>
+                    )}
+                    {!preview.requiresConsent && preview.payType === 'Unpaid' && (
+                      <> Unpaid — {preview.unpaidDays} day(s) with no salary. You remain employed and return to work afterward.</>
+                    )}
+                  </>}
               {Object.keys(preview.holidays || {}).length > 0 && (
                 <div className="text-xs mt-0.5">Holiday: {Object.entries(preview.holidays).map(([d, n]) => `${n} (${formatDate(d)})`).join(', ')}</div>
               )}
+            </div>
+          )}
+          {preview?.requiresConsent && !applyForm.acceptSplit && (
+            <div className="rounded-lg border border-amber-200 bg-amber-50 px-3 py-2.5 text-[13px] text-amber-900">
+              <p>
+                Only <strong>{preview.balanceBefore}</strong> day(s) of {selectedType?.name || applyForm.leaveType} remaining —{' '}
+                <strong>{preview.shortfall}</strong> day(s) short. Take {preview.balanceBefore} day(s) paid and {preview.shortfall} day(s) unpaid?
+              </p>
+              <div className="flex gap-2 mt-2">
+                <Button size="xs" variant="secondary" onClick={() => setApplyForm((f) => ({ ...f, acceptSplit: false }))}>Decline</Button>
+                <Button size="xs" onClick={() => setApplyForm((f) => ({ ...f, acceptSplit: true }))}>Accept split</Button>
+              </div>
+            </div>
+          )}
+          {preview?.requiresConsent && applyForm.acceptSplit && (
+            <div className="rounded-lg border border-emerald-200 bg-emerald-50 px-3 py-2.5 text-[13px] text-emerald-900 flex items-center justify-between gap-3">
+              <span>This will be split: <strong>{preview.balanceBefore}</strong> day(s) paid, <strong>{preview.shortfall}</strong> day(s) unpaid.</span>
+              <button type="button" className="text-xs font-medium text-emerald-700 hover:text-emerald-900 shrink-0" onClick={() => setApplyForm((f) => ({ ...f, acceptSplit: false }))}>
+                Change
+              </button>
             </div>
           )}
           <Textarea
@@ -690,7 +771,12 @@ export default function Leave() {
           />
           <div>
             <label className="text-[13px] font-medium text-gray-700">
-              Supporting Document <span className="text-gray-400 font-normal">(optional proof, e.g. medical certificate)</span>
+              Supporting Document{' '}
+              <span className="text-gray-400 font-normal">
+                {selectedType?.requiresProof
+                  ? `(required${selectedType.proofThresholdDays > 0 ? ` for requests over ${selectedType.proofThresholdDays} day(s)` : ''}, e.g. medical or death certificate)`
+                  : '(optional proof, e.g. medical certificate)'}
+              </span>
             </label>
             {applyForm.proofFile ? (
               <div className="mt-1.5 flex items-center justify-between gap-2 px-3.5 py-2.5 rounded-xl border border-gray-200 bg-gray-50">
@@ -714,12 +800,13 @@ export default function Leave() {
               </label>
             )}
             {proofError && <p className="text-xs text-red-500 font-medium mt-1.5">{proofError}</p>}
+            {applyErrors.documents && <p className="text-xs text-red-500 font-medium mt-1.5">{applyErrors.documents}</p>}
           </div>
           <div className="flex justify-end gap-3 pt-2">
             <Button variant="secondary" onClick={() => { setIsApplyOpen(false); setApplyErrors({}); }}>
               Cancel
             </Button>
-            <Button icon={CheckCircle} onClick={handleApplyLeave}>
+            <Button icon={CheckCircle} onClick={handleApplyLeave} disabled={preview?.requiresConsent && !applyForm.acceptSplit}>
               Submit Request
             </Button>
           </div>

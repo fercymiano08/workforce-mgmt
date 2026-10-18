@@ -7,7 +7,11 @@ use App\Http\Controllers\Api\Concerns\GeneratesSequentialIds;
 use App\Http\Controllers\Controller;
 use App\Models\Employee;
 use App\Models\Leave;
+use App\Models\LeaveType;
 use App\Services\AuditLogger;
+use App\Services\LeaveEligibility;
+use App\Services\LeaveLedger;
+use App\Services\LeavePayResolver;
 use App\Services\WorkingDays;
 use App\Services\NotificationService;
 use Illuminate\Http\JsonResponse;
@@ -60,17 +64,12 @@ class LeaveController extends Controller
             return response()->json(['data' => $employee->leaveBalances()]);
         }
 
-        $totals = Employee::defaultLeaveBalances();
-        $data = array_map(
-            fn ($type, $total) => [
-                'type' => $type,
-                'total' => (float) $total,
-                'used' => 0.0,
-                'remaining' => (float) $total,
-            ],
-            array_keys($totals),
-            array_values($totals)
-        );
+        // No employee to read a ledger for yet - zero balances for every balance-requiring type,
+        // rather than guessing at a default total (there is no such thing anymore; balance is
+        // entirely ledger-accrued).
+        $data = LeaveType::where('requires_balance', true)->where('active', true)->get()
+            ->map(fn (LeaveType $type) => ['type' => $type->code, 'total' => 0.0, 'used' => 0.0, 'remaining' => 0.0])
+            ->values()->all();
 
         return response()->json(['data' => $data]);
     }
@@ -89,26 +88,32 @@ class LeaveController extends Controller
             'approvedBy' => 'nullable|string|max:150',
             'comments' => 'nullable|string',
             'documents' => 'nullable|array',
+            'acceptSplit' => 'sometimes|boolean',
         ]));
+
+        $acceptSplit = (bool) $request->input('acceptSplit', false);
 
         $this->assertSelfOrAdmin($request, $data['employee_id']);
 
+        $type = LeaveType::where('code', $data['leave_type'])->first();
+        $isAdmin = $request->user()?->role === 'Administrator';
+
         // An employee's request always starts Pending and unapproved, whatever the
         // request body says. Only an Administrator may create one already decided.
-        if ($request->user()?->role !== 'Administrator') {
+        if (! $isAdmin) {
             $data['status'] = 'Pending';
             $data['approved_by'] = null;
 
             $today = Carbon::now('Asia/Manila')->toDateString();
             $startDate = Carbon::parse($data['start_date'])->toDateString();
 
-            if ($data['leave_type'] === 'Sick') {
-                // Nobody can predict being sick - filed for today, the future, or the past 7 days,
-                // the same window Overtime already allows for the same reason.
-                $earliestSick = Carbon::now('Asia/Manila')->subDays(7)->toDateString();
-                if ($startDate < $earliestSick) {
+            if ($type && $type->retroactive_allowed) {
+                // Nobody can predict needing this type - filed for today, the future, or the past
+                // retroactive_window_days (the same latitude Overtime already allows, for the same reason).
+                $earliestBackdate = Carbon::now('Asia/Manila')->subDays($type->retroactive_window_days)->toDateString();
+                if ($startDate < $earliestBackdate) {
                     throw ValidationException::withMessages([
-                        'startDate' => ['Sick leave can only be filed for today, the future, or the past 7 days. Please contact HR for older dates.'],
+                        'startDate' => ["{$type->name} can only be filed for today, the future, or the past {$type->retroactive_window_days} day(s). Please contact HR for older dates."],
                     ]);
                 }
             } elseif ($startDate < $today) {
@@ -119,18 +124,20 @@ class LeaveController extends Controller
                 ]);
             }
 
-            // Vacation is planned time off, not a same-day decision - it needs lead time so the
-            // schedule can actually absorb it.
-            if ($data['leave_type'] === 'Vacation') {
-                $earliestVacation = Carbon::now('Asia/Manila')->addDays(7)->toDateString();
-                if ($startDate < $earliestVacation) {
+            if ($type && $type->advance_notice_days > 0) {
+                // Planned time off is not a same-day decision - it needs lead time so the schedule
+                // can actually absorb it.
+                $earliestStart = Carbon::now('Asia/Manila')->addDays($type->advance_notice_days)->toDateString();
+                if ($startDate < $earliestStart) {
                     throw ValidationException::withMessages([
-                        'startDate' => ['Vacation leave must be filed at least 7 days before the start date.'],
+                        'startDate' => ["{$type->name} must be filed at least {$type->advance_notice_days} day(s) before the start date."],
                     ]);
                 }
             }
 
-            $this->assertEligibleForType($data['employee_id'], $data['leave_type']);
+            if ($type) {
+                $this->assertEligibleForType($data['employee_id'], $type);
+            }
         }
 
         if (Carbon::parse($data['end_date'])->lt(Carbon::parse($data['start_date']))) {
@@ -162,11 +169,49 @@ class LeaveController extends Controller
             ]);
         }
 
-        $this->assertSufficientBalance($data['employee_id'], $data['leave_type'], $counted['days']);
+        // Consecutive-day cap is measured in CALENDAR days (matches the statutory Maternity/
+        // Paternity definitions), not working days - a 105-day maternity leave spans ~120+
+        // calendar days once weekends are included, and that is the number being bounded.
+        if ($type && $type->max_consecutive_days && $counted['calendarDays'] > $type->max_consecutive_days) {
+            throw ValidationException::withMessages([
+                'endDate' => ["{$type->name} cannot exceed {$type->max_consecutive_days} consecutive day(s)."],
+            ]);
+        }
 
+        if ($type && $type->requires_proof && $counted['calendarDays'] > $type->proof_threshold_days && empty($data['documents'])) {
+            throw ValidationException::withMessages([
+                'documents' => ["{$type->name} requires supporting proof (e.g. a medical or death certificate) for a request of this length."],
+            ]);
+        }
+
+        $payType = null;
+        $paidDays = null;
+        $unpaidDays = null;
+        $employee = Employee::find($data['employee_id']);
+
+        if ($type && $employee) {
+            $resolved = LeavePayResolver::resolve($employee, $type, (float) $counted['days'], $acceptSplit);
+
+            if ($resolved['requiresConsent']) {
+                throw ValidationException::withMessages([
+                    'leaveType' => ["Insufficient balance. Only {$resolved['balanceBefore']} day(s) of {$type->code} leave remaining, {$resolved['shortfall']} day(s) short. "
+                        ."Resubmit with acceptSplit to take {$resolved['balanceBefore']} day(s) paid and {$resolved['shortfall']} day(s) unpaid, or choose different dates."],
+                ]);
+            }
+
+            $payType = $resolved['payType'];
+            $paidDays = $resolved['paidDays'];
+            $unpaidDays = $resolved['unpaidDays'];
+        }
+
+        // No ledger write happens here - only at approval (see updateStatus()). The numbers below
+        // are a snapshot, trusted as-is even if the balance moves before this is decided.
         $record = Leave::create([
             ...$data,
             'days' => $counted['days'],
+            'pay_type' => $payType,
+            'paid_days' => $paidDays,
+            'unpaid_days' => $unpaidDays,
             'id' => $this->nextIdFor(Leave::class, 'LVE'),
         ]);
 
@@ -193,7 +238,9 @@ class LeaveController extends Controller
 
     /**
      * What a leave request would cost, before it is filed: the working days in the range and which days were
-     * skipped (holidays, days off). The Leave form shows this as the person picks dates.
+     * skipped (holidays, days off). The Leave form shows this as the person picks dates. When leaveTypeCode is
+     * also given, the pay/split breakdown (LeavePayResolver) is merged in too - the same preview that would be
+     * computed at submission time, shown live as the employee picks dates and a type, with no extra round trip.
      */
     public function workingDays(Request $request): JsonResponse
     {
@@ -201,10 +248,21 @@ class LeaveController extends Controller
             'employeeId' => 'required|string|max:20',
             'startDate' => 'required|date',
             'endDate' => 'required|date|after_or_equal:startDate',
+            'leaveTypeCode' => 'sometimes|string|max:50',
         ]);
         $this->assertSelfOrAdmin($request, $data['employeeId']);
 
-        return response()->json(['data' => (new WorkingDays())->count($data['employeeId'], $data['startDate'], $data['endDate'])]);
+        $counted = (new WorkingDays())->count($data['employeeId'], $data['startDate'], $data['endDate']);
+
+        if (! empty($data['leaveTypeCode'])) {
+            $type = LeaveType::where('code', $data['leaveTypeCode'])->where('active', true)->first();
+            $employee = Employee::find($data['employeeId']);
+            if ($type && $employee) {
+                $counted = [...$counted, ...LeavePayResolver::resolve($employee, $type, (float) $counted['days'], false)];
+            }
+        }
+
+        return response()->json(['data' => $counted]);
     }
 
     /**
@@ -212,66 +270,16 @@ class LeaveController extends Controller
      * still record any type on someone's behalf (e.g. logging a maternity leave already taken, or a
      * probationary employee's approved exception), the same latitude the past-date rule above gives.
      */
-    private function assertEligibleForType(string $employeeId, string $leaveType): void
+    private function assertEligibleForType(string $employeeId, LeaveType $type): void
     {
         $employee = Employee::find($employeeId);
         if (! $employee) {
             return;
         }
 
-        if ($leaveType === 'Maternity' && $employee->gender !== 'Female') {
-            throw ValidationException::withMessages([
-                'leaveType' => ['Maternity leave is only available to female employees.'],
-            ]);
-        }
-
-        if ($leaveType === 'Paternity' && $employee->gender !== 'Male') {
-            throw ValidationException::withMessages([
-                'leaveType' => ['Paternity leave is only available to male employees.'],
-            ]);
-        }
-
-        // Vacation and Special are discretionary leave - a new hire has not earned either yet.
-        // Sick, Bereavement, Maternity, Paternity and Unpaid stay available regardless of tenure.
-        if (in_array($leaveType, ['Vacation', 'Special'], true) && $employee->isProbationary()) {
-            throw ValidationException::withMessages([
-                'leaveType' => ["{$leaveType} leave is not available until probation ends on {$employee->probationEndsAt()}."],
-            ]);
-        }
-    }
-
-    private function assertSufficientBalance(string $employeeId, string $leaveType, float|int $requested): void
-    {
-        $employee = Employee::find($employeeId);
-        if (! $employee) {
-            return;
-        }
-
-        $balance = collect($employee->leaveBalances())->firstWhere('type', $leaveType);
-
-        if (! $balance) {
-            /*
-              No allowance row for this type. The check used to simply return, which meant an
-              unknown type could be filed for any number of days with no limit at all - the
-              'Half Day' requests in the data went through exactly this gap. Falling back to the
-              default entitlement keeps the check meaningful rather than skipping it. Unreachable
-              through the API now that leaveType is validated, but leave records can also be
-              imported, so the guard stays.
-            */
-            $default = Employee::defaultLeaveBalances()[$leaveType] ?? 0;
-            if ($default < $requested) {
-                throw ValidationException::withMessages([
-                    'leaveType' => ["No leave allowance is set up for {$leaveType}, so this request cannot be filed. Ask an administrator to set the allowance first."],
-                ]);
-            }
-
-            return;
-        }
-
-        if ($balance['remaining'] < $requested) {
-            throw ValidationException::withMessages([
-                'leaveType' => ["Insufficient balance. Only {$balance['remaining']} day(s) of {$leaveType} leave remaining."],
-            ]);
+        $reasons = LeaveEligibility::ineligibilityReasons($employee, $type);
+        if ($reasons !== []) {
+            throw ValidationException::withMessages(['leaveType' => $reasons]);
         }
     }
 
@@ -297,22 +305,54 @@ class LeaveController extends Controller
         ]));
 
         $before = $record->toApiArray();
-        // Moving the dates moves the cost: count the working days again.
-        if (isset($data['start_date']) || isset($data['end_date'])) {
+        $employeeId = $data['employee_id'] ?? $record->employee_id;
+        $leaveType = $data['leave_type'] ?? $record->leave_type;
+
+        // Moving the dates or the type moves the cost: count the working days (and, for a still-
+        // Approved request, the pay resolution) again.
+        if (isset($data['start_date']) || isset($data['end_date']) || isset($data['leave_type'])) {
             $start = $data['start_date'] ?? $record->start_date->toDateString();
             $end = $data['end_date'] ?? $record->end_date->toDateString();
             if ($end < $start) {
                 throw ValidationException::withMessages(['endDate' => ['The end date cannot be before the start date.']]);
             }
-            $counted = (new WorkingDays())->count($data['employee_id'] ?? $record->employee_id, $start, $end);
+            $counted = (new WorkingDays())->count($employeeId, $start, $end);
             if ($counted['days'] < 1) {
                 throw ValidationException::withMessages(['startDate' => ['These dates contain no working days (they fall on weekends, holidays or days off).']]);
             }
             $data['days'] = $counted['days'];
+
+            $type = LeaveType::where('code', $leaveType)->first();
+            $employee = Employee::find($employeeId);
+            if ($type && $employee) {
+                // Admin-only route - never needs the employee's split consent.
+                $resolved = LeavePayResolver::resolve($employee, $type, (float) $counted['days'], true);
+                $data['pay_type'] = $resolved['payType'];
+                $data['paid_days'] = $resolved['paidDays'];
+                $data['unpaid_days'] = $resolved['unpaidDays'];
+            }
         }
+
+        $wasApproved = $record->status === 'Approved';
         $record->update($data);
 
-        AuditLogger::record('timeoff', 
+        // If this request was (and remains) Approved under PaidWithBalance, Leave::booted() already
+        // reversed the OLD paid_days the moment leave_type/paid_days changed - write the new amount
+        // back in so the ledger reflects the edited request instead of nothing.
+        if ($wasApproved && $record->status === 'Approved' && $record->pay_type === 'PaidWithBalance'
+            && (float) $record->paid_days > 0 && ($record->wasChanged('leave_type') || $record->wasChanged('paid_days'))) {
+            LeaveLedger::write(
+                $record->employee_id,
+                $record->leave_type,
+                'Usage',
+                -(float) $record->paid_days,
+                $record->id,
+                null,
+                $request->user()?->name ?? 'SYSTEM',
+            );
+        }
+
+        AuditLogger::record('timeoff',
             'leave.updated',
             'Leave',
             $record->id,
@@ -368,14 +408,36 @@ class LeaveController extends Controller
             'comments' => $request->has('comments') ? ($comments ?: null) : $record->comments,
         ]);
 
-        AuditLogger::record('timeoff', 
+        // Approving a PaidWithBalance request deducts from the ledger NOW, not at submission - the
+        // paid/unpaid numbers were snapshotted at submission time and are trusted as-is, even if the
+        // balance has since moved (re-resolving here would need a second, undesigned admin-side
+        // consent flow). If the balance already can't cover it, the deduction still happens, but it's
+        // flagged rather than hidden.
+        $meta = ['status' => $status, 'employeeId' => $record->employee_id];
+        if ($status === 'Approved' && $record->pay_type === 'PaidWithBalance' && (float) $record->paid_days > 0) {
+            $balanceBefore = LeaveLedger::currentBalance($record->employee_id, $record->leave_type);
+            if ($balanceBefore < (float) $record->paid_days) {
+                $meta['balanceDriftDetected'] = true;
+            }
+            LeaveLedger::write(
+                $record->employee_id,
+                $record->leave_type,
+                'Usage',
+                -(float) $record->paid_days,
+                $record->id,
+                null,
+                $request->user()?->name ?? 'SYSTEM',
+            );
+        }
+
+        AuditLogger::record('timeoff',
             'leave.status_changed',
             'Leave',
             $record->id,
             actor: $request->user()?->name,
             actorId: $request->user()?->employee_id,
             after: $record->fresh()->toApiArray(),
-            meta: ['status' => $status, 'employeeId' => $record->employee_id],
+            meta: $meta,
         );
 
         if ($status === 'Approved') {
@@ -409,14 +471,28 @@ class LeaveController extends Controller
         return response()->json(['data' => $record->fresh()->toApiArray()]);
     }
 
-    public function destroy(string $id): JsonResponse
+    public function destroy(Request $request, string $id): JsonResponse
     {
         $record = Leave::find($id);
         if (! $record) {
             return response()->json(['message' => 'Leave request not found'], 404);
         }
 
-        AuditLogger::record('timeoff', 
+        // The model's booted() hook only reverses a ledger deduction on save() - a hard delete
+        // never fires it, so the credit-back has to happen explicitly here, before the row is gone.
+        if ($record->status === 'Approved' && $record->pay_type === 'PaidWithBalance' && (float) $record->paid_days > 0) {
+            LeaveLedger::write(
+                $record->employee_id,
+                $record->leave_type,
+                'Adjustment',
+                (float) $record->paid_days,
+                $record->id,
+                'Reversal: leave record deleted',
+                $request->user()?->name ?? 'SYSTEM',
+            );
+        }
+
+        AuditLogger::record('timeoff',
             'leave.deleted',
             'Leave',
             $record->id,

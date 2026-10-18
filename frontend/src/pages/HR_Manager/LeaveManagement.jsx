@@ -362,6 +362,15 @@ export default function LeaveManagement() {
               </span>
             </div>
 
+            {selectedLeave.payType && (
+              <div className="rounded-xl border border-gray-100 px-4 py-3 flex flex-wrap items-center gap-4 text-sm text-gray-700">
+                <span className="text-xs font-semibold uppercase tracking-wide text-gray-500">Pay Breakdown</span>
+                <span>Paid: <strong>{selectedLeave.paidDays ?? 0}</strong> day(s)</span>
+                <span>Unpaid: <strong>{selectedLeave.unpaidDays ?? 0}</strong> day(s)</span>
+                <Badge variant="default" size="xs">{selectedLeave.payType}</Badge>
+              </div>
+            )}
+
             {(() => {
               const impact = teamImpact(selectedLeave);
               if (!impact.dept) return null;

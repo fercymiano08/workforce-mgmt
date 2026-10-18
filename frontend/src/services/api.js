@@ -251,8 +251,10 @@ export const leaveService = {
     return data;
   },
   // What a date range would cost: the working days in it, minus weekends, holidays and days off.
-  workingDays: async (employeeId, startDate, endDate) => {
-    const { data } = await http.get('/leaves/working-days', { params: { employeeId, startDate, endDate } });
+  // Passing leaveTypeCode also merges in the pay/split breakdown (LeavePayResolver) - same call,
+  // no extra round trip.
+  workingDays: async (employeeId, startDate, endDate, leaveTypeCode) => {
+    const { data } = await http.get('/leaves/working-days', { params: { employeeId, startDate, endDate, leaveTypeCode } });
     return data;
   },
   create: async (payload) => {
@@ -269,6 +271,42 @@ export const leaveService = {
   },
   delete: async (id) => {
     const { data } = await http.delete(`/leaves/${id}`);
+    return data;
+  },
+};
+
+export const leaveTypeService = {
+  getAll: async () => {
+    const { data } = await http.get('/leave-types');
+    return data;
+  },
+  // Every active type, annotated for one employee: eligible/ineligibilityReasons/balance.
+  getEligible: async (employeeId) => {
+    const { data } = await http.get(`/leave-types/eligible/${employeeId}`);
+    return data;
+  },
+  create: async (payload) => {
+    const { data } = await http.post('/leave-types', payload);
+    return data;
+  },
+  update: async (id, payload) => {
+    const { data } = await http.put(`/leave-types/${id}`, payload);
+    return data;
+  },
+  // Deactivates, never a hard delete - historical requests keep resolving.
+  deactivate: async (id) => {
+    const { data } = await http.delete(`/leave-types/${id}`);
+    return data;
+  },
+};
+
+export const leaveLedgerService = {
+  get: async (employeeId) => {
+    const { data } = await http.get(`/leave-balance-ledger/${employeeId}`);
+    return data;
+  },
+  adjust: async (payload) => {
+    const { data } = await http.post('/leave-balance-ledger/adjust', payload);
     return data;
   },
 };

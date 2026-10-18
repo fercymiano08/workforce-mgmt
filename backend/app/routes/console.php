@@ -39,3 +39,8 @@ Schedule::command('notifications:prune')->dailyAt('02:00')->timezone('Asia/Manil
 
 // Rebuild recent timesheets right after a punch or overtime approval changes the figures behind them.
 Schedule::command('timesheets:refresh')->everyMinute()->withoutOverlapping();
+
+// Leave balance is never typed in by an admin - it accrues monthly, and whatever carries over
+// past each type's cap expires once a year. Both only ever add ledger entries, never edit one.
+Schedule::command('leave:accrue-monthly')->monthlyOn(1, '00:15')->timezone('Asia/Manila')->withoutOverlapping();
+Schedule::command('leave:expire-carryover')->yearlyOn(1, 1, '00:20')->timezone('Asia/Manila')->withoutOverlapping();

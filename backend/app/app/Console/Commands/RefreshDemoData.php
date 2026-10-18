@@ -9,6 +9,9 @@ use App\Models\Employee;
 use App\Models\Notification;
 use App\Models\Holiday;
 use App\Models\Leave;
+use App\Models\LeaveType;
+use App\Services\LeaveLedger;
+use App\Services\LeavePayResolver;
 use App\Models\ScheduleSetting;
 use App\Models\ShiftDefinition;
 use App\Models\ShiftSchedule;
@@ -370,6 +373,34 @@ class RefreshDemoData extends Command
         return self::OVERTIME_REASONS[crc32($seed.'|ot-reason') % count(self::OVERTIME_REASONS)];
     }
 
+    /**
+     * Creates one Approved demo leave AND, for a balance-requiring type, resolves and writes the
+     * matching ledger Usage entry. This command creates leave rows directly (::create(), bypassing
+     * LeaveController) the same way it always has - so unlike a real request, nothing else does
+     * that bookkeeping for it, and without this the ledger would silently never reflect demo leave.
+     */
+    private function createApprovedDemoLeave(Employee $employee, string $leaveId, string $leaveType, string $start, string $end, float $days, string $reason, string $appliedDate): void
+    {
+        $type = LeaveType::where('code', $leaveType)->first();
+        $resolved = $type
+            ? LeavePayResolver::resolve($employee, $type, $days, true)
+            : ['payType' => null, 'paidDays' => null, 'unpaidDays' => null];
+
+        $leave = Leave::create([
+            'id' => $leaveId,
+            'employee_id' => $employee->id, 'employee_name' => trim($employee->first_name.' '.$employee->last_name),
+            'leave_type' => $leaveType,
+            'start_date' => $start, 'end_date' => $end, 'days' => $days,
+            'pay_type' => $resolved['payType'], 'paid_days' => $resolved['paidDays'], 'unpaid_days' => $resolved['unpaidDays'],
+            'reason' => $reason, 'status' => 'Approved',
+            'applied_date' => $appliedDate, 'approved_by' => 'Workforce Admin',
+        ]);
+
+        if ($resolved['payType'] === 'PaidWithBalance' && (float) $resolved['paidDays'] > 0) {
+            LeaveLedger::write($employee->id, $leaveType, 'Usage', -(float) $resolved['paidDays'], $leave->id, null, 'SYSTEM');
+        }
+    }
+
     /** Requests an earlier run wrote with the placeholder "Demo data." get a real-sounding reason too. */
     private function polishPlaceholderReasons(): void
     {
@@ -396,8 +427,6 @@ class RefreshDemoData extends Command
         $toDate = Carbon::parse($to);
 
         foreach (Employee::whereIn('id', $ids)->get(['id', 'first_name', 'last_name']) as $employee) {
-            $name = trim($employee->first_name.' '.$employee->last_name);
-
             for ($weekStart = Carbon::parse($from)->startOfWeek(Carbon::MONDAY); $weekStart->lte($toDate); $weekStart->addWeeks(3)) {
                 $roll = crc32($employee->id.'|leave|'.$weekStart->toDateString()) % 100;
                 if ($roll >= 35) {
@@ -423,14 +452,15 @@ class RefreshDemoData extends Command
                     continue;   // landed entirely on a day off or a holiday
                 }
 
-                Leave::create([
-                    'id' => 'LVE'.str_pad((string) ++$leaveNo, 3, '0', STR_PAD_LEFT),
-                    'employee_id' => $employee->id, 'employee_name' => $name,
-                    'leave_type' => $types[$roll % count($types)],
-                    'start_date' => $start->toDateString(), 'end_date' => $end->toDateString(), 'days' => $days,
-                    'reason' => $this->leaveReason($types[$roll % count($types)], $employee->id.$start->toDateString()), 'status' => 'Approved',
-                    'applied_date' => $start->copy()->subDays(3)->toDateString(), 'approved_by' => 'Workforce Admin',
-                ]);
+                $leaveType = $types[$roll % count($types)];
+                $this->createApprovedDemoLeave(
+                    $employee,
+                    'LVE'.str_pad((string) ++$leaveNo, 3, '0', STR_PAD_LEFT),
+                    $leaveType,
+                    $start->toDateString(), $end->toDateString(), $days,
+                    $this->leaveReason($leaveType, $employee->id.$start->toDateString()),
+                    $start->copy()->subDays(3)->toDateString(),
+                );
             }
         }
     }
@@ -473,14 +503,15 @@ class RefreshDemoData extends Command
                 continue;   // both candidate days were off - skip rather than force a non-work day
             }
 
-            Leave::create([
-                'id' => 'LVE'.str_pad((string) ++$leaveNo, 3, '0', STR_PAD_LEFT),
-                'employee_id' => $employee->id, 'employee_name' => trim($employee->first_name.' '.$employee->last_name),
-                'leave_type' => $types[$roll % count($types)],
-                'start_date' => $start->toDateString(), 'end_date' => $start->toDateString(), 'days' => $days,
-                'reason' => $this->leaveReason($types[$roll % count($types)], $employee->id.$start->toDateString()), 'status' => 'Approved',
-                'applied_date' => $start->copy()->subDays(2)->toDateString(), 'approved_by' => 'Workforce Admin',
-            ]);
+            $leaveType = $types[$roll % count($types)];
+            $this->createApprovedDemoLeave(
+                $employee,
+                'LVE'.str_pad((string) ++$leaveNo, 3, '0', STR_PAD_LEFT),
+                $leaveType,
+                $start->toDateString(), $start->toDateString(), $days,
+                $this->leaveReason($leaveType, $employee->id.$start->toDateString()),
+                $start->copy()->subDays(2)->toDateString(),
+            );
             $guaranteed++;
         }
     }

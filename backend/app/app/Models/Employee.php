@@ -29,7 +29,7 @@ class Employee extends Model
         'employment_type', 'status', 'hire_date', 'manager', 'avatar',
         'address', 'date_of_birth', 'gender', 'blood_group', 'emergency_contact',
         'emergency_phone', 'skills', 'education', 'face_registered',
-        'face_image', 'face_descriptor', 'face_registered_at', 'leave_balances',
+        'face_image', 'face_descriptor', 'face_registered_at',
     ];
 
     protected function casts(): array
@@ -42,7 +42,6 @@ class Employee extends Model
             'face_registered' => 'boolean',
             'face_descriptor' => 'array',
             'face_registered_at' => 'datetime',
-            'leave_balances' => 'array',
         ];
     }
 
@@ -107,121 +106,70 @@ class Employee extends Model
     }
 
     /**
-     * Default annual leave entitlement per leave type (calendar days).
-     *
-     * A panel review walked through these one by one: "Emergency" was redundant with "Sick" (folded
-     * in here - genuinely urgent personal matters now file under "Special"), "Funeral" read as
-     * morbid and unclear ("Bereavement" is the standard HR term), and there was no way at all to
-     * request Maternity or Paternity leave - both now exist as their own type, gender-checked in
-     * LeaveController (see assertEligible there for all of the type-specific rules).
-     *
-     * Maternity (105 days) and Paternity (7 days) follow RA 11210 and RA 8187 respectively - the
-     * statutory minimums, used here as the default until a real company policy exists.
-     *
-     * @return array<string, int>
-     */
-    public static function defaultLeaveBalances(): array
-    {
-        return [
-            'Vacation' => 20,
-            'Sick' => 10,
-            'Special' => 5,
-            'Bereavement' => 5,
-            'Maternity' => 105,
-            'Paternity' => 7,
-            'Unpaid' => 30,
-        ];
-    }
-
-    /**
-     * The canonical leave types a request may be filed under.
-     *
-     * Kept beside the entitlement map rather than in the controller so there is exactly one
-     * definition of "a leave type exists here": every allowance above is a key of this list, and
-     * every type allowed through validation is a key of it too. Adding a new type means adding
-     * it in one place and the form, the balance check and the analytics charts all follow.
-     *
-     * Requests were previously validated as a bare string, so any text at all could be filed and
-     * stored. A 'Half Day' request reached the database that way: it has no balance here, so it
-     * skipped the allowance check entirely, and no chart had a bucket for it, so approved leave
-     * existed while appearing on no report at all.
+     * The canonical leave types a request may be filed under: every active row of LeaveType,
+     * the Workforce Admin's config table. Requests were previously validated against a hardcoded
+     * array; now the server-side source of truth is the same table the admin edits, so adding or
+     * retiring a type takes effect everywhere (the form, the balance check, the analytics charts)
+     * without a code deploy.
      *
      * @return list<string>
      */
     public static function leaveTypes(): array
     {
-        return array_keys(self::defaultLeaveBalances());
+        return LeaveType::activeCodes();
     }
 
     /**
-     * Total approved leave days consumed per type.
+     * Total approved leave days consumed per type, read from the balance ledger's Usage entries
+     * rather than recomputed from Leave rows - the ledger is the authoritative history now.
      *
      * @return array<string, float>
      */
     public function usedLeaveDays(): array
     {
-        return Leave::where('employee_id', $this->id)
-            ->where('status', 'Approved')
+        return LeaveBalanceLedger::where('employee_id', $this->id)
+            ->where('entry_type', 'Usage')
             ->get()
-            ->groupBy('leave_type')
-            ->map(fn ($rows) => (float) $rows->sum(fn ($l) => $l->days ?? ($l->start_date->diffInDays($l->end_date) + 1)))
+            ->groupBy('leave_type_code')
+            ->map(fn ($rows) => (float) abs($rows->sum('days_delta')))
             ->all();
     }
 
     /**
      * Leave balances in the shape the frontend Leave page expects:
-     * [{ type, total, used, remaining }, ...].
+     * [{ type, total, used, remaining }, ...]. Only balance-requiring active types are included -
+     * a type like Maternity or Unpaid genuinely has no balance to show. Derived entirely from the
+     * ledger (SUM of positive vs. negative entries), never from a stored total.
      *
      * @return list<array{type: string, total: float, used: float, remaining: float}>
      */
     public function leaveBalances(): array
     {
-        $totals = $this->normalizedLeaveBalancesMap();
-        $used = $this->usedLeaveDays();
+        $types = LeaveType::where('requires_balance', true)->where('active', true)->get();
+        if ($types->isEmpty()) {
+            return [];
+        }
 
-        $balances = [];
-        foreach ($totals as $type => $total) {
-            $total = (float) $total;
-            $u = (float) ($used[$type] ?? 0);
-            $balances[] = [
-                'type' => $type,
+        // One query for every type's ledger rows, not one per type - toApiArray() calls this for
+        // every employee on a list endpoint (e.g. GET /employees), so this was the difference
+        // between 2 queries per employee and up to 2x(number of balance-requiring types).
+        $rowsByType = LeaveBalanceLedger::where('employee_id', $this->id)
+            ->whereIn('leave_type_code', $types->pluck('code'))
+            ->get()
+            ->groupBy('leave_type_code');
+
+        return $types->map(function (LeaveType $type) use ($rowsByType) {
+            $rows = $rowsByType->get($type->code, collect());
+            $total = (float) $rows->where('days_delta', '>', 0)->sum('days_delta');
+            $used = (float) abs($rows->where('days_delta', '<', 0)->sum('days_delta'));
+
+            return [
+                'type' => $type->code,
                 'total' => $total,
-                'used' => $u,
-                'remaining' => max($total - $u, 0),
+                'used' => $used,
+                'remaining' => max($total - $used, 0),
             ];
-        }
-
-        return $balances;
-    }
-
-    /**
-     * Canonical {Type: total} map from the stored leave_balances column.
-     *
-     * The column normally stores the canonical map, but some environments have
-     * historically persisted the API output shape (a list of
-     * {type,total,used,remaining} objects) instead. Both shapes are accepted
-     * here so mis-shapen data can never gray out the balance cards again.
-     *
-     * @return array<string, float>
-     */
-    private function normalizedLeaveBalancesMap(): array
-    {
-        $stored = $this->leave_balances;
-
-        if (is_array($stored) && ! array_is_list($stored)) {
-            return $stored;
-        }
-
-        $map = [];
-        if (is_array($stored)) {
-            foreach ($stored as $row) {
-                if (is_array($row) && isset($row['type'])) {
-                    $map[$row['type']] = (float) ($row['total'] ?? 0);
-                }
-            }
-        }
-
-        return $map !== [] ? $map : self::defaultLeaveBalances();
+        })->values()->all();
     }
 
     public function toApiArray(): array

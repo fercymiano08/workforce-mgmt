@@ -10,7 +10,9 @@
 |----------------------------------------------------------------------------
 */
 
+use App\Http\Controllers\Api\LeaveBalanceLedgerController;
 use App\Http\Controllers\Api\LeaveController;
+use App\Http\Controllers\Api\LeaveTypeController;
 use App\Http\Controllers\Api\OvertimeRequestController;
 use Illuminate\Support\Facades\Route;
 
@@ -30,6 +32,26 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::get('/balances/{employeeId}', [LeaveController::class, 'balances']);
         Route::get('/working-days', [LeaveController::class, 'workingDays']);
         Route::get('/{id}', [LeaveController::class, 'show']);
+    });
+
+    // Own prefix, deliberately not nested under /leaves/ - that group's catch-all GET
+    // /leaves/{id} is ordered carefully against its sibling paths, and a nested
+    // /leaves/types/eligible/{employeeId} would be one more path to keep in that order.
+    Route::prefix('leave-types')->group(function () {
+        Route::middleware('admin')->group(function () {
+            Route::get('/', [LeaveTypeController::class, 'index']);
+            Route::post('/', [LeaveTypeController::class, 'store']);
+            Route::put('/{id}', [LeaveTypeController::class, 'update']);
+            Route::delete('/{id}', [LeaveTypeController::class, 'destroy']);
+        });
+        // Self-or-admin, enforced inline.
+        Route::get('/eligible/{employeeId}', [LeaveTypeController::class, 'eligibleForEmployee']);
+    });
+
+    Route::prefix('leave-balance-ledger')->group(function () {
+        // Self-or-admin, enforced inline.
+        Route::get('/{employeeId}', [LeaveBalanceLedgerController::class, 'index']);
+        Route::middleware('admin')->post('/adjust', [LeaveBalanceLedgerController::class, 'adjust']);
     });
 
     Route::prefix('overtime')->group(function () {

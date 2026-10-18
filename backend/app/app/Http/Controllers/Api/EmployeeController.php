@@ -276,7 +276,6 @@ class EmployeeController extends Controller
             'emergencyPhone' => 'nullable|string|max:50',
             'skills' => 'nullable|array',
             'education' => 'nullable|array',
-            'leaveBalances' => 'nullable|array',
             'password' => ['nullable', Password::min(8)->mixedCase()->numbers()],
         ];
 
