@@ -33,10 +33,11 @@ const adminMenuGroups = [
     ],
   },
   {
+    // The leave rules engine moved to Settings > Company Configuration ("Leave Rules"), so this
+    // group is now just the approval console.
     label: 'nav.group.leave',
     items: [
       { path: '/leave', key: 'nav.leave', icon: Calendar },
-      { path: '/leave-types', key: 'nav.leaveTypes', icon: SlidersHorizontal },
     ],
   },
   {

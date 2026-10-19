@@ -58,9 +58,11 @@ const PAGES = {
 };
 // Windows that open inside a page (a crash there does not show when the page itself loads): open each one,
 // click through its tabs, and check nothing breaks. [page name, buttons to click in order]
+// The old "+ Automated Shift" draft-and-approve wizard used to be here; that wizard was removed from the
+// Shifts page, and the modal that matters now is the Assign Shift form.
 const INSIDE = {
   admin: [
-    ['shifts', ['+ Automated Shift', 'Continue', 'Back']],
+    ['shifts', ['Assign Shift']],
   ],
   employee: [],
 };

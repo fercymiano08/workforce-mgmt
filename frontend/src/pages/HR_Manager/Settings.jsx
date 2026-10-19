@@ -1,12 +1,14 @@
 import { useState } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import {
   Settings as SettingsIcon, Building, Palette, Shield,
-  Save, Globe, Mail, Smartphone, TimerOff,
+  Save, Globe, Mail, Smartphone, TimerOff, SlidersHorizontal,
 } from 'lucide-react';
 import Card, { CardHeader, CardTitle, CardDescription } from '../../components/ui/Card';
 import Button from '../../components/ui/Button';
 import Input, { Select } from '../../components/ui/Input';
 import { InfoNote, AccountSection, AppearanceSection } from '../../components/settings/SharedSections';
+import LeaveTypes from './LeaveTypes';
 import { settingsService, employeeService, departmentService } from '../../services/api';
 import { useToast } from '../../context/ToastContext';
 import { useLanguage, LANGUAGE_OPTIONS } from '../../context/LanguageContext';
@@ -22,6 +24,10 @@ const NAV_GROUPS = [
     items: [
       { id: 'company', key: 'settings.company', icon: Building },
       { id: 'timeManager', key: 'settings.timeManager', icon: TimerOff },
+      // The leave rules engine. It sits here with the other company-wide policy (grace period,
+      // lunch) rather than on the Leave Management page, because the admin never picks a rule
+      // while approving - the employee already filed against one. Leave Management stays the queue.
+      { id: 'leaveRules', key: 'settings.leaveRules', icon: SlidersHorizontal },
       { id: 'regional', key: 'settings.regional', icon: Globe },
     ],
   },
@@ -354,11 +360,24 @@ function RegionalSection({ settingsData, onSaved }) {
 }
 
 export default function Settings() {
-  const [activeTab, setActiveTab] = useState('company');
+  // The active section lives in the URL (?section=) instead of component state, so a section can
+  // be linked to directly - /leave-types redirects to /settings?section=leaveRules, and reloading
+  // the page keeps you where you were.
+  const [searchParams, setSearchParams] = useSearchParams();
+  const activeTab = searchParams.get('section') || 'company';
   const [reloadKey, setReloadKey] = useState(0);
   const { t } = useLanguage();
 
   const { data: settingsData, loading, refresh } = useApiData(() => settingsService.get(), []);
+
+  const setActiveTab = (id) => {
+    const next = new URLSearchParams(searchParams);
+    if (id === 'company') next.delete('section');
+    else next.set('section', id);
+    // replace: switching sections is not a new place you were, so the back button still
+    // leaves Settings instead of stepping backwards through every tab you opened.
+    setSearchParams(next, { replace: true });
+  };
 
   const handleSaved = () => {
     refresh();
@@ -372,6 +391,9 @@ export default function Settings() {
         return <RegionalSection {...props} />;
       case 'timeManager':
         return <TimeManagerSection {...props} />;
+      case 'leaveRules':
+        // Fetches and manages its own data (leave_types, not the settings row).
+        return <LeaveTypes />;
       case 'account':
         return <AccountSection />;
       case 'appearance':

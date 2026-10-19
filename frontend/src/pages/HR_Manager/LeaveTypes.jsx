@@ -1,15 +1,24 @@
+/*
+ * The leave rules engine. It used to be its own page (/leave-types) with its own sidebar entry;
+ * it now renders as the "Leave Rules" section of Settings > Company Configuration, right below
+ * Time Manager. The placement follows one rule: policy that defines what is allowed for the whole
+ * company lives in Settings (grace periods, lunch, leave rules), while a module page holds the
+ * daily work done against that policy - so Leave Management stays purely the approval queue.
+ * The old route redirects to /settings?section=leaveRules.
+ */
 import { useState } from 'react';
 import { Plus, Edit, Ban, RotateCcw, Sliders } from 'lucide-react';
-import Card from '../../components/ui/Card';
+import Card, { CardHeader, CardTitle, CardDescription } from '../../components/ui/Card';
 import Button from '../../components/ui/Button';
 import Badge from '../../components/ui/Badge';
 import Modal from '../../components/ui/Modal';
 import Input, { Select } from '../../components/ui/Input';
 import TableShell from '../../components/ui/TableShell';
+import { InfoNote } from '../../components/settings/SharedSections';
 import { leaveTypeService } from '../../services/api';
 import { useToast } from '../../context/ToastContext';
 import useApiData from '../../hooks/useApiData';
-import { SkeletonPage } from '../../components/ui/LoadingSkeleton';
+import { SkeletonCard, SkeletonTable } from '../../components/ui/LoadingSkeleton';
 
 const payTypeVariant = { PaidWithBalance: 'primary', PaidWithoutBalance: 'info', Unpaid: 'teal' };
 
@@ -123,18 +132,28 @@ export default function LeaveTypes() {
   };
 
   if (loading) {
-    return <SkeletonPage kpiCount={0} />;
+    return (
+      <div className="space-y-6">
+        <SkeletonCard lines={2} />
+        <SkeletonTable rows={5} cols={7} />
+      </div>
+    );
   }
 
   return (
-    <div className="space-y-6 animate-fadeIn">
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-        <div>
-          <h1 className="text-2xl font-bold text-gray-900">Leave Type Configuration</h1>
-          <p className="text-[14px] text-gray-500 mt-1">Every rule behind a leave type - who can file it, how it's paid, and what it requires</p>
-        </div>
-        <Button icon={Plus} onClick={openAdd}>Add Leave Type</Button>
-      </div>
+    <div className="space-y-6">
+      <Card>
+        <CardHeader action={<Button icon={Plus} onClick={openAdd}>Add Leave Type</Button>}>
+          <div>
+            <CardTitle>Leave Rules</CardTitle>
+            <CardDescription>Every rule behind a leave type - who can file it, how it's paid, and what it requires</CardDescription>
+          </div>
+        </CardHeader>
+        <InfoNote>
+          Deactivating a rule only hides that type from the employee's apply screen - nothing is deleted,
+          and past requests keep resolving against the rules they were filed under.
+        </InfoNote>
+      </Card>
 
       <Card padding={false}>
         <TableShell minWidth="min-w-[900px]">
