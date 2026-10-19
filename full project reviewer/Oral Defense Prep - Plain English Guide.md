@@ -129,7 +129,7 @@ Browser (frontend) → sends a request to `/api/...` → forwarded to the one La
 1. HR **registers** the employee (start with basic info + a password + face).
 2. HR **assigns a schedule** (the Standard Shift) with **Assign Shift**: pick one or more employees from a Department → Role → Employee picker, the date, and assign - each employee is checked independently (not already scheduled, not on approved leave that day), so one conflict only skips that person, never the whole batch. (An earlier "Automated Shift" wizard - rules building a multi-week draft for HR to approve - was removed on a panel review's advice: the company only ever has the one shift, so a draft-and-approve step for *who* goes on it was solving a problem that doesn't exist.)
 3. Each day the employee **clocks in/out** (face at the kiosk).
-4. If they can't come in, they **file a leave request**; HR **approves or rejects** it, and a "leave balance" is updated.
+4. If they can't come in, they open **Apply Leave**, which only lists the leave types they're actually eligible for - each type carries its own gender and minimum-tenure rule (e.g. a male employee never even sees Maternity; Vacation needs 6 months of tenure), and an ineligible type shows greyed-out with the reason right there instead of just vanishing. HR **approves or rejects** the request, and on approval the system automatically works out whether it's Paid-with-balance, Paid-without-balance, or Unpaid from that leave type's own configured rules - nobody picks the pay type by hand. Only the balance-requiring types post an entry to that employee's leave ledger, and if the balance is short, the employee is offered a paid+unpaid split they have to accept, not a silent hard rejection.
 5. Weekly, the system builds a **timesheet** (hours worked) from completed, clocked-out attendance. The current, still-open week is labeled **"Ongoing Timesheet Record"** with a pulsing **Live** badge and recomputed straight from attendance (polled every 30s) rather than a saved snapshot - the saved weekly row underneath exists for its workflow status (Draft/Submitted/Approved), not as the hours shown. When the week ends the employee reviews and submits it (or the system submits it Monday noon); HR approves it, or rejects it with a reason, and approved ones go to payroll once. A **history** of past weeks sits right below it on the My Timesheet page.
 6. If they work extra hours, they can file an **overtime request**, which HR approves (opening each one and deciding it).
 
@@ -155,7 +155,7 @@ Use these as quick talking points. Say each in ONE breath.
 - **Login / Auth** - "The gateway. Logs people in, gives a token, and blocks attackers with a lockout. An employee can also switch on a second sign-in step: the password alone does not get a token, a one-time code does."
 - **Attendance** - "Who was present and when. Clock-in/out records for everyone, with alerts if something's wrong."
 - **Corrections** *(inside Time & Attendance)* - "For the two times the kiosk record is wrong: you worked past your shift, or the kiosk just didn't catch your clock-in/out. File it with a photo as proof; HR checks it against the kiosk's own punch records before deciding."
-- **Leave** - "Time off requests. Employees file, HR approves/rejects, and balances are updated."
+- **Leave** - "Time off requests, but rule-driven, not a flat form: each leave type (Vacation, Sick, Maternity, Unpaid, etc.) is configured by the Workforce Admin - who's eligible, whether it draws from a balance, how it's paid. Employees only see the types they qualify for; HR approves/rejects, and the pay type (paid-with-balance / paid-without-balance / unpaid) resolves automatically from that type's own rules."
 - **Overtime** - "Extra hours worked. Employees request, HR opens each one and approves or rejects it."
 - **Timesheets** - "A weekly summary of hours with a live 'This Week' popup and a history table. Employees submit after the week ends, HR approves or rejects with a reason."
 
@@ -397,7 +397,7 @@ Use this as a rapid-fire review. One line = one idea. Cover the right column, th
 | **Attendance (kiosk)** | The clock-in/out terminal | Face match (< 0.6 distance) + server-enforced rules (shift required, Present ≤ 15 min / Late after, reason for early leave) → one row in `attendance` | Accurate, tamper-resistant attendance with zero manual work |
 | **HR Attendance** | Fix/correct daily records | Approve, edit, delete rows; computed Late/Present/Absent | Keeps records honest; the audit trail source of truth |
 | **Corrections** | Employee-filed fix for a wrong kiosk record | Employee files for "worked past shift" or "kiosk missed my clock-in/out" with photo proof → HR compares it to the kiosk's own punch record and approves (entering the final time by hand) or rejects | Lets a real mistake get fixed without just taking the employee's word for it |
-| **Leave** | Time-off requests | Apply (Pending) → HR Approve/Reject → deducts balance → notify | Balances stay consistent; approved leave stops "Absent" flags |
+| **Leave** | Time-off requests | Apply (only eligible types shown, by gender/tenure; Pending) → HR Approve/Reject → pay type (paid-with-balance / paid-without-balance / unpaid) auto-resolved from the leave type's config; only balance-requiring types post a ledger entry → notify | Eligibility and pay are enforced by configurable rules, not hand-picked, and the balance is always the live sum of ledger entries, never a stored number; approved leave stops "Absent" flags |
 | **Overtime** | Extra hours tracking | Same lifecycle as leave, PLUS reconciliation pushes approved OT into attendance + timesheets | Payroll numbers agree across every page |
 | **Shifts/Schedules** | Who works when | Templates + generated/edited assignments in `shift_schedules` | Drives kiosk validation, Late/Present math, coverage analysis |
 | **Timesheets** | Weekly hour summaries + a live "This Week" popup + full history | Auto-generated from attendance → "This Week" opens a live per-day breakdown; employee submits (or auto-submitted Monday noon) → HR approves / rejects with a reason → sent to payroll once; hours freeze after submitting | Payroll-friendly, auditable, no manual summing |
@@ -450,12 +450,12 @@ Use this as a rapid-fire review. One line = one idea. Cover the right column, th
 12. Why did we pick each tech? → React=fast UI, Laravel=secure backend, PostgreSQL=reliable relational database, Gemini=smart insights.
 
 ## Database (13-19)
-13. How many tables? → 29 (20 business + 9 Laravel plumbing), built from 53 migrations. The business tables include the newest: `early_clock_outs` (early-leave reasons), `attendance_adjustments` (corrections with photo proof), `audit_events` (the audit trail), and `two_factor_challenges` (the emailed-code second sign-in step).
+13. How many tables? → 31 (22 business + 9 Laravel plumbing), built from 61 migrations. The business tables include the newest: `leave_types` (admin-configured rules per leave type) and `leave_balance_ledger` (append-only balance entries - the balance is their SUM, never a stored number), plus `early_clock_outs` (early-leave reasons), `attendance_adjustments` (corrections with photo proof), `audit_events` (the audit trail), and `two_factor_challenges` (the emailed-code second sign-in step).
 14. Which table is most important? → `employees` - everything links by `employee_id`.
 15. What is a primary key? → Unique row ID (e.g. `EMP20260001`).
 16. What is a foreign key? → A column pointing to another table's key (attendance.employee_id → employees.id).
 17. What is a JOIN? → Combining two tables on their key to show related data together.
-18. Why JSON columns? → Flexible config (leave_balances, kiosk, ai_resolved_insights).
+18. Why JSON columns? → Flexible config (skills, kiosk, ai_resolved_insights) - note leave balance is NOT one of these: it's the live SUM of `leave_balance_ledger` rows, never a stored JSON blob or number.
 19. How many employees/attendance rows are in the demo? → 10 seeded demo employees (plus the admin/employee demo accounts), with attendance rows generated from their schedules. Leave and overtime requests are seeded the same rolling way - a sparse, deterministic scatter of approved requests that advances with "today" every time `php artisan demo:refresh` runs - so Analytics and the AI page never come up empty just because the demo is being run on a different day than it was first seeded.
 
 ## Attendance rules (20-26)
@@ -472,7 +472,9 @@ Use this as a rapid-fire review. One line = one idea. Cover the right column, th
 
 ## Leave & timesheet (27-33)
 27. Leave statuses? → Pending → Approved/Rejected; employee can Cancel while Pending.
-28. What happens on leave approval? → Balance deducted + notification + protects from Absent.
+28. What happens on leave approval? → The leave type's own config decides the pay type automatically (Paid-with-balance / Paid-without-balance / Unpaid - nobody picks it by hand); only balance-requiring types (Vacation, Sick, Special) write an entry to that employee's leave ledger, which is a running SUM of entries, never a stored number; plus a notification and protection from Absent.
+28a. Why can't everyone see every leave type? → Each type carries its own gender and minimum-tenure rule in `leave_types` (e.g. Maternity = Female only, Vacation needs 6 months tenure). The Apply form's dropdown only lists what this employee actually qualifies for; an ineligible type shows disabled with the reason instead of just vanishing - checked again on the server, not just hidden in the UI.
+28b. Why is Unpaid a leave type, and why isn't it a loophole? → Pay type is never chosen by the admin or employee - it's resolved automatically from the leave type's config. Vacation/Sick/Special draw from a real balance; Bereavement/Maternity/Paternity are paid in full but capped by `max_consecutive_days` instead of a balance (Maternity 105 days per RA 11210, Paternity 7 per RA 8187); Unpaid has no balance check at all but is capped at 30 consecutive days. If a balance-requiring request is short, the employee is offered a paid+unpaid split to accept or decline - never a silent full-unpaid fallback.
 29. What is reconciliation (OT)? → Approved OT hours copied into attendance + timesheet so payroll agrees.
 30. How is a timesheet born? → Auto-generated from that week's attendance rows.
 31. Who submits/approves timesheets? → Employee submits own; HR approves/rejects.

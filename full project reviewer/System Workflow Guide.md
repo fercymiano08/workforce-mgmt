@@ -800,11 +800,11 @@ An employee with **approved leave** on a date cannot be given a shift that day: 
 
 ---
 
-## Module 9 — Leave Requests (Apply → Approve → Balance Deduction)
+## Module 9 — Leave Requests (Apply → Approve → Pay Resolution)
 
-**What it is:** the full lifecycle of time-off: employee applies, admin decides, balances update, everybody gets notified.
+**What it is:** the full lifecycle of time-off: employee applies against admin-configured rules, admin decides, the ledger updates, pay is resolved automatically, everybody gets notified.
 
-**Files:** `Employee/Leave.jsx`, `HR_Manager/LeaveManagement.jsx`, backend `LeaveController.php` (time-off) and `WorkingDays.php` (scheduling)
+**Files:** `Employee/Leave.jsx`, `HR_Manager/LeaveManagement.jsx`, `HR_Manager/LeaveTypes.jsx` (admin rule configuration), backend `LeaveController.php`, `LeaveTypeController.php`, `LeaveBalanceLedgerController.php`, and services `LeaveEligibility.php`, `LeavePayResolver.php`, `LeaveLedger.php`
 
 ### Leave Costs Working Days, Not Calendar Days
 
@@ -821,27 +821,32 @@ The page opens on **Pending Approvals**. Tick several requests and **Approve / R
             │
 Pending ────┤
             │
-            └──────────► Approved   (balance deducted)
+            └──────────► Approved   (ledger Usage entry written, only if the type is PaidWithBalance)
                     or
-                         Rejected   (balance untouched, comments explain why)
+                         Rejected   (no ledger effect, comments explain why)
 ```
+
+Un-approving an Approved request (status moved back to Pending/Rejected), editing its dates/type while still Approved, or deleting it outright all reverse the ledger entry automatically — the employee is never left permanently overcharged after a correction.
 
 ### Flow A — Employee Applies
 
 | Step | What happens |
 |------|--------------|
-| 1 | Fill form: **leave type** — exactly six: **Vacation, Sick, Emergency, Special, Funeral, Unpaid** — plus **start date**, **end date**, **reason** |
-| 2 | Frontend validates: end ≥ start, reason required; the page also shows current **balances** fetched from `/api/leaves/balances/{employeeId}` — the default annual allowance per type (`Employee.php`) is **Vacation 20, Sick 10, Emergency 5, Special 5, Funeral 5, Unpaid 30** days, stored per employee in `employees.leave_balances` (JSON) and editable per employee by the admin |
-| 3 | `POST /api/leaves` — the payload says whose request it is; the backend verifies the caller may only file as themselves |
-| 4 | Backend re-validates and inserts into `leaves`: `status = 'Pending'`, `applied_date = today`, `employee_name` snapshotted |
-| 5 | Notification created for HR: "new leave request" |
-| 6 | Request appears in the employee's list with a **Pending** pill |
+| 1 | Open the form → the dropdown is fetched live from `GET /api/leave-types/eligible/{employeeId}`, not a hardcoded list. Each of the 7 active types (**Vacation, Sick, Special, Bereavement, Maternity, Paternity, Unpaid**) is annotated per-employee: a gender- or tenure-ineligible type renders disabled with the reason inline — a male employee never even sees Maternity as selectable |
+| 2 | Pick a type → the type's own rules show as plain text (advance notice, retroactive window, proof requirement, pay type) |
+| 3 | Pick dates → the live preview (`GET /api/leaves/working-days`, now also passing `leaveTypeCode`) shows working days **and** the pay/split breakdown: paid in full, paid-without-balance, unpaid, or — if a `PaidWithBalance` type's balance is short — an offer to split the request (X days paid from the remaining balance, Y days unpaid) that the employee must explicitly accept before submitting |
+| 4 | `POST /api/leaves` (with `acceptSplit: true` if a split was accepted) — the payload says whose request it is; the backend verifies the caller may only file as themselves |
+| 5 | Backend re-validates everything server-side against the same Leave Type config (eligibility, notice/retroactive window, max consecutive days, proof requirement), resolves `pay_type`/`paid_days`/`unpaid_days` via `LeavePayResolver`, and inserts into `leaves`: `status = 'Pending'`, `applied_date = today`, `employee_name` snapshotted |
+| 6 | Notification created for HR: "new leave request" |
+| 7 | Request appears in the employee's list with a **Pending** pill |
 
 **Guardrails on applying (enforced by the server; the form mirrors them):**
 
-- **No past dates for employees.** The date pickers grey out every day before today, and the server refuses a start date before today (`422`). An Administrator may still record a past absence on someone's behalf.
-- **No duplicate / overlapping requests.** A new request whose dates overlap one that is still **Pending or Approved** is refused with a message naming the existing request. A **Cancelled** or **Rejected** request does not block a new one.
-- **No double submit.** The Submit button locks with a spinner as soon as it is clicked and stays locked until the server answers (this is built into the shared `Button` component, so **every** button whose click calls the server behaves the same). If the request fails, the form stays open with everything typed in, and the message says why.
+- **Eligibility.** Gender and minimum tenure (in months) come from the type's own config (`LeaveEligibility`), not a hardcoded `if`. An ineligible type is filtered out of the dropdown before the employee can even try selecting it.
+- **Advance notice / retroactive filing.** Each type configures its own `advance_notice_days` (minimum lead time) and, separately, whether it `retroactive_allowed` with its own backdate window — e.g. Sick allows up to 7 days back (nobody predicts being sick) and also allows future filing for a planned medical procedure, which is why it separately requires proof beyond 2 days; Bereavement allows up to 2 days after it starts, for the same "you don't plan this" reason.
+- **Max consecutive days.** Where configured (Maternity 105, Paternity 7, Unpaid 30), measured in **calendar** days to match the statutory RA 11210 / RA 8187 definitions, not working days.
+- **Proof.** Where `requires_proof` is set and the request exceeds `proof_threshold_days`, a document upload is required or the request is refused.
+- **No past dates (outside a type's retroactive window), no duplicate/overlapping requests, no double submit** — unchanged in spirit from before: a new request whose dates overlap one that is still **Pending or Approved** is refused naming the existing request, and the Submit button locks with a spinner while the server is answering.
 
 Cancel path: while still Pending, the employee can cancel it via `PATCH /api/leaves/{id}/status` with `Cancelled` — the dual-rule endpoint allows *only* that specific combination for non-admins.
 
@@ -849,19 +854,19 @@ Cancel path: while still Pending, the employee can cancel it via `PATCH /api/lea
 
 | Step | What happens |
 |------|--------------|
-| 1 | Pending queue on Leave Management (and inside the AI Decision Support tab's decision queue) |
-| 2 | HR clicks Approve or Reject → `PATCH /api/leaves/{id}/status` or `PUT /api/leaves/{id}` |
-| 3 | **If Approved:** backend deducts the days from `employees.leave_balances` (JSON column holding per-type remaining days) |
+| 1 | Pending queue on Leave Management (and inside the AI Decision Support tab's decision queue), now showing the request's resolved pay breakdown (paid/unpaid days) alongside the usual details |
+| 2 | HR clicks Approve or Reject → `PATCH /api/leaves/{id}/status` |
+| 3 | **If Approved and the type is `PaidWithBalance`:** backend writes a `Usage` entry to `leave_balance_ledger` for `-paid_days`. A type's current balance for an employee is always the **SUM** of that employee's ledger entries — never a stored, directly-editable number. `PaidWithoutBalance` and `Unpaid` types have no balance to touch at all |
 | 4 | Row updated: `status`, `approved_by`, `comments` |
 | 5 | Notification created for the employee: approved/rejected |
 | 6 | Bonus effect: approved leave dates protect the employee from being marked **Absent** in attendance (Module 7) |
 
-> Notice how ONE approval touches THREE tables: `leaves` (status), `employees` (balance), `notifications` (message). That's normal and healthy.
+> An approval now touches up to four tables depending on the type: `leaves` (status), `leave_balance_ledger` (a new row, only for `PaidWithBalance`), `notifications` (message), and `audit_events` (every status change is logged with a before/after snapshot). The old model wrote directly to `employees.leave_balances` — that JSON column still physically exists on the table, but nothing reads or writes it anymore; it's vestigial.
 
 ### Tech Trail
 
-- Endpoints: `POST /api/leaves`, `GET /api/leaves/employee/{id}`, `GET /api/leaves/balances/{id}`, `PATCH /api/leaves/{id}/status`, admin `GET /`, `PUT /{id}`, `DELETE /{id}`
-- Tables: `leaves`, `employees.leave_balances`, `notifications`
+- Endpoints: `POST /api/leaves`, `GET /api/leaves/employee/{id}`, `GET /api/leaves/balances/{id}`, `GET /api/leaves/working-days`, `PATCH /api/leaves/{id}/status`, admin `GET /`, `PUT /{id}`, `DELETE /{id}`; plus admin `GET/POST/PUT/DELETE /api/leave-types*` (rule configuration) and `GET /api/leave-balance-ledger/{employeeId}` + admin `POST /api/leave-balance-ledger/adjust` (reason required)
+- Tables: `leaves`, `leave_types`, `leave_balance_ledger`, `notifications`, `audit_events`
 
 ---
 

@@ -14,7 +14,7 @@
 2. [Connection Details](#2-connection-details)
 3. [The Tools](#3-the-tools)
 4. [Database Concepts You Need To Know](#4-database-concepts-you-need-to-know)
-5. [All 29 Tables Explained (20 business + 9 framework)](#5-all-29-tables-explained-20-business--9-framework)
+5. [All 31 Tables Explained (22 business + 9 framework)](#5-all-31-tables-explained-22-business--9-framework)
 6. [Relationships Map](#6-relationships-map)
 7. [pgAdmin 4 Walkthrough](#7-pgadmin-4-walkthrough)
 8. [Essential SQL Queries (Cheat Sheet)](#8-essential-sql-queries-cheat-sheet)
@@ -30,7 +30,7 @@
 |----------|-------|
 | Database Engine | PostgreSQL 18 |
 | Database Name | **One database: `workforce_mgnt`** (the system was originally split into 8 databases, one per microservice; it was consolidated back into a single Laravel monolith + single database before the defense — see the note below) |
-| Total Tables | 29 tables in `workforce_mgnt`: 20 "business" tables + 9 Laravel framework tables. Every table has exactly **one** copy — there are no more read-only replica tables and nothing to keep in sync |
+| Total Tables | 31 tables in `workforce_mgnt`: 22 "business" tables + 9 Laravel framework tables. Every table has exactly **one** copy — there are no more read-only replica tables and nothing to keep in sync |
 | Managed By | One flat set of Laravel 13 migrations (`backend/app/database/migrations/`, 53 migration files) + pgAdmin 4 |
 | Runs On | Local machine (`127.0.0.1:5432`), one PostgreSQL server hosting the one database |
 | Runs On (Docker) | The `postgres` container, published on the host at **`127.0.0.1:5433`**, hosting the same single database (data in the `pgdata` Docker volume). It is a **separate** server from the local one on 5432; the password is in the git-ignored `.env` |
@@ -40,14 +40,14 @@ The database stores everything the system knows: employee records, attendance hi
 
 > **Why one database?** The Workforce Management System is itself just one microservice inside a larger E-Commerce Enterprise platform under development. Splitting *its own* internals into 8 further microservices/databases was applying the pattern one level too deep, and it was corrected before the defense. With one database, normal foreign keys and joins work directly across every domain — e.g. a timesheet query can join straight to `attendance` and `employees` in a single SQL statement — with no replication lag and no risk of a replica going stale.
 
-The 20 business tables are grouped below by domain. This is a **logical grouping only** — there is no schema or database boundary between them; every table lives in the same `workforce_mgnt` database and can be joined to any other with a normal SQL `JOIN`.
+The 22 business tables are grouped below by domain. This is a **logical grouping only** — there is no schema or database boundary between them; every table lives in the same `workforce_mgnt` database and can be joined to any other with a normal SQL `JOIN`.
 
 | Domain | Tables |
 |--------|--------|
 | Identity | `users`, `employees`, `departments`, `roles`, `audit_events`, `two_factor_challenges` |
 | Attendance | `attendance`, `early_clock_outs`, `attendance_adjustments`, `security_events` |
 | Scheduling | `shift_definitions`, `shift_schedules`, `holidays`, `schedule_settings` |
-| Time-off | `leaves`, `overtime_requests` |
+| Time-off | `leaves`, `leave_types`, `leave_balance_ledger`, `overtime_requests` |
 | Payroll | `timesheets` |
 | Communications | `notifications` |
 | Configuration | `settings` |
@@ -108,18 +108,18 @@ Some columns (like `settings.kiosk`) store flexible structured data as JSON inst
 
 ---
 
-## 5. All 29 Tables Explained (20 business + 9 framework)
+## 5. All 31 Tables Explained (22 business + 9 framework)
 
 > The tables below are described once, logically — each still means the same thing it always did, and every one lives as a single, real copy in the one `workforce_mgnt` database (see the domain grouping in Section 1). Table shapes (columns, types, relationships) are unchanged from the earlier multi-database design.
 
-### Core Business Tables (20) — most appear in the original ERD; `early_clock_outs`, `attendance_adjustments`, `audit_events` and `two_factor_challenges` were added later
+### Core Business Tables (22) — most appear in the original ERD; `early_clock_outs`, `attendance_adjustments`, `audit_events`, `two_factor_challenges`, `leave_types` and `leave_balance_ledger` were added later
 
 #### People & Organization
 
 | Table | Purpose | Key Columns |
 |-------|---------|-------------|
 | `users` | Login accounts for the Workforce Admin and Employees | `id`, `employee_id`, `email`, `password`, `role`, `role_label`, `two_factor_enabled` |
-| `employees` | Full employee profiles including face photo + descriptor for kiosk recognition | `id`, `first_name`, `last_name`, `department`, `position`, `face_image`, `face_descriptor`, `leave_balances` |
+| `employees` | Full employee profiles including face photo + descriptor for kiosk recognition. (The old `leave_balances` JSON column still physically exists on this table but is vestigial — leave balance is now derived from `leave_balance_ledger`, see the Leave section below) | `id`, `first_name`, `last_name`, `department`, `position`, `face_image`, `face_descriptor` |
 | `departments` | Company departments | `id`, `name`, `head`, `budget`, `employee_count` |
 | `roles` | Job titles per department — powers the Position dropdown | `id`, `department_id` (FK), `name` |
 
@@ -138,8 +138,12 @@ Some columns (like `settings.kiosk`) store flexible structured data as JSON inst
 | Table | Purpose | Key Columns |
 |-------|---------|-------------|
 | `leaves` | Leave applications with approval workflow. `days` = the WORKING days the request costs (the usual work days minus holidays, counted in-process by the same app when it is filed) | `id`, `employee_id` (FK), `leave_type`, `start_date`, `end_date`, `days`, `status` |
+| `leave_types` | The rules engine: one row per leave type (Vacation, Sick, Special, Bereavement, Maternity, Paternity, Unpaid), configurable by the Workforce Admin instead of hardcoded in the controller — gender eligibility, minimum tenure, pay type (`PaidWithBalance` / `PaidWithoutBalance` / `Unpaid`), whether it draws down a balance, accrual policy/rate, max carryover, advance-notice and retroactive-filing windows, max consecutive days, and proof requirements. Deactivating a type (`active = false`) never deletes it — past requests still resolve against the row they were filed under | `id`, `code` (matches `leaves.leave_type` text — a logical link, no hard FK needed), `name`, `applicable_gender`, `min_tenure_months`, `pay_type`, `requires_balance`, `accrual_policy`, `accrual_rate`, `max_carryover_days`, `max_consecutive_days`, `requires_proof`, `active` |
+| `leave_balance_ledger` | Append-only history of every balance-affecting event (Accrual, Usage, Adjustment, Expiration, Carryover) per employee per leave type. There is no stored "current balance" column anywhere — the current balance for (employee, leave type) is always `SUM(days_delta)` over this table, computed on demand by `LeaveLedger::currentBalance()`. `balance_after` is written on each row as a point-in-time snapshot for display/history only, and is never read back as the source of truth. Written only through `App\Services\LeaveLedger::write()` | `id`, `employee_id` (FK), `leave_type_code`, `entry_type`, `days_delta`, `balance_after`, `reference_id`, `performed_by` |
 
-> Note: leave balances are stored as a JSON column inside `employees.leave_balances`, not a separate table.
+> Only three of the seven seeded leave types actually hold a balance (Vacation, Sick, Special — all `requires_balance = true` with monthly accrual). Bereavement, Maternity and Paternity are `PaidWithoutBalance`: paid in full but capped by `max_consecutive_days` instead of a ledger. Unpaid has no balance check at all — just a 30-day consecutive-days cap. Which pay type an approved leave actually resolves to is decided automatically by `App\Services\LeavePayResolver` from the leave type's own config, never chosen by the admin or employee; if a `PaidWithBalance` request would exceed the available balance, the employee is offered a paid+unpaid split rather than a hard block.
+>
+> The `employees.leave_balances` JSON column still exists on the table (see above) but nothing reads or writes it anymore — it predates this ledger design and is dead weight, not the source of truth.
 
 #### Scheduling
 
@@ -173,6 +177,7 @@ Some columns (like `settings.kiosk`) store flexible structured data as JSON inst
 employees  1 --- 1  users               users.employee_id
 employees  1 --- *  attendance          attendance.employee_id
 employees  1 --- *  leaves              leaves.employee_id
+employees  1 --- *  leave_balance_ledger leave_balance_ledger.employee_id
 employees  1 --- *  overtime_requests   overtime_requests.employee_id
 employees  1 --- *  timesheets          timesheets.employee_id
 employees  1 --- *  shift_schedules     shift_schedules.employee_id
@@ -187,6 +192,7 @@ users      1 --- 0..1 two_factor_challenges  two_factor_challenges.user_id
 **Logical links (no hard foreign key):**
 - `departments.name` matches text in `employees.department`
 - `roles.name` matches text in `employees.position`
+- `leaves.leave_type` and `leave_balance_ledger.leave_type_code` match text in `leave_types.code`
 
 **`employees` is the central entity** — every module connects to it via `employee_id`.
 
@@ -242,6 +248,12 @@ SELECT employee_name, leave_type, start_date, end_date
 FROM leaves
 WHERE status = 'Pending';
 
+-- An employee's current balance for one leave type (balance is never a stored
+-- column - it's always the running SUM of every ledger entry for that pair)
+SELECT COALESCE(SUM(days_delta), 0) AS current_balance
+FROM leave_balance_ledger
+WHERE employee_id = 'EMP20260001' AND leave_type_code = 'Vacation';
+
 -- Security events (buddy-punching attempts)
 SELECT type, message, created_at
 FROM security_events
@@ -264,6 +276,7 @@ Your system already has useful ones:
 | `users_email_unique` | users.email | Login lookups + no duplicate emails |
 | `attendance_employee_id_date_index` | attendance (employee_id, date) | Fast "was this employee here today?" check at the kiosk |
 | `leaves_employee_id_index` | leaves.employee_id | Fast "show my leave requests" |
+| `leave_balance_ledger_employee_id_leave_type_code_index` | leave_balance_ledger (employee_id, leave_type_code) | Fast "what's this employee's current balance for this leave type?" — the SUM query filters on both |
 
 You never create indexes manually here — Laravel migrations defined them. In pgAdmin you can see them under each table's **Indexes** node.
 
@@ -313,19 +326,19 @@ Note: both restore STRUCTURE only. Live data, if any, lives on the original mach
 | Likely question | Ready answer (plain) |
 |----------------|----------------------|
 | Why PostgreSQL and not MySQL? | Both work; PostgreSQL handles JSON columns and complex reporting cleanly, and it's genuinely free. Our team chose it for reliability. |
-| How many tables did you design? | 20 logical business tables + 9 Laravel framework tables = 29 tables, all in one database, `workforce_mgnt`. |
+| How many tables did you design? | 22 logical business tables + 9 Laravel framework tables = 31 tables, all in one database, `workforce_mgnt`. |
 | Why one database instead of splitting it up? | The Workforce Management System is itself one microservice inside a larger E-Commerce Enterprise platform we're building. Splitting its own internals into 8 further microservices/databases applied the pattern one level too deep, so we consolidated back into one Laravel app and one database before the defense. One database means normal foreign keys and joins work directly across every domain — e.g. a timesheet query can join straight to `attendance` and `employees` — with no replication lag and no risk of a stale replica. |
 | Which table is the most important? | `employees` — it's the center. Attendance, leaves, overtime, schedules, and timesheets all point back to it by `employee_id`, as a direct join against the one real `employees` table. |
 | How do your tables connect to each other? | Normal SQL — a `JOIN` on the shared key (usually `employee_id`), or a foreign key like `roles.department_id → departments.id`. Everything is in the same database, so there's no cross-service call or sync job involved. |
 | Do you use foreign key constraints? | Mostly enforced at the application layer rather than with hard `FOREIGN KEY` constraints (only `roles.department_id` and `two_factor_challenges.user_id` declare one) — a normal design choice for this app, not a workaround for anything. Because everything lives in one database, every relationship in Section 6 is still a live, ordinary `JOIN`. |
 | What is a JOIN? | Combining two tables on their key, e.g. join `attendance` to `employees` so a report shows the person's name next to each clock-in. |
-| Why JSON columns? | For flexible data that doesn't deserve its own table: `employees.leave_balances`, `settings.kiosk`, `settings.ai_resolved_insights`, `settings.system` (the Time Manager rules). |
+| Why JSON columns? | For flexible data that doesn't deserve its own table: `employees.skills`, `employees.education`, `settings.kiosk`, `settings.ai_resolved_insights`, `settings.system` (the Time Manager rules). Leave balance used to be one of these (`employees.leave_balances`) but outgrew a JSON column once it needed real history and SUM-based math, so it moved to the dedicated `leave_balance_ledger` table — that old column is still physically there but nothing reads or writes it anymore. |
 | How is the database created? | One Laravel app with one flat set of migrations (`backend/app/database/migrations/`) builds every table, and one `DatabaseSeeder` (fed by JSON mock files) fills in demo data: `cd backend/app && php artisan migrate:fresh --seed`. |
 | What is an index for? | A shortcut to find rows faster, e.g. `attendance(employee_id, date)` makes the kiosk's "was this person here today?" instant. |
 | Where is the password stored? | In `backend/app/.env` as DB settings, not in code — `.env` is gitignored so secrets never reach GitHub. |
 | What would happen if a table were deleted? | Re-run `php artisan migrate:fresh --seed` inside `backend/app` to rebuild the whole database and re-fill it with demo data. |
 | Is this actually deployed anywhere, or only local? | Both. It runs locally (and in Docker Compose) for development, and it's also deployed live on Render for the defense — the API as a Docker web service, the React app as a static site, and the database as Render's own managed PostgreSQL. Same migrations, same schema, same tables either way; only the host changes. |
 
-> Strong closing line about the DB: **"Everything still hangs off `employee_id` conceptually, and now it's literal too — the 20 business tables all live in one `workforce_mgnt` database, so attendance, leaves, schedules, timesheets, and analytics can all be joined directly against `employees` with a normal SQL `JOIN`, no sync jobs or cross-service calls required."**
+> Strong closing line about the DB: **"Everything still hangs off `employee_id` conceptually, and now it's literal too — the 22 business tables all live in one `workforce_mgnt` database, so attendance, leaves, leave balances, schedules, timesheets, and analytics can all be joined directly against `employees` with a normal SQL `JOIN`, no sync jobs or cross-service calls required."**
 
 ---

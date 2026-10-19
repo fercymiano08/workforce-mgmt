@@ -3,13 +3,17 @@
 -- Regenerated directly from the live PostgreSQL server (127.0.0.1:5432) after
 -- the system was consolidated from 8 microservice databases into a single
 -- Laravel monolith backend. Schema only (no data).
+--
+-- Refreshed 2026-10-19: adds leave_types and leave_balance_ledger (the leave
+-- management rules engine), pay_type/paid_days/unpaid_days on leaves, and
+-- two_factor_challenges, which the previous copy of this file predated.
 -- ============================================================
 --
 --
 -- PostgreSQL database dump
 --
 
-\restrict D9Zas3wN7lgK5cvvyumwlJt6h6A1KVFXcWYAGmw5dgZ4UjJOHP8MVzeqcgwVVhz
+\restrict wOeWT1SwL6ecBNX5pJcZyLLLFYdmlF9aHNxZH4OvnLKqy5PsVyebUEf9op7DupE
 
 -- Dumped from database version 18.4
 -- Dumped by pg_dump version 18.4
@@ -113,7 +117,8 @@ CREATE TABLE public.attendance_adjustments (
     requested_date date NOT NULL,
     created_at timestamp(0) without time zone,
     updated_at timestamp(0) without time zone,
-    final_time time(0) without time zone
+    final_time time(0) without time zone,
+    corroboration json
 );
 
 
@@ -132,7 +137,9 @@ CREATE TABLE public.audit_events (
     before json,
     after json,
     meta json,
-    created_at timestamp(0) without time zone DEFAULT CURRENT_TIMESTAMP NOT NULL
+    created_at timestamp(0) without time zone DEFAULT CURRENT_TIMESTAMP NOT NULL,
+    ip_address character varying(45),
+    user_agent character varying(255)
 );
 
 
@@ -377,6 +384,70 @@ ALTER SEQUENCE public.jobs_id_seq OWNED BY public.jobs.id;
 
 
 --
+-- Name: leave_balance_ledger; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.leave_balance_ledger (
+    id bigint NOT NULL,
+    employee_id character varying(20) NOT NULL,
+    leave_type_code character varying(30) NOT NULL,
+    entry_type character varying(20) NOT NULL,
+    days_delta numeric(6,2) NOT NULL,
+    balance_after numeric(6,2) NOT NULL,
+    reference_id character varying(20),
+    reason text,
+    performed_by character varying(150),
+    created_at timestamp(0) without time zone DEFAULT CURRENT_TIMESTAMP NOT NULL
+);
+
+
+--
+-- Name: leave_balance_ledger_id_seq; Type: SEQUENCE; Schema: public; Owner: -
+--
+
+CREATE SEQUENCE public.leave_balance_ledger_id_seq
+    START WITH 1
+    INCREMENT BY 1
+    NO MINVALUE
+    NO MAXVALUE
+    CACHE 1;
+
+
+--
+-- Name: leave_balance_ledger_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: -
+--
+
+ALTER SEQUENCE public.leave_balance_ledger_id_seq OWNED BY public.leave_balance_ledger.id;
+
+
+--
+-- Name: leave_types; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.leave_types (
+    id character varying(20) NOT NULL,
+    code character varying(30) NOT NULL,
+    name character varying(100) NOT NULL,
+    applicable_gender character varying(10) DEFAULT 'Any'::character varying NOT NULL,
+    min_tenure_months integer DEFAULT 0 NOT NULL,
+    pay_type character varying(30) NOT NULL,
+    requires_balance boolean DEFAULT false NOT NULL,
+    accrual_policy character varying(20) DEFAULT 'None'::character varying NOT NULL,
+    accrual_rate numeric(5,2) DEFAULT '0'::numeric NOT NULL,
+    max_carryover_days integer,
+    advance_notice_days integer DEFAULT 0 NOT NULL,
+    retroactive_allowed boolean DEFAULT false NOT NULL,
+    retroactive_window_days integer DEFAULT 0 NOT NULL,
+    max_consecutive_days integer,
+    requires_proof boolean DEFAULT false NOT NULL,
+    proof_threshold_days integer DEFAULT 0 NOT NULL,
+    active boolean DEFAULT true NOT NULL,
+    created_at timestamp(0) without time zone,
+    updated_at timestamp(0) without time zone
+);
+
+
+--
 -- Name: leaves; Type: TABLE; Schema: public; Owner: -
 --
 
@@ -395,7 +466,10 @@ CREATE TABLE public.leaves (
     documents json,
     created_at timestamp(0) without time zone,
     updated_at timestamp(0) without time zone,
-    days numeric(5,1)
+    days numeric(5,1),
+    pay_type character varying(30),
+    paid_days numeric(6,2),
+    unpaid_days numeric(6,2)
 );
 
 
@@ -684,6 +758,40 @@ CREATE TABLE public.timesheets (
 
 
 --
+-- Name: two_factor_challenges; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.two_factor_challenges (
+    id bigint NOT NULL,
+    user_id bigint NOT NULL,
+    code character varying(255) NOT NULL,
+    attempts smallint DEFAULT '0'::smallint NOT NULL,
+    expires_at timestamp(0) without time zone NOT NULL,
+    created_at timestamp(0) without time zone,
+    updated_at timestamp(0) without time zone
+);
+
+
+--
+-- Name: two_factor_challenges_id_seq; Type: SEQUENCE; Schema: public; Owner: -
+--
+
+CREATE SEQUENCE public.two_factor_challenges_id_seq
+    START WITH 1
+    INCREMENT BY 1
+    NO MINVALUE
+    NO MAXVALUE
+    CACHE 1;
+
+
+--
+-- Name: two_factor_challenges_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: -
+--
+
+ALTER SEQUENCE public.two_factor_challenges_id_seq OWNED BY public.two_factor_challenges.id;
+
+
+--
 -- Name: users; Type: TABLE; Schema: public; Owner: -
 --
 
@@ -699,7 +807,8 @@ CREATE TABLE public.users (
     avatar_seed character varying(255),
     remember_token character varying(100),
     created_at timestamp(0) without time zone,
-    updated_at timestamp(0) without time zone
+    updated_at timestamp(0) without time zone,
+    two_factor_enabled boolean DEFAULT false NOT NULL
 );
 
 
@@ -758,6 +867,13 @@ ALTER TABLE ONLY public.jobs ALTER COLUMN id SET DEFAULT nextval('public.jobs_id
 
 
 --
+-- Name: leave_balance_ledger id; Type: DEFAULT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.leave_balance_ledger ALTER COLUMN id SET DEFAULT nextval('public.leave_balance_ledger_id_seq'::regclass);
+
+
+--
 -- Name: migrations id; Type: DEFAULT; Schema: public; Owner: -
 --
 
@@ -776,6 +892,13 @@ ALTER TABLE ONLY public.personal_access_tokens ALTER COLUMN id SET DEFAULT nextv
 --
 
 ALTER TABLE ONLY public.settings ALTER COLUMN id SET DEFAULT nextval('public.settings_id_seq'::regclass);
+
+
+--
+-- Name: two_factor_challenges id; Type: DEFAULT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.two_factor_challenges ALTER COLUMN id SET DEFAULT nextval('public.two_factor_challenges_id_seq'::regclass);
 
 
 --
@@ -922,6 +1045,30 @@ ALTER TABLE ONLY public.jobs
 
 
 --
+-- Name: leave_balance_ledger leave_balance_ledger_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.leave_balance_ledger
+    ADD CONSTRAINT leave_balance_ledger_pkey PRIMARY KEY (id);
+
+
+--
+-- Name: leave_types leave_types_code_unique; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.leave_types
+    ADD CONSTRAINT leave_types_code_unique UNIQUE (code);
+
+
+--
+-- Name: leave_types leave_types_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.leave_types
+    ADD CONSTRAINT leave_types_pkey PRIMARY KEY (id);
+
+
+--
 -- Name: leaves leaves_pkey; Type: CONSTRAINT; Schema: public; Owner: -
 --
 
@@ -1047,6 +1194,22 @@ ALTER TABLE ONLY public.shift_schedules
 
 ALTER TABLE ONLY public.timesheets
     ADD CONSTRAINT timesheets_pkey PRIMARY KEY (id);
+
+
+--
+-- Name: two_factor_challenges two_factor_challenges_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.two_factor_challenges
+    ADD CONSTRAINT two_factor_challenges_pkey PRIMARY KEY (id);
+
+
+--
+-- Name: two_factor_challenges two_factor_challenges_user_id_unique; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.two_factor_challenges
+    ADD CONSTRAINT two_factor_challenges_user_id_unique UNIQUE (user_id);
 
 
 --
@@ -1178,6 +1341,27 @@ CREATE INDEX jobs_queue_index ON public.jobs USING btree (queue);
 
 
 --
+-- Name: leave_balance_ledger_employee_id_index; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX leave_balance_ledger_employee_id_index ON public.leave_balance_ledger USING btree (employee_id);
+
+
+--
+-- Name: leave_balance_ledger_employee_id_leave_type_code_index; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX leave_balance_ledger_employee_id_leave_type_code_index ON public.leave_balance_ledger USING btree (employee_id, leave_type_code);
+
+
+--
+-- Name: leave_balance_ledger_leave_type_code_index; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX leave_balance_ledger_leave_type_code_index ON public.leave_balance_ledger USING btree (leave_type_code);
+
+
+--
 -- Name: leaves_employee_id_index; Type: INDEX; Schema: public; Owner: -
 --
 
@@ -1262,6 +1446,13 @@ CREATE INDEX timesheets_employee_id_index ON public.timesheets USING btree (empl
 
 
 --
+-- Name: two_factor_challenges_expires_at_index; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX two_factor_challenges_expires_at_index ON public.two_factor_challenges USING btree (expires_at);
+
+
+--
 -- Name: users_employee_id_index; Type: INDEX; Schema: public; Owner: -
 --
 
@@ -1277,8 +1468,16 @@ ALTER TABLE ONLY public.roles
 
 
 --
+-- Name: two_factor_challenges two_factor_challenges_user_id_foreign; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.two_factor_challenges
+    ADD CONSTRAINT two_factor_challenges_user_id_foreign FOREIGN KEY (user_id) REFERENCES public.users(id) ON DELETE CASCADE;
+
+
+--
 -- PostgreSQL database dump complete
 --
 
-\unrestrict D9Zas3wN7lgK5cvvyumwlJt6h6A1KVFXcWYAGmw5dgZ4UjJOHP8MVzeqcgwVVhz
+\unrestrict wOeWT1SwL6ecBNX5pJcZyLLLFYdmlF9aHNxZH4OvnLKqy5PsVyebUEf9op7DupE
 
