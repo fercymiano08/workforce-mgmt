@@ -464,13 +464,23 @@ class DatabaseSeeder extends Seeder
     private function seedSettings(): void
     {
         $settings = $this->mock('settings')['settings'] ?? [];
+        $existing = Setting::find(1);
+
+        // demo_seeding_disabled lives inside this same JSON column (see demoSeedingPermanentlyDisabled()),
+        // and this method runs on every deploy regardless of SEED_DEMO_DATA - overwriting 'system' wholesale
+        // from the static mock file would silently erase that flag on the very next deploy after someone
+        // sets it, undoing the one thing it exists to survive.
+        $system = $settings['system'] ?? null;
+        if ($system !== null && ($existing?->system['demo_seeding_disabled'] ?? false)) {
+            $system['demo_seeding_disabled'] = true;
+        }
 
         $fields = [
             'profile' => $settings['profile'] ?? null,
             'appearance' => $settings['appearance'] ?? null,
             'notifications' => $settings['notifications'] ?? null,
             'security' => $settings['security'] ?? null,
-            'system' => $settings['system'] ?? null,
+            'system' => $system,
         ];
 
         foreach (['company', 'kiosk', 'ai_resolved_insights'] as $section) {
@@ -479,7 +489,6 @@ class DatabaseSeeder extends Seeder
             }
         }
 
-        $existing = Setting::find(1);
         if (empty($fields['company']['name'] ?? null) && empty($existing?->company['name'] ?? null)) {
             $fields['company'] = array_merge($fields['company'] ?? $existing?->company ?? [], ['name' => 'Archon Nell Incorporated']);
         }
