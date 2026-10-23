@@ -31,7 +31,7 @@ class DatabaseSeeder extends Seeder
         // the same ids, so once real data is present the demo half is skipped entirely.
         // The admin account is still created: that is the one row a fresh deploy must always have.
         if ($this->holdsRealData()) {
-            if (filter_var(env('SEED_DEMO_DATA', true), FILTER_VALIDATE_BOOLEAN)) {
+            if ($this->demoSeedingEnabled()) {
                 User::firstOrCreate(
                     ['email' => 'admin@workforcepro.com'],
                     [
@@ -70,7 +70,7 @@ class DatabaseSeeder extends Seeder
         // SEED_DEMO_DATA=false seeds only the fixed admin account plus the
         // department/role structure (used by the Docker bootstrap). Default is
         // unchanged: everything, including the demo users and employees.
-        $demo = filter_var(env('SEED_DEMO_DATA', true), FILTER_VALIDATE_BOOLEAN);
+        $demo = $this->demoSeedingEnabled();
 
         $this->seedUsers($demo);
         $this->seedOrgStructure();
@@ -129,6 +129,31 @@ class DatabaseSeeder extends Seeder
         } catch (\Throwable) {
             // Before the first migration the table does not exist yet - that is an empty database,
             // not a reason to skip seeding.
+            return false;
+        }
+    }
+
+    /**
+     * SEED_DEMO_DATA alone was not enough: it only controls one deploy, and the next push turns
+     * it back into "fresh database, please reseed" the moment employees is empty again - exactly
+     * what happened right after an admin-only reset. This flag lives in the settings row instead
+     * of an env var, so it survives that reset and keeps every later deploy from reseeding demo
+     * data until a person deliberately clears it.
+     */
+    private function demoSeedingEnabled(): bool
+    {
+        return filter_var(env('SEED_DEMO_DATA', true), FILTER_VALIDATE_BOOLEAN)
+            && ! $this->demoSeedingPermanentlyDisabled();
+    }
+
+    private function demoSeedingPermanentlyDisabled(): bool
+    {
+        try {
+            $system = \App\Models\Setting::find(1)?->system ?? [];
+
+            return (bool) ($system['demo_seeding_disabled'] ?? false);
+        } catch (\Throwable) {
+            // Before the first migration the table does not exist yet - nothing to disable.
             return false;
         }
     }
