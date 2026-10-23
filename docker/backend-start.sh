@@ -79,6 +79,15 @@ if ! is_off "${RUN_MIGRATIONS:-true}"; then
     fi
 fi
 
+# One-shot, explicit opt-in, off by default: wipes employees/attendance/schedules/leaves/
+# timesheets/notifications/audit history back to just the admin account and org structure.
+# Set RESET_TO_ADMIN_ONLY=true for exactly one deploy, then unset it again - leaving it on
+# would wipe every deploy from here on.
+if ! is_off "${RESET_TO_ADMIN_ONLY:-false}"; then
+    echo "==> RESET_TO_ADMIN_ONLY is set - wiping back to the admin account only"
+    php artisan system:reset-to-admin-only --force --no-interaction
+fi
+
 # The scheduler talks to stdout, which is the same stream as the API's. Keep it quiet so its
 # output can never end up in the middle of a response.
 php artisan schedule:work >/dev/null 2>&1 &
