@@ -30,10 +30,30 @@ is_off() {
 
 cd /var/www/html
 
+# The HTTP server binds the port FIRST, before migrate/seed/refresh, and those run after in the
+# background. Render only waits on the port - it does not care whether the app underneath can
+# already serve a correct response - so running the slow stuff first (migrate -> seed ->
+# demo:refresh, all against a database that may be a slow hop away) was blowing Render's
+# port-scan timeout on every deploy where that chain took too long. Binding the port is now
+# independent of how long that chain takes. A request that lands in the small window before
+# migrations finish can still fail; that window was already there every deploy, just hidden
+# behind the port-scan delay instead of reachable.
+(
+    cd public
+    exec env PHP_CLI_SERVER_WORKERS="${PHP_CLI_SERVER_WORKERS:-4}" \
+        php -S "0.0.0.0:${PORT:-8000}" \
+        ../vendor/laravel/framework/src/Illuminate/Foundation/resources/server.php
+) &
+SERVER_PID=$!
+
+trap 'kill "$SERVER_PID" 2>/dev/null; exit 0' TERM INT
+
 if ! is_off "${RUN_MIGRATIONS:-true}"; then
     echo "==> Running database migrations"
     # A failed migration means the schema does not match the code, so this stays fatal: a red
     # build is a far better outcome than a live API serving queries the tables cannot answer.
+    # The server above is already bound, so Render's port scan is unaffected by this failing -
+    # the container still exits via set -e and Render still marks the deploy failed.
     php artisan migrate --force --no-interaction
 
     if ! is_off "${RUN_SEED:-true}"; then
@@ -63,7 +83,4 @@ fi
 # output can never end up in the middle of a response.
 php artisan schedule:work >/dev/null 2>&1 &
 
-cd public
-exec env PHP_CLI_SERVER_WORKERS="${PHP_CLI_SERVER_WORKERS:-4}" \
-    php -S "0.0.0.0:${PORT:-8000}" \
-    ../vendor/laravel/framework/src/Illuminate/Foundation/resources/server.php
+wait "$SERVER_PID"
