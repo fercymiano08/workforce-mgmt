@@ -97,6 +97,15 @@ return [
             'prefix_indexes' => true,
             'search_path' => 'public',
             'sslmode' => env('DB_SSLMODE', 'prefer'),
+            // A managed database on another provider pays a full TCP+TLS+auth handshake on every
+            // new connection, not just a query - noticeable the moment the database moved off of
+            // Render's own network and onto Aiven's. The built-in server's worker processes
+            // (PHP_CLI_SERVER_WORKERS, see docker/backend-start.sh) are long-lived, so letting PDO
+            // keep one real connection open per worker and reuse it across requests removes that
+            // handshake from every request but the worker's first.
+            'options' => [
+                \PDO::ATTR_PERSISTENT => filter_var(env('DB_PERSISTENT', true), FILTER_VALIDATE_BOOLEAN),
+            ],
         ],
 
         'sqlsrv' => [
