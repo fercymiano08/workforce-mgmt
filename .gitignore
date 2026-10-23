@@ -19,6 +19,9 @@ Thumbs.db
 # Raw database dumps - real employee data (names, emails, addresses, face data), never commit
 /db-backups/
 
+# Live Aiven credentials - never commit
+/.aiven/
+
 # Word/OneDrive temp and lock files
 ~WRL*.tmp
 ~$*
