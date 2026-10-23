@@ -86,7 +86,7 @@ class DatabaseSeeder extends Seeder
         }
         $this->seedSettings();
 
-        if (filter_var(env('SEED_DEMO', true), FILTER_VALIDATE_BOOLEAN)) {
+        if ($demo) {
             $this->call(DemoSeeder::class);
         }
 
