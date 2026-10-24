@@ -104,12 +104,18 @@ class DemoRefreshTest extends TestCase
             }
         }
 
-        // Timesheets: Monday-Sunday weeks, older week approved, last week waiting for review, this week a draft
+        // Timesheets: semi-monthly periods, older period approved, last period waiting for review
         $sheets = Timesheet::where('employee_id', self::DEMO)->orderBy('week_start')->get();
-        $this->assertSame(['2029-12-31', '2030-01-07', '2030-01-14'], $sheets->map(fn ($t) => $t->week_start->toDateString())->all());
-        $this->assertSame(['Approved', 'Submitted', 'Draft'], $sheets->pluck('status')->all());
+        // Semi-monthly periods, not weeks: "now" (2030-01-16) sits at the start of a new period with no
+        // completed attendance in it yet, so unlike the old weekly model there is no current-period Draft
+        // row here - just the two finished periods behind it (2029-12-16..31 approved, 2030-01-01..15
+        // submitted and waiting for review).
+        $this->assertSame(['2029-12-16', '2030-01-01'], $sheets->map(fn ($t) => $t->week_start->toDateString())->all());
+        $this->assertSame(['Approved', 'Submitted'], $sheets->pluck('status')->all());
+        // $sheets[1] is the 2030-01-01..15 period, not a single week - the comparison range has to
+        // cover the whole period it actually aggregates now.
         $this->assertEqualsWithDelta(
-            (float) Attendance::where('employee_id', self::DEMO)->whereBetween('date', ['2030-01-07', '2030-01-13'])->sum('total_hours'),
+            (float) Attendance::where('employee_id', self::DEMO)->whereBetween('date', ['2030-01-01', '2030-01-15'])->sum('total_hours'),
             (float) $sheets[1]->total_hours, 0.01
         );
 

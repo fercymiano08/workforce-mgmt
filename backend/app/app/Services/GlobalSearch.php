@@ -160,7 +160,7 @@ class GlobalSearch
             'dates' => ['x.week_start', 'x.week_end'], 'order' => 'x.week_start', 'dir' => 'desc', 'scope' => 'x.employee_id',
             'select' => ['x.id', 'x.week_start', 'x.week_end', 'x.status', 'x.total_hours'],
             'shape' => fn ($r, $a) => [
-                'id' => 'ts:'.$r->id, 'title' => ($a ? $who($r).' - ' : '').'Week of '.$day($r->week_start),
+                'id' => 'ts:'.$r->id, 'title' => ($a ? $who($r).' - ' : '').'Period of '.$day($r->week_start),
                 'subtitle' => $r->total_hours.'h total', 'badge' => $r->status,
                 'to' => $a ? '/timesheets?search='.$enc($who($r)) : '/my-timesheet',
             ],

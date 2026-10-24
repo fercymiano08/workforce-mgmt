@@ -21,7 +21,7 @@ class LeaveType extends Model
     protected $fillable = [
         'id', 'code', 'name', 'applicable_gender', 'min_tenure_months', 'pay_type',
         'requires_balance', 'accrual_policy', 'accrual_rate', 'max_carryover_days',
-        'advance_notice_days', 'retroactive_allowed', 'retroactive_window_days',
+        'advance_notice_days', 'retroactive_allowed', 'retroactive_window_days', 'locked_to_today',
         'max_consecutive_days', 'requires_proof', 'proof_threshold_days', 'active',
     ];
 
@@ -35,6 +35,7 @@ class LeaveType extends Model
             'advance_notice_days' => 'integer',
             'retroactive_allowed' => 'boolean',
             'retroactive_window_days' => 'integer',
+            'locked_to_today' => 'boolean',
             'max_consecutive_days' => 'integer',
             'requires_proof' => 'boolean',
             'proof_threshold_days' => 'integer',

@@ -17,7 +17,8 @@ class Timesheet extends Model
         'id', 'employee_id', 'employee_name', 'department', 'date', 'week_start',
         'week_end', 'regular_hours', 'regular_holiday_hours', 'special_holiday_hours',
         'overtime_hours', 'approved_ot_hours', 'paid_ot_hours',
-        'break_hours', 'total_hours', 'status', 'submitted_date', 'submitted_at', 'submitted_by',
+        'break_hours', 'late_minutes', 'undertime_minutes',
+        'total_hours', 'status', 'submitted_date', 'submitted_at', 'submitted_by',
         'auto_submitted', 'approved_by', 'reviewed_at', 'status_reason', 'needs_refresh',
         'reminded_at', 'nudged_at', 'exported_at', 'history', 'notes',
     ];
@@ -35,6 +36,8 @@ class Timesheet extends Model
             'approved_ot_hours' => 'float',
             'paid_ot_hours' => 'float',
             'break_hours' => 'float',
+            'late_minutes' => 'integer',
+            'undertime_minutes' => 'integer',
             'total_hours' => 'float',
             'submitted_date' => 'date:Y-m-d',
             'submitted_at' => 'datetime',

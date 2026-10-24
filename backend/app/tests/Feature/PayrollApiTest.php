@@ -73,12 +73,16 @@ class PayrollApiTest extends TestCase
             'break_hours' => 1,
         ]);
 
-        (new TimesheetGenerationService())->syncForEmployee('EMP20260001', now()->toDateString());
+        $service = new TimesheetGenerationService();
+        $service->syncForEmployee('EMP20260001', now()->toDateString());
+
+        $periodStart = $service->periodStart(now());
+        $periodEnd = $service->periodEnd($periodStart);
 
         $this->assertDatabaseHas('timesheets', [
             'employee_id' => 'EMP20260001',
-            'week_start' => now()->startOfWeek()->toDateString(),
-            'week_end' => now()->endOfWeek()->toDateString(),
+            'week_start' => $periodStart->toDateString(),
+            'week_end' => $periodEnd->toDateString(),
         ]);
     }
 }

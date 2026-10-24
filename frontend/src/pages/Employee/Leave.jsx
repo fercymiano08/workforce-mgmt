@@ -1,5 +1,5 @@
 import { useState, useMemo, useEffect, useCallback } from 'react';
-import { Calendar, CheckCircle, Clock, FileText, Plus, XCircle, Palmtree, Heart, Star, Flower2, Wallet, Hourglass, ThumbsUp, ThumbsDown, ChevronRight, Baby, HeartHandshake } from 'lucide-react';
+import { Calendar, CheckCircle, Clock, FileText, Plus, XCircle, Palmtree, Heart, Flower2, Wallet, Hourglass, ThumbsUp, ThumbsDown, ChevronRight, Baby, HeartHandshake } from 'lucide-react';
 import Card from '../../components/ui/Card';
 import Button from '../../components/ui/Button';
 import TodayBadge from '../../components/common/TodayBadge';
@@ -30,22 +30,21 @@ const statusVariant = {
 const leaveTypeVariant = {
   Vacation: 'primary',
   Sick: 'danger',
-  Special: 'purple',
   Bereavement: 'indigo',
   Maternity: 'pink',
   Paternity: 'info',
   Unpaid: 'teal',
-  // Retained for display only. 'Half Day' and 'Emergency' are not canonical types and can no
-  // longer be filed, but approved requests carrying them already exist in the data, and a
+  // Retained for display only. 'Half Day', 'Emergency' and 'Special' are not canonical types and
+  // can no longer be filed, but approved requests carrying them already exist in the data, and a
   // historical row still has to render as a labelled badge rather than falling through blank.
   'Half Day': 'default',
   Emergency: 'warning',
+  Special: 'purple',
 };
 
 const leaveBalanceStyle = {
   Vacation: { text: 'text-blue-600', barBg: 'bg-blue-100', color: 'bg-blue-500', icon: Palmtree, iconBg: 'bg-blue-50' },
   Sick: { text: 'text-red-600', barBg: 'bg-red-100', color: 'bg-red-500', icon: Heart, iconBg: 'bg-red-50' },
-  Special: { text: 'text-purple-600', barBg: 'bg-purple-100', color: 'bg-purple-500', icon: Star, iconBg: 'bg-purple-50' },
   Bereavement: { text: 'text-indigo-600', barBg: 'bg-indigo-100', color: 'bg-indigo-500', icon: Flower2, iconBg: 'bg-indigo-50' },
   Maternity: { text: 'text-pink-600', barBg: 'bg-pink-100', color: 'bg-pink-500', icon: Baby, iconBg: 'bg-pink-50' },
   Paternity: { text: 'text-sky-600', barBg: 'bg-sky-100', color: 'bg-sky-500', icon: HeartHandshake, iconBg: 'bg-sky-50' },
@@ -54,8 +53,9 @@ const leaveBalanceStyle = {
 
 // Static list kept only for the "Type" filter on the request list below (filtering EXISTING
 // records needs no eligibility data). The Apply form's dropdown is driven live by
-// leaveTypeService.getEligible() instead - see eligibleTypes below.
-const leaveTypes = ['Vacation', 'Sick', 'Special', 'Bereavement', 'Maternity', 'Paternity', 'Unpaid'];
+// leaveTypeService.getEligible() instead - see eligibleTypes below. 'Special' is no longer a
+// filable type (removed entirely) so it is not offered as a filter either.
+const leaveTypes = ['Vacation', 'Sick', 'Bereavement', 'Maternity', 'Paternity', 'Unpaid'];
 
 // Plain-language summary of a leave type's config, shown under the dropdown so the rule is known
 // before the server has to refuse the request - every rule here is also enforced server-side.
@@ -677,7 +677,18 @@ export default function Leave() {
           <Select
             label="Leave Type"
             value={applyForm.leaveType}
-            onChange={(e) => setApplyForm((f) => ({ ...f, leaveType: e.target.value, acceptSplit: false }))}
+            onChange={(e) => {
+              const code = e.target.value;
+              const type = (eligibleTypes || []).find((t) => t.code === code);
+              setApplyForm((f) => ({
+                ...f,
+                leaveType: code,
+                acceptSplit: false,
+                // Locked-to-today types (Sick) cannot be planned ahead or backdated - both dates
+                // snap to today the moment the type is picked, matching what min/max then enforce.
+                ...(type?.lockedToToday ? { startDate: todayKey(), endDate: todayKey() } : {}),
+              }));
+            }}
           >
             {(eligibleTypes || []).map((t) => (
               <option key={t.code} value={t.code} disabled={!t.eligible}>
@@ -694,7 +705,9 @@ export default function Leave() {
               type="date"
               required
               value={applyForm.startDate}
-              min={selectedType?.retroactiveAllowed ? retroMinKey(selectedType.retroactiveWindowDays) : todayKey()}
+              min={selectedType?.lockedToToday ? todayKey() : selectedType?.retroactiveAllowed ? retroMinKey(selectedType.retroactiveWindowDays) : todayKey()}
+              max={selectedType?.lockedToToday ? todayKey() : undefined}
+              disabled={!!selectedType?.lockedToToday}
               onChange={(e) => {
                 const startDate = e.target.value;
                 setApplyForm((f) => ({
@@ -712,8 +725,9 @@ export default function Leave() {
               type="date"
               required
               value={applyForm.endDate}
-              min={applyForm.startDate || todayKey()}
-              disabled={!applyForm.startDate}
+              min={selectedType?.lockedToToday ? todayKey() : applyForm.startDate || todayKey()}
+              max={selectedType?.lockedToToday ? todayKey() : undefined}
+              disabled={!applyForm.startDate || !!selectedType?.lockedToToday}
               onChange={(e) => setApplyForm((f) => ({ ...f, endDate: e.target.value }))}
               error={applyErrors.endDate}
             />

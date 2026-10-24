@@ -134,6 +134,7 @@ class LeaveTypeController extends Controller
             'advanceNoticeDays' => [$req, 'integer', 'min:0'],
             'retroactiveAllowed' => [$req, 'boolean'],
             'retroactiveWindowDays' => [$req, 'integer', 'min:0'],
+            'lockedToToday' => [$req, 'boolean'],
             'maxConsecutiveDays' => ['nullable', 'integer', 'min:0'],
             'requiresProof' => [$req, 'boolean'],
             'proofThresholdDays' => [$req, 'integer', 'min:0'],

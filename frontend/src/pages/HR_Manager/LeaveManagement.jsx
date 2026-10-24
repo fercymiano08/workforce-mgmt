@@ -31,16 +31,17 @@ const statusVariant = {
 const leaveTypeVariant = {
   Vacation: 'primary',
   Sick: 'danger',
-  Special: 'purple',
   Bereavement: 'indigo',
   Maternity: 'pink',
   Paternity: 'info',
   Unpaid: 'teal',
-  // Retained for display only - neither is one of the canonical types any more ('Half Day' never
-  // was; 'Emergency' was folded into 'Special'), but an existing approved request can still carry
-  // one and has to render as a labelled badge rather than falling through blank.
+  // Retained for display only - none of these three is one of the canonical types any more
+  // ('Half Day' never was; 'Emergency' was folded into 'Special', which was itself later removed
+  // entirely), but an existing approved request can still carry one and has to render as a
+  // labelled badge rather than falling through blank.
   'Half Day': 'default',
   Emergency: 'warning',
+  Special: 'purple',
 };
 
 const allTabs = ['Pending Approvals', 'All Requests'];
@@ -48,10 +49,10 @@ const allTabs = ['Pending Approvals', 'All Requests'];
 // Two date ranges (YYYY-MM-DD strings) share at least one day
 const overlaps = (a, b) => a.startDate <= b.endDate && b.startDate <= a.endDate;
 const statuses = ['All', 'Pending', 'Approved', 'Rejected', 'Cancelled'];
-// 'Half Day' used to sit in this filter list. It is not one of the canonical leave types and
-// the server now refuses it, so the filter could only ever match nothing. Kept off the list so the
-// dropdown offers exactly the types that can actually be filed.
-const leaveTypes = ['All', 'Vacation', 'Sick', 'Special', 'Bereavement', 'Maternity', 'Paternity', 'Unpaid'];
+// 'Half Day' and 'Special' used to sit in this filter list. Neither is a canonical leave type any
+// more and the server now refuses both, so the filter could only ever match nothing. Kept off the
+// list so the dropdown offers exactly the types that can actually be filed.
+const leaveTypes = ['All', 'Vacation', 'Sick', 'Bereavement', 'Maternity', 'Paternity', 'Unpaid'];
 
 const ROWS_PER_PAGE = 8;
 

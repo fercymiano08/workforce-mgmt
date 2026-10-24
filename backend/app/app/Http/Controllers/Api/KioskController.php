@@ -897,6 +897,9 @@ class KioskController extends Controller
             $validated['overtime'] = $hours['overtime'];
             $validated['totalHours'] = $hours['total'];
             $validated['breakHours'] = $hours['break'];
+            $validated['lateMinutes'] = $hours['lateMinutes'];
+            $validated['undertimeMinutes'] = $hours['undertimeMinutes'];
+            $validated['isRestDay'] = $hours['isRestDay'];
             $validated['clockOut'] = $countedOut->format('H:i:s');
         }
 

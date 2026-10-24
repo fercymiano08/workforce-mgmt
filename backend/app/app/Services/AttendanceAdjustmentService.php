@@ -412,6 +412,9 @@ class AttendanceAdjustmentService
             $attendance->special_holiday_hours = 0;
             $attendance->overtime = 0;
             $attendance->total_hours = 0;
+            $attendance->late_minutes = 0;
+            $attendance->undertime_minutes = 0;
+            $attendance->is_rest_day = ShiftHours::isRestDay($attendance->date->copy());
             $attendance->save();
 
             return ['attendanceId' => $attendance->id, 'hours' => 0.0];
@@ -433,6 +436,9 @@ class AttendanceAdjustmentService
         $attendance->overtime = $counts['overtime'];
         $attendance->total_hours = $counts['total'];
         $attendance->break_hours = $counts['break'];
+        $attendance->late_minutes = $counts['lateMinutes'];
+        $attendance->undertime_minutes = $counts['undertimeMinutes'];
+        $attendance->is_rest_day = $counts['isRestDay'];
         $attendance->save();
 
         return ['attendanceId' => $attendance->id, 'hours' => (float) $counts['total']];

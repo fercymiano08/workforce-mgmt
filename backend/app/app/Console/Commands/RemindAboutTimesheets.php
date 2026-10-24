@@ -28,7 +28,7 @@ class RemindAboutTimesheets extends Command
                     $t->employee_id,
                     'timesheet_reminder',
                     'Your Timesheet Is Ready',
-                    "Your timesheet for the week of {$week} is ready. Please review and submit it before ".$workflow->dueAt($t)->format('D M j, g:i A').'; after that the system submits it for you.',
+                    "Your timesheet for the pay period of {$week} is ready. Please review and submit it before ".$workflow->dueAt($t)->format('D M j, g:i A').'; after that the system submits it for you.',
                     'medium',
                     '/my-timesheet'
                 );

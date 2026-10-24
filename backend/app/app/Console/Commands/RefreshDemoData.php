@@ -42,8 +42,9 @@ use Illuminate\Support\Facades\DB;
  *   leaving    a few minutes after the (approved-overtime-extended) end; about one day in 17 ends early,
  *              which becomes an Early Leave day plus the early clock-out record HR is alerted about
  *   hours      ShiftHours::count() - paid time from the shift start, lunch deducted, overtime only if approved
- *   timesheets TimesheetGenerationService, Monday-Sunday weeks, moved through TimesheetWorkflow
- *              (older weeks approved, last week waiting for review, this week still a draft)
+ *   timesheets TimesheetGenerationService, semi-monthly periods (1st-15th, 16th-end), moved through
+ *              TimesheetWorkflow (older periods approved, last period waiting for review, this
+ *              period still a draft)
  *   leave      a sparse, deterministic scatter of fresh Approved leave requests across the rebuilt
  *              window (roughly one every 3 weeks per person), topped up with a few guaranteed ones
  *              in the last 10 days - without this, Leave Trends and Leave Type Composition on the
@@ -297,27 +298,36 @@ class RefreshDemoData extends Command
                 }
             }
 
-            // 3. Timesheets from that attendance, Monday-Sunday, moved through the real workflow
-            $thisMonday = $now->copy()->startOfWeek(Carbon::MONDAY);
-            $lastMonday = $thisMonday->copy()->subWeek()->toDateString();
-            for ($week = Carbon::parse($from); $week->lt($thisMonday->copy()->addWeek()); $week->addWeek()) {
+            // 3. Timesheets from that attendance, semi-monthly (1st-15th, 16th-end of month), moved
+            // through the real workflow. syncForEmployee() now groups by that period, not by week, so
+            // this has to step by period too - stepping by week and re-syncing the same period's row
+            // on every weekly iteration would call submit() on it more than once and fail the second
+            // time ("Only a draft or a returned timesheet can be submitted").
+            $thisPeriodStart = $timesheets->periodStart($now->copy());
+            $lastPeriodStart = $thisPeriodStart->day === 1
+                ? $thisPeriodStart->copy()->subMonth()->startOfMonth()->addDays(15)
+                : $thisPeriodStart->copy()->startOfMonth();
+            $period = $timesheets->periodStart(Carbon::parse($from));
+            while ($period->lte($thisPeriodStart)) {
                 foreach ($ids as $id) {
-                    $sheet = $timesheets->syncForEmployee($id, $week->toDateString());
-                    if (! $sheet || $week->gte($thisMonday)) {
-                        continue;   // this week stays a draft
+                    $sheet = $timesheets->syncForEmployee($id, $period->toDateString());
+                    if (! $sheet || $period->gte($thisPeriodStart)) {
+                        continue;   // this period stays a draft
                     }
                     $name = trim((string) $sheet->employee_name);
                     $sheet = $workflow->submit($sheet, $name);
-                    // Sent on the Monday after the week, before the noon deadline - not at the moment this
-                    // command happened to run, which made every old week read "submitted today".
-                    $sentAt = Carbon::parse($week->toDateString(), $tz)->addDays(7)->setTime(8, 0)->addMinutes(crc32($id.$week->toDateString()) % 210);
+                    // Sent the day after the period ends, before the noon deadline - not at the moment
+                    // this command happened to run, which made every old period read "submitted today".
+                    $periodEnd = $timesheets->periodEnd($period);
+                    $sentAt = Carbon::parse($periodEnd->toDateString(), $tz)->addDay()->setTime(8, 0)->addMinutes(crc32($id.$period->toDateString()) % 210);
                     $stamps = ['submitted_at' => $sentAt, 'submitted_date' => $sentAt->toDateString()];
-                    if ($week->toDateString() !== $lastMonday) {
-                        $workflow->approve($sheet, $admin);   // last week is left waiting for review
-                        $stamps['reviewed_at'] = $sentAt->copy()->addHours(2 + crc32($id.'rev'.$week->toDateString()) % 20);
+                    if ($period->toDateString() !== $lastPeriodStart->toDateString()) {
+                        $workflow->approve($sheet, $admin);   // last period is left waiting for review
+                        $stamps['reviewed_at'] = $sentAt->copy()->addHours(2 + crc32($id.'rev'.$period->toDateString()) % 20);
                     }
                     Timesheet::where('id', $sheet->id)->update($stamps);
                 }
+                $period = $period->day === 1 ? $period->copy()->addDays(15) : $period->copy()->addMonth()->startOfMonth();
             }
         });
 

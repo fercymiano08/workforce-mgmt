@@ -106,8 +106,17 @@ class LeaveController extends Controller
 
             $today = Carbon::now('Asia/Manila')->toDateString();
             $startDate = Carbon::parse($data['start_date'])->toDateString();
+            $endDate = Carbon::parse($data['end_date'])->toDateString();
 
-            if ($type && $type->retroactive_allowed) {
+            if ($type && $type->locked_to_today) {
+                // Nobody can plan ahead for this, and filing it after the fact defeats the point of
+                // it: it has to be today, and only today - not a multi-day range starting today either.
+                if ($startDate !== $today || $endDate !== $today) {
+                    throw ValidationException::withMessages([
+                        'startDate' => ["{$type->name} can only be filed for today ({$today}), for a single day."],
+                    ]);
+                }
+            } elseif ($type && $type->retroactive_allowed) {
                 // Nobody can predict needing this type - filed for today, the future, or the past
                 // retroactive_window_days (the same latitude Overtime already allows, for the same reason).
                 $earliestBackdate = Carbon::now('Asia/Manila')->subDays($type->retroactive_window_days)->toDateString();
@@ -124,7 +133,7 @@ class LeaveController extends Controller
                 ]);
             }
 
-            if ($type && $type->advance_notice_days > 0) {
+            if ($type && ! $type->locked_to_today && $type->advance_notice_days > 0) {
                 // Planned time off is not a same-day decision - it needs lead time so the schedule
                 // can actually absorb it.
                 $earliestStart = Carbon::now('Asia/Manila')->addDays($type->advance_notice_days)->toDateString();

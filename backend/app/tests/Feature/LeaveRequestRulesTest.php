@@ -65,7 +65,7 @@ class LeaveRequestRulesTest extends TestCase
         // Not Vacation here - Vacation needs 7 days' notice (see the test below), so "starting
         // today" is exercised through a type that has no advance-notice rule of its own.
         $this->actingAs($this->otpEmployeeUser())
-            ->postJson('/api/leaves', $this->payload($today, $today, ['leaveType' => 'Special']))
+            ->postJson('/api/leaves', $this->payload($today, $today, ['leaveType' => 'Unpaid']))
             ->assertCreated();
     }
 
@@ -90,23 +90,24 @@ class LeaveRequestRulesTest extends TestCase
             ->assertCreated();
     }
 
-    public function test_sick_leave_can_be_filed_for_today_or_up_to_7_days_in_the_past(): void
+    public function test_sick_leave_can_only_be_filed_for_today(): void
     {
         $employee = $this->otpEmployeeUser();
         $today = Carbon::now('Asia/Manila')->toDateString();
-        $sevenDaysAgo = Carbon::now('Asia/Manila')->subDays(7)->toDateString();
-        $eightDaysAgo = Carbon::now('Asia/Manila')->subDays(8)->toDateString();
+        $yesterday = Carbon::now('Asia/Manila')->subDay()->toDateString();
+        $tomorrow = Carbon::now('Asia/Manila')->addDay()->toDateString();
 
         $this->actingAs($employee)
             ->postJson('/api/leaves', $this->payload($today, $today, ['leaveType' => 'Sick']))
             ->assertCreated();
 
         $this->actingAs($employee)
-            ->postJson('/api/leaves', $this->payload($sevenDaysAgo, $sevenDaysAgo, ['leaveType' => 'Sick']))
-            ->assertCreated();
+            ->postJson('/api/leaves', $this->payload($yesterday, $yesterday, ['leaveType' => 'Sick']))
+            ->assertStatus(422)
+            ->assertJsonValidationErrors('startDate');
 
         $this->actingAs($employee)
-            ->postJson('/api/leaves', $this->payload($eightDaysAgo, $eightDaysAgo, ['leaveType' => 'Sick']))
+            ->postJson('/api/leaves', $this->payload($tomorrow, $tomorrow, ['leaveType' => 'Sick']))
             ->assertStatus(422)
             ->assertJsonValidationErrors('startDate');
     }
@@ -135,7 +136,7 @@ class LeaveRequestRulesTest extends TestCase
             ->assertCreated();
     }
 
-    public function test_vacation_and_special_are_blocked_while_on_probation(): void
+    public function test_vacation_is_blocked_while_on_probation(): void
     {
         $employee = $this->otpEmployeeUser();
         Employee::create([
@@ -261,7 +262,7 @@ class LeaveRequestRulesTest extends TestCase
     {
         $types = Employee::leaveTypes();
 
-        $this->assertSame(['Vacation', 'Sick', 'Special', 'Bereavement', 'Maternity', 'Paternity', 'Unpaid'], $types);
+        $this->assertSame(['Vacation', 'Sick', 'Bereavement', 'Maternity', 'Paternity', 'Unpaid'], $types);
         $this->assertSame($types, LeaveType::activeCodes());
     }
 
@@ -278,9 +279,11 @@ class LeaveRequestRulesTest extends TestCase
             'department' => 'IT & Systems', 'status' => 'Active',
         ]);
         // No leave_balance_ledger rows exist for this employee at all - zero balance for Sick.
+        // Sick is locked to today, so the date here has to be today, not an arbitrary future one.
+        $today = Carbon::now('Asia/Manila')->toDateString();
 
         $this->actingAs($user)
-            ->postJson('/api/leaves', $this->payload('2030-07-10', '2030-07-10', ['leaveType' => 'Sick']))
+            ->postJson('/api/leaves', $this->payload($today, $today, ['leaveType' => 'Sick']))
             ->assertStatus(422)
             ->assertJsonValidationErrors('leaveType');
 
@@ -296,8 +299,9 @@ class LeaveRequestRulesTest extends TestCase
             'department' => 'IT & Systems', 'status' => 'Active',
         ]);
 
+        $today = Carbon::now('Asia/Manila')->toDateString();
         $response = $this->actingAs($user)
-            ->postJson('/api/leaves', $this->payload('2030-07-10', '2030-07-10', [
+            ->postJson('/api/leaves', $this->payload($today, $today, [
                 'leaveType' => 'Sick', 'acceptSplit' => true,
             ]))
             ->assertStatus(201);

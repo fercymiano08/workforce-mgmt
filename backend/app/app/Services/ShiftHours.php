@@ -4,6 +4,7 @@ namespace App\Services;
 
 use App\Models\Holiday;
 use App\Models\OvertimeRequest;
+use App\Models\ScheduleSetting;
 use App\Models\Setting;
 use Illuminate\Support\Carbon;
 
@@ -65,11 +66,25 @@ class ShiftHours
         return $end->lte($start) ? $end->addDay() : $end;
     }
 
+    /** How many minutes late a clock-in is allowed to be before it counts as Late / adds to late_minutes. */
+    public static function graceMinutes(): int
+    {
+        return max(0, (int) app(SystemSettings::class)->get('late_grace_minutes', 15));
+    }
+
+    /** Whether this date falls outside the company's usual work days - independent of any shift or holiday. */
+    public static function isRestDay(Carbon $date): bool
+    {
+        return ! in_array($date->isoWeekday(), ScheduleSetting::current()->usualDays(), true);
+    }
+
     /**
-     * @return array{countedOut: Carbon, uncountedMinutes: int, regular: float, regularHoliday: float, specialHoliday: float, overtime: float, total: float, break: float, holidayType: ?string}
+     * @return array{countedOut: Carbon, uncountedMinutes: int, regular: float, regularHoliday: float, specialHoliday: float, overtime: float, total: float, break: float, holidayType: ?string, lateMinutes: int, undertimeMinutes: int, isRestDay: bool}
      */
     public static function count(Carbon $clockIn, Carbon $actualOut, Carbon $baseEnd, ?Carbon $effectiveEnd, ?int $lunchMinutes = null, ?Carbon $baseStart = null): array
     {
+        $rawClockIn = $clockIn->copy();
+
         // Paid time starts at the shift start, not at the tap-in: arriving early is recorded but is not counted
         // (the same way time after the end only counts when overtime was approved).
         if ($baseStart && $clockIn->lt($baseStart)) {
@@ -108,6 +123,14 @@ class ShiftHours
             $regular = 0.0;
         }
 
+        // Lateness is measured from the REAL tap-in, before it gets clamped to the shift start above -
+        // otherwise a late arrival would always read as zero minutes late (it's the clamping that makes
+        // the lost time not count towards pay; it must still count as lateness).
+        $lateMinutes = $baseStart
+            ? max(0, (int) round($baseStart->diffInMinutes($rawClockIn, false)) - self::graceMinutes())
+            : 0;
+        $undertimeMinutes = max(0, (int) round($actualOut->diffInMinutes($baseEnd, false)));
+
         return [
             'countedOut' => $countedOut,
             'uncountedMinutes' => $uncounted,
@@ -118,6 +141,9 @@ class ShiftHours
             'total' => round($total, 2),
             'break' => round($lunch / 60, 2),
             'holidayType' => $holiday?->type,
+            'lateMinutes' => $lateMinutes,
+            'undertimeMinutes' => $undertimeMinutes,
+            'isRestDay' => self::isRestDay($rawClockIn),
         ];
     }
 }

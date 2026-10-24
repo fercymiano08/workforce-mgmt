@@ -231,7 +231,7 @@ class TimesheetController extends Controller
             NotificationService::notifyAdmins(
                 'timesheet_submitted',
                 'Timesheet Submitted',
-                "{$t->employee_name} submitted a timesheet for the week of {$week}.",
+                "{$t->employee_name} submitted a timesheet for the pay period of {$week}.",
                 'medium',
                 '/timesheets'
             );
@@ -240,9 +240,9 @@ class TimesheetController extends Controller
         }
 
         [$type, $title, $message] = match ($status) {
-            'Approved' => ['timesheet_approved', 'Timesheet Approved', "Your timesheet for the week of {$week} has been approved."],
-            'Rejected' => ['timesheet_rejected', 'Timesheet Rejected', "Your timesheet for the week of {$week} was rejected: {$reason}"],
-            default => ['timesheet_rejected', 'Timesheet Reopened', "Your timesheet for the week of {$week} was reopened for correction: {$reason}"],
+            'Approved' => ['timesheet_approved', 'Timesheet Approved', "Your timesheet for the pay period of {$week} has been approved."],
+            'Rejected' => ['timesheet_rejected', 'Timesheet Rejected', "Your timesheet for the pay period of {$week} was rejected: {$reason}"],
+            default => ['timesheet_rejected', 'Timesheet Reopened', "Your timesheet for the pay period of {$week} was reopened for correction: {$reason}"],
         };
 
         NotificationService::notifyEmployee($t->employee_id, $type, $title, $message, 'medium', '/my-timesheet');

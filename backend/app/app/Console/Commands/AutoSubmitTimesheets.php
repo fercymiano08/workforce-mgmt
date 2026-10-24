@@ -43,14 +43,14 @@ class AutoSubmitTimesheets extends Command
                 $t->employee_id,
                 'timesheet_submitted',
                 'Timesheet Submitted Automatically',
-                "Your timesheet for the week of {$week} was not submitted by the deadline, so the system submitted it for you.",
+                "Your timesheet for the pay period of {$week} was not submitted by the deadline, so the system submitted it for you.",
                 'medium',
                 '/my-timesheet'
             );
             NotificationService::notifyAdmins(
                 'timesheet_submitted',
                 'Timesheet Submitted',
-                "{$t->employee_name}'s timesheet for the week of {$week} was submitted automatically.",
+                "{$t->employee_name}'s timesheet for the pay period of {$week} was submitted automatically.",
                 'medium',
                 '/timesheets'
             );

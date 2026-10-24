@@ -32,7 +32,7 @@ class LeaveTypeTest extends TestCase
             'minTenureMonths' => 12, 'payType' => 'PaidWithoutBalance', 'requiresBalance' => false,
             'accrualPolicy' => 'None', 'accrualRate' => 0, 'maxCarryoverDays' => null,
             'advanceNoticeDays' => 14, 'retroactiveAllowed' => false, 'retroactiveWindowDays' => 0,
-            'maxConsecutiveDays' => 10, 'requiresProof' => false, 'proofThresholdDays' => 0,
+            'lockedToToday' => false, 'maxConsecutiveDays' => 10, 'requiresProof' => false, 'proofThresholdDays' => 0,
         ];
 
         $response = $this->actingAs($this->adminUser())
@@ -60,7 +60,7 @@ class LeaveTypeTest extends TestCase
 
     public function test_deactivating_a_type_never_deletes_it_and_hides_it_from_the_canonical_list(): void
     {
-        $type = LeaveType::where('code', 'Special')->first();
+        $type = LeaveType::where('code', 'Bereavement')->first();
 
         $this->actingAs($this->adminUser())
             ->deleteJson('/api/leave-types/'.$type->id)
@@ -68,12 +68,12 @@ class LeaveTypeTest extends TestCase
             ->assertJsonPath('data.active', false);
 
         $this->assertNotNull(LeaveType::find($type->id), 'Deactivating must not delete the row.');
-        $this->assertNotContains('Special', Employee::leaveTypes(), 'An inactive type must drop out of the canonical list.');
+        $this->assertNotContains('Bereavement', Employee::leaveTypes(), 'An inactive type must drop out of the canonical list.');
     }
 
     public function test_a_deactivated_type_can_be_reactivated(): void
     {
-        $type = LeaveType::where('code', 'Special')->first();
+        $type = LeaveType::where('code', 'Bereavement')->first();
         $type->update(['active' => false]);
 
         $this->actingAs($this->adminUser())
@@ -81,7 +81,7 @@ class LeaveTypeTest extends TestCase
             ->assertOk()
             ->assertJsonPath('data.active', true);
 
-        $this->assertContains('Special', Employee::leaveTypes());
+        $this->assertContains('Bereavement', Employee::leaveTypes());
     }
 
     public function test_eligible_types_endpoint_annotates_gender_and_tenure_reasons(): void

@@ -10,8 +10,24 @@ use Illuminate\Support\Carbon;
 class TimesheetGenerationService
 {
     /**
-     * Recompute (and create when missing) the weekly timesheet row that contains the given date for
-     * the given employee, aggregated from their completed attendance records (rows with a clock-out).
+     * The Philippine semi-monthly pay period containing this date: the 1st-15th, or the 16th through
+     * the last day of the month. The `week_start`/`week_end` column names on Timesheet are unchanged
+     * from the old Monday-Sunday model (so the API contract and every existing reader stays intact) -
+     * only what range of dates they hold is different now.
+     */
+    public function periodStart(Carbon $date): Carbon
+    {
+        return $date->day <= 15 ? $date->copy()->startOfMonth() : $date->copy()->startOfMonth()->addDays(15);
+    }
+
+    public function periodEnd(Carbon $periodStart): Carbon
+    {
+        return $periodStart->day === 1 ? $periodStart->copy()->addDays(14) : $periodStart->copy()->endOfMonth();
+    }
+
+    /**
+     * Recompute (and create when missing) the semi-monthly timesheet row that contains the given date
+     * for the given employee, aggregated from their completed attendance records (rows with a clock-out).
      *
      * A timesheet still being worked on (Draft, or Rejected and sent back) is kept up to date. Once it
      * is Submitted or Approved its hours are FROZEN: if attendance changes afterwards the hours stay
@@ -24,7 +40,7 @@ class TimesheetGenerationService
             return null;
         }
 
-        $weekStart = Carbon::parse($date)->startOfDay()->startOfWeek(Carbon::MONDAY);
+        $weekStart = $this->periodStart(Carbon::parse($date)->startOfDay());
         $figures = $this->figures($employeeId, $weekStart);
         if ($figures === null) {
             return null;
@@ -57,14 +73,16 @@ class TimesheetGenerationService
         $max = Timesheet::where('id', 'like', 'TS%')->max('id');
         $num = $max ? ((int) substr($max, 2)) + 1 : 1;
 
+        $weekEnd = $this->periodEnd($weekStart);
+
         return Timesheet::create([
             'id' => 'TS'.str_pad((string) $num, 3, '0', STR_PAD_LEFT),
             'employee_id' => $employeeId,
             'employee_name' => $employeeName,
             'department' => $employee->department,
-            'date' => $weekStart->copy()->endOfWeek(Carbon::SUNDAY)->toDateString(),
+            'date' => $weekEnd->toDateString(),
             'week_start' => $weekStart->toDateString(),
-            'week_end' => $weekStart->copy()->endOfWeek(Carbon::SUNDAY)->toDateString(),
+            'week_end' => $weekEnd->toDateString(),
             'status' => 'Draft',
             'submitted_date' => null,
             'approved_by' => null,
@@ -77,7 +95,7 @@ class TimesheetGenerationService
     public function refreshFigures(Timesheet $t): Timesheet
     {
         $figures = $this->figures($t->employee_id, $t->week_start->copy()->startOfDay())
-            ?? ['regular_hours' => 0, 'regular_holiday_hours' => 0, 'special_holiday_hours' => 0, 'overtime_hours' => 0, 'approved_ot_hours' => 0, 'paid_ot_hours' => 0, 'break_hours' => 0, 'total_hours' => 0];
+            ?? ['regular_hours' => 0, 'regular_holiday_hours' => 0, 'special_holiday_hours' => 0, 'overtime_hours' => 0, 'approved_ot_hours' => 0, 'paid_ot_hours' => 0, 'break_hours' => 0, 'late_minutes' => 0, 'undertime_minutes' => 0, 'total_hours' => 0];
 
         $t->update(['needs_refresh' => false] + $figures);
 
@@ -91,7 +109,7 @@ class TimesheetGenerationService
      */
     private function figures(string $employeeId, Carbon $weekStart): ?array
     {
-        $weekEnd = $weekStart->copy()->endOfWeek(Carbon::SUNDAY);
+        $weekEnd = $this->periodEnd($weekStart);
 
         $attendance = Attendance::where('employee_id', $employeeId)
             ->whereBetween('date', [$weekStart->toDateString(), $weekEnd->toDateString()])
@@ -110,6 +128,8 @@ class TimesheetGenerationService
             'special_holiday_hours' => round((float) $attendance->sum('special_holiday_hours'), 2),
             'overtime_hours' => round((float) $attendance->sum('overtime'), 2),
             'break_hours' => round((float) $attendance->sum('break_hours'), 2),
+            'late_minutes' => (int) $attendance->sum('late_minutes'),
+            'undertime_minutes' => (int) $attendance->sum('undertime_minutes'),
             'total_hours' => round((float) $attendance->sum('total_hours'), 2),
             'approved_ot_hours' => $reconciliation->approvedHoursInWeek($employeeId, $weekStart->toDateString(), $weekEnd->toDateString()),
             // What payroll actually pays: per day, the smaller of worked and approved.
@@ -132,17 +152,17 @@ class TimesheetGenerationService
     /**
      * The attendance copy in this service refreshes about once a minute, so the rebuild that the attendance
      * service triggers at the moment of a change can run on stale data. This catches up: it re-syncs the
-     * timesheets of the last few weeks (editable ones are refreshed, locked ones are only flagged).
+     * timesheets of the last few pay periods (editable ones are refreshed, locked ones are only flagged).
      */
-    public function regenerateRecent(int $weeks = 6): int
+    public function regenerateRecent(int $periods = 3): int
     {
-        $since = Carbon::now()->subWeeks(max(1, $weeks))->startOfWeek(Carbon::MONDAY)->toDateString();
+        $since = $this->periodStart(Carbon::now()->subDays(max(1, $periods) * 15))->toDateString();
         $pairs = Attendance::whereNotNull('clock_out')->where('date', '>=', $since)->get(['employee_id', 'date']);
 
         $seen = [];
         $count = 0;
         foreach ($pairs as $row) {
-            $key = $row->employee_id.'|'.Carbon::parse($row->date)->startOfWeek(Carbon::MONDAY)->toDateString();
+            $key = $row->employee_id.'|'.$this->periodStart(Carbon::parse($row->date))->toDateString();
             if (isset($seen[$key])) {
                 continue;
             }
@@ -157,7 +177,7 @@ class TimesheetGenerationService
     }
 
     /**
-     * Regenerate timesheets for every employee/week that has at least one completed attendance
+     * Regenerate timesheets for every employee/period that has at least one completed attendance
      * record. Idempotent: editable rows are refreshed, locked ones are only flagged if they drifted.
      */
     public function regenerateAll(): int
@@ -167,7 +187,7 @@ class TimesheetGenerationService
         $seen = [];
         $count = 0;
         foreach ($pairs as $row) {
-            $weekStart = Carbon::parse($row->date)->startOfWeek(Carbon::MONDAY)->toDateString();
+            $weekStart = $this->periodStart(Carbon::parse($row->date))->toDateString();
             $key = $row->employee_id.'|'.$weekStart;
             if (isset($seen[$key])) {
                 continue;

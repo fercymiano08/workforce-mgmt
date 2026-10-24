@@ -264,6 +264,9 @@ class AttendanceController extends Controller
             'overtime' => $hours['overtime'],
             'total_hours' => $hours['total'],
             'break_hours' => $hours['break'],
+            'late_minutes' => $hours['lateMinutes'],
+            'undertime_minutes' => $hours['undertimeMinutes'],
+            'is_rest_day' => $hours['isRestDay'],
         ]);
     }
 

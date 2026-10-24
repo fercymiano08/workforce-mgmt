@@ -25,14 +25,14 @@ const payTypeVariant = { PaidWithBalance: 'primary', PaidWithoutBalance: 'info',
 const emptyForm = {
   code: '', name: '', applicableGender: 'Any', minTenureMonths: 0, payType: 'PaidWithBalance',
   requiresBalance: true, accrualPolicy: 'None', accrualRate: 0, maxCarryoverDays: '',
-  advanceNoticeDays: 0, retroactiveAllowed: false, retroactiveWindowDays: 0,
+  advanceNoticeDays: 0, retroactiveAllowed: false, retroactiveWindowDays: 0, lockedToToday: false,
   maxConsecutiveDays: '', requiresProof: false, proofThresholdDays: 0,
 };
 
-function Checkbox({ label, checked, onChange }) {
+function Checkbox({ label, checked, onChange, disabled }) {
   return (
-    <label className="flex items-center gap-2 text-[13px] font-medium text-gray-700 cursor-pointer">
-      <input type="checkbox" className="w-4 h-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500" checked={checked} onChange={(e) => onChange(e.target.checked)} />
+    <label className={`flex items-center gap-2 text-[13px] font-medium ${disabled ? 'text-gray-400 cursor-not-allowed' : 'text-gray-700 cursor-pointer'}`}>
+      <input type="checkbox" disabled={disabled} className="w-4 h-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500 disabled:opacity-50" checked={checked} onChange={(e) => onChange(e.target.checked)} />
       {label}
     </label>
   );
@@ -64,7 +64,8 @@ export default function LeaveTypes() {
       minTenureMonths: type.minTenureMonths, payType: type.payType, requiresBalance: type.requiresBalance,
       accrualPolicy: type.accrualPolicy, accrualRate: type.accrualRate, maxCarryoverDays: type.maxCarryoverDays ?? '',
       advanceNoticeDays: type.advanceNoticeDays, retroactiveAllowed: type.retroactiveAllowed,
-      retroactiveWindowDays: type.retroactiveWindowDays, maxConsecutiveDays: type.maxConsecutiveDays ?? '',
+      retroactiveWindowDays: type.retroactiveWindowDays, lockedToToday: type.lockedToToday,
+      maxConsecutiveDays: type.maxConsecutiveDays ?? '',
       requiresProof: type.requiresProof, proofThresholdDays: type.proofThresholdDays,
     });
     setFormErrors({});
@@ -188,8 +189,9 @@ export default function LeaveTypes() {
                     )}
                   </td>
                   <td className="px-4 py-3.5 text-sm text-gray-600">
-                    {type.advanceNoticeDays > 0 && <div>{type.advanceNoticeDays}d notice</div>}
-                    {type.retroactiveAllowed && <div>Backdate {type.retroactiveWindowDays}d</div>}
+                    {type.lockedToToday && <div>Today only</div>}
+                    {!type.lockedToToday && type.advanceNoticeDays > 0 && <div>{type.advanceNoticeDays}d notice</div>}
+                    {!type.lockedToToday && type.retroactiveAllowed && <div>Backdate {type.retroactiveWindowDays}d</div>}
                     {type.requiresProof && <div>Proof &gt; {type.proofThresholdDays}d</div>}
                   </td>
                   <td className="px-4 py-3.5">
@@ -270,9 +272,11 @@ export default function LeaveTypes() {
           </div>
 
           <div className="flex flex-wrap gap-5">
-            <Checkbox label="Can be filed retroactively" checked={formData.retroactiveAllowed}
+            <Checkbox label="Locked to today only (no advance filing, no backdating)" checked={formData.lockedToToday}
+              onChange={(v) => setFormData((f) => ({ ...f, lockedToToday: v, retroactiveAllowed: v ? false : f.retroactiveAllowed, advanceNoticeDays: v ? 0 : f.advanceNoticeDays }))} />
+            <Checkbox label="Can be filed retroactively" checked={formData.retroactiveAllowed} disabled={formData.lockedToToday}
               onChange={(v) => setFormData((f) => ({ ...f, retroactiveAllowed: v }))} />
-            {formData.retroactiveAllowed && (
+            {formData.retroactiveAllowed && !formData.lockedToToday && (
               <Input label="Retroactive window (days)" type="number" min={0} value={formData.retroactiveWindowDays}
                 onChange={(e) => setFormData((f) => ({ ...f, retroactiveWindowDays: e.target.value }))} containerClass="w-40" />
             )}

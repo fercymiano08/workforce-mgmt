@@ -57,6 +57,9 @@ class RecountAttendanceHours extends Command
                     'overtime' => $hours['overtime'],
                     'total_hours' => $hours['total'],
                     'break_hours' => $hours['break'],
+                    'late_minutes' => $hours['lateMinutes'],
+                    'undertime_minutes' => $hours['undertimeMinutes'],
+                    'is_rest_day' => $hours['isRestDay'],
                 ]);
                 (new TimesheetGenerationService())->syncForEmployee($row->employee_id, now()->toDateString());
                 $changed++;

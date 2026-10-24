@@ -8,13 +8,14 @@ use Illuminate\Support\Carbon;
 use Illuminate\Support\Collection;
 
 /**
- * The life of a weekly timesheet, and the rules that keep it trustworthy.
+ * The life of a semi-monthly timesheet (1st-15th, 16th-end of month), and the rules that keep it
+ * trustworthy. The column names (week_start/week_end) are unchanged from the old weekly model.
  *
  *   Draft ──submit──▶ Submitted ──approve──▶ Approved ──export──▶ (sent to payroll)
  *     ▲                  │  └──reject──▶ Rejected ──submit──▶ Submitted
  *     └────reopen────────┴────────────────(admin, with a reason)
  *
- * - Only a FINISHED week can be submitted, approved or rejected.
+ * - Only a FINISHED period can be submitted, approved or rejected.
  * - The employee submits (or the system does, once the deadline passes); the admin approves or rejects.
  * - A rejection needs a reason. Reopening needs a reason too and is refused once sent to payroll.
  * - Once submitted, the hours are frozen: later attendance changes only raise a warning flag.
@@ -24,7 +25,7 @@ class TimesheetWorkflow
 {
     public const TZ = 'Asia/Manila';
 
-    /** The system submits an unsubmitted timesheet at this hour on the day after the week ends. */
+    /** The system submits an unsubmitted timesheet at this hour on the day after the period ends. */
     public const AUTO_SUBMIT_HOUR = 12;
 
     /** A submitted timesheet nobody has reviewed for this many days triggers a nudge to the admins. */

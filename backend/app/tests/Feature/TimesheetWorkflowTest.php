@@ -13,14 +13,14 @@ use Illuminate\Support\Carbon;
 use Tests\TestCase;
 
 /**
- * The timesheet workflow: Draft -> Submitted -> Approved / Rejected, a finished week only, reasons
+ * The timesheet workflow: Draft -> Submitted -> Approved / Rejected, a finished pay period only, reasons
  * for rejecting and reopening, locked hours once submitted, automatic submission, and payroll export.
  */
 class TimesheetWorkflowTest extends TestCase
 {
     use RefreshDatabase;
 
-    private const WEEK_START = '2030-01-14';   // a Monday; the week ends Sunday 2030-01-20
+    private const WEEK_START = '2030-01-01';   // the 1st; this semi-monthly period runs 2030-01-01 to 2030-01-15
 
     protected function tearDown(): void
     {
@@ -60,7 +60,7 @@ class TimesheetWorkflowTest extends TestCase
     private function submitted(User $employee): Timesheet
     {
         $sheet = $this->sheet();
-        $this->at('2030-01-21 09:00:00');
+        $this->at('2030-01-16 09:00:00');
         $this->actingAs($employee)->patchJson('/api/timesheets/'.$sheet->id.'/status', ['status' => 'Submitted'])->assertOk();
 
         return $sheet->fresh();
@@ -71,9 +71,9 @@ class TimesheetWorkflowTest extends TestCase
     public function test_a_week_that_is_not_over_cannot_be_submitted(): void
     {
         $employee = $this->worker();
-        $this->workDay('2030-01-14');
+        $this->workDay('2030-01-01');
         $sheet = $this->sheet();
-        $this->at('2030-01-18 17:00:00');   // Friday, week still running
+        $this->at('2030-01-10 17:00:00');   // mid-period, period still running
 
         $this->actingAs($employee)->patchJson('/api/timesheets/'.$sheet->id.'/status', ['status' => 'Submitted'])
             ->assertStatus(422)->assertJsonPath('message', fn ($m) => str_contains($m, 'not over yet'));
@@ -83,7 +83,7 @@ class TimesheetWorkflowTest extends TestCase
     public function test_the_employee_submits_a_finished_week_and_it_is_recorded(): void
     {
         $employee = $this->worker();
-        $this->workDay('2030-01-14');
+        $this->workDay('2030-01-01');
 
         $sheet = $this->submitted($employee)->fresh();
 
@@ -98,7 +98,7 @@ class TimesheetWorkflowTest extends TestCase
     public function test_only_a_draft_or_returned_timesheet_can_be_submitted_and_only_by_its_owner(): void
     {
         $employee = $this->worker();
-        $this->workDay('2030-01-14');
+        $this->workDay('2030-01-01');
         $sheet = $this->submitted($employee);
 
         $this->actingAs($employee)->patchJson('/api/timesheets/'.$sheet->id.'/status', ['status' => 'Submitted'])->assertStatus(422);
@@ -110,9 +110,9 @@ class TimesheetWorkflowTest extends TestCase
     public function test_only_a_submitted_timesheet_can_be_approved_and_approval_is_recorded(): void
     {
         $employee = $this->worker();
-        $this->workDay('2030-01-14');
+        $this->workDay('2030-01-01');
         $sheet = $this->sheet();
-        $this->at('2030-01-21 09:00:00');
+        $this->at('2030-01-16 09:00:00');
         $admin = $this->adminUser();
 
         $this->actingAs($admin)->patchJson('/api/timesheets/'.$sheet->id.'/status', ['status' => 'Approved'])->assertStatus(422);   // still a draft
@@ -129,7 +129,7 @@ class TimesheetWorkflowTest extends TestCase
     public function test_a_rejection_needs_a_reason_and_the_employee_can_fix_and_resubmit(): void
     {
         $employee = $this->worker();
-        $this->workDay('2030-01-14');
+        $this->workDay('2030-01-01');
         $sheet = $this->submitted($employee);
         $admin = $this->adminUser();
 
@@ -146,7 +146,7 @@ class TimesheetWorkflowTest extends TestCase
     public function test_an_employee_can_never_approve_reject_or_reopen(): void
     {
         $employee = $this->worker();
-        $this->workDay('2030-01-14');
+        $this->workDay('2030-01-01');
         $sheet = $this->submitted($employee);
 
         foreach ([['status' => 'Approved'], ['status' => 'Rejected', 'reason' => 'no way'], ['status' => 'Draft', 'reason' => 'no way']] as $body) {
@@ -159,11 +159,11 @@ class TimesheetWorkflowTest extends TestCase
     public function test_hours_are_frozen_once_submitted_and_a_later_change_only_raises_a_flag(): void
     {
         $employee = $this->worker();
-        $this->workDay('2030-01-14');
+        $this->workDay('2030-01-01');
         $sheet = $this->submitted($employee);
         $this->assertEquals(8.0, $sheet->total_hours);
 
-        $this->workDay('2030-01-15');                 // attendance changes after submission
+        $this->workDay('2030-01-02');                 // attendance changes after submission
         $again = app(TimesheetGenerationService::class)->syncForEmployee('EMP-OTP', self::WEEK_START);
 
         $this->assertEquals(8.0, $again->total_hours);                 // the reviewed hours did not move
@@ -175,10 +175,10 @@ class TimesheetWorkflowTest extends TestCase
     public function test_reopening_needs_a_reason_brings_the_hours_up_to_date_and_is_refused_after_payroll(): void
     {
         $employee = $this->worker();
-        $this->workDay('2030-01-14');
+        $this->workDay('2030-01-01');
         $sheet = $this->submitted($employee);
         $admin = $this->adminUser();
-        $this->workDay('2030-01-15');
+        $this->workDay('2030-01-02');
         app(TimesheetGenerationService::class)->syncForEmployee('EMP-OTP', self::WEEK_START);
 
         $this->actingAs($admin)->patchJson('/api/timesheets/'.$sheet->id.'/status', ['status' => 'Draft'])->assertStatus(422);
@@ -196,7 +196,7 @@ class TimesheetWorkflowTest extends TestCase
     public function test_hours_cannot_be_typed_in_and_submitted_timesheets_cannot_be_deleted(): void
     {
         $employee = $this->worker();
-        $this->workDay('2030-01-14');
+        $this->workDay('2030-01-01');
         $sheet = $this->submitted($employee);
         $admin = $this->adminUser();
 
@@ -212,7 +212,7 @@ class TimesheetWorkflowTest extends TestCase
     public function test_payroll_export_sends_approved_timesheets_once(): void
     {
         $employee = $this->worker();
-        $this->workDay('2030-01-14');
+        $this->workDay('2030-01-01');
         $sheet = $this->submitted($employee);
         $admin = $this->adminUser();
 
@@ -231,14 +231,14 @@ class TimesheetWorkflowTest extends TestCase
     public function test_an_unsubmitted_week_is_submitted_automatically_at_the_deadline(): void
     {
         $this->worker();
-        $this->workDay('2030-01-14');
+        $this->workDay('2030-01-01');
         $sheet = $this->sheet();
 
-        $this->at('2030-01-21 11:59:00');             // Monday, just before noon
+        $this->at('2030-01-16 11:59:00');             // the day after the period ends, just before noon
         $this->artisan('timesheets:auto-submit')->assertSuccessful();
         $this->assertSame('Draft', $sheet->fresh()->status);
 
-        $this->at('2030-01-21 12:00:00');
+        $this->at('2030-01-16 12:00:00');
         $this->artisan('timesheets:auto-submit')->assertSuccessful();
 
         $sheet = $sheet->fresh();
@@ -253,11 +253,11 @@ class TimesheetWorkflowTest extends TestCase
         $this->worker();
         Timesheet::create([
             'id' => 'TS777', 'employee_id' => 'EMP-OTP', 'employee_name' => 'Juan', 'department' => 'IT & Systems',
-            'date' => '2030-01-20', 'week_start' => self::WEEK_START, 'week_end' => '2030-01-20',
+            'date' => '2030-01-15', 'week_start' => self::WEEK_START, 'week_end' => '2030-01-15',
             'regular_hours' => 0, 'overtime_hours' => 0, 'break_hours' => 0, 'total_hours' => 0, 'status' => 'Draft',
         ]);
 
-        $this->at('2030-01-22 09:00:00');
+        $this->at('2030-01-17 09:00:00');
         $this->artisan('timesheets:auto-submit')->assertSuccessful();
 
         $this->assertSame('Draft', Timesheet::find('TS777')->status);
@@ -266,16 +266,16 @@ class TimesheetWorkflowTest extends TestCase
     public function test_the_employee_is_reminded_once_and_the_admins_are_nudged_about_old_submissions(): void
     {
         $employee = $this->worker();
-        $this->workDay('2030-01-14');
+        $this->workDay('2030-01-01');
         $sheet = $this->sheet();
 
-        $this->at('2030-01-21 08:00:00');
+        $this->at('2030-01-16 08:00:00');
         $this->artisan('timesheets:remind')->assertSuccessful();
         $this->artisan('timesheets:remind')->assertSuccessful();
         $this->assertSame(1, Notification::where('type', 'timesheet_reminder')->where('employee_id', 'EMP-OTP')->count());
 
         $this->actingAs($employee)->patchJson('/api/timesheets/'.$sheet->id.'/status', ['status' => 'Submitted'])->assertOk();
-        $this->at('2030-01-24 09:00:00');             // three days later, nobody reviewed it
+        $this->at('2030-01-19 09:00:00');             // three days later, nobody reviewed it
         $this->artisan('timesheets:remind')->assertSuccessful();
         $this->artisan('timesheets:remind')->assertSuccessful();
 
@@ -287,9 +287,9 @@ class TimesheetWorkflowTest extends TestCase
     public function test_the_admin_sees_warnings_for_zero_hours_missing_clock_outs_and_unpaid_overtime(): void
     {
         $employee = $this->worker();
-        $this->workDay('2030-01-14', 8, null);        // clocked in, never clocked out
-        $this->workDay('2030-01-15');
-        Attendance::where('id', 'ATT-2030-01-15')->update(['overtime' => 2, 'total_hours' => 10]);
+        $this->workDay('2030-01-01', 8, null);        // clocked in, never clocked out
+        $this->workDay('2030-01-02');
+        Attendance::where('id', 'ATT-2030-01-02')->update(['overtime' => 2, 'total_hours' => 10]);
         // Submitted, not Draft: the admin list no longer shows a still-in-progress timesheet at all.
         $sheet = $this->submitted($employee);
 
@@ -305,16 +305,16 @@ class TimesheetWorkflowTest extends TestCase
     public function test_the_scheduled_refresh_brings_an_editable_timesheet_up_to_date_and_only_flags_a_locked_one(): void
     {
         $employee = $this->worker();
-        $this->workDay('2030-01-14');
+        $this->workDay('2030-01-01');
         $sheet = $this->sheet();                              // Draft, 8 h
-        $this->at('2030-01-21 09:00:00');
+        $this->at('2030-01-16 09:00:00');
 
-        $this->workDay('2030-01-15');                         // the attendance copy learns about a second day
+        $this->workDay('2030-01-02');                         // the attendance copy learns about a second day
         $this->artisan('timesheets:refresh')->assertSuccessful();
         $this->assertEquals(16.0, $sheet->fresh()->total_hours);              // a draft follows attendance
 
         $this->actingAs($employee)->patchJson('/api/timesheets/'.$sheet->id.'/status', ['status' => 'Submitted'])->assertOk();
-        $this->workDay('2030-01-16');                         // ...and then a third day, after it was submitted
+        $this->workDay('2030-01-03');                         // ...and then a third day, after it was submitted
         $this->artisan('timesheets:refresh')->assertSuccessful();
 
         $sheet = $sheet->fresh();
@@ -325,14 +325,14 @@ class TimesheetWorkflowTest extends TestCase
     public function test_the_flag_clears_by_itself_when_attendance_returns_to_what_was_submitted(): void
     {
         $employee = $this->worker();
-        $this->workDay('2030-01-14');
+        $this->workDay('2030-01-01');
         $sheet = $this->submitted($employee);
 
-        Attendance::where('id', 'ATT-2030-01-14')->update(['total_hours' => 6, 'regular_hours' => 6]);
+        Attendance::where('id', 'ATT-2030-01-01')->update(['total_hours' => 6, 'regular_hours' => 6]);
         $this->artisan('timesheets:refresh')->assertSuccessful();
         $this->assertTrue($sheet->fresh()->needs_refresh);
 
-        Attendance::where('id', 'ATT-2030-01-14')->update(['total_hours' => 8, 'regular_hours' => 8]);   // the approval is restored
+        Attendance::where('id', 'ATT-2030-01-01')->update(['total_hours' => 8, 'regular_hours' => 8]);   // the approval is restored
         $this->artisan('timesheets:refresh')->assertSuccessful();
         $this->assertFalse($sheet->fresh()->needs_refresh);
     }

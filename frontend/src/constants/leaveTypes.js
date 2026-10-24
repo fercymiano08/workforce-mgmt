@@ -1,22 +1,17 @@
 // Single source of truth for the color of each leave type in a CHART, so the dashboard pie, the
 // analytics donut and the analytics stacked bar cannot drift apart.
 //
-// 'special' is rose here but purple on its badge. That is deliberate: in a chart the two land as
-// adjacent segments, and purple sits too close to funeral's indigo (validated: deltaE 6.3, under the
-// legibility floor of 15). Badges never touch, so they keep the nicer purple. The badge variants
-// live in pages/Employee/Leave.jsx (leaveTypeVariant) and the badge styles in leaveBalanceStyle.
+// The badge variants live in pages/Employee/Leave.jsx (leaveTypeVariant) and the badge styles in
+// leaveBalanceStyle.
 //
-// The keys here are exactly the ones in Employee::defaultLeaveBalances(). An earlier copy of this
-// map was missing Funeral and Unpaid and carried a 'Half Day' that does not exist, so both real
-// types fell through to the same fallback purple and rendered identically in the pie.
-//
-// 'Emergency' was removed (folded into 'Special' - a panel review called it redundant with Sick),
-// 'Funeral' was renamed 'Bereavement' (clearer wording, same reviewer), and 'Maternity'/'Paternity'
-// were added as their own types rather than vague "Special" requests.
+// The keys here are exactly the active codes in the leave_types table. 'Emergency' was folded into
+// 'Special' (a panel review called it redundant with Sick), 'Funeral' was renamed 'Bereavement'
+// (clearer wording, same reviewer), 'Maternity'/'Paternity' were added as their own types rather
+// than vague "Special" requests, and 'Special' itself was later removed entirely - once Vacation
+// and Bereavement had their own proper rules, nothing distinguished it from either.
 export const LEAVE_TYPE_CHART_COLORS = {
   Vacation: '#3B82F6',
   Sick: '#EF4444',
-  Special: '#F43F5E',
   Bereavement: '#6366F1',
   Maternity: '#EC4899',
   Paternity: '#0EA5E9',
@@ -33,7 +28,6 @@ export const leaveTypeChartColor = (type) => LEAVE_TYPE_CHART_COLORS[type] ?? '#
 const LEAVE_TYPE_CHART_COLORS_DARK = {
   Vacation: '#5B8FD6',
   Sick: '#D9646B',
-  Special: '#D4738A',
   Bereavement: '#6E7BD6',
   Maternity: '#D97EB0',
   Paternity: '#4FAEDB',

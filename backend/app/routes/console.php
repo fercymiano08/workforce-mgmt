@@ -24,8 +24,9 @@ if (filter_var(env('REFRESH_DEMO_DAILY', true), FILTER_VALIDATE_BOOLEAN)) {
 Schedule::command('attendance:mark-absent')->dailyAt('00:10')->timezone('Asia/Manila')->withoutOverlapping();
 Schedule::command('attendance:mark-absent')->dailyAt('12:00')->timezone('Asia/Manila')->withoutOverlapping();
 
-// Timesheet workflow: submit unsubmitted finished weeks at the deadline (Monday 12:00 Manila time) and
-// send the one-time reminders. Both are safe to run repeatedly.
+// Timesheet workflow: submit unsubmitted finished pay periods at the deadline (noon Manila time the
+// day after the period ends - the 16th or the 1st of the next month) and send the one-time reminders.
+// Both are safe to run repeatedly.
 Schedule::command('timesheets:auto-submit')->hourly()->withoutOverlapping();
 Schedule::command('timesheets:remind')->hourly()->withoutOverlapping();
 
