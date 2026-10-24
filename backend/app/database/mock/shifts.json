@@ -1,27 +1,6 @@
 {
   "shiftDefinitions": [
     {
-      "id": "SHIFT001",
-      "name": "Morning Shift",
-      "startTime": "06:00",
-      "endTime": "14:00",
-      "color": "#22C55E"
-    },
-    {
-      "id": "SHIFT002",
-      "name": "Afternoon Shift",
-      "startTime": "14:00",
-      "endTime": "22:00",
-      "color": "#F59E0B"
-    },
-    {
-      "id": "SHIFT003",
-      "name": "Night Shift",
-      "startTime": "22:00",
-      "endTime": "06:00",
-      "color": "#8B5CF6"
-    },
-    {
       "id": "SHIFT004",
       "name": "Standard Shift",
       "startTime": "08:00",
@@ -753,27 +732,6 @@
   ],
   "_default": {
     "shiftDefinitions": [
-      {
-        "id": "SHIFT001",
-        "name": "Morning Shift",
-        "startTime": "06:00",
-        "endTime": "14:00",
-        "color": "#22C55E"
-      },
-      {
-        "id": "SHIFT002",
-        "name": "Afternoon Shift",
-        "startTime": "14:00",
-        "endTime": "22:00",
-        "color": "#F59E0B"
-      },
-      {
-        "id": "SHIFT003",
-        "name": "Night Shift",
-        "startTime": "22:00",
-        "endTime": "06:00",
-        "color": "#8B5CF6"
-      },
       {
         "id": "SHIFT004",
         "name": "Standard Shift",
