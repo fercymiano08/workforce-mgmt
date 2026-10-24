@@ -6,6 +6,7 @@ import {
 } from 'lucide-react';
 import Badge from '../../components/ui/Badge';
 import Button from '../../components/ui/Button';
+import Card from '../../components/ui/Card';
 import Modal from '../../components/ui/Modal';
 import TableShell from '../../components/ui/TableShell';
 import Input, { Select, Textarea } from '../../components/ui/Input';
@@ -510,10 +511,13 @@ export default function MyAttendance() {
       {activeTab === 'attendance' ? (
         <>
           {/* Attendance History */}
-          <div className="bg-white rounded-2xl border border-gray-100 shadow-sm h-[560px] flex flex-col overflow-hidden">
-        <div className="p-6 pb-4 flex-shrink-0">
+          <Card padding={false} className="shadow-sm border border-gray-100 h-[560px] flex flex-col overflow-hidden">
+        <div className="p-5 border-b border-gray-100">
           <div className="flex items-center justify-between flex-wrap gap-3">
-            <h3 className="text-[15px] font-semibold text-gray-900">Attendance History</h3>
+            <div>
+              <h3 className="text-base font-semibold text-gray-900">Attendance History</h3>
+              <p className="text-sm text-gray-500 mt-0.5">Your daily attendance records</p>
+            </div>
             <div className="flex items-center gap-2">
               <Filter className="w-4 h-4 text-gray-400" />
               {['All', 'This Week', 'This Month'].map((period) => (
@@ -522,8 +526,8 @@ export default function MyAttendance() {
                   onClick={() => setPeriodFilter(period)}
                   className={`px-3 py-1.5 pointer-coarse:py-2.5 text-xs font-medium rounded-lg transition-colors ${
                     periodFilter === period
-                      ? 'bg-blue-50 text-blue-700'
-                      : 'text-gray-500 hover:bg-gray-50 hover:text-gray-700'
+                      ? 'bg-blue-50 text-blue-700 border border-blue-200'
+                      : 'text-gray-600 hover:bg-gray-50 hover:text-gray-900 border border-transparent'
                   }`}
                 >
                   {period}
@@ -534,21 +538,21 @@ export default function MyAttendance() {
         </div>
 
         <div className="flex-1 min-h-0 overflow-y-auto">
-          <TableShell minWidth="min-w-[760px]" bleed={false}>
+          <TableShell minWidth="min-w-[820px]" bleed={false}>
             <table className="w-full">
             <thead>
-              <tr className="border-b border-gray-100">
+              <tr className="border-b border-gray-200 bg-gray-50/80">
                 {['Date', 'Day', 'Clock In', 'Clock Out', 'Regular Hours', 'Overtime', 'Total Hours', 'Status', 'Location'].map((h) => (
-                  <th key={h} className="sticky top-0 z-10 px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider bg-gray-50">
+                  <th key={h} className="sticky top-0 z-10 px-6 py-3.5 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider bg-gray-50/90">
                     {h}
                   </th>
                 ))}
               </tr>
             </thead>
-            <tbody className="divide-y divide-gray-50">
+            <tbody className="divide-y divide-gray-100">
               {filtered.length === 0 ? (
                 <tr>
-                  <td colSpan={9} className="px-4 py-12 text-center text-gray-400 text-sm">
+                  <td colSpan={9} className="px-6 py-12 text-center text-gray-400 text-sm">
                     No attendance records found
                   </td>
                 </tr>
@@ -558,15 +562,15 @@ export default function MyAttendance() {
                   const inProgress = a.clockIn && !a.clockOut;
                   const finalized = a.clockIn && a.clockOut;
                   return (
-                    <tr key={a.id} className={`hover:bg-gray-50/50 transition-colors ${todayRowClass(a.date)}`}>
-                      <td className="px-4 py-4 text-sm text-gray-900 font-medium whitespace-nowrap">
+                    <tr key={a.id} className={`hover:bg-blue-50/30 transition-colors ${todayRowClass(a.date)}`}>
+                      <td className="px-6 py-4 text-sm text-gray-900 font-medium whitespace-nowrap">
                         <span className="inline-flex items-center gap-2">{formatDate(a.date)}{a.date === todayDay && <TodayBadge />}</span>
                       </td>
-                      <td className="px-4 py-4 text-sm text-gray-500">{dayName}</td>
-                      <td className="px-4 py-4 text-sm text-gray-700">
+                      <td className="px-6 py-4 text-sm text-gray-500">{dayName}</td>
+                      <td className="px-6 py-4 text-sm text-gray-700">
                         {a.clockIn ? formatTime(a.clockIn) : <span className="text-gray-400">Not Clocked In</span>}
                       </td>
-                      <td className="px-4 py-4 text-sm text-gray-700">
+                      <td className="px-6 py-4 text-sm text-gray-700">
                         {a.clockOut ? (
                           formatTime(a.clockOut)
                         ) : inProgress ? (
@@ -575,7 +579,7 @@ export default function MyAttendance() {
                           <span className="text-gray-400">—</span>
                         )}
                       </td>
-                      <td className="px-4 py-4 text-sm text-gray-700 font-medium">
+                      <td className="px-6 py-4 text-sm text-gray-900 font-medium">
                         {finalized ? (
                           `${formatHours(a.regularHours)}h`
                         ) : inProgress ? (
@@ -584,7 +588,7 @@ export default function MyAttendance() {
                           <span className="text-gray-400">—</span>
                         )}
                       </td>
-                      <td className="px-4 py-4 text-sm text-gray-700">
+                      <td className="px-6 py-4 text-sm text-gray-700">
                         {finalized ? (
                           a.overtime > 0 ? (
                             <span className="text-blue-600 font-medium">+{formatHours(a.overtime)}h</span>
@@ -595,7 +599,7 @@ export default function MyAttendance() {
                           <span className="text-gray-400">—</span>
                         )}
                       </td>
-                      <td className="px-4 py-4 text-sm text-gray-900 font-semibold">
+                      <td className="px-6 py-4 text-sm text-gray-900 font-semibold">
                         {finalized ? (
                           `${formatHours(a.totalHours)}h`
                         ) : inProgress ? (
@@ -604,7 +608,7 @@ export default function MyAttendance() {
                           <span className="text-gray-400">—</span>
                         )}
                       </td>
-                      <td className="px-4 py-4">
+                      <td className="px-6 py-4">
                         <Badge variant={statusVariant[a.status]} dot size="xs">{a.status}</Badge>
                         {attendanceFlagsFor(a).length > 0 && (
                           <div className="mt-1.5 flex flex-wrap items-center gap-1">
@@ -614,10 +618,10 @@ export default function MyAttendance() {
                           </div>
                         )}
                       </td>
-                      <td className="px-4 py-4">
+                      <td className="px-6 py-4">
                         <div className="flex items-center gap-1.5 text-sm text-gray-600">
                           <MapPin className="w-3.5 h-3.5 text-gray-400" />
-                          {a.location}
+                          <span className="truncate max-w-[120px]" title={a.location}>{a.location || '-'}</span>
                         </div>
                       </td>
                     </tr>
@@ -628,7 +632,7 @@ export default function MyAttendance() {
           </table>
           </TableShell>
         </div>
-      </div>
+        </Card>
         </>
       ) : null}
 

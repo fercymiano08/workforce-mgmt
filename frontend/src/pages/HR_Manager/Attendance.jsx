@@ -369,10 +369,13 @@ export default function Attendance() {
 
       {/* Attendance History */}
       <Card padding={false}>
-        <div className="p-4 border-b border-gray-100">
+        <div className="p-5 border-b border-gray-100">
           <div className="flex items-center justify-between flex-wrap gap-3">
-            <h3 className="font-semibold text-gray-900">Attendance History</h3>
-            <div className="flex flex-wrap items-center gap-3">
+            <div>
+              <h3 className="text-base font-semibold text-gray-900">Attendance History</h3>
+              <p className="text-sm text-gray-500 mt-0.5">Track employee clock-ins, hours, and status</p>
+            </div>
+            <div className="flex flex-wrap items-center gap-2.5">
               <SearchBar value={search} onChange={(v) => { setSearch(v); setCurrentPage(1); }} placeholder="Search employee..." className="w-full sm:w-64" />
               <DateRangePicker
                 value={dateRange}
@@ -386,22 +389,22 @@ export default function Attendance() {
           </div>
         </div>
 
-        <TableShell minWidth="min-w-[760px]">
+        <TableShell minWidth="min-w-[900px]">
           <table className="w-full">
             <thead>
-              <tr className="border-b border-gray-100 bg-gray-50/50">
-                {['Employee', 'Date', 'Clock In', 'Clock Out', 'Regular', 'Overtime', 'Total', 'Status', 'Location'].map(h => (
-                  <th key={h} className="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">{h}</th>
+              <tr className="border-b border-gray-200 bg-gray-50/80">
+                {['Employee', 'Date', 'Clock In', 'Clock Out', 'Regular', 'Break', 'Overtime', 'Total', 'Status', 'Location'].map(h => (
+                  <th key={h} className="px-6 py-3.5 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">{h}</th>
                 ))}
               </tr>
             </thead>
-            <tbody className="divide-y divide-gray-50">
+            <tbody className="divide-y divide-gray-100">
               {filtered.length === 0 ? (
-                <tr><td colSpan={10} className="px-4 py-12 text-center text-gray-400 text-sm">No attendance records found</td></tr>
+                <tr><td colSpan={10} className="px-6 py-12 text-center text-gray-400 text-sm">No attendance records found</td></tr>
               ) : (
                 paginated.map((a, i) => (
-                  <tr key={a.id || i} className="hover:bg-gray-50/50 transition-colors">
-                    <td className="px-4 py-3.5">
+                  <tr key={a.id || i} className="hover:bg-blue-50/30 transition-colors">
+                    <td className="px-6 py-4">
                       <div className="flex items-center gap-3">
                         <Avatar firstName={a.firstName} lastName={a.lastName} size="sm" src={a.avatar} />
                         <div>
@@ -410,15 +413,15 @@ export default function Attendance() {
                         </div>
                       </div>
                     </td>
-                    <td className="px-4 py-3.5 text-sm text-gray-700">{formatDate(a.date)}</td>
-                    <td className="px-4 py-3.5 text-sm text-gray-700">{a.clockIn ? formatTime(a.clockIn) : '-'}</td>
-                    <td className="px-4 py-3.5 text-sm text-gray-700">{a.clockOut ? formatTime(a.clockOut) : <span className="text-amber-500 italic">Still in</span>}</td>
-                    <td className="px-4 py-3.5 text-sm text-gray-700 font-medium">{a.clockIn && a.clockOut ? `${formatHours(a.regularHours)}h` : '-'}</td>
-                    <td className="px-4 py-3.5 text-sm text-gray-700">{a.clockIn && a.clockOut ? `${formatHours(a.breakHours || 0)}h` : '-'}</td>
-                    <td className="px-4 py-3.5 text-sm text-gray-700">
+                    <td className="px-6 py-4 text-sm text-gray-900 font-medium">{formatDate(a.date)}</td>
+                    <td className="px-6 py-4 text-sm text-gray-700">{a.clockIn ? formatTime(a.clockIn) : '-'}</td>
+                    <td className="px-6 py-4 text-sm text-gray-700">{a.clockOut ? formatTime(a.clockOut) : <span className="text-amber-500 italic">Still in</span>}</td>
+                    <td className="px-6 py-4 text-sm text-gray-900 font-medium">{a.clockIn && a.clockOut ? `${formatHours(a.regularHours)}h` : '-'}</td>
+                    <td className="px-6 py-4 text-sm text-gray-700">{a.clockIn && a.clockOut ? `${formatHours(a.breakHours || 0)}h` : '-'}</td>
+                    <td className="px-6 py-4 text-sm text-gray-700">
                       {a.overtime > 0 ? (
                         <span className="flex items-center gap-1">
-                          <span className={(a.overtimeReconciliation?.status === 'unauthorized' || a.overtimeReconciliation?.status === 'overrun') ? 'text-amber-600 font-medium' : ''}>
+                          <span className={(a.overtimeReconciliation?.status === 'unauthorized' || a.overtimeReconciliation?.status === 'overrun') ? 'text-amber-600 font-medium' : 'text-blue-600 font-medium'}>
                             {formatHours(a.overtime)}h
                           </span>
                           {a.overtimeReconciliation?.status === 'unauthorized' && (
@@ -430,8 +433,8 @@ export default function Attendance() {
                         </span>
                       ) : '-'}
                     </td>
-                    <td className="px-4 py-3.5 text-sm text-gray-700 font-medium">{a.clockIn && a.clockOut ? `${formatHours(a.totalHours)}h` : '-'}</td>
-                    <td className="px-4 py-3.5">
+                    <td className="px-6 py-4 text-sm text-gray-900 font-semibold">{a.clockIn && a.clockOut ? `${formatHours(a.totalHours)}h` : '-'}</td>
+                    <td className="px-6 py-4">
                       <Badge variant={statusVariant[a.status]} dot size="xs">{a.status}</Badge>
                       {attendanceFlagsFor(a).length > 0 && (
                         <div className="mt-1.5 flex flex-wrap items-center gap-1">
@@ -441,10 +444,10 @@ export default function Attendance() {
                         </div>
                       )}
                     </td>
-                    <td className="px-4 py-3.5">
+                    <td className="px-6 py-4">
                       <div className="flex items-center gap-1.5 text-sm text-gray-600">
                         <MapPin className="w-3.5 h-3.5 text-gray-400" />
-                        {a.location}
+                        <span className="truncate max-w-[120px]" title={a.location}>{a.location || '-'}</span>
                       </div>
                     </td>
                   </tr>
