@@ -1,388 +1,660 @@
-import { useMemo, useState } from 'react';
+import { useState, useMemo } from 'react';
+import { createPortal } from 'react-dom';
+import clsx from 'clsx';
 import {
-  ChevronLeft, ChevronRight, CheckCircle, XCircle, AlertTriangle, Download,
-  Eye, RotateCcw, History, ExternalLink, Users,
+  FileText, Clock, AlertTriangle, CheckCircle, Calendar, TrendingUp, Timer, Eye, Info,
+  X, XCircle, ChevronLeft, ChevronRight, RefreshCw, ArrowUpDown, ArrowUp, ArrowDown, RotateCcw, Banknote,
 } from 'lucide-react';
 import Card from '../../components/ui/Card';
 import Button from '../../components/ui/Button';
 import Badge from '../../components/ui/Badge';
-import Modal from '../../components/ui/Modal';
+import Avatar from '../../components/ui/Avatar';
 import SearchBar from '../../components/ui/SearchBar';
-import EmptyState from '../../components/ui/EmptyState';
-import { SkeletonPage } from '../../components/ui/LoadingSkeleton';
-import TableShell from '../../components/ui/TableShell';
+import FilterMenu from '../../components/ui/FilterMenu';
+import Modal from '../../components/ui/Modal';
 import { Pagination } from '../../components/ui/Table';
-import { Textarea } from '../../components/ui/Input';
-import { employeeService, timesheetService } from '../../services/api';
-import { formatDate, formatTime } from '../../utils/helpers';
-import { statusVariant, FLAG_INFO } from '../../utils/timesheetWorkflow';
-import { downloadCSV } from '../../utils/export';
-import { HistoryTimeline } from '../../components/timesheets/WorkflowParts';
-import { periodByOffset, periodLabel } from '../../utils/payPeriod';
-import { useToast } from '../../context/ToastContext';
-import useApiData from '../../hooks/useApiData';
+import TableShell from '../../components/ui/TableShell';
 import {
-  useTimesheets, useTimesheetsLoaded, refreshTimesheets,
-  approveTimesheet, rejectTimesheet, reopenTimesheet, exportTimesheetsForPayroll,
+  useTimesheets, useTimesheetsLoaded, approveTimesheet, rejectTimesheet, reopenTimesheet, exportTimesheetsForPayroll,
+  refreshTimesheets,
 } from '../../hooks/useTimesheets';
+import { StatusSteps, HistoryTimeline } from '../../components/timesheets/WorkflowParts';
+import { FLAG_INFO } from '../../utils/timesheetWorkflow';
+import { formatDate, formatTime } from '../../utils/helpers';
+import { toDateKey } from '../../services/attendanceService';
+import { attendanceService } from '../../services/api';
+import useApiData from '../../hooks/useApiData';
+import useUrlSearch from '../../hooks/useUrlSearch';
+import KpiCard from '../../components/dashboard/KpiCard';
+import { downloadCSV } from '../../utils/export';
+import { useAuth } from '../../context/AuthContext';
+import { useToast } from '../../context/ToastContext';
+import { SkeletonPage } from '../../components/ui/LoadingSkeleton';
+import useUrlFilter from '../../hooks/useUrlFilter';
+import { periodStartOf, periodEndOf, daysInPeriod } from '../../utils/payPeriod';
 
-const toDateKey = (d) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
-const ROWS_PER_PAGE = 10;
+const statusVariant = {
+  Draft: 'default',
+  Submitted: 'info',
+  Approved: 'success',
+  Rejected: 'danger',
+};
 
-const payableHours = (t) => round1(
-  Number(t.regularHours) + Number(t.regularHolidayHours) + Number(t.specialHolidayHours) + Number(t.paidOtHours)
-);
-function round1(n) { return Math.round(n * 100) / 100; }
+// ---------------------------------------------------------------------------
+// Workforce Admin view - review every employee's semi-monthly timesheet (1st-15th, 16th-end of
+// month). The employee submits (or the system does at the deadline); the admin approves, rejects
+// (with a reason) or reopens; approved timesheets are then sent to payroll, once each. Hours cannot
+// be edited: they come from attendance and freeze when the timesheet is submitted.
+// ---------------------------------------------------------------------------
+// A rough "full period" reference for the progress bars below - not a strict rule, just the scale
+// they're drawn against. A half-month on a 6-day work week is ~13 working days at 8h.
+const PERIOD_HOURS = 104;
 
-export default function Timesheets() {
-  const { toast } = useToast();
-  const [offset, setOffset] = useState(0);
-  const { start, end } = useMemo(() => periodByOffset(offset), [offset]);
-  const startKey = toDateKey(start);
+const attendanceVariant = {
+  Present: 'success', Late: 'warning', 'Early Leave': 'info', Absent: 'danger', 'On Leave': 'purple',
+};
+const flagTone = { red: 'bg-red-50 text-red-700 border-red-100', amber: 'bg-amber-50 text-amber-700 border-amber-100', purple: 'bg-purple-50 text-purple-700 border-purple-100' };
 
-  const sheets = useTimesheets();
-  const loaded = useTimesheetsLoaded();
-  const { data: employees } = useApiData(() => employeeService.getAll(), []);
+const hoursText = (n) => `${Number(n || 0).toFixed(2).replace(/\.?0+$/, '') || '0'}h`;
+const shortRange = (a, b) => `${formatDate(a)} – ${formatDate(b)}`;
 
-  const periodSheets = useMemo(
-    () => (sheets || []).filter((t) => t.weekStart === startKey),
-    [sheets, startKey]
-  );
-  const byEmployee = useMemo(() => {
-    const map = {};
-    periodSheets.forEach((t) => { map[t.employeeId] = t; });
-    return map;
-  }, [periodSheets]);
+// The pay period (1st-15th / 16th-end) a date key falls in, as [start, end] date-key strings.
+const periodOf = (dateKey) => {
+  const start = periodStartOf(new Date(`${dateKey}T00:00:00`));
+  return [toDateKey(start), toDateKey(periodEndOf(start))];
+};
+// Step back `n` periods from a given period start (date key), e.g. for "last period" filters.
+const periodBack = (startKey, n) => {
+  let start = new Date(`${startKey}T00:00:00`);
+  for (let i = 0; i < n; i++) start = periodStartOf(new Date(start.getFullYear(), start.getMonth(), start.getDate() - 1));
+  return toDateKey(start);
+};
 
-  const activeEmployees = useMemo(() => (employees || []).filter((e) => e.status === 'Active'), [employees]);
+const PERIODS = [
+  { id: 'all', label: 'All time' },
+  { id: 'this', label: 'This period' },
+  { id: 'last', label: 'Last period' },
+  { id: '3p', label: 'Last 3 periods' },
+];
 
-  const rows = useMemo(() => activeEmployees.map((e) => {
-    const t = byEmployee[e.id];
-    return {
-      employee: e,
-      sheet: t || null,
-      status: t?.status || 'Not Submitted',
-      exceptions: t?.flags?.length || 0,
-    };
-  }), [activeEmployees, byEmployee]);
+const SORTS = {
+  week: (a, b) => (a.weekStart || '').localeCompare(b.weekStart || ''),
+  employee: (a, b) => (a.employeeName || '').localeCompare(b.employeeName || ''),
+  total: (a, b) => (a.totalHours || 0) - (b.totalHours || 0),
+  overtime: (a, b) => (a.paidOtHours || 0) - (b.paidOtHours || 0),
+  status: (a, b) => (a.status || '').localeCompare(b.status || ''),
+};
 
-  const tiles = useMemo(() => ({
-    submitted: rows.filter((r) => r.status === 'Submitted').length,
-    approved: rows.filter((r) => r.status === 'Approved').length,
-    rejected: rows.filter((r) => r.status === 'Rejected').length,
-    // Draft rows are never shown to admins (an employee's unfinished week is theirs alone until they
-    // submit it - see TimesheetController::index()), so "not submitted" is a plain headcount, not a
-    // peek at anyone's in-progress hours.
-    notSubmitted: rows.filter((r) => r.status === 'Not Submitted').length,
-  }), [rows]);
+// One employee's pay period, day by day, from their attendance records.
+function WeekBreakdown({ ts }) {
+  const { data: records, loading, error } = useApiData(() => attendanceService.getByEmployeeId(ts.employeeId), [ts.employeeId]);
+  const periodEnd = useMemo(() => toDateKey(periodEndOf(new Date(`${ts.weekStart}T00:00:00`))), [ts.weekStart]);
 
-  const [search, setSearch] = useState('');
-  const [exceptionsOnly, setExceptionsOnly] = useState(false);
-  const [page, setPage] = useState(1);
-
-  const filtered = useMemo(() => {
-    const q = search.trim().toLowerCase();
-    return rows.filter((r) => {
-      const name = `${r.employee.firstName} ${r.employee.lastName}`.toLowerCase();
-      const matchSearch = !q || name.includes(q) || (r.employee.department || '').toLowerCase().includes(q);
-      const matchException = !exceptionsOnly || r.exceptions > 0;
-      return matchSearch && matchException;
+  const days = useMemo(() => {
+    const byDate = new Map((records || []).map((r) => [r.date, r]));
+    return daysInPeriod(new Date(`${ts.weekStart}T00:00:00`), new Date(`${periodEnd}T00:00:00`)).map((key) => {
+      const date = new Date(`${key}T00:00:00`);
+      return { name: date.toLocaleDateString('en-US', { weekday: 'short' }), key, day: date.getDate(), isWeekend: date.getDay() === 0, record: byDate.get(key) };
     });
-  }, [rows, search, exceptionsOnly]);
+  }, [records, ts.weekStart, periodEnd]);
 
-  const totalPages = Math.max(1, Math.ceil(filtered.length / ROWS_PER_PAGE));
-  const paginated = filtered.slice((page - 1) * ROWS_PER_PAGE, page * ROWS_PER_PAGE);
+  const tallest = Math.max(10, ...days.map((d) => d.record?.totalHours || 0));
 
-  const approvedUnexported = periodSheets.filter((t) => t.status === 'Approved' && !t.exportedAt);
-  const readiness = `${tiles.approved} approved · ${tiles.submitted + tiles.notSubmitted} pending · ${rows.filter((r) => r.exceptions > 0).length} exceptions`;
-
-  const [exporting, setExporting] = useState(false);
-  const handleExport = async () => {
-    setExporting(true);
-    try {
-      const exported = await exportTimesheetsForPayroll({ ids: approvedUnexported.map((t) => t.id) });
-      downloadCSV(`payroll-${startKey}.csv`, exported.map((t) => ({
-        employee: t.employeeName, department: t.department, period: `${t.weekStart} to ${t.weekEnd}`,
-        regularHours: t.regularHours, holidayHours: round1(t.regularHolidayHours + t.specialHolidayHours),
-        overtimeHours: t.paidOtHours, payableHours: payableHours(t), lateMinutes: t.lateMinutes, undertimeMinutes: t.undertimeMinutes,
-      })));
-      toast.success('Sent to Payroll', `${exported.length} timesheet(s) exported and locked.`);
-      refreshTimesheets();
-    } catch (e) {
-      toast.error('Export failed', e?.response?.data?.message || 'Please try again.');
-    } finally {
-      setExporting(false);
-    }
-  };
-
-  const [detailEmployee, setDetailEmployee] = useState(null);
-
-  if (!loaded) return <SkeletonPage />;
+  if (loading) return <p className="text-sm text-gray-400">Loading the daily records...</p>;
+  if (error) return <p className="text-sm text-red-500">Could not load the daily records: {error}</p>;
 
   return (
-    <div className="space-y-6 animate-fadeIn">
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-        <div>
-          <h1 className="text-2xl font-bold text-gray-900">Timesheets</h1>
-          <p className="text-[14px] text-gray-500 mt-1">Review and approve pay-period timesheets</p>
+    <div className="rounded-xl border border-gray-100 overflow-hidden max-h-[360px] overflow-y-auto">
+      {days.map(({ name, key, day, isWeekend, record }) => (
+        <div key={key} className="flex items-center gap-3 px-3 py-2.5 border-b border-gray-50 last:border-0">
+          <div className="w-11 shrink-0 text-center">
+            <p className="text-[10px] uppercase tracking-wide text-gray-400">{name}</p>
+            <p className="text-sm font-semibold text-gray-800 leading-none">{day}</p>
+          </div>
+          {record ? (
+            <>
+              <div className="flex-1 min-w-0">
+                <div className="flex items-center gap-2 flex-wrap">
+                  <Badge variant={attendanceVariant[record.status] || 'default'} size="xs">{record.status}</Badge>
+                  <span className="text-xs text-gray-500">
+                    {record.clockIn ? formatTime(record.clockIn) : '—'} – {record.clockOut ? formatTime(record.clockOut) : <span className="text-red-500 font-medium">no clock-out</span>}
+                  </span>
+                </div>
+                <div className="mt-1.5 h-1.5 rounded-full bg-gray-100 overflow-hidden flex">
+                  <div className="bg-blue-500" style={{ width: `${Math.min(100, ((record.regularHours || 0) / tallest) * 100)}%` }} />
+                  <div className="bg-cyan-400" style={{ width: `${Math.min(100, ((record.overtime || 0) / tallest) * 100)}%` }} />
+                </div>
+              </div>
+              <div className="text-right shrink-0">
+                <p className="text-sm font-semibold text-gray-900">{hoursText(record.totalHours)}</p>
+                {record.overtime > 0 && <p className="text-[10px] text-cyan-600">{hoursText(record.overtime)} OT</p>}
+              </div>
+            </>
+          ) : (
+            <p className="flex-1 text-xs text-gray-300">{isWeekend ? 'Rest day' : 'No record'}</p>
+          )}
         </div>
-      </div>
-
-      {/* 1. Period selector + status tiles */}
-      <Card>
-        <div className="flex items-center gap-3 mb-4">
-          <button onClick={() => setOffset((o) => o - 1)} className="p-2 rounded-lg hover:bg-gray-100 text-gray-400 hover:text-gray-600 transition-colors">
-            <ChevronLeft className="w-4 h-4" />
-          </button>
-          <p className="text-lg font-bold text-gray-900 min-w-[200px] text-center">{periodLabel(start, end)}</p>
-          <button onClick={() => setOffset((o) => o + 1)} disabled={offset >= 0} className="p-2 rounded-lg hover:bg-gray-100 text-gray-400 hover:text-gray-600 transition-colors disabled:opacity-30 disabled:hover:bg-transparent">
-            <ChevronRight className="w-4 h-4" />
-          </button>
-        </div>
-        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-          {[
-            { label: 'Not Submitted', value: tiles.notSubmitted, accent: 'text-gray-500 bg-gray-50' },
-            { label: 'Submitted', value: tiles.submitted, accent: 'text-blue-600 bg-blue-50' },
-            { label: 'Approved', value: tiles.approved, accent: 'text-emerald-600 bg-emerald-50' },
-            { label: 'Rejected', value: tiles.rejected, accent: 'text-red-600 bg-red-50' },
-          ].map((s) => (
-            <div key={s.label} className={`rounded-xl p-3 ${s.accent}`}>
-              <p className="text-xs font-semibold uppercase tracking-wide opacity-80">{s.label}</p>
-              <p className="text-2xl font-bold mt-0.5">{s.value}</p>
-            </div>
-          ))}
-        </div>
-      </Card>
-
-      {/* 2 & 3. Employee list + exception queue filter */}
-      <Card padding={false}>
-        <div className="p-5 pb-4 flex items-center gap-3 flex-wrap">
-          <SearchBar value={search} onChange={(v) => { setSearch(v); setPage(1); }} placeholder="Search employee or department..." className="flex-1 min-w-[220px]" />
-          <button
-            type="button"
-            onClick={() => { setExceptionsOnly((v) => !v); setPage(1); }}
-            className={`inline-flex items-center gap-1.5 text-xs font-semibold px-3 py-2 rounded-lg border transition-colors ${
-              exceptionsOnly ? 'bg-amber-50 border-amber-300 text-amber-700' : 'bg-white border-gray-200 text-gray-500 hover:border-gray-300'
-            }`}
-          >
-            <AlertTriangle className="w-3.5 h-3.5" /> Exceptions only
-          </button>
-        </div>
-        {paginated.length === 0 ? (
-          <EmptyState icon={Users} title="No employees match" description="Try a different search or clear the exceptions filter." />
-        ) : (
-          <>
-            <TableShell minWidth="min-w-[760px]">
-              <table className="w-full">
-                <thead>
-                  <tr className="border-b border-gray-100 bg-gray-50/50">
-                    {['Employee', 'Reported', 'Payable', 'Exceptions', 'Status', ''].map((h) => (
-                      <th key={h} className="px-5 py-2.5 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">{h}</th>
-                    ))}
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-gray-50">
-                  {paginated.map((r) => (
-                    <tr key={r.employee.id} className="hover:bg-gray-50/50 transition-colors">
-                      <td className="px-5 py-3">
-                        <p className="text-sm font-medium text-gray-900">{r.employee.firstName} {r.employee.lastName}</p>
-                        <p className="text-xs text-gray-400">{r.employee.department}</p>
-                      </td>
-                      <td className="px-5 py-3 text-sm text-gray-700 tabular-nums">{r.sheet ? `${r.sheet.totalHours}h` : '—'}</td>
-                      <td className="px-5 py-3 text-sm font-semibold text-gray-900 tabular-nums">{r.sheet ? `${payableHours(r.sheet)}h` : '—'}</td>
-                      <td className="px-5 py-3">
-                        {r.exceptions > 0 ? (
-                          <span className="inline-flex items-center gap-1 text-xs font-semibold text-amber-700">
-                            <AlertTriangle className="w-3.5 h-3.5" /> {r.exceptions}
-                          </span>
-                        ) : <span className="text-xs text-gray-300">—</span>}
-                      </td>
-                      <td className="px-5 py-3">
-                        <Badge variant={statusVariant[r.status] || 'default'} dot size="xs">{r.status}</Badge>
-                      </td>
-                      <td className="px-5 py-3 text-right">
-                        <Button size="xs" variant="secondary" icon={Eye} disabled={!r.sheet} onClick={() => setDetailEmployee(r.employee)}>View</Button>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </TableShell>
-            {totalPages > 1 && (
-              <div className="p-4"><Pagination currentPage={page} totalPages={totalPages} onPageChange={setPage} /></div>
-            )}
-          </>
-        )}
-      </Card>
-
-      {/* 5. Export + Lock */}
-      <Card>
-        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
-          <p className="text-xs text-gray-500">{readiness}</p>
-          <Button
-            icon={Download}
-            loading={exporting}
-            disabled={approvedUnexported.length === 0}
-            onClick={handleExport}
-            title={approvedUnexported.length === 0 ? 'Nothing approved and waiting yet' : 'Exporting also locks these timesheets - no further edits or reopening'}
-          >
-            Export to Payroll & Lock ({approvedUnexported.length})
-          </Button>
-        </div>
-      </Card>
-
-      {/* 4. Drill-down */}
-      {detailEmployee && (
-        <DetailModal
-          employee={detailEmployee}
-          sheet={byEmployee[detailEmployee.id]}
-          start={startKey}
-          onClose={() => setDetailEmployee(null)}
-        />
-      )}
+      ))}
     </div>
   );
 }
 
-function DetailModal({ employee, sheet, start, onClose }) {
-  const { toast } = useToast();
-  const [rejectReason, setRejectReason] = useState('');
-  const [showReject, setShowReject] = useState(false);
-  const [busy, setBusy] = useState(false);
+// A full paid day on the standard shift: 08:00-17:00 less the 1-hour lunch break.
+const FULL_DAY_PAID_HOURS = 8;
 
-  const end = useMemo(() => {
-    const d = new Date(start);
-    return toDateKey(d.getDate() === 1 ? new Date(d.getFullYear(), d.getMonth(), 15) : new Date(d.getFullYear(), d.getMonth() + 1, 0));
-  }, [start]);
+function TimesheetPanel({ ts, position, onClose, onPrev, onNext, onDecide, busy }) {
+  // "Missed hours": paid time the employee was scheduled for but did not attend this period - the
+  // shortfall of each worked day against a full paid day (late arrival, early leave) plus a full day
+  // for every absence. Approved leave is excused, so it is not in it.
+  const { data: weekRecords } = useApiData(() => attendanceService.getByEmployeeId(ts.employeeId), [ts.employeeId]);
+  const missedHours = useMemo(() => {
+    const first = ts.weekStart;
+    const last = toDateKey(periodEndOf(new Date(`${ts.weekStart}T00:00:00`)));
+    const total = (weekRecords || [])
+      .filter((r) => r.date >= first && r.date <= last)
+      .reduce((sum, r) => {
+        if (r.status === 'Absent') return sum + FULL_DAY_PAID_HOURS;
+        if (r.clockIn && r.clockOut && ['Present', 'Late', 'Early Leave'].includes(r.status)) return sum + Math.max(0, FULL_DAY_PAID_HOURS - (r.regularHours || 0));
+        return sum;
+      }, 0);
+    return Math.round(total * 100) / 100;
+  }, [weekRecords, ts.weekStart]);
+  // which form is open at the bottom: null | 'reject' | 'reopen'
+  const [mode, setMode] = useState(null);
+  const [reason, setReason] = useState('');
+  const paid = ts.paidOtHours ?? 0;
+  const notPaid = Math.max(0, (ts.overtimeHours || 0) - paid);
+  const filled = Math.min(100, ((ts.totalHours || 0) / PERIOD_HOURS) * 100);
+  const flags = ts.flags || [];
+  const canReopen = (ts.status === 'Submitted' || ts.status === 'Approved') && !ts.exportedAt;
+  const reasonOk = reason.trim().length >= 5;
 
-  const { data: days, loading } = useApiData(
-    () => timesheetService.getDays(employee.id, start, end),
-    [employee.id, start, end]
+  const closeForm = () => { setMode(null); setReason(''); };
+  const send = async (action) => { await onDecide(ts, action, reason.trim()); closeForm(); };
+
+  return createPortal(
+    <div className="fixed inset-0 z-50 flex justify-end bg-black/40" onClick={onClose}>
+      <aside className="w-full max-w-lg h-full bg-white shadow-2xl flex flex-col" onClick={(e) => e.stopPropagation()}>
+        <div className="flex items-center justify-between gap-3 px-5 py-3 border-b border-gray-100">
+          <div className="flex items-center gap-1">
+            <button type="button" onClick={onPrev} disabled={!onPrev} aria-label="Previous timesheet" className="p-1.5 rounded-lg text-gray-500 hover:bg-gray-100 disabled:opacity-30 disabled:hover:bg-transparent">
+              <ChevronLeft className="w-5 h-5" />
+            </button>
+            <button type="button" onClick={onNext} disabled={!onNext} aria-label="Next timesheet" className="p-1.5 rounded-lg text-gray-500 hover:bg-gray-100 disabled:opacity-30 disabled:hover:bg-transparent">
+              <ChevronRight className="w-5 h-5" />
+            </button>
+            <span className="text-xs text-gray-400 ml-1">{position}</span>
+          </div>
+          <button type="button" onClick={onClose} aria-label="Close" className="p-1.5 rounded-lg text-gray-400 hover:text-gray-700 hover:bg-gray-100">
+            <X className="w-5 h-5" />
+          </button>
+        </div>
+
+        <div className="flex-1 overflow-y-auto p-5 space-y-5">
+          <div className="flex items-center gap-4">
+            <Avatar firstName={(ts.employeeName || '').split(' ')[0]} lastName={(ts.employeeName || '').split(' ').slice(1).join(' ')} size="xl" />
+            <div className="min-w-0">
+              <h3 className="text-xl font-bold text-gray-900 truncate">{ts.employeeName}</h3>
+              <p className="text-sm text-gray-500">{ts.employeeId}</p>
+              <div className="flex gap-2 mt-1.5 flex-wrap">
+                <Badge variant="primary" size="xs">{ts.department}</Badge>
+                <Badge variant={statusVariant[ts.status]} dot size="xs">{ts.status}</Badge>
+                {ts.autoSubmitted && <Badge variant="info" size="xs">Auto-submitted</Badge>}
+                {ts.exportedAt && <Badge variant="purple" size="xs">Sent to payroll</Badge>}
+              </div>
+            </div>
+          </div>
+
+          <StatusSteps status={ts.status} />
+
+          <div className="flex items-center gap-2 px-4 py-2.5 bg-gray-50 rounded-xl text-sm text-gray-700">
+            <Calendar className="w-4 h-4 text-gray-400" />
+            <span className="font-medium">{shortRange(ts.weekStart, ts.weekEnd)}</span>
+            {!ts.weekFinished && <span className="ml-auto text-xs font-semibold text-blue-600">Period still in progress</span>}
+          </div>
+
+          {flags.length > 0 && (
+            <div className="rounded-xl border border-amber-200 bg-amber-50/60 p-4 space-y-2">
+              <p className="text-xs font-semibold uppercase tracking-wide text-amber-700 flex items-center gap-1.5"><AlertTriangle className="w-3.5 h-3.5" /> Check before approving</p>
+              <ul className="space-y-1 text-sm text-gray-700">
+                {flags.map((f) => <li key={f}>• {FLAG_INFO[f]?.label || f}{f === 'changed_after_submit' ? ' - reopen it so the hours are brought up to date' : ''}</li>)}
+              </ul>
+            </div>
+          )}
+
+          {ts.statusReason && (ts.status === 'Rejected' || ts.status === 'Draft') && (
+            <div className={`rounded-xl px-4 py-3 text-sm ${ts.status === 'Rejected' ? 'bg-red-50 text-red-700' : 'bg-amber-50 text-amber-700'}`}>
+              <p className="font-semibold">{ts.status === 'Rejected' ? 'Rejected because' : 'Reopened because'}</p>
+              <p className="mt-0.5">{ts.statusReason}</p>
+            </div>
+          )}
+
+          <div className="grid grid-cols-2 gap-3">
+            <div className="rounded-xl bg-emerald-50 p-4">
+              <p className="text-[11px] font-semibold uppercase tracking-wide text-emerald-600">Total counted</p>
+              <p className="text-2xl font-bold text-emerald-700 mt-1">{hoursText(ts.totalHours)}</p>
+              <div className="mt-2 h-1.5 rounded-full bg-emerald-100 overflow-hidden"><div className="h-full bg-emerald-500" style={{ width: `${filled}%` }} /></div>
+              <p className="text-[11px] text-emerald-600 mt-1">{Math.round(filled)}% of a ~{PERIOD_HOURS}h period</p>
+            </div>
+            <div className="rounded-xl bg-orange-50 p-4" title="Paid time scheduled but not attended: late arrivals and early leaves (the shortfall against a full 8-hour day) plus full days of absence. Approved leave is not counted.">
+              <p className="text-[11px] font-semibold uppercase tracking-wide text-orange-600">Missed hours</p>
+              <p className="text-2xl font-bold text-orange-700 mt-1">{weekRecords ? hoursText(missedHours) : '—'}</p>
+              <p className="text-[11px] text-orange-600 mt-1">Late, early leave or absent</p>
+            </div>
+            <div className="rounded-xl bg-cyan-50 p-4">
+              <p className="text-[11px] font-semibold uppercase tracking-wide text-cyan-600">Overtime</p>
+              <p className="text-2xl font-bold text-cyan-700 mt-1">{hoursText(ts.overtimeHours)}</p>
+              <p className="text-[11px] text-cyan-600 mt-1">{ts.approvedOtHours > 0 ? `${hoursText(ts.approvedOtHours)} approved` : 'None approved'}</p>
+            </div>
+            <div className="rounded-xl bg-purple-50 p-4">
+              <p className="text-[11px] font-semibold uppercase tracking-wide text-purple-600">Payable overtime</p>
+              <p className="text-2xl font-bold text-purple-700 mt-1">{hoursText(paid)}</p>
+              <p className="text-[11px] text-purple-600 mt-1">{notPaid > 0 ? `${hoursText(notPaid)} not paid` : 'All overtime paid'}</p>
+            </div>
+          </div>
+
+          <div>
+            <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-2">Day by day</p>
+            <WeekBreakdown ts={ts} />
+          </div>
+
+          <div>
+            <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-3">History</p>
+            <HistoryTimeline history={ts.history} />
+          </div>
+
+          {ts.notes && (
+            <div className="bg-gray-50 rounded-xl p-4">
+              <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-1">Notes</p>
+              <p className="text-sm text-gray-700">{ts.notes}</p>
+            </div>
+          )}
+        </div>
+
+        <div className="px-5 py-4 border-t border-gray-100 bg-white space-y-3">
+          {mode ? (
+            <div className="space-y-2">
+              <p className="text-sm font-semibold text-gray-800">{mode === 'reject' ? 'Why is this timesheet being rejected?' : 'Why is it being reopened?'}</p>
+              <textarea
+                autoFocus
+                value={reason}
+                onChange={(e) => setReason(e.target.value)}
+                rows={3}
+                maxLength={500}
+                placeholder={mode === 'reject' ? 'e.g. Tuesday has no clock-out. The employee sees this.' : 'e.g. Attendance was corrected after submission.'}
+                className="w-full px-3 py-2 text-sm border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500/30"
+              />
+              <div className="flex items-center justify-between gap-3">
+                <span className="text-xs text-gray-400">{reasonOk ? 'The employee will be told.' : 'A few words are needed.'}</span>
+                <div className="flex gap-2">
+                  <Button variant="outline" size="sm" onClick={closeForm}>Cancel</Button>
+                  <Button variant={mode === 'reject' ? 'danger' : 'primary'} size="sm" loading={busy} disabled={!reasonOk} onClick={() => send(mode)}>
+                    {mode === 'reject' ? 'Reject timesheet' : 'Reopen timesheet'}
+                  </Button>
+                </div>
+              </div>
+            </div>
+          ) : ts.status === 'Submitted' ? (
+            <div className="flex items-center justify-between gap-3 flex-wrap">
+              <button type="button" onClick={() => setMode('reopen')} className="text-xs font-semibold text-gray-500 hover:text-gray-800">Reopen instead</button>
+              <div className="flex gap-3">
+                <Button variant="danger" icon={XCircle} onClick={() => setMode('reject')}>Reject</Button>
+                <Button variant="success" icon={CheckCircle} loading={busy} onClick={() => send('approve')}>Approve</Button>
+              </div>
+            </div>
+          ) : canReopen ? (
+            <div className="flex items-center justify-between gap-3">
+              <p className="text-sm text-gray-500 flex items-center gap-2"><Info className="w-4 h-4 text-gray-400" /> Approved. It can still be reopened until it is sent to payroll.</p>
+              <Button variant="outline" size="sm" icon={RotateCcw} onClick={() => setMode('reopen')}>Reopen</Button>
+            </div>
+          ) : (
+            <p className="text-sm text-gray-500 flex items-center gap-2">
+              <Info className="w-4 h-4 text-gray-400" />
+              {ts.exportedAt ? 'Sent to payroll. It is now closed.' : ts.status === 'Rejected' ? 'Waiting for the employee to fix it and submit again.' : 'Waiting for the employee to submit it.'}
+            </p>
+          )}
+        </div>
+      </aside>
+    </div>,
+    document.body,
   );
+}
 
-  const handleApprove = async () => {
+function AdminTimesheetsView() {
+  const { user } = useAuth();
+  const { toast } = useToast();
+  const reviewer = user ? `${user.firstName} ${user.lastName}` : 'HR Admin';
+
+  const [search, setSearch] = useUrlSearch();
+  // In the URL so the dashboard's cards can link straight to one bucket, e.g. ?status=Approved.
+  const [statusFilter, setStatusFilter] = useUrlFilter('status', 'Submitted');
+  const [deptFilter, setDeptFilter] = useState('All');
+  const [period, setPeriod] = useState('all');
+  const [flag, setFlag] = useState('');
+  const [sort, setSort] = useState({ key: 'week', dir: 'desc' });
+  const [pageSize, setPageSize] = useState(10);
+  const [currentPage, setCurrentPage] = useState(1);
+  const [openId, setOpenId] = useState(null);
+  const [busy, setBusy] = useState(false);
+  const [confirmPayroll, setConfirmPayroll] = useState(false);
+
+  const data = useTimesheets();
+  const timesheetsLoaded = useTimesheetsLoaded();
+
+  const departments = useMemo(() => ['All', ...new Set(data.map((t) => t.department).filter(Boolean))], [data]);
+  const [thisPeriodStart] = useMemo(() => periodOf(toDateKey(new Date())), []);
+  const flagsOf = (t) => t.flags || [];
+
+  // Everything except the status filter, so the status pills can show honest counts.
+  const base = useMemo(() => data.filter((t) => {
+    if (search && !(t.employeeName || '').toLowerCase().includes(search.toLowerCase()) && !(t.employeeId || '').toLowerCase().includes(search.toLowerCase())) return false;
+    if (deptFilter !== 'All' && t.department !== deptFilter) return false;
+    if (period === 'this' && t.weekStart !== thisPeriodStart) return false;
+    if (period === 'last' && t.weekStart !== periodBack(thisPeriodStart, 1)) return false;
+    if (period === '3p' && (t.weekStart || '') < periodBack(thisPeriodStart, 3)) return false;
+    if (flag && !(flag === 'payroll' ? t.status === 'Approved' && !t.exportedAt : (t.flags || []).includes(flag))) return false;
+    return true;
+  }), [data, search, deptFilter, period, flag, thisPeriodStart]);
+
+  const rows = useMemo(() => {
+    const list = base.filter((t) => statusFilter === 'All' || t.status === statusFilter);
+    const cmp = SORTS[sort.key] || SORTS.week;
+    return [...list].sort((a, b) => (sort.dir === 'asc' ? cmp(a, b) : cmp(b, a)));
+  }, [base, statusFilter, sort]);
+
+  const count = (status) => base.filter((t) => t.status === status).length;
+  const submitted = base.filter((t) => t.status === 'Submitted');
+  const totalHours = base.reduce((s, t) => s + (t.totalHours || 0), 0);
+  const regularHours = base.reduce((s, t) => s + (t.regularHours || 0), 0);
+  const overtimeHours = base.reduce((s, t) => s + (t.overtimeHours || 0), 0);
+  const paidOt = base.reduce((s, t) => s + (t.paidOtHours || 0), 0);
+
+  const readyForPayroll = data.filter((t) => t.status === 'Approved' && !t.exportedAt);
+  const attention = [
+    { id: 'pending', label: 'Waiting for review', n: data.filter((t) => t.status === 'Submitted').length, icon: Clock, tone: 'amber', apply: () => { setFlag(''); setStatusFilter('Submitted'); } },
+    { id: 'payroll', label: 'Ready for payroll', n: readyForPayroll.length, icon: Banknote, tone: 'purple', apply: () => { setStatusFilter('Approved'); setFlag('payroll'); } },
+    { id: 'changed', label: 'Attendance changed after submit', n: data.filter((t) => flagsOf(t).includes('changed_after_submit')).length, icon: AlertTriangle, tone: 'red', apply: () => { setStatusFilter('All'); setFlag('changed_after_submit'); } },
+    { id: 'clockout', label: 'Missing clock-out', n: data.filter((t) => flagsOf(t).includes('missing_clock_out')).length, icon: AlertTriangle, tone: 'amber', apply: () => { setStatusFilter('All'); setFlag('missing_clock_out'); } },
+    { id: 'rejected', label: 'Rejected', n: data.filter((t) => t.status === 'Rejected').length, icon: XCircle, tone: 'red', apply: () => { setFlag(''); setStatusFilter('Rejected'); } },
+  ];
+
+  const totalPages = Math.max(1, Math.ceil(rows.length / pageSize));
+  const page = Math.min(currentPage, totalPages);
+  const pageRows = rows.slice((page - 1) * pageSize, page * pageSize);
+  const openIndex = rows.findIndex((t) => t.id === openId);
+  const openTs = openIndex >= 0 ? rows[openIndex] : null;
+
+  const resetPage = () => setCurrentPage(1);
+  const clearAll = () => { setSearch(''); setStatusFilter('All'); setDeptFilter('All'); setPeriod('all'); setFlag(''); resetPage(); };
+  const filtersOn = search || statusFilter !== 'All' || deptFilter !== 'All' || period !== 'all' || flag;
+
+  const toggleSort = (key) => setSort((s) => (s.key === key ? { key, dir: s.dir === 'asc' ? 'desc' : 'asc' } : { key, dir: key === 'employee' ? 'asc' : 'desc' }));
+  const sortIcon = (key) => (sort.key !== key ? <ArrowUpDown className="w-3 h-3 text-gray-300" /> : sort.dir === 'asc' ? <ArrowUp className="w-3 h-3 text-blue-600" /> : <ArrowDown className="w-3 h-3 text-blue-600" />);
+
+  // action: 'approve' | 'reject' | 'reopen' (reject and reopen need a reason)
+  const decide = async (list, action, reason = '') => {
     setBusy(true);
-    try {
-      await approveTimesheet(sheet.id, 'Workforce Admin');
-      toast.success('Approved', `${employee.firstName}'s timesheet was approved.`);
-      refreshTimesheets();
-      onClose();
-    } catch (e) {
-      toast.error('Could not approve', e?.response?.data?.message || 'Please try again.');
-    } finally {
-      setBusy(false);
+    let done = 0;
+    let lastError = '';
+    for (const ts of list) {
+      try {
+        if (action === 'approve') await approveTimesheet(ts.id, reviewer);
+        else if (action === 'reject') await rejectTimesheet(ts.id, reason);
+        else await reopenTimesheet(ts.id, reason);
+        done += 1;
+      } catch (err) { lastError = err?.response?.data?.message || ''; }
     }
+    await refreshTimesheets();
+    setBusy(false);
+    const verb = { approve: 'approved', reject: 'rejected', reopen: 'reopened' }[action];
+    if (done === list.length) toast.success(`Timesheet${list.length === 1 ? '' : 's'} ${verb}`, list.length === 1 ? `${list[0].employeeName}'s timesheet was ${verb}.` : `${done} timesheets were ${verb}.`);
+    else toast.error(`Could not ${action} all`, lastError || `${done} of ${list.length} timesheets were ${verb}.`);
   };
 
-  const handleReject = async () => {
-    if (rejectReason.trim().length < 5) {
-      toast.error('Reason required', 'Tell the employee why, in at least a few words.');
-      return;
-    }
+  const csvRows = (list) => list.map((t) => ({
+    Employee: t.employeeName,
+    'Employee ID': t.employeeId,
+    Department: t.department,
+    'Period start': t.weekStart,
+    'Period end': t.weekEnd,
+    'Regular hours': t.regularHours,
+    'Break hours': t.breakHours,
+    'Overtime worked': t.overtimeHours,
+    'Overtime approved': t.approvedOtHours ?? 0,
+    'Overtime paid': t.paidOtHours ?? 0,
+    'Total hours': t.totalHours,
+    Status: t.status,
+    'Reviewed by': t.approvedBy || '',
+    'Submitted by': t.submittedBy || '',
+    'Auto-submitted': t.autoSubmitted ? 'Yes' : 'No',
+  }));
+
+  // Sends every approved timesheet not yet sent to payroll, marks them sent, and downloads the payroll file.
+  const sendToPayroll = async () => {
     setBusy(true);
     try {
-      await rejectTimesheet(sheet.id, rejectReason.trim());
-      toast.success('Rejected', 'Sent back to the employee for correction.');
-      refreshTimesheets();
-      onClose();
-    } catch (e) {
-      toast.error('Could not reject', e?.response?.data?.message || 'Please try again.');
-    } finally {
-      setBusy(false);
+      const sent = await exportTimesheetsForPayroll({});
+      await refreshTimesheets();
+      downloadCSV(`payroll-timesheets-${toDateKey(new Date())}.csv`, csvRows(sent));
+      toast.success('Sent to payroll', `${sent.length} approved timesheet${sent.length === 1 ? '' : 's'} sent and downloaded.`);
+    } catch (err) {
+      toast.error('Nothing sent', err?.response?.data?.message || 'Could not send to payroll.');
     }
+    setBusy(false);
+    setConfirmPayroll(false);
   };
+
+  if (!timesheetsLoaded) return <SkeletonPage kpiCount={4} />;
+
+  const readyHours = readyForPayroll.reduce((s, t) => s + (t.totalHours || 0), 0);
 
   return (
-    <Modal isOpen onClose={onClose} title={`${employee.firstName} ${employee.lastName}`} size="xl">
-      <div className="space-y-5">
-        <div className="flex items-center justify-between flex-wrap gap-3">
+    <div className="space-y-6 animate-fadeIn pb-20">
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+        <div className="flex items-center gap-3">
+          <div className="w-11 h-11 rounded-xl bg-blue-50 flex items-center justify-center shrink-0"><FileText className="w-5 h-5 text-blue-600" /></div>
           <div>
-            <p className="text-sm text-gray-500">{employee.department} · {periodLabel(new Date(start), new Date(end))}</p>
-          </div>
-          <Badge variant={statusVariant[sheet?.status] || 'default'} dot>{sheet?.status || 'Not Submitted'}</Badge>
-        </div>
-
-        {sheet?.flags?.length > 0 && (
-          <div className="rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 space-y-1">
-            <p className="text-xs font-semibold text-amber-800 uppercase tracking-wide">Check before approving</p>
-            {sheet.flags.map((f) => (
-              <p key={f} className="text-sm text-amber-800">• {FLAG_INFO[f]?.label || f}</p>
-            ))}
-          </div>
-        )}
-
-        <div className="rounded-xl border border-gray-200 overflow-hidden">
-          <div className="grid grid-cols-4 bg-gray-50 px-4 py-2 text-[11px] font-semibold text-gray-500 uppercase tracking-wide">
-            <span>Date</span><span>Scheduled</span><span>Reported</span><span className="text-right">Payable</span>
-          </div>
-          <div className="divide-y divide-gray-50 max-h-[320px] overflow-y-auto">
-            {loading ? (
-              <div className="p-6 text-center text-sm text-gray-400">Loading…</div>
-            ) : (days || []).map((d) => {
-              const a = d.attendance;
-              const payable = a ? round1(Number(a.regularHours) + Number(a.regularHolidayHours) + Number(a.specialHolidayHours)) : 0;
-              return (
-                <div key={d.date} className="grid grid-cols-4 px-4 py-2 text-sm items-center">
-                  <span className="text-gray-700">{formatDate(d.date)}</span>
-                  <span className="text-gray-500 text-xs">{d.scheduledStart ? `${formatTime(d.scheduledStart)}–${formatTime(d.scheduledEnd)}` : '—'}</span>
-                  <span className="text-gray-700 text-xs">{a ? `${a.clockIn ? formatTime(a.clockIn) : '—'}–${a.clockOut ? formatTime(a.clockOut) : '—'}` : (d.leaveType ? `${d.leaveType} leave` : '—')}</span>
-                  <span className="text-right font-semibold text-gray-900">{payable ? `${payable}h` : '—'}</span>
-                </div>
-              );
-            })}
+            <h1 className="text-2xl font-bold text-gray-900">Timesheets</h1>
+            <p className="text-[14px] text-gray-500 mt-0.5">Employees submit their pay period; you approve it, then send it to payroll.</p>
           </div>
         </div>
-
-        {sheet && (sheet.history || []).length > 0 && (
-          <details>
-            <summary className="flex items-center gap-2 text-xs font-semibold text-gray-500 uppercase tracking-wide cursor-pointer select-none">
-              <History className="w-3.5 h-3.5" /> History
-            </summary>
-            <div className="mt-2"><HistoryTimeline history={sheet.history} /></div>
-          </details>
-        )}
-
-        {sheet?.status === 'Submitted' && (
-          <div className="pt-3 border-t border-gray-100">
-            {showReject ? (
-              <div className="space-y-2">
-                <Textarea label="Reason for rejection" required rows={2} value={rejectReason} onChange={(e) => setRejectReason(e.target.value)} placeholder="What needs to be fixed..." />
-                <div className="flex justify-end gap-2">
-                  <Button variant="secondary" size="sm" onClick={() => setShowReject(false)}>Cancel</Button>
-                  <Button variant="danger" size="sm" loading={busy} onClick={handleReject}>Confirm Reject</Button>
-                </div>
-              </div>
-            ) : (
-              <div className="flex justify-end gap-3">
-                <Button variant="dangerOutline" icon={XCircle} onClick={() => setShowReject(true)}>Reject</Button>
-                <Button icon={CheckCircle} loading={busy} onClick={handleApprove}>Approve</Button>
-              </div>
-            )}
-          </div>
-        )}
-        {sheet?.status === 'Approved' && !sheet.exportedAt && (
-          <div className="pt-3 border-t border-gray-100 flex justify-end">
-            <Button variant="secondary" icon={RotateCcw} loading={busy} onClick={async () => {
-              setBusy(true);
-              try {
-                await reopenTimesheet(sheet.id, 'Reopened for correction by admin.');
-                toast.success('Reopened', 'Sent back to the employee.');
-                refreshTimesheets();
-                onClose();
-              } catch (e) {
-                toast.error('Could not reopen', e?.response?.data?.message || 'Please try again.');
-              } finally { setBusy(false); }
-            }}>
-              Reopen for Correction
-            </Button>
-          </div>
-        )}
-        {!sheet && (
-          <div className="pt-3 border-t border-gray-100 flex items-center justify-end gap-2 text-sm text-gray-400">
-            <ExternalLink className="w-3.5 h-3.5" /> Nothing submitted for this period yet.
-          </div>
-        )}
+        <div className="flex items-center gap-3 flex-wrap">
+          <Button variant="outline" icon={RefreshCw} size="md" onClick={() => refreshTimesheets()}>Refresh</Button>
+          <Button variant="primary" icon={Banknote} size="md" disabled={readyForPayroll.length === 0} onClick={() => setConfirmPayroll(true)}>
+            Send to payroll{readyForPayroll.length > 0 ? ` (${readyForPayroll.length})` : ''}
+          </Button>
+        </div>
       </div>
-    </Modal>
+
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+        <KpiCard label="Waiting for review" value={submitted.length} icon={Clock} accent="amber" noBar subtext={`${hoursText(submitted.reduce((s, t) => s + (t.totalHours || 0), 0))} to approve`} to="/timesheets?status=Submitted" />
+        <KpiCard label="Approved" value={count('Approved')} icon={CheckCircle} accent="emerald" noBar subtext={`of ${base.length} timesheet${base.length === 1 ? '' : 's'}`} to="/timesheets?status=Approved" />
+        <KpiCard label="Hours counted" value={hoursText(totalHours)} icon={Timer} accent="blue" noBar subtext={`${hoursText(regularHours)} regular · ${hoursText(overtimeHours)} overtime`} />
+        <KpiCard label="Overtime paid" value={hoursText(paidOt)} icon={TrendingUp} accent="purple" noBar subtext={`${base.filter((t) => (t.paidOtHours || 0) > 0).length} employee-period(s)`} />
+      </div>
+
+      <div className="flex flex-wrap gap-2">
+        {attention.filter((a) => a.n > 0).map((a) => (
+          <button key={a.id} type="button" onClick={a.apply} className={clsx('inline-flex items-center gap-2 px-3 py-2 rounded-xl border text-xs font-semibold hover:shadow-sm transition-shadow', flagTone[a.tone])}>
+            <a.icon className="w-3.5 h-3.5" /> {a.label}
+            <span className="px-1.5 py-0.5 rounded-md bg-white/70 text-[11px]">{a.n}</span>
+          </button>
+        ))}
+      </div>
+
+      <Card padding={false}>
+        <div className="p-4 space-y-3 border-b border-gray-100">
+          {/* One tidy row: search, then the three filters as dropdowns. A filter that is narrowing the
+              list turns blue, so what is switched on is visible without opening anything. */}
+          <div className="flex flex-col lg:flex-row lg:items-center gap-3">
+            <SearchBar value={search} onChange={(v) => { setSearch(v); resetPage(); }} placeholder="Search by employee name or ID..." className="flex-1 min-w-[220px]" />
+            <div className="grid grid-cols-1 sm:grid-cols-3 lg:flex gap-2.5">
+              <FilterMenu
+                label="Status"
+                value={statusFilter}
+                defaultValue="All"
+                onChange={(v) => { setStatusFilter(v); resetPage(); }}
+                options={[
+                  { value: 'All', label: 'All' },
+                  // Not 'Draft': a still-in-progress timesheet is the employee's own, not yet
+                  // submitted, and the admin API no longer returns it at all (a panel review
+                  // called seeing it early unfair) - so this filter would only ever show 0.
+                  ...['Submitted', 'Approved', 'Rejected'].map((s) => ({ value: s, label: s, count: count(s) })),
+                ]}
+              />
+              <FilterMenu
+                label="Period"
+                value={period}
+                defaultValue="all"
+                onChange={(v) => { setPeriod(v); resetPage(); }}
+                options={PERIODS.map((p) => ({ value: p.id, label: p.label }))}
+              />
+              <FilterMenu
+                label="Dept"
+                value={deptFilter}
+                defaultValue="All"
+                onChange={(v) => { setDeptFilter(v); resetPage(); }}
+                options={departments.map((d) => ({ value: d, label: d === 'All' ? 'All departments' : d }))}
+                align="right"
+              />
+            </div>
+          </div>
+          {filtersOn && (
+            <div className="flex items-center justify-between gap-3 text-xs">
+              <span className="text-gray-500">Showing <span className="font-semibold text-gray-700">{rows.length}</span> timesheet{rows.length === 1 ? '' : 's'}</span>
+              <button type="button" onClick={clearAll} className="font-semibold text-blue-600 hover:text-blue-700">Clear filters</button>
+            </div>
+          )}
+        </div>
+
+        <TableShell minWidth="min-w-[720px]">
+          <table className="w-full">
+            <thead>
+              <tr className="border-b border-gray-100 bg-gray-50/60">
+                {[['employee', 'Employee'], ['week', 'Period'], [null, 'Hours'], ['overtime', 'Overtime paid'], ['total', 'Total'], ['status', 'Status']].map(([key, label]) => (
+                  <th key={label} className="px-3 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider whitespace-nowrap">
+                    {key ? <button type="button" onClick={() => toggleSort(key)} className="inline-flex items-center gap-1 hover:text-gray-800">{label} {sortIcon(key)}</button> : label}
+                  </th>
+                ))}
+                <th className="px-3 py-3 text-right text-xs font-semibold text-gray-500 uppercase tracking-wider">Actions</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-gray-50">
+              {pageRows.length === 0 ? (
+                <tr><td colSpan={7} className="px-4 py-14 text-center text-sm text-gray-400">
+                  {statusFilter === 'Submitted' && !flag && !search && deptFilter === 'All' && period === 'all'
+                    ? 'Nothing is waiting for your review. You are all caught up.'
+                    : filtersOn ? 'No timesheets match these filters.' : 'No timesheets yet. They appear once employees clock out.'}
+                </td></tr>
+              ) : pageRows.map((ts) => {
+                const regularPct = Math.min(100, ((ts.regularHours || 0) / PERIOD_HOURS) * 100);
+                const otPct = Math.min(100 - regularPct, ((ts.overtimeHours || 0) / PERIOD_HOURS) * 100);
+                const notPaid = Math.max(0, (ts.overtimeHours || 0) - (ts.paidOtHours ?? 0));
+                const isThisPeriod = ts.weekStart === thisPeriodStart;
+                const flags = flagsOf(ts);
+                return (
+                  <tr key={ts.id} onClick={() => setOpenId(ts.id)} className="hover:bg-blue-50/40 transition-colors cursor-pointer">
+                    <td className="px-3 py-3">
+                      <div className="flex items-center gap-3">
+                        <Avatar firstName={(ts.employeeName || '').split(' ')[0]} lastName={(ts.employeeName || '').split(' ').slice(1).join(' ')} size="sm" />
+                        <div className="min-w-0">
+                          <p className="font-semibold text-sm text-gray-900 truncate">{ts.employeeName}</p>
+                          <p className="text-xs text-gray-400 truncate">{ts.employeeId} · {ts.department}</p>
+                        </div>
+                      </div>
+                    </td>
+                    <td className="px-3 py-3 whitespace-nowrap">
+                      <p className="text-sm text-gray-800">{shortRange(ts.weekStart, ts.weekEnd)}</p>
+                      {isThisPeriod && <span className="text-[10px] font-semibold text-blue-600">This period</span>}
+                    </td>
+                    <td className="px-3 py-3 min-w-[150px]">
+                      <div className="flex h-2 rounded-full bg-gray-100 overflow-hidden">
+                        <div className="bg-blue-500" style={{ width: `${regularPct}%` }} />
+                        <div className="bg-amber-400" style={{ width: `${otPct}%` }} />
+                      </div>
+                      <p className="text-[11px] text-gray-500 mt-1">{hoursText(ts.regularHours)} regular{ts.overtimeHours > 0 ? ` + ${hoursText(ts.overtimeHours)} OT` : ''}</p>
+                    </td>
+                    <td className="px-3 py-3 text-sm whitespace-nowrap">
+                      {(ts.paidOtHours || 0) > 0 ? <span className="font-semibold text-purple-700">{hoursText(ts.paidOtHours)}</span> : <span className="text-gray-300">—</span>}
+                      {notPaid > 0 && <p className="text-[11px] text-red-500">{hoursText(notPaid)} not paid</p>}
+                    </td>
+                    <td className="px-3 py-3 text-sm font-bold text-gray-900 whitespace-nowrap">{hoursText(ts.totalHours)}</td>
+                    <td className="px-3 py-3">
+                      <div className="flex items-center gap-1.5 flex-wrap">
+                        <Badge variant={statusVariant[ts.status]} dot size="xs">{ts.status === 'Draft' && !ts.weekFinished ? 'In progress' : ts.status}</Badge>
+                        {ts.autoSubmitted && <span className="text-[10px] font-semibold text-blue-600" title="The employee missed the deadline, so the system submitted it">auto</span>}
+                        {ts.exportedAt && <Banknote className="w-3.5 h-3.5 text-purple-500" title="Sent to payroll" />}
+                      </div>
+                      {flags.length > 0 && (
+                        <p className="text-[11px] text-amber-600 mt-0.5 flex items-center gap-1" title={flags.map((f) => FLAG_INFO[f]?.label || f).join(', ')}>
+                          <AlertTriangle className="w-3 h-3" /> {FLAG_INFO[flags[0]]?.label}{flags.length > 1 ? ` +${flags.length - 1}` : ''}
+                        </p>
+                      )}
+                    </td>
+                    <td className="px-3 py-3" onClick={(e) => e.stopPropagation()}>
+                      <div className="flex items-center justify-end gap-1">
+                        {ts.status === 'Submitted' && flags.length === 0 && (
+                          <button type="button" title="Approve" aria-label={`Approve ${ts.employeeName}'s timesheet`} disabled={busy} onClick={() => decide([ts], 'approve')} className="p-1.5 rounded-lg text-emerald-600 hover:bg-emerald-50 disabled:opacity-40">
+                            <CheckCircle className="w-[18px] h-[18px]" />
+                          </button>
+                        )}
+                        <button type="button" title={ts.status === 'Submitted' && flags.length > 0 ? 'Has warnings - open to review' : 'View details'} aria-label={`View ${ts.employeeName}'s timesheet`} onClick={() => setOpenId(ts.id)} className={clsx('p-1.5 rounded-lg hover:bg-gray-100 hover:text-blue-600', ts.status === 'Submitted' && flags.length > 0 ? 'text-amber-500' : 'text-gray-400')}>
+                          <Eye className="w-[18px] h-[18px]" />
+                        </button>
+                      </div>
+                    </td>
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
+        </TableShell>
+
+        <div className="flex items-center justify-between gap-3 flex-wrap px-4 py-3 border-t border-gray-100 bg-gray-50/50">
+          <div className="flex items-center gap-3">
+            <p className="text-xs text-gray-500">{rows.length} timesheet{rows.length === 1 ? '' : 's'}</p>
+            <select value={pageSize} onChange={(e) => { setPageSize(Number(e.target.value)); resetPage(); }} className="px-2 py-1 text-xs border border-gray-200 rounded-lg bg-white focus:outline-none">
+              {[10, 25, 50].map((n) => <option key={n} value={n}>{n} / page</option>)}
+            </select>
+          </div>
+          {totalPages > 1 && <Pagination currentPage={page} totalPages={totalPages} onPageChange={setCurrentPage} />}
+        </div>
+      </Card>
+
+      {openTs && (
+        <TimesheetPanel
+          key={openTs.id}
+          ts={openTs}
+          position={`${openIndex + 1} of ${rows.length}`}
+          busy={busy}
+          onClose={() => setOpenId(null)}
+          onPrev={openIndex > 0 ? () => setOpenId(rows[openIndex - 1].id) : null}
+          onNext={openIndex < rows.length - 1 ? () => setOpenId(rows[openIndex + 1].id) : null}
+          onDecide={async (t, action, reason) => { await decide([t], action, reason); }}
+        />
+      )}
+
+      <Modal isOpen={confirmPayroll} onClose={() => setConfirmPayroll(false)} title="Send approved timesheets to payroll" size="md">
+        <div className="space-y-4">
+          <p className="text-sm text-gray-700">
+            <span className="font-semibold">{readyForPayroll.length}</span> approved timesheet{readyForPayroll.length === 1 ? '' : 's'} ({hoursText(readyHours)} in total) will be marked as sent and downloaded as a file for payroll.
+          </p>
+          <p className="text-sm text-gray-500 flex items-start gap-2"><Info className="w-4 h-4 mt-0.5 shrink-0 text-gray-400" /> Each period is sent only once, so it can never be paid twice. After this, those timesheets can no longer be reopened.</p>
+          <div className="flex justify-end gap-3">
+            <Button variant="outline" onClick={() => setConfirmPayroll(false)}>Cancel</Button>
+            <Button variant="primary" icon={Banknote} loading={busy} onClick={sendToPayroll}>Send and download</Button>
+          </div>
+        </div>
+      </Modal>
+
+      </div>
   );
+}
+
+// ---------------------------------------------------------------------------
+// Workforce Admin view - review every employee's pay-period timesheet.
+// Admin-only route (employees use My Timesheet), so this is always the admin view.
+// ---------------------------------------------------------------------------
+export default function Timesheets() {
+  return <AdminTimesheetsView />;
 }
