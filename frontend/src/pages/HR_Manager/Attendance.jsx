@@ -20,6 +20,7 @@ import { kioskService } from '../../services/kioskService';
 import { formatHours, toDateKey } from '../../services/attendanceService';
 import { formatDate, formatTime } from '../../utils/helpers';
 import { weekOf, todayKey } from '../../utils/today';
+import { attendanceFlagsFor } from '../../utils/attendanceFlags';
 import useApiData from '../../hooks/useApiData';
 import { useToast } from '../../context/ToastContext';
 import { useAuth } from '../../context/AuthContext';
@@ -429,7 +430,16 @@ export default function Attendance() {
                       ) : '-'}
                     </td>
                     <td className="px-4 py-3.5 text-sm text-gray-700 font-medium">{a.clockIn && a.clockOut ? `${formatHours(a.totalHours)}h` : '-'}</td>
-                    <td className="px-4 py-3.5"><Badge variant={statusVariant[a.status]} dot size="xs">{a.status}</Badge></td>
+                    <td className="px-4 py-3.5">
+                      <Badge variant={statusVariant[a.status]} dot size="xs">{a.status}</Badge>
+                      {attendanceFlagsFor(a).length > 0 && (
+                        <div className="mt-1.5 flex flex-wrap items-center gap-1">
+                          {attendanceFlagsFor(a).map((f) => (
+                            <Badge key={f.key} variant={f.tone} size="xs">{f.label}</Badge>
+                          ))}
+                        </div>
+                      )}
+                    </td>
                     <td className="px-4 py-3.5">
                       <div className="flex items-center gap-1.5 text-sm text-gray-600">
                         <MapPin className="w-3.5 h-3.5 text-gray-400" />

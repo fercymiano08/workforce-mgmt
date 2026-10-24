@@ -20,6 +20,7 @@ import useApiData from '../../hooks/useApiData';
 import { attendanceService, overtimeService, shiftService } from '../../services/api';
 import TodayBadge from '../../components/common/TodayBadge';
 import { todayKey, todayRowClass, weekOf } from '../../utils/today';
+import { attendanceFlagsFor } from '../../utils/attendanceFlags';
 import { kioskService } from '../../services/kioskService';
 import { formatDate, formatTime, approvedOvertimeHours, extendTime } from '../../utils/helpers';
 import { formatHours } from '../../services/attendanceService';
@@ -605,6 +606,13 @@ export default function MyAttendance() {
                       </td>
                       <td className="px-4 py-4">
                         <Badge variant={statusVariant[a.status]} dot size="xs">{a.status}</Badge>
+                        {attendanceFlagsFor(a).length > 0 && (
+                          <div className="mt-1.5 flex flex-wrap items-center gap-1">
+                            {attendanceFlagsFor(a).map((f) => (
+                              <Badge key={f.key} variant={f.tone} size="xs">{f.label}</Badge>
+                            ))}
+                          </div>
+                        )}
                       </td>
                       <td className="px-4 py-4">
                         <div className="flex items-center gap-1.5 text-sm text-gray-600">
