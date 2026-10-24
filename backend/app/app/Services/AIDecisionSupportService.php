@@ -142,8 +142,11 @@ class AIDecisionSupportService
                 'days' => $days,
                 'applied' => $l->applied_date?->format('Y-m-d'),
                 'reason' => $l->reason,
-                // null when the leave type has no limited balance
-                'balance' => $balance ? [
+                // null when the leave type has no limited balance - leaveBalances() now also
+                // returns a row for non-balance types (for the employee's balance cards), so
+                // finding a row is no longer enough on its own; it has to actually be one with a
+                // balance.
+                'balance' => ($balance && ($balance['requiresBalance'] ?? false)) ? [
                     'remaining' => (float) $balance['remaining'],
                     'afterApproval' => round((float) $balance['remaining'] - $days, 1),
                 ] : null,

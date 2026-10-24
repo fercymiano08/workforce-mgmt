@@ -1,5 +1,5 @@
 import { useState, useMemo, useEffect, useCallback } from 'react';
-import { Calendar, CheckCircle, Clock, FileText, Plus, XCircle, Palmtree, Heart, Flower2, Wallet, Hourglass, ThumbsUp, ThumbsDown, ChevronRight, Baby, HeartHandshake } from 'lucide-react';
+import { Calendar, CheckCircle, Clock, FileText, Plus, XCircle, Palmtree, Heart, Flower2, Wallet, Hourglass, ThumbsUp, ThumbsDown, ChevronRight, ChevronLeft, Baby, HeartHandshake, Check, Lock } from 'lucide-react';
 import Card from '../../components/ui/Card';
 import Button from '../../components/ui/Button';
 import TodayBadge from '../../components/common/TodayBadge';
@@ -9,7 +9,7 @@ import SearchBar from '../../components/ui/SearchBar';
 import FilterMenu from '../../components/ui/FilterMenu';
 import EmptyState from '../../components/ui/EmptyState';
 import { SkeletonList } from '../../components/ui/LoadingSkeleton';
-import Input, { Select, Textarea } from '../../components/ui/Input';
+import Input, { Textarea } from '../../components/ui/Input';
 import Modal from '../../components/ui/Modal';
 import { Pagination } from '../../components/ui/Table';
 import { leaveService, leaveTypeService } from '../../services/api';
@@ -49,6 +49,12 @@ const leaveBalanceStyle = {
   Maternity: { text: 'text-pink-600', barBg: 'bg-pink-100', color: 'bg-pink-500', icon: Baby, iconBg: 'bg-pink-50' },
   Paternity: { text: 'text-sky-600', barBg: 'bg-sky-100', color: 'bg-sky-500', icon: HeartHandshake, iconBg: 'bg-sky-50' },
   Unpaid: { text: 'text-teal-600', barBg: 'bg-teal-100', color: 'bg-teal-500', icon: Wallet, iconBg: 'bg-teal-50' },
+};
+
+// What a non-balance type's card shows instead of a fraction - there's no ledger to draw down.
+const PAY_TYPE_LABEL = {
+  PaidWithoutBalance: 'Paid in full',
+  Unpaid: 'Unpaid',
 };
 
 // Static list kept only for the "Type" filter on the request list below (filtering EXISTING
@@ -155,8 +161,16 @@ export default function Leave() {
   const [selectedLeave, setSelectedLeave] = useState(null);
 
   const [isApplyOpen, setIsApplyOpen] = useState(false);
-  const [applyForm, setApplyForm] = useState({ leaveType: 'Vacation', startDate: '', endDate: '', reason: '', proofFile: null, acceptSplit: false });
+  const [applyStep, setApplyStep] = useState(1);
+  const APPLY_STEPS = ['Type', 'Dates', 'Review'];
+  const [applyForm, setApplyForm] = useState({ leaveType: '', startDate: '', endDate: '', reason: '', proofFile: null, acceptSplit: false });
   const [applyErrors, setApplyErrors] = useState({});
+  const openApply = () => {
+    setApplyForm({ leaveType: '', startDate: '', endDate: '', reason: '', proofFile: null, acceptSplit: false });
+    setApplyErrors({});
+    setApplyStep(1);
+    setIsApplyOpen(true);
+  };
   const [proofError, setProofError] = useState('');
   // Live cost of the chosen dates (working days, plus the pay/split breakdown for this type),
   // asked from the server as the person picks them.
@@ -184,6 +198,13 @@ export default function Leave() {
     () => (eligibleTypes || []).find((t) => t.code === applyForm.leaveType) || null,
     [eligibleTypes, applyForm.leaveType]
   );
+
+  // What each step of the Apply flow needs before "Next" is allowed.
+  const canLeaveStep1 = !!selectedType && selectedType.eligible;
+  const canLeaveStep2 = !!applyForm.startDate && !!applyForm.endDate && applyForm.startDate <= applyForm.endDate
+    && (!preview || preview.days >= 1)
+    && !(preview?.requiresConsent && !applyForm.acceptSplit);
+  const goToStep = (n) => setApplyStep(n);
 
   const MAX_PROOF_SIZE = 5 * 1024 * 1024; // 5MB
 
@@ -252,6 +273,7 @@ export default function Leave() {
 
   const validateApply = () => {
     const errs = {};
+    if (!applyForm.leaveType) errs.leaveType = 'Choose a leave type';
     if (!applyForm.startDate) errs.startDate = 'Start date is required';
     else if (applyForm.startDate < todayKey()) errs.startDate = 'Leave cannot start in the past. Choose today or a later date.';
     if (!applyForm.endDate) errs.endDate = 'End date is required';
@@ -300,9 +322,10 @@ export default function Leave() {
       toast.error('Could not submit leave', firstFieldError || data?.message || 'The server did not respond. Please try again.');
       return;
     }
-    setApplyForm({ leaveType: 'Vacation', startDate: '', endDate: '', reason: '', proofFile: null, acceptSplit: false });
+    setApplyForm({ leaveType: '', startDate: '', endDate: '', reason: '', proofFile: null, acceptSplit: false });
     setApplyErrors({});
     setProofError('');
+    setApplyStep(1);
     setIsApplyOpen(false);
   };
 
@@ -314,7 +337,7 @@ export default function Leave() {
           <h1 className="text-2xl font-bold text-gray-900">My Leave</h1>
           <p className="text-[14px] text-gray-500 mt-1">View your leave requests and remaining balances</p>
         </div>
-        <Button icon={Plus} onClick={() => setIsApplyOpen(true)}>
+        <Button icon={Plus} onClick={openApply}>
           Apply Leave
         </Button>
       </div>
@@ -364,19 +387,18 @@ export default function Leave() {
                 </div>
               ))}
             </div>
-            <div className="hidden sm:grid grid-cols-2 sm:grid-cols-4 gap-3.5">
-              {Array.from({ length: 4 }).map((_, i) => (
+            <div className="hidden sm:grid grid-cols-3 lg:grid-cols-6 gap-3">
+              {Array.from({ length: 6 }).map((_, i) => (
                 <Card key={i} padding={false}>
-                  <div className="p-4">
-                    <div className="flex items-center gap-2.5">
-                      <div className="skeleton w-8 h-8 rounded-lg flex-shrink-0" />
+                  <div className="p-3">
+                    <div className="flex items-center gap-2">
+                      <div className="skeleton w-7 h-7 rounded-lg flex-shrink-0" />
                       <div className="flex-1 space-y-1.5">
-                        <div className="skeleton h-3 w-20 rounded" />
-                        <div className="skeleton h-2 w-16 rounded" />
+                        <div className="skeleton h-2.5 w-14 rounded" />
+                        <div className="skeleton h-2 w-10 rounded" />
                       </div>
-                      <div className="skeleton h-5 w-12 rounded" />
                     </div>
-                    <div className="skeleton h-1.5 w-full rounded-full mt-3" />
+                    <div className="skeleton h-1.5 w-full rounded-full mt-2.5" />
                   </div>
                 </Card>
               ))}
@@ -387,7 +409,7 @@ export default function Leave() {
             <div className="sm:hidden rounded-2xl border border-gray-100 bg-white divide-y divide-gray-100 overflow-hidden">
               {leaveBalances.map((b) => {
                 const style = leaveBalanceStyle[b.type] || fallbackBalanceStyle;
-                const pct = b.total > 0 ? Math.max((b.remaining / b.total) * 100, 0) : 0;
+                const pct = b.requiresBalance && b.total > 0 ? Math.max((b.remaining / b.total) * 100, 0) : 0;
                 return (
                   <div key={b.type} className="flex items-center gap-3 px-3.5 py-3">
                     <div className={`w-9 h-9 rounded-lg flex items-center justify-center flex-shrink-0 ${style.iconBg}`}>
@@ -396,48 +418,66 @@ export default function Leave() {
                     <div className="min-w-0 flex-1">
                       <div className="flex items-baseline justify-between gap-3">
                         <p className={`text-[13px] font-semibold truncate ${style.text}`}>{b.type}</p>
-                        <p className="text-base font-bold text-gray-900 whitespace-nowrap">
-                          {b.remaining}
-                          <span className="text-xs font-normal text-gray-400"> / {b.total}</span>
-                        </p>
+                        {b.requiresBalance ? (
+                          <p className="text-base font-bold text-gray-900 whitespace-nowrap">
+                            {b.remaining}
+                            <span className="text-xs font-normal text-gray-400"> / {b.total}</span>
+                          </p>
+                        ) : (
+                          <p className="text-xs font-semibold text-gray-400 whitespace-nowrap">{PAY_TYPE_LABEL[b.payType] || 'No balance'}</p>
+                        )}
                       </div>
-                      <div className={`w-full h-1.5 rounded-full mt-1.5 ${style.barBg}`}>
-                        <div className={`h-1.5 rounded-full transition-all duration-500 ${style.color}`} style={{ width: `${pct}%` }} />
-                      </div>
-                      {/* The bar and the number both say what is left; this is the half nobody could
-                          see - what it was actually spent on. */}
-                      <p className="text-[11px] text-gray-500 mt-1">{b.used} of {b.total} days used</p>
+                      {b.requiresBalance ? (
+                        <>
+                          <div className={`w-full h-1.5 rounded-full mt-1.5 ${style.barBg}`}>
+                            <div className={`h-1.5 rounded-full transition-all duration-500 ${style.color}`} style={{ width: `${pct}%` }} />
+                          </div>
+                          {/* The bar and the number both say what is left; this is the half nobody could
+                              see - what it was actually spent on. */}
+                          <p className="text-[11px] text-gray-500 mt-1">{b.used} of {b.total} days used</p>
+                        </>
+                      ) : (
+                        <p className="text-[11px] text-gray-500 mt-1">{b.used} day{b.used === 1 ? '' : 's'} used this year</p>
+                      )}
                     </div>
                   </div>
                 );
               })}
             </div>
 
-            <div className="hidden sm:grid grid-cols-2 sm:grid-cols-4 gap-3.5">
+            {/* Six compact cards in one row on desktop instead of six full-height ones wrapping to
+                two rows - the balance-requiring types (Vacation, Sick) keep their fraction and bar;
+                the rest have no ledger to show a fraction of, so they show what they ARE instead
+                (paid in full, unpaid, no cap) plus how much was actually used this year. */}
+            <div className="hidden sm:grid grid-cols-3 lg:grid-cols-6 gap-3">
               {leaveBalances.map((b) => {
                 const style = leaveBalanceStyle[b.type] || fallbackBalanceStyle;
-                const pct = b.total > 0 ? Math.max((b.remaining / b.total) * 100, 0) : 0;
+                const pct = b.requiresBalance && b.total > 0 ? Math.max((b.remaining / b.total) * 100, 0) : 0;
                 return (
-                  // One row, one glance. These used to be a 40px icon, a label, a big number, a bar and a
-                  // caption stacked on top of each other - six of them ate the whole screen and pushed the
-                  // requests people actually came for below the fold.
-                  <Card key={b.type} padding={false} hover>
-                    <div className="p-4">
-                      <div className="flex items-center gap-2.5">
-                        <div className={`w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0 ${style.iconBg || 'bg-gray-50'}`}>
-                          {style.icon && <style.icon className={`w-4 h-4 ${style.text}`} />}
+                  <Card key={b.type} padding={false} hover title={`${b.type} Leave`}>
+                    <div className="p-3">
+                      <div className="flex items-center gap-2">
+                        <div className={`w-7 h-7 rounded-lg flex items-center justify-center flex-shrink-0 ${style.iconBg || 'bg-gray-50'}`}>
+                          {style.icon && <style.icon className={`w-3.5 h-3.5 ${style.text}`} />}
                         </div>
-                        <div className="min-w-0 flex-1">
-                          <p className={`text-[13px] font-semibold truncate ${style.text}`}>{b.type} Leave</p>
-                          <p className="text-[11px] text-gray-400">{b.used} of {b.total} days used</p>
-                        </div>
-                        <p className="text-lg font-bold text-gray-900 whitespace-nowrap">
-                          {b.remaining}<span className="text-xs font-normal text-gray-400">/{b.total}</span>
-                        </p>
+                        <p className={`text-xs font-semibold truncate ${style.text}`}>{b.type}</p>
                       </div>
-                      <div className={`w-full h-1.5 rounded-full mt-3 ${style.barBg}`}>
-                        <div className={`h-1.5 rounded-full transition-all duration-500 ${style.color}`} style={{ width: `${pct}%` }} />
-                      </div>
+                      {b.requiresBalance ? (
+                        <>
+                          <p className="text-base font-bold text-gray-900 mt-2 leading-none">
+                            {b.remaining}<span className="text-[11px] font-normal text-gray-400">/{b.total}</span>
+                          </p>
+                          <p className="text-[10px] text-gray-400 mt-0.5">{b.used} used</p>
+                          <div className={`w-full h-1.5 rounded-full mt-2 ${style.barBg}`}>
+                            <div className={`h-1.5 rounded-full transition-all duration-500 ${style.color}`} style={{ width: `${pct}%` }} />
+                          </div>
+                        </>
+                      ) : (
+                        <>
+                          <p className="text-[11px] font-semibold text-gray-500 mt-2 leading-tight">{PAY_TYPE_LABEL[b.payType] || 'No balance'}</p>
+                          <p className="text-[10px] text-gray-400 mt-0.5">{b.used} used this yr</p>
+                        </>
+                      )}
                     </div>
                   </Card>
                 );
@@ -477,7 +517,7 @@ export default function Leave() {
                 title="No leave requests yet"
                 description="You have not filed any leave request. When you need time off, submit a request and HR will review it."
                 action={
-                  <Button icon={Plus} onClick={() => setIsApplyOpen(true)}>
+                  <Button icon={Plus} onClick={openApply}>
                     Apply for Leave
                   </Button>
                 }
@@ -671,158 +711,298 @@ export default function Leave() {
         )}
       </Modal>
 
-      {/* Apply Leave Modal */}
-      <Modal isOpen={isApplyOpen} onClose={() => { setIsApplyOpen(false); setApplyErrors({}); }} title="Apply for Leave" size="md">
-        <div className="space-y-4">
-          <Select
-            label="Leave Type"
-            value={applyForm.leaveType}
-            onChange={(e) => {
-              const code = e.target.value;
-              const type = (eligibleTypes || []).find((t) => t.code === code);
-              setApplyForm((f) => ({
-                ...f,
-                leaveType: code,
-                acceptSplit: false,
-                // Locked-to-today types (Sick) cannot be planned ahead or backdated - both dates
-                // snap to today the moment the type is picked, matching what min/max then enforce.
-                ...(type?.lockedToToday ? { startDate: todayKey(), endDate: todayKey() } : {}),
-              }));
-            }}
-          >
-            {(eligibleTypes || []).map((t) => (
-              <option key={t.code} value={t.code} disabled={!t.eligible}>
-                {t.name}{!t.eligible && t.ineligibilityReasons[0] ? ` — ${t.ineligibilityReasons[0]}` : ''}
-              </option>
-            ))}
-          </Select>
-          {selectedType && (
-            <p className="text-xs text-gray-500 -mt-1">{describeLeaveType(selectedType)}</p>
-          )}
-          <div className="grid grid-cols-2 gap-4">
-            <Input
-              label="Start Date"
-              type="date"
-              required
-              value={applyForm.startDate}
-              min={selectedType?.lockedToToday ? todayKey() : selectedType?.retroactiveAllowed ? retroMinKey(selectedType.retroactiveWindowDays) : todayKey()}
-              max={selectedType?.lockedToToday ? todayKey() : undefined}
-              disabled={!!selectedType?.lockedToToday}
-              onChange={(e) => {
-                const startDate = e.target.value;
-                setApplyForm((f) => ({
-                  ...f,
-                  startDate,
-                  // Clear a now-invalid end date rather than leave a
-                  // silently-broken range sitting in the form.
-                  endDate: f.endDate && f.endDate < startDate ? '' : f.endDate,
-                }));
-              }}
-              error={applyErrors.startDate}
-            />
-            <Input
-              label="End Date"
-              type="date"
-              required
-              value={applyForm.endDate}
-              min={selectedType?.lockedToToday ? todayKey() : applyForm.startDate || todayKey()}
-              max={selectedType?.lockedToToday ? todayKey() : undefined}
-              disabled={!applyForm.startDate || !!selectedType?.lockedToToday}
-              onChange={(e) => setApplyForm((f) => ({ ...f, endDate: e.target.value }))}
-              error={applyErrors.endDate}
-            />
+      {/* Apply Leave Modal - a guided 3-step flow: type, then dates (with live eligibility/balance/
+          holiday feedback), then a final review before it actually submits. */}
+      <Modal isOpen={isApplyOpen} onClose={() => { setIsApplyOpen(false); setApplyErrors({}); }} title="Apply for Leave" size="lg">
+        <div className="space-y-5">
+          {/* Step indicator */}
+          <div className="flex items-center">
+            {APPLY_STEPS.map((label, i) => {
+              const n = i + 1;
+              const done = applyStep > n;
+              const active = applyStep === n;
+              const reachable = n <= applyStep;
+              return (
+                <div key={label} className={`flex items-center ${n < APPLY_STEPS.length ? 'flex-1' : ''}`}>
+                  <button
+                    type="button"
+                    disabled={!reachable}
+                    onClick={() => reachable && goToStep(n)}
+                    className={`flex items-center gap-2 ${reachable ? 'cursor-pointer' : 'cursor-default'}`}
+                  >
+                    <span className={`w-7 h-7 rounded-full flex items-center justify-center text-xs font-bold shrink-0 transition-colors ${
+                      done ? 'bg-blue-600 text-white' : active ? 'bg-blue-100 text-blue-700 ring-2 ring-blue-500' : 'bg-gray-100 text-gray-400'
+                    }`}>
+                      {done ? <Check className="w-3.5 h-3.5" /> : n}
+                    </span>
+                    <span className={`text-xs font-semibold hidden sm:inline ${active ? 'text-gray-900' : done ? 'text-gray-600' : 'text-gray-400'}`}>{label}</span>
+                  </button>
+                  {n < APPLY_STEPS.length && <div className={`flex-1 h-0.5 mx-2 rounded-full transition-colors ${done ? 'bg-blue-400' : 'bg-gray-200'}`} />}
+                </div>
+              );
+            })}
           </div>
-          {preview && (
-            <div className={`rounded-lg border px-3 py-2 text-[13px] ${preview.days < 1 ? 'border-red-200 bg-red-50 text-red-700' : 'border-blue-200 bg-blue-50 text-blue-800'}`}>
-              {preview.days < 1
-                ? 'These dates have no working days (weekend, holiday or day off). Pick different dates.'
-                : <>
-                    This is <strong>{preview.days} working {preview.days === 1 ? 'day' : 'days'}</strong>
-                    {preview.calendarDays > preview.days && ` (${preview.calendarDays} calendar days; weekends, holidays and days off are not counted)`}.
-                    {!preview.requiresConsent && preview.payType === 'PaidWithBalance' && (
-                      <> Paid from your balance — balance after: <strong>{Math.max((preview.balanceBefore ?? 0) - preview.paidDays, 0)}</strong>.</>
-                    )}
-                    {!preview.requiresConsent && preview.payType === 'PaidWithoutBalance' && (
-                      <> Paid in full, not deducted from any balance.</>
-                    )}
-                    {!preview.requiresConsent && preview.payType === 'Unpaid' && (
-                      <> Unpaid — {preview.unpaidDays} day(s) with no salary. You remain employed and return to work afterward.</>
-                    )}
-                  </>}
-              {Object.keys(preview.holidays || {}).length > 0 && (
-                <div className="text-xs mt-0.5">Holiday: {Object.entries(preview.holidays).map(([d, n]) => `${n} (${formatDate(d)})`).join(', ')}</div>
+
+          {/* Step 1: Type */}
+          {applyStep === 1 && (
+            <div className="space-y-2">
+              <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide">Choose a leave type</p>
+              <div className="space-y-2 max-h-[400px] overflow-y-auto pr-1 -mr-1">
+                {(eligibleTypes || []).map((t) => {
+                  const style = leaveBalanceStyle[t.code] || fallbackBalanceStyle;
+                  const selected = applyForm.leaveType === t.code;
+                  return (
+                    <button
+                      key={t.code}
+                      type="button"
+                      disabled={!t.eligible}
+                      onClick={() => setApplyForm((f) => ({
+                        ...f,
+                        leaveType: t.code,
+                        acceptSplit: false,
+                        // Locked-to-today types (Sick) cannot be planned ahead or backdated - both
+                        // dates snap to today the moment the type is picked.
+                        ...(t.lockedToToday ? { startDate: todayKey(), endDate: todayKey() } : {}),
+                      }))}
+                      className={`w-full text-left flex items-start gap-3 p-3.5 rounded-xl border transition-colors ${
+                        !t.eligible ? 'border-gray-100 bg-gray-50 opacity-60 cursor-not-allowed'
+                          : selected ? 'border-blue-400 bg-blue-50/60 ring-1 ring-blue-400' : 'border-gray-200 hover:border-blue-300 hover:bg-blue-50/40'
+                      }`}
+                    >
+                      <div className={`w-9 h-9 rounded-lg flex items-center justify-center shrink-0 ${style.iconBg}`}>
+                        {style.icon && <style.icon className={`w-4 h-4 ${style.text}`} />}
+                      </div>
+                      <div className="min-w-0 flex-1">
+                        <div className="flex items-center gap-2 flex-wrap">
+                          <p className="text-sm font-semibold text-gray-900">{t.name}</p>
+                          {t.lockedToToday && (
+                            <span className="inline-flex items-center gap-1 text-[10px] font-bold uppercase tracking-wide text-amber-700 bg-amber-100 px-1.5 py-0.5 rounded-full">
+                              <Lock className="w-2.5 h-2.5" /> Today only
+                            </span>
+                          )}
+                        </div>
+                        <p className="text-xs text-gray-500 mt-0.5">
+                          {!t.eligible && t.ineligibilityReasons[0] ? t.ineligibilityReasons[0] : describeLeaveType(t)}
+                        </p>
+                      </div>
+                      {selected && <Check className="w-4 h-4 text-blue-600 shrink-0 mt-1" />}
+                    </button>
+                  );
+                })}
+              </div>
+              {applyErrors.leaveType && <p className="text-xs text-red-500 font-medium">{applyErrors.leaveType}</p>}
+            </div>
+          )}
+
+          {/* Step 2: Dates */}
+          {applyStep === 2 && selectedType && (
+            <div className="space-y-4">
+              <div className="flex items-center gap-2.5 px-3.5 py-2.5 rounded-xl bg-gray-50 border border-gray-100">
+                <div className={`w-8 h-8 rounded-lg flex items-center justify-center shrink-0 ${(leaveBalanceStyle[selectedType.code] || fallbackBalanceStyle).iconBg}`}>
+                  {(() => { const I = (leaveBalanceStyle[selectedType.code] || fallbackBalanceStyle).icon; return I ? <I className={`w-4 h-4 ${(leaveBalanceStyle[selectedType.code] || fallbackBalanceStyle).text}`} /> : null; })()}
+                </div>
+                <div className="min-w-0">
+                  <p className="text-sm font-semibold text-gray-900">{selectedType.name}</p>
+                  <p className="text-xs text-gray-500 truncate">{describeLeaveType(selectedType)}</p>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 gap-4">
+                <Input
+                  label="Start Date"
+                  type="date"
+                  required
+                  value={applyForm.startDate}
+                  min={selectedType.lockedToToday ? todayKey() : selectedType.retroactiveAllowed ? retroMinKey(selectedType.retroactiveWindowDays) : todayKey()}
+                  max={selectedType.lockedToToday ? todayKey() : undefined}
+                  disabled={!!selectedType.lockedToToday}
+                  onChange={(e) => {
+                    const startDate = e.target.value;
+                    setApplyForm((f) => ({
+                      ...f,
+                      startDate,
+                      // Clear a now-invalid end date rather than leave a
+                      // silently-broken range sitting in the form.
+                      endDate: f.endDate && f.endDate < startDate ? '' : f.endDate,
+                    }));
+                  }}
+                  error={applyErrors.startDate}
+                />
+                <Input
+                  label="End Date"
+                  type="date"
+                  required
+                  value={applyForm.endDate}
+                  min={selectedType.lockedToToday ? todayKey() : applyForm.startDate || todayKey()}
+                  max={selectedType.lockedToToday ? todayKey() : undefined}
+                  disabled={!applyForm.startDate || !!selectedType.lockedToToday}
+                  onChange={(e) => setApplyForm((f) => ({ ...f, endDate: e.target.value }))}
+                  error={applyErrors.endDate}
+                />
+              </div>
+              {selectedType.lockedToToday && (
+                <p className="flex items-center gap-1.5 text-xs text-gray-500">
+                  <Lock className="w-3.5 h-3.5 shrink-0" /> {selectedType.name} can only be filed for today — no advance filing, no backdating.
+                </p>
+              )}
+
+              {preview && (
+                <div className={`rounded-lg border px-3 py-2 text-[13px] ${preview.days < 1 ? 'border-red-200 bg-red-50 text-red-700' : 'border-blue-200 bg-blue-50 text-blue-800'}`}>
+                  {preview.days < 1
+                    ? 'These dates have no working days (weekend, holiday or day off). Pick different dates.'
+                    : <>
+                        This is <strong>{preview.days} working {preview.days === 1 ? 'day' : 'days'}</strong>
+                        {preview.calendarDays > preview.days && ` (${preview.calendarDays} calendar days; weekends, holidays and days off are not counted)`}.
+                        {!preview.requiresConsent && preview.payType === 'PaidWithBalance' && (
+                          <> Paid from your balance — balance after: <strong>{Math.max((preview.balanceBefore ?? 0) - preview.paidDays, 0)}</strong>.</>
+                        )}
+                        {!preview.requiresConsent && preview.payType === 'PaidWithoutBalance' && (
+                          <> Paid in full, not deducted from any balance.</>
+                        )}
+                        {!preview.requiresConsent && preview.payType === 'Unpaid' && (
+                          <> Unpaid — {preview.unpaidDays} day(s) with no salary. You remain employed and return to work afterward.</>
+                        )}
+                      </>}
+                  {Object.keys(preview.holidays || {}).length > 0 && (
+                    <div className="text-xs mt-0.5">Holiday: {Object.entries(preview.holidays).map(([d, n]) => `${n} (${formatDate(d)})`).join(', ')}</div>
+                  )}
+                </div>
+              )}
+              {preview?.requiresConsent && !applyForm.acceptSplit && (
+                <div className="rounded-lg border border-amber-200 bg-amber-50 px-3 py-2.5 text-[13px] text-amber-900">
+                  <p>
+                    Only <strong>{preview.balanceBefore}</strong> day(s) of {selectedType.name} remaining —{' '}
+                    <strong>{preview.shortfall}</strong> day(s) short. Take {preview.balanceBefore} day(s) paid and {preview.shortfall} day(s) unpaid?
+                  </p>
+                  <div className="flex gap-2 mt-2">
+                    <Button size="xs" variant="secondary" onClick={() => setApplyForm((f) => ({ ...f, acceptSplit: false }))}>Decline</Button>
+                    <Button size="xs" onClick={() => setApplyForm((f) => ({ ...f, acceptSplit: true }))}>Accept split</Button>
+                  </div>
+                </div>
+              )}
+              {preview?.requiresConsent && applyForm.acceptSplit && (
+                <div className="rounded-lg border border-emerald-200 bg-emerald-50 px-3 py-2.5 text-[13px] text-emerald-900 flex items-center justify-between gap-3">
+                  <span>This will be split: <strong>{preview.balanceBefore}</strong> day(s) paid, <strong>{preview.shortfall}</strong> day(s) unpaid.</span>
+                  <button type="button" className="text-xs font-medium text-emerald-700 hover:text-emerald-900 shrink-0" onClick={() => setApplyForm((f) => ({ ...f, acceptSplit: false }))}>
+                    Change
+                  </button>
+                </div>
               )}
             </div>
           )}
-          {preview?.requiresConsent && !applyForm.acceptSplit && (
-            <div className="rounded-lg border border-amber-200 bg-amber-50 px-3 py-2.5 text-[13px] text-amber-900">
-              <p>
-                Only <strong>{preview.balanceBefore}</strong> day(s) of {selectedType?.name || applyForm.leaveType} remaining —{' '}
-                <strong>{preview.shortfall}</strong> day(s) short. Take {preview.balanceBefore} day(s) paid and {preview.shortfall} day(s) unpaid?
-              </p>
-              <div className="flex gap-2 mt-2">
-                <Button size="xs" variant="secondary" onClick={() => setApplyForm((f) => ({ ...f, acceptSplit: false }))}>Decline</Button>
-                <Button size="xs" onClick={() => setApplyForm((f) => ({ ...f, acceptSplit: true }))}>Accept split</Button>
+
+          {/* Step 3: Review & submit */}
+          {applyStep === 3 && selectedType && (
+            <div className="space-y-4">
+              <div className="rounded-xl border border-gray-200 divide-y divide-gray-100 overflow-hidden">
+                <div className="px-4 py-3 flex items-center justify-between gap-3">
+                  <span className="text-xs font-semibold text-gray-500 uppercase tracking-wide">Type</span>
+                  <span className="text-sm font-semibold text-gray-900">{selectedType.name}</span>
+                </div>
+                <div className="px-4 py-3 flex items-center justify-between gap-3">
+                  <span className="text-xs font-semibold text-gray-500 uppercase tracking-wide">Dates</span>
+                  <span className="text-sm text-gray-700">
+                    {formatDate(applyForm.startDate)}{applyForm.startDate !== applyForm.endDate && ` – ${formatDate(applyForm.endDate)}`}
+                    {preview && <span className="text-gray-400"> · {preview.days} working day{preview.days === 1 ? '' : 's'}</span>}
+                  </span>
+                </div>
+                {preview && (
+                  <div className="px-4 py-3 flex items-center justify-between gap-3">
+                    <span className="text-xs font-semibold text-gray-500 uppercase tracking-wide">Pay</span>
+                    <span className="text-sm text-gray-700 text-right">
+                      {preview.payType === 'PaidWithBalance' && !applyForm.acceptSplit && `${preview.paidDays} day(s) from your balance`}
+                      {preview.payType === 'PaidWithoutBalance' && 'Paid in full, no balance deducted'}
+                      {preview.payType === 'Unpaid' && `Unpaid — ${preview.unpaidDays} day(s), no salary`}
+                      {applyForm.acceptSplit && ` (split: ${preview.paidDays}d paid / ${preview.unpaidDays}d unpaid)`}
+                    </span>
+                  </div>
+                )}
+              </div>
+
+              <Textarea
+                label="Reason"
+                required
+                placeholder="Reason for leave..."
+                rows={3}
+                value={applyForm.reason}
+                onChange={(e) => setApplyForm((f) => ({ ...f, reason: e.target.value }))}
+                error={applyErrors.reason}
+              />
+              <div>
+                <label className="text-[13px] font-medium text-gray-700">
+                  Supporting Document{' '}
+                  <span className="text-gray-400 font-normal">
+                    {selectedType.requiresProof
+                      ? `(required${selectedType.proofThresholdDays > 0 ? ` for requests over ${selectedType.proofThresholdDays} day(s)` : ''}, e.g. medical or death certificate)`
+                      : '(optional proof, e.g. medical certificate)'}
+                  </span>
+                </label>
+                {applyForm.proofFile ? (
+                  <div className="mt-1.5 flex items-center justify-between gap-2 px-3.5 py-2.5 rounded-xl border border-gray-200 bg-gray-50">
+                    <span className="flex items-center gap-2 text-sm text-gray-700 truncate">
+                      <FileText className="w-4 h-4 text-gray-400 shrink-0" />
+                      <span className="truncate">{applyForm.proofFile.name}</span>
+                    </span>
+                    <button
+                      type="button"
+                      onClick={() => setApplyForm((f) => ({ ...f, proofFile: null }))}
+                      className="text-xs font-medium text-gray-400 hover:text-red-600 shrink-0"
+                    >
+                      Remove
+                    </button>
+                  </div>
+                ) : (
+                  <label className="mt-1.5 flex items-center justify-center gap-2 px-3.5 py-2.5 rounded-xl border border-dashed border-gray-300 bg-white text-sm text-gray-500 hover:border-blue-400 hover:text-blue-600 cursor-pointer transition-colors">
+                    <Plus className="w-4 h-4" />
+                    Attach a file
+                    <input type="file" accept="image/*,.pdf" className="hidden" onChange={handleProofSelect} />
+                  </label>
+                )}
+                {proofError && <p className="text-xs text-red-500 font-medium mt-1.5">{proofError}</p>}
+                {applyErrors.documents && <p className="text-xs text-red-500 font-medium mt-1.5">{applyErrors.documents}</p>}
               </div>
             </div>
           )}
-          {preview?.requiresConsent && applyForm.acceptSplit && (
-            <div className="rounded-lg border border-emerald-200 bg-emerald-50 px-3 py-2.5 text-[13px] text-emerald-900 flex items-center justify-between gap-3">
-              <span>This will be split: <strong>{preview.balanceBefore}</strong> day(s) paid, <strong>{preview.shortfall}</strong> day(s) unpaid.</span>
-              <button type="button" className="text-xs font-medium text-emerald-700 hover:text-emerald-900 shrink-0" onClick={() => setApplyForm((f) => ({ ...f, acceptSplit: false }))}>
-                Change
-              </button>
+
+          {/* Step navigation */}
+          <div className="flex items-center justify-between gap-3 pt-3 border-t border-gray-100">
+            <div>
+              {applyStep > 1 && (
+                <Button variant="secondary" icon={ChevronLeft} onClick={() => goToStep(applyStep - 1)}>Back</Button>
+              )}
             </div>
-          )}
-          <Textarea
-            label="Reason"
-            required
-            placeholder="Reason for leave..."
-            rows={3}
-            value={applyForm.reason}
-            onChange={(e) => setApplyForm((f) => ({ ...f, reason: e.target.value }))}
-            error={applyErrors.reason}
-          />
-          <div>
-            <label className="text-[13px] font-medium text-gray-700">
-              Supporting Document{' '}
-              <span className="text-gray-400 font-normal">
-                {selectedType?.requiresProof
-                  ? `(required${selectedType.proofThresholdDays > 0 ? ` for requests over ${selectedType.proofThresholdDays} day(s)` : ''}, e.g. medical or death certificate)`
-                  : '(optional proof, e.g. medical certificate)'}
-              </span>
-            </label>
-            {applyForm.proofFile ? (
-              <div className="mt-1.5 flex items-center justify-between gap-2 px-3.5 py-2.5 rounded-xl border border-gray-200 bg-gray-50">
-                <span className="flex items-center gap-2 text-sm text-gray-700 truncate">
-                  <FileText className="w-4 h-4 text-gray-400 shrink-0" />
-                  <span className="truncate">{applyForm.proofFile.name}</span>
-                </span>
-                <button
-                  type="button"
-                  onClick={() => setApplyForm((f) => ({ ...f, proofFile: null }))}
-                  className="text-xs font-medium text-gray-400 hover:text-red-600 shrink-0"
+            <div className="flex gap-3">
+              <Button variant="secondary" onClick={() => { setIsApplyOpen(false); setApplyErrors({}); }}>
+                Cancel
+              </Button>
+              {applyStep < APPLY_STEPS.length ? (
+                <Button
+                  disabled={applyStep === 1 ? !canLeaveStep1 : !canLeaveStep2}
+                  onClick={() => {
+                    if (applyStep === 1) {
+                      if (!canLeaveStep1) { setApplyErrors({ leaveType: 'Choose an eligible leave type to continue.' }); return; }
+                    } else if (applyStep === 2) {
+                      const errs = {};
+                      if (!applyForm.startDate) errs.startDate = 'Start date is required';
+                      else if (applyForm.startDate < todayKey()) errs.startDate = 'Leave cannot start in the past. Choose today or a later date.';
+                      if (!applyForm.endDate) errs.endDate = 'End date is required';
+                      if (applyForm.startDate && applyForm.endDate && applyForm.startDate > applyForm.endDate) errs.endDate = 'End date must be after start date';
+                      if (Object.keys(errs).length) { setApplyErrors(errs); return; }
+                      if (preview && preview.days < 1) { setApplyErrors({ startDate: 'These dates contain no working days. Choose different dates.' }); return; }
+                      if (preview?.requiresConsent && !applyForm.acceptSplit) { return; }
+                    }
+                    setApplyErrors({});
+                    goToStep(applyStep + 1);
+                  }}
                 >
-                  Remove
-                </button>
-              </div>
-            ) : (
-              <label className="mt-1.5 flex items-center justify-center gap-2 px-3.5 py-2.5 rounded-xl border border-dashed border-gray-300 bg-white text-sm text-gray-500 hover:border-blue-400 hover:text-blue-600 cursor-pointer transition-colors">
-                <Plus className="w-4 h-4" />
-                Attach a file
-                <input type="file" accept="image/*,.pdf" className="hidden" onChange={handleProofSelect} />
-              </label>
-            )}
-            {proofError && <p className="text-xs text-red-500 font-medium mt-1.5">{proofError}</p>}
-            {applyErrors.documents && <p className="text-xs text-red-500 font-medium mt-1.5">{applyErrors.documents}</p>}
-          </div>
-          <div className="flex justify-end gap-3 pt-2">
-            <Button variant="secondary" onClick={() => { setIsApplyOpen(false); setApplyErrors({}); }}>
-              Cancel
-            </Button>
-            <Button icon={CheckCircle} onClick={handleApplyLeave} disabled={preview?.requiresConsent && !applyForm.acceptSplit}>
-              Submit Request
-            </Button>
+                  Next
+                </Button>
+              ) : (
+                <Button icon={CheckCircle} onClick={handleApplyLeave} disabled={preview?.requiresConsent && !applyForm.acceptSplit}>
+                  Submit Request
+                </Button>
+              )}
+            </div>
           </div>
         </div>
       </Modal>

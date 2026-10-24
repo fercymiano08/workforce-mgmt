@@ -110,11 +110,15 @@ class ShiftHours
 
         // A day worked on a holiday moves its regular hours into one holiday bucket instead of the
         // other, so the same hour is never paid as both plain regular and holiday premium. Overtime
-        // keeps its own separate treatment either way - the two premiums are not stacked here.
+        // keeps its own separate treatment either way - the two premiums are not stacked here. A
+        // 'special_working' day is deliberately left alone: DOLE pays it exactly like an ordinary
+        // day (100% worked, no premium), so reclassifying it would just move hours into a bucket
+        // worth the same as the one they started in - holidayType below still reports it, the hours
+        // themselves do not move.
         $holiday = Holiday::query()->where('date', $clockIn->toDateString())->first();
         $regularHoliday = 0.0;
         $specialHoliday = 0.0;
-        if ($holiday) {
+        if ($holiday && $holiday->type !== 'special_working') {
             if ($holiday->type === 'special_non_working') {
                 $specialHoliday = $regular;
             } else {

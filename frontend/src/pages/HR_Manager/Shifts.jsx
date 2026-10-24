@@ -32,6 +32,15 @@ const shiftBadgeVariant = { SHIFT004: 'primary', SHIFT005: 'danger' };
 const statusVariant = { Scheduled: 'primary', Cancelled: 'danger' };
 const STATUS_OPTIONS = ['Scheduled', 'Cancelled'];
 
+// DOLE's three holiday-pay categories (Art. 94 regular, Art. 93 special non-working, and the
+// yearly-proclaimed special working day, which pays exactly like an ordinary day).
+const HOLIDAY_META = {
+  regular: { label: 'Regular holiday', rate: '200%', note: '200% if worked', badge: 'bg-red-100 text-red-700' },
+  special_non_working: { label: 'Special non-working day', rate: '130%', note: '130% if worked', badge: 'bg-amber-100 text-amber-700' },
+  special_working: { label: 'Special working day', rate: '100%', note: 'no premium — paid as an ordinary day', badge: 'bg-gray-200 text-gray-600' },
+};
+const holidayMeta = (type) => HOLIDAY_META[type] || HOLIDAY_META.regular;
+
 const toDateKey = (d) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
 const addDays = (d, n) => { const x = new Date(d); x.setDate(x.getDate() + n); return x; };
 const startOfWeek = (d) => addDays(d, -((d.getDay() + 6) % 7));
@@ -376,13 +385,13 @@ export default function Shifts() {
                 key={dateK}
                 type="button"
                 onClick={() => setDayDetailDate(dateK)}
-                title={holiday ? `${holiday.name} (${holiday.type === 'special_non_working' ? 'Special non-working day — 130% if worked' : 'Regular holiday — 200% if worked'})` : undefined}
+                title={holiday ? `${holiday.name} (${holidayMeta(holiday.type).label} — ${holidayMeta(holiday.type).note})` : undefined}
                 className={`min-h-[92px] w-full border-r border-b border-gray-50 last:border-r-0 p-2 flex flex-col items-center gap-1.5 transition-colors hover:bg-blue-50/40 ${isToday ? 'bg-blue-50/40' : holiday ? 'bg-amber-50/60' : ''} ${!inMonth ? 'opacity-40' : ''}`}
               >
                 <span className={`text-xs font-semibold ${isToday ? 'text-blue-600' : holiday ? 'text-amber-700' : 'text-gray-700'}`}>{dayDate.getDate()}</span>
                 {holiday && (
-                  <span className={`text-[9px] font-bold px-1 py-0.5 rounded-full truncate max-w-full ${holiday.type === 'special_non_working' ? 'bg-amber-100 text-amber-700' : 'bg-red-100 text-red-700'}`}>
-                    {holiday.type === 'special_non_working' ? '130%' : '200%'}
+                  <span className={`text-[9px] font-bold px-1 py-0.5 rounded-full truncate max-w-full ${holidayMeta(holiday.type).badge}`}>
+                    {holidayMeta(holiday.type).rate}
                   </span>
                 )}
                 {daySchedules.length > 0 && (
@@ -422,7 +431,7 @@ export default function Shifts() {
             <div className="mb-4 rounded-xl bg-amber-50 border border-amber-200 px-4 py-3">
               <p className="text-sm font-semibold text-amber-800">{holiday.name}</p>
               <p className="text-xs text-amber-700 mt-0.5">
-                {holiday.type === 'special_non_working' ? 'Special non-working day' : 'Regular holiday'} — anyone scheduled and working this day is paid {holiday.type === 'special_non_working' ? '130%' : '200%'} for hours worked.
+                {holidayMeta(holiday.type).label} — anyone scheduled and working this day is paid {holidayMeta(holiday.type).rate === '100%' ? 'the ordinary rate (no premium)' : `${holidayMeta(holiday.type).rate} for hours worked`}.
               </p>
             </div>
           );
@@ -640,7 +649,7 @@ export default function Shifts() {
               {formData.date && <p className="text-xs text-gray-400 mt-1.5">{new Date(`${formData.date}T00:00:00`).toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}</p>}
               {formData.date && holidaysByDate[formData.date] && (
                 <p className="text-xs font-semibold text-amber-700 mt-1">
-                  {holidaysByDate[formData.date].name} — {holidaysByDate[formData.date].type === 'special_non_working' ? 'special non-working day, 130%' : 'regular holiday, 200%'} pay if worked.
+                  {holidaysByDate[formData.date].name} — {holidayMeta(holidaysByDate[formData.date].type).label.toLowerCase()}, {holidayMeta(holidaysByDate[formData.date].type).note}.
                 </p>
               )}
             </div>

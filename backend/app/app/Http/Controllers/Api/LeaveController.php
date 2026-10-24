@@ -64,11 +64,13 @@ class LeaveController extends Controller
             return response()->json(['data' => $employee->leaveBalances()]);
         }
 
-        // No employee to read a ledger for yet - zero balances for every balance-requiring type,
-        // rather than guessing at a default total (there is no such thing anymore; balance is
+        // No employee to read a ledger (or leave history) for yet - zero/empty for every active
+        // type, rather than guessing at a default total (there is no such thing anymore; balance is
         // entirely ledger-accrued).
-        $data = LeaveType::where('requires_balance', true)->where('active', true)->get()
-            ->map(fn (LeaveType $type) => ['type' => $type->code, 'total' => 0.0, 'used' => 0.0, 'remaining' => 0.0])
+        $data = LeaveType::where('active', true)->get()
+            ->map(fn (LeaveType $type) => $type->requires_balance
+                ? ['type' => $type->code, 'requiresBalance' => true, 'total' => 0.0, 'used' => 0.0, 'remaining' => 0.0]
+                : ['type' => $type->code, 'requiresBalance' => false, 'payType' => $type->pay_type, 'used' => 0.0, 'maxConsecutiveDays' => $type->max_consecutive_days])
             ->values()->all();
 
         return response()->json(['data' => $data]);

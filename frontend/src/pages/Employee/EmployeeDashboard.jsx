@@ -260,7 +260,7 @@ export default function EmployeeDashboard() {
   }, [myAttendance]);
 
   const leaveBalance = useMemo(() => {
-    const balances = leaveBalances || [];
+    const balances = (leaveBalances || []).filter((b) => b.requiresBalance);
     const vacation = balances.find((b) => b.type === 'Vacation');
     if (vacation) return vacation.remaining;
     return balances.reduce((sum, b) => sum + b.remaining, 0);

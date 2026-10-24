@@ -155,7 +155,9 @@ export default function EmployeeDetailModal({ employeeId, period, isOpen, onClos
                       <tr key={r.type}>
                         <td className="py-2.5 pr-4 font-medium text-gray-800">{LEAVE_TYPE_SHORT[r.type] || r.type}</td>
                         <td className="py-2.5 pr-4 text-gray-600">{r.usedThisPeriod}d</td>
-                        <td className="py-2.5 pr-4 text-gray-600">{r.remaining} / {r.total}d</td>
+                        <td className="py-2.5 pr-4 text-gray-600">
+                          {r.requiresBalance ? `${r.remaining} / ${r.total}d` : <span className="text-gray-400">No balance — paid as needed</span>}
+                        </td>
                       </tr>
                     ))}
                   </tbody>

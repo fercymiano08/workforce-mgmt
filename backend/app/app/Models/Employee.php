@@ -136,40 +136,59 @@ class Employee extends Model
     }
 
     /**
-     * Leave balances in the shape the frontend Leave page expects:
-     * [{ type, total, used, remaining }, ...]. Only balance-requiring active types are included -
-     * a type like Maternity or Unpaid genuinely has no balance to show. Derived entirely from the
-     * ledger (SUM of positive vs. negative entries), never from a stored total.
+     * Leave balances in the shape the frontend Leave page expects, one row per active leave type -
+     * not just the balance-requiring ones. A type like Maternity or Unpaid has no ledger balance to
+     * show (requiresBalance: false instead), but it is still a real leave type an employee can file,
+     * so it still gets a card: 'used' there is this calendar year's approved days, read from Leave
+     * rows directly since nothing without a balance ever gets a ledger entry.
      *
-     * @return list<array{type: string, total: float, used: float, remaining: float}>
+     * @return list<array{type: string, requiresBalance: bool, total?: float, used: float, remaining?: float, payType?: string, maxConsecutiveDays?: ?int}>
      */
     public function leaveBalances(): array
     {
-        $types = LeaveType::where('requires_balance', true)->where('active', true)->get();
-        if ($types->isEmpty()) {
-            return [];
-        }
+        $allTypes = LeaveType::where('active', true)->get();
+        $balanceTypes = $allTypes->where('requires_balance', true);
+        $otherTypes = $allTypes->where('requires_balance', false);
 
         // One query for every type's ledger rows, not one per type - toApiArray() calls this for
         // every employee on a list endpoint (e.g. GET /employees), so this was the difference
         // between 2 queries per employee and up to 2x(number of balance-requiring types).
-        $rowsByType = LeaveBalanceLedger::where('employee_id', $this->id)
-            ->whereIn('leave_type_code', $types->pluck('code'))
+        $rowsByType = $balanceTypes->isEmpty() ? collect() : LeaveBalanceLedger::where('employee_id', $this->id)
+            ->whereIn('leave_type_code', $balanceTypes->pluck('code'))
             ->get()
             ->groupBy('leave_type_code');
 
-        return $types->map(function (LeaveType $type) use ($rowsByType) {
+        $balanceRows = $balanceTypes->map(function (LeaveType $type) use ($rowsByType) {
             $rows = $rowsByType->get($type->code, collect());
             $total = (float) $rows->where('days_delta', '>', 0)->sum('days_delta');
             $used = (float) abs($rows->where('days_delta', '<', 0)->sum('days_delta'));
 
             return [
                 'type' => $type->code,
+                'requiresBalance' => true,
                 'total' => $total,
                 'used' => $used,
                 'remaining' => max($total - $used, 0),
             ];
-        })->values()->all();
+        });
+
+        // Same one-query-for-everyone discipline as above - grouped once, not queried per type.
+        $usedByType = $otherTypes->isEmpty() ? collect() : Leave::where('employee_id', $this->id)
+            ->where('status', 'Approved')
+            ->whereIn('leave_type', $otherTypes->pluck('code'))
+            ->whereYear('start_date', now()->year)
+            ->get()
+            ->groupBy('leave_type');
+
+        $otherRows = $otherTypes->map(fn (LeaveType $type) => [
+            'type' => $type->code,
+            'requiresBalance' => false,
+            'payType' => $type->pay_type,
+            'used' => (float) $usedByType->get($type->code, collect())->sum('days'),
+            'maxConsecutiveDays' => $type->max_consecutive_days,
+        ]);
+
+        return $balanceRows->concat($otherRows)->values()->all();
     }
 
     public function toApiArray(): array
