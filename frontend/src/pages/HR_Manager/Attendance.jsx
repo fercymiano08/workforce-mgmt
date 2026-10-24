@@ -397,7 +397,7 @@ export default function Attendance() {
             </thead>
             <tbody className="divide-y divide-gray-50">
               {filtered.length === 0 ? (
-                <tr><td colSpan={9} className="px-4 py-12 text-center text-gray-400 text-sm">No attendance records found</td></tr>
+                <tr><td colSpan={10} className="px-4 py-12 text-center text-gray-400 text-sm">No attendance records found</td></tr>
               ) : (
                 paginated.map((a, i) => (
                   <tr key={a.id || i} className="hover:bg-gray-50/50 transition-colors">
@@ -414,6 +414,7 @@ export default function Attendance() {
                     <td className="px-4 py-3.5 text-sm text-gray-700">{a.clockIn ? formatTime(a.clockIn) : '-'}</td>
                     <td className="px-4 py-3.5 text-sm text-gray-700">{a.clockOut ? formatTime(a.clockOut) : <span className="text-amber-500 italic">Still in</span>}</td>
                     <td className="px-4 py-3.5 text-sm text-gray-700 font-medium">{a.clockIn && a.clockOut ? `${formatHours(a.regularHours)}h` : '-'}</td>
+                    <td className="px-4 py-3.5 text-sm text-gray-700">{a.clockIn && a.clockOut ? `${formatHours(a.breakHours || 0)}h` : '-'}</td>
                     <td className="px-4 py-3.5 text-sm text-gray-700">
                       {a.overtime > 0 ? (
                         <span className="flex items-center gap-1">
