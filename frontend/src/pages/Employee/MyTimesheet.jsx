@@ -25,12 +25,11 @@ import { periodStartOf, periodEndOf, daysInPeriod } from '../../utils/payPeriod'
 
 const hours = (value) => `${Number(value || 0).toFixed(1)}h`;
 
-const WORKED_STATUSES = ['Present', 'Late', 'Half Day'];
+const WORKED_STATUSES = ['Present', 'Late'];
 
 const ATTENDANCE_STATUS_VARIANT = {
   Present: 'success',
   Late: 'warning',
-  'Half Day': 'warning',
   'On Leave': 'purple',
   Leave: 'purple',
   Absent: 'danger',

@@ -36,7 +36,7 @@ import {
 
 const statusVariant = {
   Present: 'success', Late: 'warning', Absent: 'danger',
-  'Half Day': 'info', 'Early Leave': 'amber', 'On Leave': 'default',
+  'Early Leave': 'amber', 'On Leave': 'default',
 };
 
 const overtimeStatusVariant = {
@@ -368,7 +368,7 @@ export default function MyAttendance() {
           <TableShell minWidth="min-w-[760px]">
             <table className="w-full">
               <thead>
-                <tr className="border-t border-b border-gray-100">
+                <tr className="border-b border-gray-200 bg-gray-50/80">
                   {['Date', 'Expected Hours', 'Reason', 'Status', ''].map((h) => (
                     <th key={h} className="px-6 py-2.5 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider bg-gray-50">
                       {h}
@@ -376,19 +376,19 @@ export default function MyAttendance() {
                   ))}
                 </tr>
               </thead>
-              <tbody className="divide-y divide-gray-50">
+              <tbody className="divide-y divide-gray-100">
                 {myOvertimeRequests.map((req) => (
-                  <tr key={req.id} className={`hover:bg-gray-50/50 transition-colors ${todayRowClass(req.date)}`}>
-                    <td className="px-6 py-3.5 text-sm text-gray-900 font-medium whitespace-nowrap">
+                  <tr key={req.id} className={`hover:bg-blue-50/30 transition-colors ${todayRowClass(req.date)}`}>
+                    <td className="px-6 py-4 text-sm text-gray-900 font-medium whitespace-nowrap">
                       <span className="inline-flex items-center gap-2">{formatDate(req.date)}{req.date === todayDay && <TodayBadge />}</span>
                     </td>
-                    <td className="px-6 py-3.5 text-sm text-gray-700 whitespace-nowrap">
+                    <td className="px-6 py-4 text-sm text-gray-700 whitespace-nowrap">
                       {req.status === 'Approved' && req.approvedHours != null
                         ? <span className="text-emerald-700 font-medium">{formatHours(req.approvedHours)}h approved</span>
                         : req.expectedHours ? `${formatHours(req.expectedHours)}h` : '—'}
                     </td>
-                    <td className="px-6 py-3.5 text-sm text-gray-600 max-w-xs truncate">{req.reason}</td>
-                    <td className="px-6 py-3.5">
+                    <td className="px-6 py-4 text-sm text-gray-600 max-w-xs truncate">{req.reason}</td>
+                    <td className="px-6 py-4">
                       <Badge variant={overtimeStatusVariant[req.status] || 'default'} dot size="xs">{req.status}</Badge>
                       {req.status === 'Approved' && (() => {
                         const actual = records?.find(a => a.employeeId === employeeId && a.date === req.date)?.overtime || 0;
@@ -402,7 +402,7 @@ export default function MyAttendance() {
                         return <p className="text-xs text-gray-400 mt-1">Not clocked yet</p>;
                       })()}
                     </td>
-                    <td className="px-6 py-3.5 text-right">
+                    <td className="px-6 py-4 text-right">
                       {req.status === 'Pending' && (
                         <Button
                           variant="ghost"
@@ -446,24 +446,24 @@ export default function MyAttendance() {
               <TableShell minWidth="min-w-[560px]">
                 <table className="w-full">
                   <thead>
-                    <tr className="border-b border-gray-100 bg-gray-50/50">
+                    <tr className="border-b border-gray-200 bg-gray-50/80">
                       {['Date', 'Clocked Out At', 'Scheduled End', 'Time Lost', 'Reason', 'Classification', ''].map((h) => (
                         <th key={h} className="px-6 py-2.5 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">{h}</th>
                       ))}
                     </tr>
                   </thead>
-                  <tbody className="divide-y divide-gray-50">
+                  <tbody className="divide-y divide-gray-100">
                     {earlyOutRecords.map((rec) => {
                       const classificationMeta = EARLY_CLOCKOUT_CLASSIFICATION_META[rec.classification] || EARLY_CLOCKOUT_CLASSIFICATION_META.PENDING_REVIEW;
                       return (
-                        <tr key={rec.id} className={`hover:bg-gray-50/50 transition-colors ${todayRowClass(rec.date)}`}>
-                          <td className="px-6 py-3.5 text-sm text-gray-900 font-medium whitespace-nowrap">
+                        <tr key={rec.id} className={`hover:bg-blue-50/30 transition-colors ${todayRowClass(rec.date)}`}>
+                          <td className="px-6 py-4 text-sm text-gray-900 font-medium whitespace-nowrap">
                             <span className="inline-flex items-center gap-2">{formatDate(rec.date)}{rec.date === todayDay && <TodayBadge />}</span>
                           </td>
-                          <td className="px-6 py-3.5 text-sm text-gray-700 tabular-nums">{formatTime(rec.actualClockOutTime)}</td>
-                          <td className="px-6 py-3.5 text-sm text-gray-500 tabular-nums">{formatTime(rec.scheduledEndTime)}</td>
-                          <td className="px-6 py-3.5 text-sm text-amber-600 font-medium">{formatMinutesShort(rec.minutesEarly)}</td>
-                          <td className="px-6 py-3.5 text-sm text-gray-700">
+                          <td className="px-6 py-4 text-sm text-gray-700 tabular-nums">{formatTime(rec.actualClockOutTime)}</td>
+                          <td className="px-6 py-4 text-sm text-gray-500 tabular-nums">{formatTime(rec.scheduledEndTime)}</td>
+                          <td className="px-6 py-4 text-sm text-amber-600 font-medium">{formatMinutesShort(rec.minutesEarly)}</td>
+                          <td className="px-6 py-4 text-sm text-gray-700">
                             {rec.reasonCode ? (
                               <span className="font-medium">{EARLY_CLOCKOUT_REASON_LABELS[rec.reasonCode] || rec.reasonCode}</span>
                             ) : (
@@ -473,7 +473,7 @@ export default function MyAttendance() {
                               <p className="text-xs text-gray-400 mt-0.5 max-w-[220px] truncate" title={rec.reasonNote}>{rec.reasonNote}</p>
                             )}
                           </td>
-                          <td className="px-6 py-3.5">
+                          <td className="px-6 py-4">
                             <Badge variant={classificationMeta.variant} dot size="xs">{classificationMeta.label}</Badge>
                             {EARLY_CLOCKOUT_REASON_STATUS_META[rec.reasonStatus] && (
                               <div className="mt-1">
@@ -488,7 +488,7 @@ export default function MyAttendance() {
                               </div>
                             )}
                           </td>
-                          <td className="px-6 py-3.5 text-right">
+                          <td className="px-6 py-4 text-right">
                             <button
                               onClick={() => openEarlyReasonModal(rec)}
                               className="inline-flex items-center gap-1 text-xs font-semibold text-blue-600 hover:text-blue-700 transition-colors"
@@ -542,8 +542,8 @@ export default function MyAttendance() {
             <table className="w-full">
             <thead>
               <tr className="border-b border-gray-200 bg-gray-50/80">
-                {['Date', 'Day', 'Clock In', 'Clock Out', 'Regular Hours', 'Overtime', 'Total Hours', 'Status', 'Location'].map((h) => (
-                  <th key={h} className="sticky top-0 z-10 px-6 py-3.5 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider bg-gray-50/90">
+                {['Date', 'Day', 'Clock In', 'Clock Out', 'Regular Hours', 'Break', 'Overtime', 'Total Hours', 'Status', 'Location'].map((h) => (
+                  <th key={h} className="sticky top-0 z-10 px-6 py-4 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider bg-gray-50/90">
                     {h}
                   </th>
                 ))}
@@ -552,7 +552,7 @@ export default function MyAttendance() {
             <tbody className="divide-y divide-gray-100">
               {filtered.length === 0 ? (
                 <tr>
-                  <td colSpan={9} className="px-6 py-12 text-center text-gray-400 text-sm">
+                  <td colSpan={10} className="px-6 py-12 text-center text-gray-400 text-sm">
                     No attendance records found
                   </td>
                 </tr>
@@ -584,6 +584,13 @@ export default function MyAttendance() {
                           `${formatHours(a.regularHours)}h`
                         ) : inProgress ? (
                           <span className="text-amber-500 italic">In Progress</span>
+                        ) : (
+                          <span className="text-gray-400">—</span>
+                        )}
+                      </td>
+                      <td className="px-6 py-4 text-sm text-gray-700">
+                        {finalized ? (
+                          a.breakHours != null ? `${formatHours(a.breakHours)}h` : '—'
                         ) : (
                           <span className="text-gray-400">—</span>
                         )}

@@ -31,7 +31,7 @@ import {
   EARLY_CLOCKOUT_CLASSIFICATION_OPTIONS,
 } from '../../utils/constants';
 
-const statusVariant = { Present: 'success', Late: 'warning', Absent: 'danger', 'Half Day': 'info', 'Early Leave': 'amber', 'On Leave': 'default' };
+const statusVariant = { Present: 'success', Late: 'warning', Absent: 'danger', 'Early Leave': 'amber', 'On Leave': 'default' };
 const overtimeStatusVariant = { Pending: 'warning', Approved: 'success', Rejected: 'danger', Cancelled: 'default' };
 
 function formatMinutesShort(minutes) {
@@ -313,7 +313,7 @@ export default function Attendance() {
           <button
             key={tab.key}
             onClick={() => setActiveTab(tab.key)}
-            className={`shrink-0 whitespace-nowrap px-4 py-2.5 text-sm font-medium transition-colors ${
+            className={`shrink-0 whitespace-nowrap px-6 py-3.5 text-sm font-medium transition-colors ${
               activeTab === tab.key ? 'bg-blue-50 text-blue-600' : 'text-gray-500 hover:bg-gray-50'
             }`}
           >
@@ -384,7 +384,7 @@ export default function Attendance() {
               />
               <FilterMenu label="Status" value={statusFilter} defaultValue="All" className="min-w-[10rem]"
                 onChange={(v) => { setStatusFilter(v); setCurrentPage(1); }}
-                options={[['All', 'All statuses'], ['Present', 'Present'], ['Late', 'Late'], ['Absent', 'Absent'], ['Half Day', 'Half Day'], ['Early Leave', 'Early Leave'], ['On Leave', 'On Leave']].map(([value, label]) => ({ value, label }))} />
+                options={[['All', 'All statuses'], ['Present', 'Present'], ['Late', 'Late'], ['Absent', 'Absent'], ['Early Leave', 'Early Leave'], ['On Leave', 'On Leave']].map(([value, label]) => ({ value, label }))} />
             </div>
           </div>
         </div>
@@ -534,31 +534,31 @@ export default function Attendance() {
             <TableShell minWidth="min-w-[640px]">
               <table className="w-full">
                 <thead>
-                  <tr className="border-b border-gray-100 bg-gray-50/30">
+                  <tr className="border-b border-gray-200 bg-gray-50/80">
                     {['Employee', 'Department', 'Date', 'Expected Hours', 'Reason', 'Status', ''].map(h => (
-                      <th key={h} className="px-4 py-2.5 text-left text-[10px] font-semibold text-gray-400 uppercase tracking-wider">{h}</th>
+                      <th key={h} className="px-6 py-3.5 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">{h}</th>
                     ))}
                   </tr>
                 </thead>
-                <tbody className="divide-y divide-gray-50">
+                <tbody className="divide-y divide-gray-100">
                   {filteredOvertime.map((r) => (
-                    <tr key={r.id} className="transition-colors hover:bg-gray-50/50">
-                      <td className="px-4 py-3.5">
+                    <tr key={r.id} className="transition-colors hover:bg-blue-50/30">
+                      <td className="px-6 py-4">
                         <div className="flex items-center gap-3">
                           <Avatar firstName={r.firstName} lastName={r.lastName} size="sm" src={r.avatar} />
                           <p className="font-medium text-sm text-gray-900">{r.firstName} {r.lastName}</p>
                         </div>
                       </td>
-                      <td className="px-4 py-3.5 text-sm text-gray-500 whitespace-nowrap">{r.department || 'Unassigned'}</td>
-                      <td className="px-4 py-3.5 text-sm text-gray-700 whitespace-nowrap">{formatDate(r.date)}</td>
-                      <td className="px-4 py-3.5 text-sm text-gray-700 whitespace-nowrap">
+                      <td className="px-6 py-4 text-sm text-gray-500 whitespace-nowrap">{r.department || 'Unassigned'}</td>
+                      <td className="px-6 py-4 text-sm text-gray-700 whitespace-nowrap">{formatDate(r.date)}</td>
+                      <td className="px-6 py-4 text-sm text-gray-700 whitespace-nowrap">
                         {r.status === 'Approved' && r.approvedHours != null
                           ? <span><span className="font-medium text-gray-900">{formatHours(r.approvedHours)}h</span> <span className="text-gray-400">(of {r.expectedHours ? `${formatHours(r.expectedHours)}h` : '-'})</span></span>
                           : r.expectedHours ? `${formatHours(r.expectedHours)}h` : '-'}
                       </td>
-                      <td className="px-4 py-3.5 text-sm text-gray-600 max-w-[16rem] truncate" title={r.reason}>{r.reason}</td>
-                      <td className="px-4 py-3.5"><Badge variant={overtimeStatusVariant[r.status] || 'default'} dot size="xs">{r.status}</Badge></td>
-                      <td className="px-4 py-3.5">
+                      <td className="px-6 py-4 text-sm text-gray-600 max-w-[16rem] truncate" title={r.reason}>{r.reason}</td>
+                      <td className="px-6 py-4"><Badge variant={overtimeStatusVariant[r.status] || 'default'} dot size="xs">{r.status}</Badge></td>
+                      <td className="px-6 py-4">
                         {/* The only way into an overtime decision, so it cannot be a bare word
                             with no padding around it - on a phone that is not a tap target. */}
                         <button
@@ -634,18 +634,18 @@ export default function Attendance() {
           <TableShell minWidth="min-w-[760px]">
             <table className="w-full">
               <thead>
-                <tr className="border-b border-gray-100 bg-gray-50/30">
+                <tr className="border-b border-gray-200 bg-gray-50/80">
                   {['Employee', 'Date', 'Clocked Out', 'Scheduled End', 'Time Lost', 'Reason', 'Classification', ''].map(h => (
-                    <th key={h} className="px-4 py-2.5 text-left text-[10px] font-semibold text-gray-400 uppercase tracking-wider">{h}</th>
+                    <th key={h} className="px-6 py-3.5 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">{h}</th>
                   ))}
                 </tr>
               </thead>
-              <tbody className="divide-y divide-gray-50">
+              <tbody className="divide-y divide-gray-100">
                 {filteredEarly.map((rec) => {
                   const meta = EARLY_CLOCKOUT_CLASSIFICATION_META[rec.classification] || EARLY_CLOCKOUT_CLASSIFICATION_META.PENDING_REVIEW;
                   return (
-                    <tr key={rec.id} className="hover:bg-gray-50/50 transition-colors">
-                      <td className="px-4 py-3.5">
+                    <tr key={rec.id} className="hover:bg-blue-50/30 transition-colors">
+                      <td className="px-6 py-4">
                         <div className="flex items-center gap-3">
                           <Avatar firstName={rec.firstName} lastName={rec.lastName} size="sm" src={rec.avatar} />
                           <div>
@@ -654,11 +654,11 @@ export default function Attendance() {
                           </div>
                         </div>
                       </td>
-                      <td className="px-4 py-3.5 text-sm text-gray-700 whitespace-nowrap">{formatDate(rec.date)}</td>
-                      <td className="px-4 py-3.5 text-sm text-gray-700 tabular-nums">{formatTime(rec.actualClockOutTime)}</td>
-                      <td className="px-4 py-3.5 text-sm text-gray-500 tabular-nums">{formatTime(rec.scheduledEndTime)}</td>
-                      <td className="px-4 py-3.5 text-sm text-amber-600 font-medium">{formatMinutesShort(rec.minutesEarly)}</td>
-                      <td className="px-4 py-3.5 text-sm text-gray-600 max-w-[220px]">
+                      <td className="px-6 py-4 text-sm text-gray-700 whitespace-nowrap">{formatDate(rec.date)}</td>
+                      <td className="px-6 py-4 text-sm text-gray-700 tabular-nums">{formatTime(rec.actualClockOutTime)}</td>
+                      <td className="px-6 py-4 text-sm text-gray-500 tabular-nums">{formatTime(rec.scheduledEndTime)}</td>
+                      <td className="px-6 py-4 text-sm text-amber-600 font-medium">{formatMinutesShort(rec.minutesEarly)}</td>
+                      <td className="px-6 py-4 text-sm text-gray-600 max-w-[220px]">
                         {rec.reasonCode ? (
                           <span className="font-medium text-gray-900">{EARLY_CLOCKOUT_REASON_LABELS[rec.reasonCode] || rec.reasonCode}</span>
                         ) : (
@@ -675,8 +675,8 @@ export default function Attendance() {
                           </div>
                         )}
                       </td>
-                      <td className="px-4 py-3.5"><Badge variant={meta.variant} dot size="xs">{meta.label}</Badge></td>
-                      <td className="px-4 py-3.5 text-right">
+                      <td className="px-6 py-4"><Badge variant={meta.variant} dot size="xs">{meta.label}</Badge></td>
+                      <td className="px-6 py-4 text-right">
                         <button onClick={() => openEarly(rec)} className="text-xs font-semibold text-blue-600 hover:text-blue-700 transition-colors">
                           {rec.classification === 'PENDING_REVIEW' ? 'Classify' : 'Review'}
                         </button>

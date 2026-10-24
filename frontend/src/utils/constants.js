@@ -5,7 +5,7 @@
 // leaving, so it stays its own category and is not inside Present.
 export const isPresentGroup = (status) => status === 'Present' || status === 'Late';
 
-export const ATTENDED_STATUSES = ['Present', 'Late', 'Early Leave', 'Half Day'];
+export const ATTENDED_STATUSES = ['Present', 'Late', 'Early Leave'];
 export const didAttend = (status) => ATTENDED_STATUSES.includes(status);
 
 // "Probationary" is not in this list on purpose: it is a status derived from how recently someone

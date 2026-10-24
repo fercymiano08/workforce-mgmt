@@ -28,15 +28,18 @@ export function attendanceFlagsFor(a) {
     const flags = [];
 
     if (a.clockIn && !a.clockOut) {
-        flags.push({ key: 'missing_clock_out', tone: 'amber', label: 'Missing clock-out' });
+        const meta = ATTENDANCE_FLAG_META.missing_clock_out;
+        flags.push({ key: 'missing_clock_out', tone: meta.tone, label: meta.label });
     }
 
     if (a.status === 'Late') {
-        flags.push({ key: 'late', tone: 'red', label: a.lateMinutes > 0 ? 'Late - ' + a.lateMinutes + 'm' : 'Late' });
+        const meta = ATTENDANCE_FLAG_META.late;
+        flags.push({ key: 'late', tone: meta.tone, label: a.lateMinutes > 0 ? 'Late - ' + a.lateMinutes + 'm' : meta.label });
     }
 
     if (a.undertimeMinutes > 0) {
-        flags.push({ key: 'early', tone: 'amber', label: 'Early - ' + a.undertimeMinutes + 'm' });
+        const meta = ATTENDANCE_FLAG_META.early;
+        flags.push({ key: 'early', tone: meta.tone, label: 'Early - ' + a.undertimeMinutes + 'm' });
     }
 
     return flags;
