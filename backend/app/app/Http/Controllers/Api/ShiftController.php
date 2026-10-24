@@ -6,6 +6,7 @@ use App\Http\Controllers\Api\Concerns\AuthorizesEmployeeScope;
 use App\Http\Controllers\Api\Concerns\GeneratesSequentialIds;
 use App\Http\Controllers\Controller;
 use App\Models\Employee;
+use App\Models\Holiday;
 use App\Models\Leave;
 use App\Models\ShiftDefinition;
 use App\Models\ShiftSchedule;
@@ -23,6 +24,14 @@ class ShiftController extends Controller
     {
         return response()->json([
             'data' => ShiftDefinition::orderBy('id')->get()->map->toApiArray()->values(),
+        ]);
+    }
+
+    /** Read-only reference data, same as definitions() - any authenticated user may see which days are holidays. */
+    public function holidays(): JsonResponse
+    {
+        return response()->json([
+            'data' => Holiday::orderBy('date')->get()->map->toApiArray()->values(),
         ]);
     }
 

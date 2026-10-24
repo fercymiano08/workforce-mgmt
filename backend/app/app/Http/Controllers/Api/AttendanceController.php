@@ -259,6 +259,8 @@ class AttendanceController extends Controller
             'clock_out' => $hours['countedOut']->format('H:i:s'),
             'actual_clock_out' => Carbon::parse($clockOut)->format('H:i:s'),
             'regular_hours' => $hours['regular'],
+            'regular_holiday_hours' => $hours['regularHoliday'],
+            'special_holiday_hours' => $hours['specialHoliday'],
             'overtime' => $hours['overtime'],
             'total_hours' => $hours['total'],
             'break_hours' => $hours['break'],

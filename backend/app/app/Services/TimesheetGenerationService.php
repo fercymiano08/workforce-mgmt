@@ -77,7 +77,7 @@ class TimesheetGenerationService
     public function refreshFigures(Timesheet $t): Timesheet
     {
         $figures = $this->figures($t->employee_id, $t->week_start->copy()->startOfDay())
-            ?? ['regular_hours' => 0, 'overtime_hours' => 0, 'approved_ot_hours' => 0, 'paid_ot_hours' => 0, 'break_hours' => 0, 'total_hours' => 0];
+            ?? ['regular_hours' => 0, 'regular_holiday_hours' => 0, 'special_holiday_hours' => 0, 'overtime_hours' => 0, 'approved_ot_hours' => 0, 'paid_ot_hours' => 0, 'break_hours' => 0, 'total_hours' => 0];
 
         $t->update(['needs_refresh' => false] + $figures);
 
@@ -106,6 +106,8 @@ class TimesheetGenerationService
 
         return [
             'regular_hours' => round((float) $attendance->sum('regular_hours'), 2),
+            'regular_holiday_hours' => round((float) $attendance->sum('regular_holiday_hours'), 2),
+            'special_holiday_hours' => round((float) $attendance->sum('special_holiday_hours'), 2),
             'overtime_hours' => round((float) $attendance->sum('overtime'), 2),
             'break_hours' => round((float) $attendance->sum('break_hours'), 2),
             'total_hours' => round((float) $attendance->sum('total_hours'), 2),

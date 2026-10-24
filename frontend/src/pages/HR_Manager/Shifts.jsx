@@ -42,6 +42,7 @@ export default function Shifts() {
   const { toast } = useToast();
   const { data: shiftDefs, loading: loadingShiftDefs } = useApiData(() => shiftService.getAllShifts(), []);
   const { data: shiftSchedules, refresh: refreshSchedules, loading: loadingShiftSchedules } = useApiData(() => shiftService.getSchedules(), []);
+  const { data: holidays } = useApiData(() => shiftService.getHolidays(), []);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingSchedule, setEditingSchedule] = useState(null);
   // employeeId (single) drives Edit; employeeIds (multi) drives a new Assign - never both.
@@ -77,6 +78,11 @@ export default function Shifts() {
     };
   }, [shiftSchedules]);
   const departments = useMemo(() => [...new Set(employees.map(e => e.department).filter(Boolean))].sort(), [employees]);
+  const holidaysByDate = useMemo(() => {
+    const map = {};
+    for (const h of holidays || []) map[h.date] = h;
+    return map;
+  }, [holidays]);
   const standardShift = useMemo(() => {
     const d = shiftDefs || [];
     return d.find(s => s.startTime === '08:00' && s.endTime === '17:00') || d.find(s => s.id === 'SHIFT004') || d[0] || null;
@@ -364,14 +370,21 @@ export default function Shifts() {
             const inMonth = dayDate.getMonth() === calMonthDate.getMonth();
             const daySchedules = calSchedulesByDate[dateK] || [];
             const dayPreview = daySchedules.slice(0, 3);
+            const holiday = holidaysByDate[dateK];
             return (
               <button
                 key={dateK}
                 type="button"
                 onClick={() => setDayDetailDate(dateK)}
-                className={`min-h-[92px] w-full border-r border-b border-gray-50 last:border-r-0 p-2 flex flex-col items-center gap-1.5 transition-colors hover:bg-blue-50/40 ${isToday ? 'bg-blue-50/40' : ''} ${!inMonth ? 'opacity-40' : ''}`}
+                title={holiday ? `${holiday.name} (${holiday.type === 'special_non_working' ? 'Special non-working day — 130% if worked' : 'Regular holiday — 200% if worked'})` : undefined}
+                className={`min-h-[92px] w-full border-r border-b border-gray-50 last:border-r-0 p-2 flex flex-col items-center gap-1.5 transition-colors hover:bg-blue-50/40 ${isToday ? 'bg-blue-50/40' : holiday ? 'bg-amber-50/60' : ''} ${!inMonth ? 'opacity-40' : ''}`}
               >
-                <span className={`text-xs font-semibold ${isToday ? 'text-blue-600' : 'text-gray-700'}`}>{dayDate.getDate()}</span>
+                <span className={`text-xs font-semibold ${isToday ? 'text-blue-600' : holiday ? 'text-amber-700' : 'text-gray-700'}`}>{dayDate.getDate()}</span>
+                {holiday && (
+                  <span className={`text-[9px] font-bold px-1 py-0.5 rounded-full truncate max-w-full ${holiday.type === 'special_non_working' ? 'bg-amber-100 text-amber-700' : 'bg-red-100 text-red-700'}`}>
+                    {holiday.type === 'special_non_working' ? '130%' : '200%'}
+                  </span>
+                )}
                 {daySchedules.length > 0 && (
                   <>
                     <span className="flex items-center -space-x-1.5">
@@ -404,16 +417,29 @@ export default function Shifts() {
       <Modal isOpen={!!dayDetailDate} onClose={() => setDayDetailDate(null)} title={dayDetailDate ? formatDate(dayDetailDate) : ''} size="md">
         {(() => {
           const daySchedules = dayDetailDate ? (calSchedulesByDate[dayDetailDate] || []) : [];
+          const holiday = dayDetailDate ? holidaysByDate[dayDetailDate] : null;
+          const holidayBanner = holiday && (
+            <div className="mb-4 rounded-xl bg-amber-50 border border-amber-200 px-4 py-3">
+              <p className="text-sm font-semibold text-amber-800">{holiday.name}</p>
+              <p className="text-xs text-amber-700 mt-0.5">
+                {holiday.type === 'special_non_working' ? 'Special non-working day' : 'Regular holiday'} — anyone scheduled and working this day is paid {holiday.type === 'special_non_working' ? '130%' : '200%'} for hours worked.
+              </p>
+            </div>
+          );
           if (daySchedules.length === 0) {
             return (
-              <div className="text-center py-8">
-                <p className="text-sm text-gray-500 mb-4">No one is scheduled on this day.</p>
-                <Button icon={UserPlus} onClick={() => { const d = dayDetailDate; setDayDetailDate(null); openAdd(d); }}>Assign a shift</Button>
+              <div>
+                {holidayBanner}
+                <div className="text-center py-8">
+                  <p className="text-sm text-gray-500 mb-4">No one is scheduled on this day.</p>
+                  <Button icon={UserPlus} onClick={() => { const d = dayDetailDate; setDayDetailDate(null); openAdd(d); }}>Assign a shift</Button>
+                </div>
               </div>
             );
           }
           return (
             <div>
+              {holidayBanner}
               <p className="text-sm text-gray-500 mb-3">{daySchedules.length} shift{daySchedules.length === 1 ? '' : 's'} scheduled</p>
               <div className="rounded-xl border border-gray-200 divide-y divide-gray-100 max-h-96 overflow-y-auto">
                 {daySchedules.map(s => {
@@ -612,6 +638,11 @@ export default function Shifts() {
             <div>
               <Input label="Date" type="date" value={formData.date} onChange={e => setFormData({ ...formData, date: e.target.value })} error={formErrors.date} />
               {formData.date && <p className="text-xs text-gray-400 mt-1.5">{new Date(`${formData.date}T00:00:00`).toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}</p>}
+              {formData.date && holidaysByDate[formData.date] && (
+                <p className="text-xs font-semibold text-amber-700 mt-1">
+                  {holidaysByDate[formData.date].name} — {holidaysByDate[formData.date].type === 'special_non_working' ? 'special non-working day, 130%' : 'regular holiday, 200%'} pay if worked.
+                </p>
+              )}
             </div>
             <Textarea label="Notes" value={formData.notes} onChange={e => setFormData({ ...formData, notes: e.target.value })} placeholder="Optional notes about this assignment..." rows={2} />
           </div>

@@ -18,6 +18,7 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::prefix('shifts')->group(function () {
         // Shift definitions are read-only reference data, safe for any authenticated user.
         Route::get('/', [ShiftController::class, 'definitions']);
+        Route::get('/holidays', [ShiftController::class, 'holidays']);
         Route::middleware('admin')->group(function () {
             Route::get('/schedules', [ShiftController::class, 'schedules']);
             Route::post('/schedules', [ShiftController::class, 'createSchedule']);

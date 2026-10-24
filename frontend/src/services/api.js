@@ -316,6 +316,10 @@ export const shiftService = {
     const { data } = await http.get('/shifts');
     return data;
   },
+  getHolidays: async () => {
+    const { data } = await http.get('/shifts/holidays');
+    return data;
+  },
   getSchedules: async () => {
     const { data } = await http.get('/shifts/schedules');
     return data;

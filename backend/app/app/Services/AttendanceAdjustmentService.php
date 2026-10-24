@@ -408,6 +408,8 @@ class AttendanceAdjustmentService
         $actualOut = $attendance->actual_clock_out ?: $attendance->clock_out;
         if (! $attendance->clock_in || ! $actualOut) {
             $attendance->regular_hours = 0;
+            $attendance->regular_holiday_hours = 0;
+            $attendance->special_holiday_hours = 0;
             $attendance->overtime = 0;
             $attendance->total_hours = 0;
             $attendance->save();
@@ -426,6 +428,8 @@ class AttendanceAdjustmentService
 
         $attendance->clock_out = $counts['countedOut']->format('H:i:s');
         $attendance->regular_hours = $counts['regular'];
+        $attendance->regular_holiday_hours = $counts['regularHoliday'];
+        $attendance->special_holiday_hours = $counts['specialHoliday'];
         $attendance->overtime = $counts['overtime'];
         $attendance->total_hours = $counts['total'];
         $attendance->break_hours = $counts['break'];

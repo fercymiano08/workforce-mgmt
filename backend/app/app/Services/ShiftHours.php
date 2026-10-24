@@ -2,6 +2,7 @@
 
 namespace App\Services;
 
+use App\Models\Holiday;
 use App\Models\OvertimeRequest;
 use App\Models\Setting;
 use Illuminate\Support\Carbon;
@@ -65,7 +66,7 @@ class ShiftHours
     }
 
     /**
-     * @return array{countedOut: Carbon, uncountedMinutes: int, regular: float, overtime: float, total: float, break: float}
+     * @return array{countedOut: Carbon, uncountedMinutes: int, regular: float, regularHoliday: float, specialHoliday: float, overtime: float, total: float, break: float, holidayType: ?string}
      */
     public static function count(Carbon $clockIn, Carbon $actualOut, Carbon $baseEnd, ?Carbon $effectiveEnd, ?int $lunchMinutes = null, ?Carbon $baseStart = null): array
     {
@@ -90,14 +91,33 @@ class ShiftHours
 
         $total = max(0, $elapsed - $lunch) / 60;
         $overtime = max(0, $baseEnd->diffInMinutes($countedOut, false)) / 60;
+        $regular = round(max(0, $total - $overtime), 2);
+
+        // A day worked on a holiday moves its regular hours into one holiday bucket instead of the
+        // other, so the same hour is never paid as both plain regular and holiday premium. Overtime
+        // keeps its own separate treatment either way - the two premiums are not stacked here.
+        $holiday = Holiday::query()->where('date', $clockIn->toDateString())->first();
+        $regularHoliday = 0.0;
+        $specialHoliday = 0.0;
+        if ($holiday) {
+            if ($holiday->type === 'special_non_working') {
+                $specialHoliday = $regular;
+            } else {
+                $regularHoliday = $regular;
+            }
+            $regular = 0.0;
+        }
 
         return [
             'countedOut' => $countedOut,
             'uncountedMinutes' => $uncounted,
-            'regular' => round(max(0, $total - $overtime), 2),
+            'regular' => $regular,
+            'regularHoliday' => round($regularHoliday, 2),
+            'specialHoliday' => round($specialHoliday, 2),
             'overtime' => round($overtime, 2),
             'total' => round($total, 2),
             'break' => round($lunch / 60, 2),
+            'holidayType' => $holiday?->type,
         ];
     }
 }

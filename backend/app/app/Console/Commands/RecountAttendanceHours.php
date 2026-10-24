@@ -44,13 +44,16 @@ class RecountAttendanceHours extends Command
                 $countedOut = $hours['countedOut']->format('H:i:s');
                 if ($row->clock_out === $countedOut
                     && (float) $row->total_hours === $hours['total']
-                    && (float) $row->overtime === $hours['overtime']) {
+                    && (float) $row->overtime === $hours['overtime']
+                    && (float) $row->regular_hours === $hours['regular']) {
                     return;
                 }
 
                 $row->update([
                     'clock_out' => $countedOut,
                     'regular_hours' => $hours['regular'],
+                    'regular_holiday_hours' => $hours['regularHoliday'],
+                    'special_holiday_hours' => $hours['specialHoliday'],
                     'overtime' => $hours['overtime'],
                     'total_hours' => $hours['total'],
                     'break_hours' => $hours['break'],

@@ -16,7 +16,8 @@ class Attendance extends Model
 
     protected $fillable = [
         'id', 'employee_id', 'date', 'clock_in', 'clock_out', 'actual_clock_out', 'status', 'overtime',
-        'regular_hours', 'total_hours', 'break_hours', 'location', 'notes',
+        'regular_hours', 'regular_holiday_hours', 'special_holiday_hours', 'total_hours', 'break_hours',
+        'location', 'notes',
     ];
 
     protected function casts(): array
@@ -28,6 +29,8 @@ class Attendance extends Model
             'actual_clock_out' => 'string',
             'overtime' => 'float',
             'regular_hours' => 'float',
+            'regular_holiday_hours' => 'float',
+            'special_holiday_hours' => 'float',
             'total_hours' => 'float',
             'break_hours' => 'float',
         ];
