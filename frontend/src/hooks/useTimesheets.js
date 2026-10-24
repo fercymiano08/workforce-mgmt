@@ -84,6 +84,12 @@ export function reopenTimesheet(id, reason) {
   return timesheetService.updateStatus(id, 'Draft', undefined, reason);
 }
 
+// The employee's own undo of a not-yet-reviewed submission - no reason needed, and the backend
+// refuses it once an admin has already acted (that is reopenTimesheet's job, not this one's).
+export function withdrawTimesheet(id) {
+  return timesheetService.updateStatus(id, 'Draft');
+}
+
 export function exportTimesheetsForPayroll(payload) {
   return timesheetService.exportForPayroll(payload);
 }

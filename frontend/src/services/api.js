@@ -349,16 +349,22 @@ export const shiftService = {
 };
 
 export const timesheetService = {
-  getAll: async () => {
-    const { data } = await http.get('/timesheets');
+  getAll: async (params = {}) => {
+    const { data } = await http.get('/timesheets', { params });
     return data;
   },
   getById: async (id) => {
     const { data } = await http.get(`/timesheets/${id}`);
     return data;
   },
-  getByEmployeeId: async (employeeId) => {
-    const { data } = await http.get(`/timesheets/employee/${employeeId}`);
+  getByEmployeeId: async (employeeId, params = {}) => {
+    const { data } = await http.get(`/timesheets/employee/${employeeId}`, { params });
+    return data;
+  },
+  // One row per calendar day in [from, to]: scheduled shift, actual attendance, leave - everything
+  // the day grid needs, pre-merged server-side.
+  getDays: async (employeeId, from, to) => {
+    const { data } = await http.get(`/timesheets/employee/${employeeId}/days`, { params: { from, to } });
     return data;
   },
   update: async (id, payload) => {

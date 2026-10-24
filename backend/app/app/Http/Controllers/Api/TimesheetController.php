@@ -4,12 +4,16 @@ namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Api\Concerns\AuthorizesEmployeeScope;
 use App\Http\Controllers\Controller;
+use App\Models\Attendance;
+use App\Models\Leave;
+use App\Models\ShiftSchedule;
 use App\Models\Timesheet;
 use App\Services\AuditLogger;
 use App\Services\NotificationService;
 use App\Services\TimesheetWorkflow;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Carbon;
 use Illuminate\Support\Collection;
 
 /**
@@ -32,9 +36,14 @@ class TimesheetController extends Controller
      * below that the admin can browse (index, byEmployee, show) excludes Draft rows for them; the
      * employee viewing their own timesheet is unaffected.
      */
-    public function index(): JsonResponse
+    public function index(Request $request): JsonResponse
     {
-        $records = Timesheet::where('status', '!=', 'Draft')->orderBy('week_end', 'desc')->orderBy('id')->get();
+        $request->validate(['from' => 'nullable|date', 'to' => 'nullable|date']);
+
+        $records = Timesheet::where('status', '!=', 'Draft')
+            ->when($request->filled('from'), fn ($q) => $q->where('week_start', '>=', $request->input('from')))
+            ->when($request->filled('to'), fn ($q) => $q->where('week_start', '<=', $request->input('to')))
+            ->orderBy('week_end', 'desc')->orderBy('id')->get();
 
         return response()->json(['data' => $this->present($records)]);
     }
@@ -59,13 +68,69 @@ class TimesheetController extends Controller
     public function byEmployee(Request $request, string $employeeId): JsonResponse
     {
         $this->assertSelfOrAdmin($request, $employeeId);
+        $request->validate(['from' => 'nullable|date', 'to' => 'nullable|date']);
 
         $isAdmin = $request->user()?->role === 'Administrator';
         $records = Timesheet::where('employee_id', $employeeId)
             ->when($isAdmin, fn ($q) => $q->where('status', '!=', 'Draft'))
+            ->when($request->filled('from'), fn ($q) => $q->where('week_start', '>=', $request->input('from')))
+            ->when($request->filled('to'), fn ($q) => $q->where('week_start', '<=', $request->input('to')))
             ->orderBy('week_end', 'desc')->get();
 
         return response()->json(['data' => $this->present($records)]);
+    }
+
+    /**
+     * One row per calendar day in [from, to] for the day grid: the scheduled shift (if any), the
+     * actual attendance for that day (if any), and whether it was a leave day - everything the grid
+     * needs to show Scheduled vs. Reported side by side without the frontend assembling it from three
+     * separate fetches itself. Read-only: this is a view over Attendance/ShiftSchedule/Leave, never a
+     * place that writes to any of them.
+     */
+    public function days(Request $request, string $employeeId): JsonResponse
+    {
+        $this->assertSelfOrAdmin($request, $employeeId);
+        $range = $request->validate([
+            'from' => 'required|date_format:Y-m-d',
+            'to' => 'required|date_format:Y-m-d',
+        ]);
+
+        $attendanceByDate = Attendance::where('employee_id', $employeeId)
+            ->whereBetween('date', [$range['from'], $range['to']])
+            ->get()->keyBy(fn (Attendance $a) => $a->date->toDateString());
+
+        $scheduleByDate = ShiftSchedule::with('shift')
+            ->where('employee_id', $employeeId)
+            ->where('status', '!=', 'Cancelled')
+            ->whereBetween('date', [$range['from'], $range['to']])
+            ->get()->keyBy(fn (ShiftSchedule $s) => $s->date->toDateString());
+
+        // Any day inside an Approved leave counts as a leave day, not just the leave's own
+        // start/end - a 5-day Vacation spans several attendance-less days in between.
+        $leaves = Leave::where('employee_id', $employeeId)
+            ->where('status', 'Approved')
+            ->where('start_date', '<=', $range['to'])
+            ->where('end_date', '>=', $range['from'])
+            ->get(['leave_type', 'start_date', 'end_date']);
+
+        $days = [];
+        for ($d = Carbon::parse($range['from']); $d->toDateString() <= $range['to']; $d->addDay()) {
+            $dateKey = $d->toDateString();
+            $attendance = $attendanceByDate->get($dateKey);
+            $schedule = $scheduleByDate->get($dateKey);
+            $leave = $leaves->first(fn (Leave $l) => $dateKey >= $l->start_date->toDateString() && $dateKey <= $l->end_date->toDateString());
+
+            $days[] = [
+                'date' => $dateKey,
+                'scheduledStart' => $schedule?->shift?->start_time,
+                'scheduledEnd' => $schedule?->shift?->end_time,
+                'shiftId' => $schedule?->shift_id,
+                'leaveType' => $leave?->leave_type,
+                'attendance' => $attendance?->toApiArray(),
+            ];
+        }
+
+        return response()->json(['data' => $days]);
     }
 
     /** Hours cannot be typed in or edited: they come from attendance. Only the admin's note can change. */
@@ -95,7 +160,8 @@ class TimesheetController extends Controller
 
     /**
      * The one endpoint that moves a timesheet through its workflow.
-     *   employee (owner): status = Submitted
+     *   employee (owner): status = Submitted, or Draft (= withdraw their own still-unreviewed
+     *                      submission, no reason needed - distinct from the admin's reopen below)
      *   admin: status = Approved | Rejected (reason required) | Draft (= reopen, reason required)
      */
     public function updateStatus(Request $request, string $id): JsonResponse
@@ -118,8 +184,9 @@ class TimesheetController extends Controller
         $reason = (string) $request->input('reason', '');
 
         if (! $isAdmin) {
-            // Employees may only submit their own timesheet - nothing else.
-            if ($user?->employee_id !== $record->employee_id || $status !== 'Submitted') {
+            // Employees may only act on their own timesheet, and only to submit it or withdraw
+            // their own still-unreviewed submission - nothing else.
+            if ($user?->employee_id !== $record->employee_id || ! in_array($status, ['Submitted', 'Draft'], true)) {
                 abort(403, 'You are not authorized to perform this action.');
             }
         } elseif ($status === 'Submitted') {
@@ -127,14 +194,15 @@ class TimesheetController extends Controller
         }
 
         $before = $record->toApiArray();
-        $updated = match ($status) {
-            'Submitted' => $this->workflow->submit($record, $who),
-            'Approved' => $this->workflow->approve($record, $who),
-            'Rejected' => $this->workflow->reject($record, $who, $reason),
-            'Draft' => $this->workflow->reopen($record, $who, $reason),
+        $updated = match (true) {
+            $status === 'Submitted' => $this->workflow->submit($record, $who),
+            $status === 'Approved' => $this->workflow->approve($record, $who),
+            $status === 'Rejected' => $this->workflow->reject($record, $who, $reason),
+            $status === 'Draft' && $isAdmin => $this->workflow->reopen($record, $who, $reason),
+            default => $this->workflow->withdraw($record, $who),
         };
 
-        AuditLogger::record('payroll', 
+        AuditLogger::record('payroll',
             'timesheet.status_changed',
             'Timesheet',
             $updated->id,
@@ -145,7 +213,12 @@ class TimesheetController extends Controller
             meta: ['status' => $status, 'employeeId' => $updated->employee_id, 'reason' => $reason ?: null],
         );
 
-        $this->notify($updated, $status, $reason);
+        // A self-withdraw is the employee undoing their own not-yet-reviewed action - nobody else
+        // saw it happen (it never became visible to admins while still Submitted-but-unreviewed in
+        // this flow) and the employee does not need to be told about their own click.
+        if (! ($status === 'Draft' && ! $isAdmin)) {
+            $this->notify($updated, $status, $reason);
+        }
 
         return response()->json(['data' => $this->present(collect([$updated]))[0]]);
     }

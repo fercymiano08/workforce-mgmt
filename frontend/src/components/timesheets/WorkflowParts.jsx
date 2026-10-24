@@ -1,5 +1,5 @@
 import clsx from 'clsx';
-import { Check, X, Clock, Send, RotateCcw, Banknote, Bot } from 'lucide-react';
+import { Check, X, Clock, Send, RotateCcw, Banknote, Bot, Undo2 } from 'lucide-react';
 import { whenText } from '../../utils/timesheetWorkflow';
 
 // Small pieces shared by the employee's "My Timesheet" and the admin's "Timesheets" pages, so both
@@ -11,6 +11,7 @@ const EVENTS = {
   approved: { label: 'Approved', icon: Check, tone: 'bg-emerald-50 text-emerald-600' },
   rejected: { label: 'Rejected', icon: X, tone: 'bg-red-50 text-red-600' },
   reopened: { label: 'Reopened for correction', icon: RotateCcw, tone: 'bg-amber-50 text-amber-600' },
+  withdrawn: { label: 'Withdrawn by the employee', icon: Undo2, tone: 'bg-gray-100 text-gray-600' },
   exported: { label: 'Sent to payroll', icon: Banknote, tone: 'bg-purple-50 text-purple-600' },
 };
 

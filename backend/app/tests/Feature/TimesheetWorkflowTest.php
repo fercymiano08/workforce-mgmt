@@ -95,6 +95,34 @@ class TimesheetWorkflowTest extends TestCase
         $this->assertSame(1, Notification::where('type', 'timesheet_submitted')->count());
     }
 
+    public function test_the_employee_can_withdraw_their_own_unreviewed_submission(): void
+    {
+        $employee = $this->worker();
+        $this->workDay('2030-01-01');
+        $sheet = $this->submitted($employee);
+
+        $this->actingAs($employee)->patchJson('/api/timesheets/'.$sheet->id.'/status', ['status' => 'Draft'])
+            ->assertOk()->assertJsonPath('data.status', 'Draft');
+
+        $fresh = $sheet->fresh();
+        $this->assertNull($fresh->submitted_at);
+        $this->assertNull($fresh->submitted_by);
+        $this->assertSame('withdrawn', $fresh->history[1]['event']);
+        // Nobody is notified about the employee undoing their own not-yet-reviewed action.
+        $this->assertSame(0, Notification::where('type', 'timesheet_rejected')->count());
+    }
+
+    public function test_withdraw_does_not_work_once_the_admin_has_already_decided(): void
+    {
+        $employee = $this->worker();
+        $this->workDay('2030-01-01');
+        $sheet = $this->submitted($employee);
+        $this->actingAs($this->adminUser())->patchJson('/api/timesheets/'.$sheet->id.'/status', ['status' => 'Approved'])->assertOk();
+
+        $this->actingAs($employee)->patchJson('/api/timesheets/'.$sheet->id.'/status', ['status' => 'Draft'])
+            ->assertStatus(422);
+    }
+
     public function test_only_a_draft_or_returned_timesheet_can_be_submitted_and_only_by_its_owner(): void
     {
         $employee = $this->worker();
@@ -143,13 +171,16 @@ class TimesheetWorkflowTest extends TestCase
             ->assertOk()->assertJsonPath('data.status', 'Submitted');
     }
 
-    public function test_an_employee_can_never_approve_reject_or_reopen(): void
+    // Draft is deliberately not in this list any more: an employee setting their OWN Submitted
+    // timesheet back to Draft is a withdraw, not a reopen, and is now allowed - see the withdraw
+    // tests above. Approving or rejecting their own timesheet is still never allowed.
+    public function test_an_employee_can_never_approve_or_reject(): void
     {
         $employee = $this->worker();
         $this->workDay('2030-01-01');
         $sheet = $this->submitted($employee);
 
-        foreach ([['status' => 'Approved'], ['status' => 'Rejected', 'reason' => 'no way'], ['status' => 'Draft', 'reason' => 'no way']] as $body) {
+        foreach ([['status' => 'Approved'], ['status' => 'Rejected', 'reason' => 'no way']] as $body) {
             $this->actingAs($employee)->patchJson('/api/timesheets/'.$sheet->id.'/status', $body)->assertForbidden();
         }
     }

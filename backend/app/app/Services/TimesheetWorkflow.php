@@ -72,6 +72,27 @@ class TimesheetWorkflow
         return $this->save($t, $auto ? 'auto_submitted' : 'submitted', $auto ? 'System' : $by, null);
     }
 
+    /**
+     * The employee's own undo of a not-yet-reviewed submission - distinct from reopen(): no reason
+     * needed (it is their own action, not an admin override), only works while still Submitted (once
+     * an admin has acted, only the admin's reopen can bring it back), and it is not blocked by
+     * exported_at the way reopen is, since nothing Submitted-only can have been exported yet.
+     */
+    public function withdraw(Timesheet $t, string $by): Timesheet
+    {
+        if ($t->status !== 'Submitted') {
+            abort(422, 'Only a submitted timesheet can be withdrawn, and only before it has been reviewed.');
+        }
+
+        $t->status = 'Draft';
+        $t->submitted_at = null;
+        $t->submitted_by = null;
+        $t->auto_submitted = false;
+        $t->reminded_at = null;
+
+        return $this->save($t, 'withdrawn', $by, null);
+    }
+
     public function approve(Timesheet $t, string $by): Timesheet
     {
         $this->requireSubmitted($t, 'approved');

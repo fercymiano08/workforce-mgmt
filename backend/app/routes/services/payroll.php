@@ -22,6 +22,7 @@ Route::middleware('auth:sanctum')->group(function () {
             Route::delete('/{id}', [TimesheetController::class, 'destroy']);
         });
         Route::get('/employee/{employeeId}', [TimesheetController::class, 'byEmployee']);
+        Route::get('/employee/{employeeId}/days', [TimesheetController::class, 'days']);
         Route::get('/{id}', [TimesheetController::class, 'show']);
         // Workflow rules are enforced inline: the employee submits their own, the admin approves / rejects / reopens.
         Route::patch('/{id}/status', [TimesheetController::class, 'updateStatus']);
