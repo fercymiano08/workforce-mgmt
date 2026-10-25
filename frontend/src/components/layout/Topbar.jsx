@@ -154,7 +154,7 @@ export default function Topbar({ onMenuToggle }) {
                 <button onClick={() => { navigate('/settings'); setShowProfile(false); }} className="w-full flex items-center gap-2.5 px-4 py-2.5 text-sm text-gray-700 hover:bg-gray-50 transition-colors">
                   <Settings className="w-4 h-4 text-gray-400" /> {t('topbar.settings')}
                 </button>
-                <button className="w-full flex items-center gap-2.5 px-4 py-2.5 text-sm text-gray-700 hover:bg-gray-50 transition-colors">
+                <button onClick={() => { navigate('/help'); setShowProfile(false); }} className="w-full flex items-center gap-2.5 px-4 py-2.5 text-sm text-gray-700 hover:bg-gray-50 transition-colors">
                   <HelpCircle className="w-4 h-4 text-gray-400" /> {t('topbar.help')}
                 </button>
               </div>
