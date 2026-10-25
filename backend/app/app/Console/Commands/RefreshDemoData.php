@@ -67,17 +67,27 @@ class RefreshDemoData extends Command
     protected $signature = 'demo:refresh
         {--weeks=4 : full weeks of history before the current one}
         {--close-today : also write today\'s clock-outs, treating today as a finished workday rather than a shift in progress}
-        {--spare-today : generate nothing for today and clear whatever was generated for it; today is left to the real kiosk}';
+        {--spare-today : generate nothing for today and clear whatever was generated for it; today is left to the real kiosk}
+        {--employee= : rebuild only this employee id instead of the demo set}';
 
     protected $description = "Rebuild the demo employees' schedules, attendance and timesheets up to today";
 
     public function handle(TimesheetGenerationService $timesheets, TimesheetWorkflow $workflow, WorkingDays $workingDays): int
     {
-        $ids = $this->demoEmployeeIds();
-        if ($ids === []) {
-            $this->warn('No demo employees in this database.');
+        $empOpt = $this->option('employee');
+        if ($empOpt) {
+            $ids = Employee::where('id', $empOpt)->pluck('id')->all();
+            if ($ids === []) {
+                $this->error("Employee {$empOpt} not found.");
+                return self::FAILURE;
+            }
+        } else {
+            $ids = $this->demoEmployeeIds();
+            if ($ids === []) {
+                $this->warn('No demo employees in this database.');
 
-            return self::SUCCESS;
+                return self::SUCCESS;
+            }
         }
 
         $tz = ShiftHours::timezone();
