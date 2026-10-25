@@ -49,12 +49,6 @@ return new class extends Migration
                 'accrual_policy' => 'Monthly', 'accrual_rate' => 0.83, 'max_carryover_days' => 5,
                 'advance_notice_days' => 0, 'retroactive_allowed' => true, 'retroactive_window_days' => 7,
                 'max_consecutive_days' => null, 'requires_proof' => true, 'proof_threshold_days' => 2],
-            ['id' => 'LVT003', 'code' => 'Special', 'name' => 'Special Leave', 'applicable_gender' => 'Any',
-                'min_tenure_months' => 6, 'pay_type' => 'PaidWithBalance', 'requires_balance' => true,
-                'accrual_policy' => 'Monthly', 'accrual_rate' => 0.42, 'max_carryover_days' => 0,
-                'advance_notice_days' => 0, 'retroactive_allowed' => false, 'retroactive_window_days' => 0,
-                'max_consecutive_days' => null, 'requires_proof' => false, 'proof_threshold_days' => 0],
-            // Not balance-requiring: paid in full, but bounded by max_consecutive_days instead of an annual ledger.
             ['id' => 'LVT004', 'code' => 'Bereavement', 'name' => 'Bereavement Leave', 'applicable_gender' => 'Any',
                 'min_tenure_months' => 0, 'pay_type' => 'PaidWithoutBalance', 'requires_balance' => false,
                 'accrual_policy' => 'None', 'accrual_rate' => 0, 'max_carryover_days' => null,

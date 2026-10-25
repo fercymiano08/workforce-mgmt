@@ -371,7 +371,6 @@ class RefreshDemoData extends Command
     private const LEAVE_REASONS = [
         'Vacation' => ['Family trip out of town', 'Rest days with family', 'Long weekend getaway', 'Personal time off'],
         'Sick' => ['Fever and cough, advised to rest', 'Medical check-up', 'Stomach flu', 'Migraine, rested at home'],
-        'Special' => ['Family emergency', 'Urgent repairs at home', 'Accompanied a relative to the hospital', 'Wedding of a close relative', 'Birthday leave', 'School event of my child'],
         'Bereavement' => ['Attending the wake and burial of a relative'],
     ];
 
@@ -442,7 +441,7 @@ class RefreshDemoData extends Command
      */
     private function rollingLeave(array $ids, string $from, string $to, WorkingDays $workingDays): void
     {
-        $types = ['Vacation', 'Sick', 'Bereavement', 'Special'];
+        $types = ['Vacation', 'Sick', 'Bereavement'];
         $leaveNo = $this->maxNumber(Leave::class, 'LVE');
         $toDate = Carbon::parse($to);
 
@@ -496,7 +495,7 @@ class RefreshDemoData extends Command
         $toDate = Carbon::parse($to);
         $windowStart = $toDate->copy()->subDays(9)->toDateString();
         $leaveNo = $this->maxNumber(Leave::class, 'LVE');
-        $types = ['Vacation', 'Sick', 'Special'];
+        $types = ['Vacation', 'Sick'];
 
         $guaranteed = 0;
         foreach (Employee::whereIn('id', $ids)->orderBy('id')->get(['id', 'first_name', 'last_name']) as $employee) {
