@@ -621,7 +621,7 @@ export default function MyProfile() {
 
       {/* Unsaved-changes bar */}
       {dirty && createPortal(
-        <div className="fixed bottom-4 left-1/2 lg:left-[calc(50%+130px)] -translate-x-1/2 z-40 w-[calc(100%-2rem)] max-w-xl">
+        <div className="fixed bottom-4 left-1/2 -translate-x-1/2 z-40 w-[calc(100%-2rem)] max-w-xl">
           <div className="flex items-center justify-between gap-3 rounded-2xl bg-gray-900 text-white px-4 py-3 shadow-2xl">
             <p className="text-sm font-medium">You have unsaved changes</p>
             <div className="flex items-center gap-2">
