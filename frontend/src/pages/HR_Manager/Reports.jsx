@@ -225,8 +225,14 @@ export default function Reports() {
                           <div className="min-w-0 flex-1">
                             <p className="text-sm font-bold text-gray-900 group-hover:text-blue-600 transition-colors">{rpt.name}</p>
                             <p className="text-xs text-gray-500 mt-1 leading-relaxed">{rpt.desc}</p>
+                            <div className="flex gap-1.5 mt-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                              <span className="text-[10px] text-blue-500 font-medium">Click to generate &amp; export</span>
+                            </div>
                           </div>
-                          <ArrowRight className="w-4 h-4 text-gray-300 group-hover:text-blue-500 shrink-0 mt-1 transition-all group-hover:translate-x-0.5" />
+                          <div className="flex flex-col items-end gap-1 shrink-0 mt-1">
+                            <span className="text-[9px] font-semibold uppercase tracking-wide text-gray-300 group-hover:text-gray-400">Schedule (soon)</span>
+                            <ArrowRight className="w-4 h-4 text-gray-300 group-hover:text-blue-500 transition-all group-hover:translate-x-0.5" />
+                          </div>
                         </div>
                       </button>
                     );
