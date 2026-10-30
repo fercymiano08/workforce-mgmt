@@ -141,7 +141,7 @@ There are three roles. Each role logs in through the same login page but lands o
 | Logs in with | Email + password | Email + password |
 | Sees sidebar | Full management menu | Personal menu only |
 
-> Note: the system exposes exactly one operator role - the **Workforce Admin** (role value `Administrator`). All HR duties (employees, schedules, leave, overtime, payroll, kiosk, settings) are performed by that single account.
+> Note: the system exposes exactly one operator role - the **HR Admin** (role value `Administrator`). All HR duties (employees, schedules, leave, overtime, payroll, kiosk, settings) are performed by that single account.
 
 > Note: the sidebar is closed by default and opens/closes with the hamburger icon at every screen width, the same way on desktop as on a phone. It used to stay permanently docked open above a certain width (always reserving 260px of every page); it is an overlay now, so closing it actually gives the page back that space rather than just being a mobile convenience.
 
@@ -288,7 +288,7 @@ POST /api/auth/reset-password   (email + code + new password)
 Step 4 - "Password reset" screen, then sign in with the new password
 ```
 
-Rules: reset requests are limited to 3 a minute; the Workforce Admin account cannot use this flow; an unknown email
+Rules: reset requests are limited to 3 a minute; the HR Admin account cannot use this flow; an unknown email
 gets the same answer as a real one, so the page never reveals which emails exist.
 
 ### Flow B2 — Session Timeout (Employees: 3 Minutes Of Inactivity)
@@ -505,12 +505,12 @@ Face does not match the registered descriptor
         ▼
 Terminal shows "Identity Verification Failed" (red): clocking in under
 another person's ID is a security violation; the attempt was logged and
-the Workforce Admin has been alerted.
+the HR Admin has been alerted.
         │
         ▼
 The server (from the kiosk log call) does TWO things:
   1. writes a security event: type = 'face_mismatch', status = 'Open', employee_id attached
-  2. sends every Workforce Admin a HIGH-priority notification
+  2. sends every HR Admin a HIGH-priority notification
      (type 'security_face_mismatch', "Face Mismatch at Kiosk", deep-links to the AI Decision Support tab)
         │
         ▼
@@ -580,7 +580,7 @@ A kiosk cannot tell whether "I'm sick" is true — and every employee sees the s
 |---------|--------------|
 | **Free allowance** | Each employee gets **2 free early clock-outs per rolling 30 days** (both editable in Settings). The **3rd is marked UNEXCUSED (Unpaid) automatically, at the punch** — no waiting for HR. Only *earlier* early-outs count against you, so "2 free" means two |
 | **Proof for SICK** | A *Feeling Unwell* claim becomes `CERTIFICATE_REQUIRED` with a deadline of **48 hours** (Settings → Time Manager → *Certificate Deadline*). The employee uploads a photo/PDF in My Attendance → Early Clock Outs. If the deadline passes with nothing attached, an hourly job (`early-outs:expire-certificates`) marks it **unexcused automatically** and tells both sides. HR **cannot** excuse a sick early-out without a certificate on file, unless they use *Override* (audited) |
-| **Alert on every early clock-out** | All Workforce Admins are notified for **every** early clock-out — including *Other* — with the running count ("early clock-out #2 in 30 days, within the free allowance of 2"). High priority once the allowance is exceeded, so a person can follow up the same day |
+| **Alert on every early clock-out** | All HR Admins are notified for **every** early clock-out — including *Other* — with the running count ("early clock-out #2 in 30 days, within the free allowance of 2"). High priority once the allowance is exceeded, so a person can follow up the same day |
 | **Copycat detection** | If **3 employees** leave early on the same day citing the same reason, the admins get a "Possible Early-Leave Pattern" alert |
 | **Only verifiable reasons** | *Approved Leave* is no longer offered (a day with approved leave has no clock-in at all, so it can never be true at the kiosk); the server also refuses it |
 
@@ -741,7 +741,7 @@ The employee files a correction (last 7 days only) for one of two problems:
 - **Uncorroborated claims are flagged, not refused.** No punch to check against, or a kiosk that was clearly working for other employees within **15 minutes** of the claimed time (for a "kiosk failed" claim), only adds a warning. A failed face or PIN check in the security log, a kiosk that was silent at that time, and the headcount on the clock are listed as supporting or opposing evidence.
 - The results are frozen on the request when it is filed (approving overwrites the punch, so the evidence would otherwise vanish) and shown to the admin as **Checked against the record**, above the day and the manual entry. The admin still decides; the check only informs. The limits are the constants `PUNCH_TOLERANCE_MINUTES` and `KIOSK_ALIVE_MINUTES` in `CorrectionCorroboration.php`.
 
-**Only the Workforce Admin decides.** The review screen shows the employee's account, the photos (click to enlarge), the shift, and the day as it stands. The **manual entry** starts from the time the employee gave; HR can change it, and a live preview says what the day would then be worth. **Approve & record** writes it to the attendance record through the normal hour rules, stamps it *Manually entered via ADJ... by ...*, refreshes the timesheet and notifies the employee. **Decline** needs a reason the employee reads. Both are in the audit log, which keeps the day as it was before the entry. A request with several claims in 30 days is flagged as a pattern for the admin to look at.
+**Only the HR Admin decides.** The review screen shows the employee's account, the photos (click to enlarge), the shift, and the day as it stands. The **manual entry** starts from the time the employee gave; HR can change it, and a live preview says what the day would then be worth. **Approve & record** writes it to the attendance record through the normal hour rules, stamps it *Manually entered via ADJ... by ...*, refreshes the timesheet and notifies the employee. **Decline** needs a reason the employee reads. Both are in the audit log, which keeps the day as it was before the entry. A request with several claims in 30 days is flagged as a pattern for the admin to look at.
 
 Endpoints: `POST /api/attendance/adjustments` (file), `GET /api/attendance/adjustments/mine`, `POST .../{id}/cancel`; admin only: `GET /api/attendance/adjustments`, `GET .../{id}` (with photos), `POST .../{id}/preview`, `POST .../{id}/decide`. Table: `attendance_adjustments`.
 
@@ -1200,7 +1200,7 @@ Suspicious attempt at kiosk (wrong face / wrong PIN)
 Event inserted, status = Open
         │
         ▼
-For a face mismatch, every Workforce Admin ALSO gets an immediate
+For a face mismatch, every HR Admin ALSO gets an immediate
 high-priority notification (bell + Notifications page, type
 'security_face_mismatch') that deep-links here — they don't have to
 wait until someone opens the security section
@@ -1512,7 +1512,7 @@ Nine times out of ten the bug is one of: stale frontend state (refresh), wrong r
 > **The one backend (:8000)** is a single Laravel app containing **8 cleanly-separated domains** — auth/identity, attendance, scheduling, time-off, payroll, communications, configuration, intelligence. One process, one port, one PostgreSQL database, one test suite (476 tests, 2207 assertions). There is no gateway, no service-to-service HTTP, no shared secret token, no internal API.
 > **Cross-domain data** moves with plain Eloquent relationships and real foreign keys inside the same database — no snapshot replication, no `*Client` classes. The consolidation deleted all of it: nothing was left needing a replica.
 >
-> **Kiosk** verifies faces in-browser, and its rules are enforced by the attendance domain **server-side** (no shift or finished shift = refused; up to 15 min after start = Present, later = Late with a warning; leaving early needs a reason). A face mismatch is logged and alerts the Workforce Admins.
+> **Kiosk** verifies faces in-browser, and its rules are enforced by the attendance domain **server-side** (no shift or finished shift = refused; up to 15 min after start = Present, later = Late with a warning; leaving early needs a reason). A face mismatch is logged and alerts the HR Admins.
 > **Performance rules** keep it fast with none of the split-system machinery: no identity hop to cache, no replica pushes, no concurrent sync — the remaining levers are bounded lists, short timeouts on non-critical calls, and polling-free background tabs (Part 1, *Keeping It Fast And Safe*).
 > **Requests** (leave/OT) follow one pattern: apply → Pending → decide → notify (+ balance/reconciliation side effects) — now entirely in-process, where the AI path and the HR path share the same "must still be Pending" guard.
 > **Timesheets** are born automatically from attendance and end locked after HR approval — one join away in the same database, no replica involved.

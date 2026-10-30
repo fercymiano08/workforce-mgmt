@@ -107,7 +107,7 @@ Open the public link and sign in with the seeded accounts
 
 | Role | Email | Password |
 |---|---|---|
-| Workforce Admin | `admin@workforcepro.com` | `Admin@123` |
+| HR Admin | `admin@workforcepro.com` | `Admin@123` |
 | Employee | (any demo employee, see the Employees screen) | `Employee@123` |
 
 Check in this order, so you find a problem while you still have time:

@@ -7,7 +7,7 @@ use Illuminate\Database\Eloquent\Model;
 
 /**
  * A correction request ("Corrections" in Time & Attendance): the employee says what happened and attaches photo proof;
- * the Workforce Admin decides and, when approving, enters the final time by hand.
+ * the HR Admin decides and, when approving, enters the final time by hand.
  */
 class AttendanceAdjustment extends Model
 {

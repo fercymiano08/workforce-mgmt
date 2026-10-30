@@ -11,7 +11,7 @@ use Illuminate\Support\Carbon;
  * Loads backend/core/database/demo/core.json into the core database as real
  * rows: the 10 demo employees plus their audit trail. Dates are anchored to
  * the Monday of the current week in Manila. Not a single User (admin) row is
- * touched - John Delgado remains the only workforce admin.
+ * touched - John Delgado remains the only HR Admin.
  */
 class DemoSeeder extends Seeder
 {

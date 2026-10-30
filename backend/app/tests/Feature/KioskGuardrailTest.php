@@ -18,7 +18,7 @@ use Tests\TestCase;
  *   - within 15 min of start    -> Present (15:00 exactly is still on time)
  *   - later than that           -> Late (allowed, admins are told)
  *   - leaving before shift end  -> a reason must be stated first
- *   - face mismatch             -> logged AND the Workforce Admins are alerted
+ *   - face mismatch             -> logged AND the HR Admins are alerted
  */
 class KioskGuardrailTest extends TestCase
 {
@@ -225,7 +225,7 @@ class KioskGuardrailTest extends TestCase
         $this->assertSame(1, SecurityEvent::where('type', 'face_mismatch')->count());
 
         $alert = Notification::where('type', 'security_face_mismatch')->first();
-        $this->assertNotNull($alert, 'the Workforce Admins must be notified of a face mismatch');
+        $this->assertNotNull($alert, 'the HR Admins must be notified of a face mismatch');
         $this->assertSame('high', $alert->priority);
         $this->assertStringContainsString('EMP20260001', $alert->message);
     }

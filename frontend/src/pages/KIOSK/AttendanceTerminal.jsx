@@ -537,7 +537,7 @@ export default function AttendanceTerminal() {
     setNotice({
       tone: 'danger',
       title: 'Identity Verification Failed',
-      message: `The face in the camera does not match ${employee.firstName} ${employee.lastName}'s registered photo. Clocking in under another person's ID is a security violation. This attempt has been logged and the Workforce Admin has been alerted.${warning} Please step aside and see HR if you believe this is a mistake.`,
+      message: `The face in the camera does not match ${employee.firstName} ${employee.lastName}'s registered photo. Clocking in under another person's ID is a security violation. This attempt has been logged and the HR Admin has been alerted.${warning} Please step aside and see HR if you believe this is a mistake.`,
       confirmLabel: 'I Understand',
       cancelLabel: 'Cancel',
       onConfirm: resetToMode,
@@ -881,7 +881,7 @@ export default function AttendanceTerminal() {
     }
   }, [employee, recordedType, clockInOutcome, clockOutOutcome, earlyLeaveInfo, shiftInfo]);
 
-  // --- Disabled screen: kiosk mode has not been enabled by the Workforce Admin --
+  // --- Disabled screen: kiosk mode has not been enabled by the HR Admin --
   if (!enabled) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-[#0B1F3A] via-[#0E2747] to-[#0B1F3A] flex flex-col">
@@ -923,7 +923,7 @@ export default function AttendanceTerminal() {
             </div>
             <h2 className="text-2xl font-bold text-gray-900 mt-4">Awaiting Setup</h2>
             <p className="text-gray-500 mt-1.5">
-              Kiosk mode is on, but no access PIN has been created yet. Please ask the Workforce Admin to create one
+              Kiosk mode is on, but no access PIN has been created yet. Please ask the HR Admin to create one
               in Kiosk Management before using this terminal.
             </p>
             <Button

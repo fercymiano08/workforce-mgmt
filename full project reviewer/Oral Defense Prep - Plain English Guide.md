@@ -23,7 +23,7 @@
 
 1. **WorkForce Pro** is a web-based **workforce management system** built for a retail/BPO company called **Archon Nell Incorporated**.
 2. It helps the company handle **attendance, schedules, leave, overtime, and timesheets** for all employees in one place.
-3. There are **three users**: the **Workforce Admin** (who controls everything), the **Employee** (who checks and manages their own records), and the **Kiosk** (a touchscreen device at the entrance used for clocking in and out).
+3. There are **three users**: the **HR Admin** (who controls everything), the **Employee** (who checks and manages their own records), and the **Kiosk** (a touchscreen device at the entrance used for clocking in and out).
 4. The system has a **frontend** (what you see in the browser) and a **backend built as one Laravel application with one database** — organized inside into 8 clear domains (identity, attendance, scheduling, leave/overtime, payroll, communications, configuration, and analytics/AI), because WorkForce Pro is itself just ONE microservice inside the bigger E-Commerce Enterprise platform the team is building.
 5. It also includes **smart features**: facial-recognition attendance, automatic schedule generation, analytics dashboards, and an **AI assistant** that helps HR make decisions.
 
@@ -33,7 +33,7 @@
 
 # PART 2 - Who uses it (memorize these three)
 
-**Workforce Admin** *(Administrator)*
+**HR Admin** *(Administrator)*
 - The boss / HR personnel.
 - Can do **everything**: register employees, manage schedules, approve leave and overtime, see analytics and reports, use the AI assistant.
 - Say it as: *"The person in charge. Full access."*
@@ -86,7 +86,7 @@ Browser (frontend) → sends a request to `/api/...` → forwarded to the one La
 - Wrong password → error. After **5 wrong attempts**, a **60-second cool-down** (lockout).
 - Passwords must be **8+ characters with uppercase, lowercase, and a number**.
 - Forgot password → email, then the new password, and only then is a **6-digit code (OTP)** emailed and its countdown started; valid **5 minutes**, one-time use (then request a new one).
-- Workforce Admin (admin) account **cannot** reset via forgot-password (it's the reserved owner account).
+- HR Admin (admin) account **cannot** reset via forgot-password (it's the reserved owner account).
 - Separate second step: any account can switch on **two-factor sign-in** (Settings/Profile). Once it's on, a correct password does NOT hand over the token by itself - the backend emails a fresh 6-digit code and only issues the token after that code checks out. It's off by default (opt-in, per account), and it's a different code/flow from the forgot-password OTP above - one gets you a new password, the other finishes an ordinary sign-in.
 
 ## Flow 2 - Attendance with facial recognition (the kiosk)
@@ -110,11 +110,11 @@ Browser (frontend) → sends a request to `/api/...` → forwarded to the one La
 | Clock in before the shift starts | Popup "Clocking In Early" → can continue |
 | Clock out before the shift end | Must **state a reason first** (reason picker) → recorded "Early Leave" |
 | Clock out at/after the shift end | "Clocked Out" - success. If it is more than 15 min past the end with no approved overtime: amber **"Overtime Not Approved"** warning - the extra time is not counted (the day ends at the approved end) |
-| Someone else's face | Red **"Identity Verification Failed"** warning, security event logged, **Workforce Admins alerted**, 5 wrong faces = 60 s lockout (kept on the server, per kiosk) |
+| Someone else's face | Red **"Identity Verification Failed"** warning, security event logged, **HR Admins alerted**, 5 wrong faces = 60 s lockout (kept on the server, per kiosk) |
 
 > **Key defense point:** these rules are enforced by the **server**, not just the screen. The server uses its own clock and looks up the shift itself, so a wrong tablet clock or a hand-made request can't fake an on-time punch. The popups just explain the rule to the employee first.
 
-> **Also worth knowing:** the 15-minute number above is not hardcoded. Workforce Admin Settings has a **Time Manager** section where the admin configures, in one place, the late grace period, the no-show alert threshold, break-time rules, and the early-leave policy — these used to be fixed constants in the code and are now stored as system settings the admin can change.
+> **Also worth knowing:** the 15-minute number above is not hardcoded. HR Admin Settings has a **Time Manager** section where the admin configures, in one place, the late grace period, the no-show alert threshold, break-time rules, and the early-leave policy — these used to be fixed constants in the code and are now stored as system settings the admin can change.
 
 **While scanning**, the camera shows a **face-shaped oval** with a sweeping scan band and dots that pulse over the face, and the oval turns green when identity is confirmed.
 
@@ -155,11 +155,11 @@ Use these as quick talking points. Say each in ONE breath.
 - **Login / Auth** - "The gateway. Logs people in, gives a token, and blocks attackers with a lockout. An employee can also switch on a second sign-in step: the password alone does not get a token, a one-time code does."
 - **Attendance** - "Who was present and when. Clock-in/out records for everyone, with alerts if something's wrong."
 - **Corrections** *(inside Time & Attendance)* - "For the two times the kiosk record is wrong: you worked past your shift, or the kiosk just didn't catch your clock-in/out. File it with a photo as proof; HR checks it against the kiosk's own punch records before deciding."
-- **Leave** - "Time off requests, but rule-driven, not a flat form: each leave type (Vacation, Sick, Maternity, Unpaid, etc.) is configured by the Workforce Admin - who's eligible, whether it draws from a balance, how it's paid. Employees only see the types they qualify for; HR approves/rejects, and the pay type (paid-with-balance / paid-without-balance / unpaid) resolves automatically from that type's own rules."
+- **Leave** - "Time off requests, but rule-driven, not a flat form: each leave type (Vacation, Sick, Maternity, Unpaid, etc.) is configured by the HR Admin - who's eligible, whether it draws from a balance, how it's paid. Employees only see the types they qualify for; HR approves/rejects, and the pay type (paid-with-balance / paid-without-balance / unpaid) resolves automatically from that type's own rules."
 - **Overtime** - "Extra hours worked. Employees request, HR opens each one and approves or rejects it."
 - **Timesheets** - "A weekly summary of hours with a live 'This Week' popup and a history table. Employees submit after the week ends, HR approves or rejects with a reason."
 
-**Workforce Admin only:**
+**HR Admin only:**
 - **Employees / Registration** - "The company directory. HR adds, edits, and removes employees, and each one automatically gets a login account."
 - **Face Registration** - "Turns a person's face into a 128-number face print so the kiosk can recognize them."
 - **Departments & Roles** - "The org chart - what departments exist and what job titles belong to them."
@@ -182,7 +182,7 @@ These are the exact things the panel may probe. Say them confidently.
 |-------|-------------------|
 | **Sanctum tokens** | The login "ID badge". Each badge belongs to one user and is revoked on logout. |
 | **Password hashing (bcrypt)** | Passwords are scrambled before storage, so even the database can't reveal the original. |
-| **Role-based access (RBAC)** | Employees and Workforce Admin see different menus. Admin-only routes are protected server-side. |
+| **Role-based access (RBAC)** | Employees and HR Admin see different menus. Admin-only routes are protected server-side. |
 | **OTP reset** | Forgot password asks for the email and the new password first, then sends a 6-digit code that expires in 5 minutes and works only once. |
 | **Two-factor sign-in** | An optional second step any account can switch on: after the password is checked, no token is issued yet - a 6-digit code is emailed and must be entered before the login finishes. Off by default; separate from the OTP reset above. |
 | **Login lockout** | 5 wrong attempts = 60-second cool-down (stops guessing/brute-force). |
@@ -191,7 +191,7 @@ These are the exact things the panel may probe. Say them confidently.
 | **Kiosk PIN** | A PIN is stored only as a SHA-256 hash (a one-way code), never in plain text. |
 | **Kiosk device token** | The device has no login, but entering the kiosk PIN gives it a signed token that lasts until midnight (one PIN entry per day); without the token the kiosk endpoints answer 401. Even with it, it only sees minimal info (never salary, email, phone, address). |
 | **Server-enforced attendance rules** | No shift / finished shift = refused, Present vs Late is computed from the *server's* clock, and an early clock-out must carry a reason - all checked on the backend, so the kiosk screen can't be bypassed. |
-| **Face-mismatch alert** | A face that doesn't match the ID entered is logged as a security event AND every Workforce Admin gets a high-priority notification right away. |
+| **Face-mismatch alert** | A face that doesn't match the ID entered is logged as a security event AND every HR Admin gets a high-priority notification right away. |
 | **Session token expiry** | An employee login token auto-expires in 3 minutes and is extended only by real activity (mouse/keys/touch), so walking away signs you out. Every request is checked against it in-process by the single backend — no separate identity hop to cache. |
 
 **One killer closing line:**
@@ -220,16 +220,16 @@ These are the exact things the panel may probe. Say them confidently.
 **Live, public link (no laptop needed):** `https://workforce-management-qty0.onrender.com` - the real system, hosted on Render, reachable from any browser. It talks to the API at `https://workforce-api-nm7v.onrender.com`. Same demo accounts below work there too. A scheduled ping keeps the free-tier API from falling asleep, but open it once before you go on just in case - a cold start can take 30-60 seconds.
 
 **Demo accounts (they exist in your database):**
-- Workforce Admin: `admin@workforcepro.com` / `Admin@123`
+- HR Admin: `admin@workforcepro.com` / `Admin@123`
 - Employee: `employee@workforcepro.com` / `Employee@123`
 - Fercy (Employee): `fercy.miano84@gmail.com`
 - Balderama (Employee): `randycapalar@gmail.com`
 
 **30-second version (opening line):**
-"This is WorkForce Pro, a workforce management system for Archon Nell Inc. It handles HR's daily work - registering employees, attendance by facial recognition, schedules, leave, overtime, and timesheets. There are three types of users: the Workforce Admin, employees, and the kiosk device at the entrance. The system is a React frontend talking to one Laravel backend and one PostgreSQL database - internally organized into 8 clear domains, and built as one of the microservices inside our larger E-Commerce Enterprise platform."
+"This is WorkForce Pro, a workforce management system for Archon Nell Inc. It handles HR's daily work - registering employees, attendance by facial recognition, schedules, leave, overtime, and timesheets. There are three types of users: the HR Admin, employees, and the kiosk device at the entrance. The system is a React frontend talking to one Laravel backend and one PostgreSQL database - internally organized into 8 clear domains, and built as one of the microservices inside our larger E-Commerce Enterprise platform."
 
 **2-minute tour (pick the extras that fit your demo):**
-1. Log in as **Workforce Admin** → show the dashboard: point out the live **System Health %** tile (watch it alone for 30s to show it actually polls), the **Database Health** graph moving on its own, and a quick-action tile.
+1. Log in as **HR Admin** → show the dashboard: point out the live **System Health %** tile (watch it alone for 30s to show it actually polls), the **Database Health** graph moving on its own, and a quick-action tile.
 2. Open **Employees** → show the directory, note each employee has a login account.
 3. Open **Analytics** → "this summarizes everything" (Overview tab).
 4. Switch to the **AI Decision Support** tab → "the assistant flags problems in the data; HR can act in one click".
@@ -257,8 +257,8 @@ These are the exact things the panel may probe. Say them confidently.
 
 # PART 9 - Likely trap questions + one-line answers
 
-**Q: What is the difference between an Employee and the Workforce Admin account?**
-A: The Workforce Admin has full access and management rights; an Employee only sees and manages their own records. It's enforced on the backend, not just hidden in the menu.
+**Q: What is the difference between an Employee and the HR Admin account?**
+A: The HR Admin has full access and management rights; an Employee only sees and manages their own records. It's enforced on the backend, not just hidden in the menu.
 
 **Q: How do you know a face matches?**
 A: Each face is saved as a 128-number descriptor. The kiosk compares the new capture to the stored one; a distance below 0.6 means it's the same person.
@@ -279,10 +279,10 @@ A: Five failed attempts trigger a 60-second lockout, plus the password policy an
 A: No. The server refuses it ("No Shift Scheduled Today" / "Shift Over"). It's checked on the backend, so it can't be bypassed from the kiosk screen.
 
 **Q: What if someone clocks in late?**
-A: Up to and including 15 minutes after the shift start is Present. After that the kiosk shows an "You Are Late" warning and still lets them clock in ("Clock In Anyway"); it's recorded as Late and the Workforce Admins are notified.
+A: Up to and including 15 minutes after the shift start is Present. After that the kiosk shows an "You Are Late" warning and still lets them clock in ("Clock In Anyway"); it's recorded as Late and the HR Admins are notified.
 
 **Q: What if someone clocks in as another person?**
-A: The face doesn't match, so the kiosk shows an "Identity Verification Failed" warning, logs a security event and alerts the Workforce Admins immediately. Five wrong faces stop the face reader for 60 seconds (counted on the server, so refreshing does not reset it).
+A: The face doesn't match, so the kiosk shows an "Identity Verification Failed" warning, logs a security event and alerts the HR Admins immediately. Five wrong faces stop the face reader for 60 seconds (counted on the server, so refreshing does not reset it).
 
 **Q: Why is the system slow on your laptop but fast in Docker?**
 A: Every action makes several requests and each one boots the Laravel framework (about half a second on a low-power laptop CPU), locally run on PHP's built-in single-request server. We measured it. We cut the load in code (light employee lists, bounded notification batches, concurrent alert pushes, short timeouts on external calls) — and the pre-consolidation performance burden (identity hops to `core`, replica sync) is simply gone, since it's one in-process backend now. The remaining slowness is mostly the laptop (a low-power CPU, limited free RAM, running on battery) and the one-request-at-a-time local server, not a bug; Docker's multiple workers help.
@@ -434,7 +434,7 @@ Use this as a rapid-fire review. One line = one idea. Cover the right column, th
 ## Big picture (1-5)
 1. What is WorkForce Pro? → A web workforce management system for Archon Nell Inc.
 2. Name the 5 focus modules → Time&Attendance, Shift&Schedule, Leave, Timesheet, Analytics.
-3. Name the three "users" → Workforce Admin, Employee, Kiosk (device).
+3. Name the three "users" → HR Admin, Employee, Kiosk (device).
 4. What are the 3 tech layers? → React frontend, Laravel backend, PostgreSQL database.
 5. What was the client problem? → Paper/Excel HR work: attendance, schedules, leave, timesheets was slow and error-prone.
 

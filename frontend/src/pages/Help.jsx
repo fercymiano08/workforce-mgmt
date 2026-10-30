@@ -43,7 +43,7 @@ const EMPLOYEE_FAQ = [
   { q: 'How do I request leave?', a: 'Go to Leave → New Request, choose a leave type and dates, and submit. HR approves/rejects and you are notified. Approved leave is reflected on your schedule and attendance (status becomes "On Leave").' },
   { q: 'What is the "unsaved changes" bar?', a: 'On pages like My Profile, edits are not saved automatically. The floating bar at the bottom lets you Save changes or Discard. Leaving the page with unsaved edits prompts a confirmation.' },
   { q: 'What does "Missing clock-out" mean?', a: 'You clocked in but never clocked out (including still-in-progress rows). It is flagged amber on your attendance history. HR follows up; you may file a correction request with photo evidence.' },
-  { q: 'How do attendance corrections work?', a: 'If the kiosk missed a punch or you worked past your shift end, file a correction request with supporting photo evidence. A Workforce Admin reviews it against what the kiosk recorded before approving or rejecting.' },
+  { q: 'How do attendance corrections work?', a: 'If the kiosk missed a punch or you worked past your shift end, file a correction request with supporting photo evidence. A HR Admin reviews it against what the kiosk recorded before approving or rejecting.' },
   { q: 'Can I enable two-factor sign-in?', a: 'Yes — employees may optionally enable 2FA in Settings. After password verification, a time-limited one-time code is sent to your email.' },
 ];
 
@@ -106,7 +106,7 @@ export default function Help() {
               An AI-enhanced workforce management platform for e-commerce enterprises and industrial organizations.
               It covers intelligent shift scheduling, leave management, timesheet generation, attendance corrections,
               overtime reconciliation, and workforce analytics — all backed by a single shared period filter and
-              role-based access (Workforce Admin vs Employee). Built with Laravel (backend) + React/Vite (frontend),
+              role-based access (HR Admin vs Employee). Built with Laravel (backend) + React/Vite (frontend),
               PostgreSQL, and Docker Compose.
             </p>
             <div className="mt-3 flex flex-wrap gap-2">
@@ -192,7 +192,7 @@ export default function Help() {
         </div>
         <p className="text-sm text-gray-600 leading-relaxed">
           Need help beyond the FAQ? Reach out to your system administrator or HR. For account, password, or access issues,
-          contact the Workforce Admin team. Bug reports and feature requests can be filed via GitHub Issues.
+          contact the HR Admin team. Bug reports and feature requests can be filed via GitHub Issues.
         </p>
         <div className="mt-4 flex flex-wrap gap-2">
           <Button variant="secondary" size="sm" icon={Mail} onClick={() => { window.location.href = 'mailto:support@workforcepro.com'; }}>

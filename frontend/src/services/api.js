@@ -117,7 +117,7 @@ export const auditService = {
  *
  * `create` deliberately takes no hours field. The employee sends what happened (a claimed time, a reason and photo
  * proof) and the server works the arithmetic out from the roster, so there is nothing on the client that could put a
- * number into payroll. Only the Workforce Admin decides, and approving is the manual entry of the final time.
+ * number into payroll. Only the HR Admin decides, and approving is the manual entry of the final time.
  */
 export const adjustmentService = {
   mine: async () => {

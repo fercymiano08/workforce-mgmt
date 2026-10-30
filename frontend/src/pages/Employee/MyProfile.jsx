@@ -268,7 +268,7 @@ export default function MyProfile() {
           <AlertCircle className="w-5 h-5 text-amber-500 mt-0.5 shrink-0" />
           <div>
             <p className="font-semibold text-gray-900">No employee profile found</p>
-            <p className="text-sm text-gray-500 mt-1">{error || 'This account is not linked to an employee record. Please contact the Workforce Admin.'}</p>
+            <p className="text-sm text-gray-500 mt-1">{error || 'This account is not linked to an employee record. Please contact the HR Admin.'}</p>
           </div>
         </div>
       </Card>
@@ -352,7 +352,7 @@ export default function MyProfile() {
               <Briefcase className="w-5 h-5 text-gray-400 mt-0.5" />
               <div>
                 <CardTitle>Employment</CardTitle>
-                <CardDescription>Managed by HR - contact the Workforce Admin to change these</CardDescription>
+                <CardDescription>Managed by HR - contact the HR Admin to change these</CardDescription>
               </div>
             </div>
           </CardHeader>
@@ -539,7 +539,7 @@ export default function MyProfile() {
                 <p className="text-sm font-semibold text-emerald-800">Your face is registered</p>
                     <p className="text-xs text-emerald-700 mt-0.5">
                       {employee.faceRegisteredAt ? `Registered on ${formatDate(employee.faceRegisteredAt)}. ` : ''}
-                      If the kiosk stops recognizing you, ask the Workforce Admin to register your face again.
+                      If the kiosk stops recognizing you, ask the HR Admin to register your face again.
                     </p>
               </div>
             </div>
@@ -548,7 +548,7 @@ export default function MyProfile() {
               <AlertCircle className="w-5 h-5 text-amber-600 mt-0.5 shrink-0" />
               <div>
                 <p className="text-sm font-semibold text-amber-800">No face registered yet</p>
-                <p className="text-xs text-amber-700 mt-0.5">You can't clock in at the kiosk until the Workforce Admin registers your face.</p>
+                <p className="text-xs text-amber-700 mt-0.5">You can't clock in at the kiosk until the HR Admin registers your face.</p>
               </div>
             </div>
           )}

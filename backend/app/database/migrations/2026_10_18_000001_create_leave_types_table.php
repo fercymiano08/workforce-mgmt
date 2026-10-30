@@ -6,7 +6,7 @@ use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema;
 
 /**
- * Every rule a leave type carries, configurable by the Workforce Admin instead of hardcoded in
+ * Every rule a leave type carries, configurable by the HR Admin instead of hardcoded in
  * LeaveController. Seeded here with the 7 types that already exist as plain strings on `leaves`,
  * translating today's hardcoded checks 1:1 so behavior does not silently change at cutover - the
  * two deliberate exceptions (Unpaid loses its old balance check but gains max_consecutive_days;

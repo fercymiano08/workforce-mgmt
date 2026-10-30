@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Middleware\AddRequestId;
 use App\Http\Middleware\EnsureKioskDevice;
 use App\Http\Middleware\EnsureUserIsAdministrator;
 use Illuminate\Foundation\Application;
@@ -16,6 +17,7 @@ return Application::configure(basePath: dirname(__DIR__))
         health: '/up',
     )
     ->withMiddleware(function (Middleware $middleware): void {
+        $middleware->append(AddRequestId::class);
         // Behind a public host (Render, nginx, Caddy) the request arrives over plain HTTP from the
         // proxy and the real scheme is in X-Forwarded-Proto. Without this, Laravel builds http:// URLs.
         $middleware->trustProxies(at: '*');

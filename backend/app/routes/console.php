@@ -18,7 +18,7 @@ Schedule::command('attendance:recount-hours')->everyMinute()->withoutOverlapping
 // dashboard that otherwise says those people worked. Running the rebuild at 00:05 and the marker at 00:10
 // means the marker finds a real record for yesterday and has nothing to do. Set REFRESH_DEMO_DAILY=false to
 // turn the rebuild off; the marker still runs.
-if (filter_var(env('REFRESH_DEMO_DAILY', true), FILTER_VALIDATE_BOOLEAN)) {
+if (filter_var(env('REFRESH_DEMO_DAILY', false), FILTER_VALIDATE_BOOLEAN)) {
     Schedule::command('demo:refresh --spare-today')->dailyAt('00:05')->timezone('Asia/Manila')->withoutOverlapping();
 }
 Schedule::command('attendance:mark-absent')->dailyAt('00:10')->timezone('Asia/Manila')->withoutOverlapping();

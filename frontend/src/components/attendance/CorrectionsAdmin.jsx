@@ -70,7 +70,7 @@ function ConsistencyChecks({ checks }) {
 }
 
 /**
- * Time & Attendance > Corrections, the Workforce Admin's side. The list of requests, and for each one a review screen:
+ * Time & Attendance > Corrections, the HR Admin's side. The list of requests, and for each one a review screen:
  * the photos and the employee's account, the day as it stands, and the manual entry - approving records the time the
  * admin confirms (or corrects), rejecting needs a reason the employee will read.
  */

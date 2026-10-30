@@ -33,7 +33,7 @@ docker compose down             # stop everything (your database data is KEPT)
 docker compose down -v          # stop AND ERASE the Docker database (fresh empty system)
 ```
 
-- Open **http://localhost:5173** and log in as the Workforce Admin (John Delgado). A brand-new Docker database contains
+- Open **http://localhost:5173** and log in as the HR Admin (John Delgado). A brand-new Docker database contains
   **only** the admin, the 8 departments and the 33 job positions; add employees yourself.
 - Secrets live in a file called `.env` in the project folder (git-ignored). If it is missing, copy `.env.docker.example`
   to `.env` and fill it in.

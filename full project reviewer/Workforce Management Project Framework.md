@@ -4,7 +4,7 @@
 > We built **AI-Enhanced Workforce Management** for **Archon Nell Inc.**: a web app with
 > **Facial Recognition clock-in**, **Shift Scheduling**, **Leave Management**, **Weekly Timesheets**,
 > **Workforce Analytics** with a built-in ranked **Top Performer** view and a per-employee popup, plus **AI Decision Support** as its own tab. Built with **React + Laravel + PostgreSQL**.
-> Users: Workforce Admin, Employees, and an entrance Clock-In kiosk device. Team of 5 under client **Junar Love Olarte**.
+> Users: HR Admin, Employees, and an entrance Clock-In kiosk device. Team of 5 under client **Junar Love Olarte**.
 > Deployed live on Render — see Deployment below for the links — alongside the usual local/Docker setup.
 
 ---
@@ -30,7 +30,7 @@ Features:
 -Leave Management
 -Workforce Analytical View (one This Week/Month/Year filter driving the overview's charts, each stating its own data source and formula)
 -Report Generation
--Live Workforce Admin dashboard (a polling System Health %, an animated Database Health graph, quick-action tiles, a navigable attendance chart) and a closable side navigation, used the same way on desktop as on a phone
+-Live HR Admin dashboard (a polling System Health %, an animated Database Health graph, quick-action tiles, a navigable attendance chart) and a closable side navigation, used the same way on desktop as on a phone
 
 Techstack:
 React (Mainframe)
@@ -49,7 +49,7 @@ Florita Romulo
 Kyle Matthew Galande
 
 Usertypes:
--Workforce Admin (role value `Administrator`): the single operator account that runs the whole company side
+-HR Admin (role value `Administrator`): the single operator account that runs the whole company side
 -Employees: self-service for their own work life
 -Entrance Clocking-In (kiosk) Device: not a login — a locked-down device at the entrance employees use to clock in/out
 

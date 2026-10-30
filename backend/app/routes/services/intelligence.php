@@ -34,6 +34,10 @@ Route::middleware('auth:sanctum')->prefix('analytics')->group(function () {
     });
 });
 
+// Liveness / readiness probes for partners and load balancers (no auth).
+Route::get('/health', [SystemHealthController::class, 'health']);
+Route::get('/ready', [SystemHealthController::class, 'ready']);
+
 // Not analytics data - a raw Postgres round-trip time, for the dashboard's live DB-health graph.
 Route::middleware(['auth:sanctum', 'admin'])->get('/system/db-health', [SystemHealthController::class, 'db']);
 

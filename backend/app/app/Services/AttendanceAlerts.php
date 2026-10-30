@@ -11,7 +11,7 @@ use App\Support\LocalTime;
 use Illuminate\Support\Carbon;
 
 /**
- * The attendance alerts the Workforce Admins get in their notification bell:
+ * The attendance alerts the HR Admins get in their notification bell:
  *
  *   Possible No-Show            scheduled today, the absent-grace time after the shift start has passed, no clock-in
  *   Incomplete Attendance       clocked in on a day that is over, never clocked out

@@ -15,7 +15,7 @@ use Illuminate\Support\Facades\DB;
 use Tests\TestCase;
 
 /**
- * Corrections (Time & Attendance > Corrections): the employee files with photo proof, the Workforce Admin decides and
+ * Corrections (Time & Attendance > Corrections): the employee files with photo proof, the HR Admin decides and
  * makes the manual entry. Tested mostly for the refusals - a claim can recover time, never invent it.
  */
 class AttendanceAdjustmentTest extends TestCase

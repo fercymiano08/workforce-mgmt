@@ -15,7 +15,7 @@ use Illuminate\Support\Carbon;
  *      UNPAID (unexcused), with no need to wait for HR;
  *   2. requires proof for a SICK claim (a medical certificate) within a deadline,
  *      or the record becomes unexcused automatically;
- *   3. alerts the Workforce Admins about EVERY early clock-out, with how many the
+ *   3. alerts the HR Admins about EVERY early clock-out, with how many the
  *      person has had, so a human can follow up the same day;
  *   4. flags a copycat pattern - several people leaving early the same day with
  *      the same reason.

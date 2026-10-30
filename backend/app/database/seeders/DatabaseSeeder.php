@@ -39,7 +39,7 @@ class DatabaseSeeder extends Seeder
                         'name' => 'John Delgado',
                         'password' => Hash::make('Admin@123'),
                         'role' => 'Administrator',
-                        'role_label' => 'Workforce Admin',
+                        'role_label' => 'HR Admin',
                         'avatar_seed' => 'John',
                     ],
                 );
@@ -178,7 +178,7 @@ class DatabaseSeeder extends Seeder
                 'name' => 'John Delgado',
                 'password' => Hash::make('Admin@123'),
                 'role' => 'Administrator',
-                'role_label' => 'Workforce Admin',
+                'role_label' => 'HR Admin',
                 'avatar_seed' => 'John',
             ],
         );

@@ -6,7 +6,7 @@ use Illuminate\Support\Facades\DB;
 /**
  * A generated timesheet used to be saved as "Pending", a status nothing else understands: the
  * employee's Submit button and the server both look for "Draft", so those timesheets could never be
- * submitted and never reached the Workforce Admin. Generated timesheets now start as "Draft"; this
+ * submitted and never reached the HR Admin. Generated timesheets now start as "Draft"; this
  * moves the ones already saved.
  */
 return new class extends Migration

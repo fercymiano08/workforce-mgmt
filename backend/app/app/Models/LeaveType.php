@@ -6,7 +6,7 @@ use App\Models\Concerns\ApiSerializable;
 use Illuminate\Database\Eloquent\Model;
 
 /**
- * A bundle of rules the Workforce Admin configures per leave type - gender/tenure eligibility,
+ * A bundle of rules the HR Admin configures per leave type - gender/tenure eligibility,
  * pay resolution, accrual, advance notice, proof requirements. Replaces the hardcoded string
  * checks that used to live in LeaveController. `code` matches the existing `leaves.leave_type`
  * string values exactly, so nothing on the leaves table needed renaming when this was introduced.

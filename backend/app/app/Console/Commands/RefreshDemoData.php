@@ -131,7 +131,7 @@ class RefreshDemoData extends Command
         $spareToday = (bool) $this->option('spare-today');
         // Generation stops at $to. --spare-today ends it yesterday, so a day that has only just begun is never filled with made-up activity.
         $to = $spareToday ? $now->copy()->subDay()->toDateString() : $today;
-        $admin = User::where('role', 'Administrator')->value('name') ?: 'Workforce Admin';
+        $admin = User::where('role', 'Administrator')->value('name') ?: 'HR Admin';
 
         DB::transaction(function () use ($ids, $from, $today, $now, $tz, $shift, $shiftId, $grace, $closeToday, $spareToday, $to, $timesheets, $workflow, $workingDays, $admin): void {
             // Initials instead of borrowed cartoon pictures
@@ -189,7 +189,7 @@ class RefreshDemoData extends Command
             Timesheet::whereIn('employee_id', $ids)->delete();
             ShiftSchedule::whereIn('employee_id', $ids)->where('date', '<=', $today)->delete();
             if ($spareToday) {
-                OvertimeRequest::whereIn('employee_id', $ids)->where('date', $today)->where('approved_by', 'Workforce Admin')->delete();
+                OvertimeRequest::whereIn('employee_id', $ids)->where('date', $today)->where('approved_by', 'HR Admin')->delete();
             }
 
             // 0. Leave and overtime requests roll forward with "today" too - added BEFORE the schedule
@@ -412,7 +412,7 @@ class RefreshDemoData extends Command
             'start_date' => $start, 'end_date' => $end, 'days' => $days,
             'pay_type' => $resolved['payType'], 'paid_days' => $resolved['paidDays'], 'unpaid_days' => $resolved['unpaidDays'],
             'reason' => $reason, 'status' => 'Approved',
-            'applied_date' => $appliedDate, 'approved_by' => 'Workforce Admin',
+            'applied_date' => $appliedDate, 'approved_by' => 'HR Admin',
         ]);
 
         if ($resolved['payType'] === 'PaidWithBalance' && (float) $resolved['paidDays'] > 0) {
@@ -565,7 +565,7 @@ class RefreshDemoData extends Command
                 'date' => $row['date'], 'expected_hours' => $hours, 'approved_hours' => $hours,
                 'reason' => $this->overtimeReason($row['employee_id'].$row['date']), 'status' => 'Approved',
                 'requested_date' => Carbon::parse($row['date'])->subDay()->toDateString(),
-                'approved_by' => 'Workforce Admin', 'approved_at' => Carbon::parse($row['date'])->subDay(),
+                'approved_by' => 'HR Admin', 'approved_at' => Carbon::parse($row['date'])->subDay(),
             ]);
         }
     }

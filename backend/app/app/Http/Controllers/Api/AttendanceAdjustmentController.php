@@ -18,7 +18,7 @@ use Illuminate\Validation\ValidationException;
 /**
  * Corrections, inside Time & Attendance.
  *
- * The employee files one in their own words with photo proof; the Workforce Admin decides and, when approving,
+ * The employee files one in their own words with photo proof; the HR Admin decides and, when approving,
  * enters the final time by hand (a manual clock-in, clock-out or shift edit). Nothing reaches payroll without that
  * decision, and every number is derived from the roster, never taken from the request.
  */
@@ -212,7 +212,7 @@ class AttendanceAdjustmentController extends Controller
     }
 
     /**
-     * The decision - the Workforce Admin's alone. Approving is the manual entry: the admin confirms (or corrects) the
+     * The decision - the HR Admin's alone. Approving is the manual entry: the admin confirms (or corrects) the
      * time, and it is written to the attendance record by the same rules a live punch follows.
      */
     public function decide(Request $request, string $id): JsonResponse
@@ -233,7 +233,7 @@ class AttendanceAdjustmentController extends Controller
             ]);
         }
 
-        $actorName = $request->user()?->name ?? 'Workforce Admin';
+        $actorName = $request->user()?->name ?? 'HR Admin';
 
         if ($data['decision'] === 'Rejected') {
             $adjustment->update([

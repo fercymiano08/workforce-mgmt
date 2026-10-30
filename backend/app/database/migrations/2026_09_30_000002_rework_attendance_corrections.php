@@ -6,7 +6,7 @@ use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema;
 
 /**
- * Corrections now live inside Time & Attendance and follow a simpler flow: the employee files, the Workforce Admin
+ * Corrections now live inside Time & Attendance and follow a simpler flow: the employee files, the HR Admin
  * decides and, when approving, enters the final time by hand.
  *
  *   worked_past_shift  worked beyond the end of the shift (a clock-out that failed, or that was not counted)

@@ -180,7 +180,7 @@ class TimesheetController extends Controller
         $status = $request->input('status');
         $user = $request->user();
         $isAdmin = $user?->role === 'Administrator';
-        $who = $user?->name ?: ($isAdmin ? 'Workforce Admin' : 'Employee');
+        $who = $user?->name ?: ($isAdmin ? 'HR Admin' : 'Employee');
         $reason = (string) $request->input('reason', '');
 
         if (! $isAdmin) {
@@ -247,7 +247,7 @@ class TimesheetController extends Controller
             return response()->json(['message' => 'There are no approved timesheets waiting to be sent to payroll.'], 422);
         }
 
-        $by = $request->user()?->name ?: 'Workforce Admin';
+        $by = $request->user()?->name ?: 'HR Admin';
         $this->workflow->markExported($sheets, $by);
 
         AuditLogger::record('payroll', 

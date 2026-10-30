@@ -19,7 +19,7 @@ use Illuminate\Support\Facades\DB;
  *   kiosk_clock_out    "The kiosk did not clock me out"
  *
  * The employee states WHAT HAPPENED (a time, a reason and a photo as proof), never how many hours they are owed.
- * Every number is derived from their scheduled shift, and only the Workforce Admin can turn a claim into a change - by
+ * Every number is derived from their scheduled shift, and only the HR Admin can turn a claim into a change - by
  * entering the final time by hand when approving. A claim can recover time, not invent it:
  *   - before the shift started        -> refused (that time was never scheduled)
  *   - in the future                   -> refused
@@ -339,7 +339,7 @@ class AttendanceAdjustmentService
             'reason' => 'Correction '.$adjustment->id.': '.$adjustment->reason,
             'status' => 'Approved',
             'requested_date' => $adjustment->requested_date->toDateString(),
-            'comments' => 'Recorded from a correction the Workforce Admin approved, not a request made in advance.',
+            'comments' => 'Recorded from a correction the HR Admin approved, not a request made in advance.',
         ]);
     }
 

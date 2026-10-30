@@ -141,17 +141,17 @@ Let's trace what happens when an employee clocks in at the kiosk. Read this like
 3. If it matches, the frontend sends a request: `POST /api/kiosk/attendance` — basically saying "clock this person in now."
 4. That request has the URL prefix `/api/kiosk/...`, so the frontend's traffic-router (a setting called the Vite proxy) sends it to the **one backend** on port `8000` — the whole API lives at a single address now, not one address per feature.
 5. Inside the backend, the request lands in the **Attendance domain** (`routes/services/attendance.php`): it checks the rules itself — is there a shift scheduled today? Is the shift already over? Are they already clocked in? The kiosk screen also shows friendly warning popups first (for example "You Are Late"), but the **server is the one that really enforces the rules** — so nobody can cheat by editing the screen.
-6. It uses **its own clock** to decide the time and whether the person is **Present** or **Late**, using a grace period (15 minutes by default) that the Workforce Admin can tune from **Settings → Time Manager** — it's no longer a hardcoded number. If they're late, it still lets them clock in, but the admins get a notification. If there's no shift today, it says no. Then it writes one new row into the `attendance` table in the single `workforce_mgnt` database — the actual attendance record.
+6. It uses **its own clock** to decide the time and whether the person is **Present** or **Late**, using a grace period (15 minutes by default) that the HR Admin can tune from **Settings → Time Manager** — it's no longer a hardcoded number. If they're late, it still lets them clock in, but the admins get a notification. If there's no shift today, it says no. Then it writes one new row into the `attendance` table in the single `workforce_mgnt` database — the actual attendance record.
 7. It sends back a JSON answer: "success, clocked in at 8:03 AM."
 8. The kiosk screen shows a green success message (or an amber one if the person was late).
 
-> **If someone tries to clock in as another person:** their face won't match, the kiosk shows a red warning, and the system sends an alert to the Workforce Admin.
+> **If someone tries to clock in as another person:** their face won't match, the kiosk shows a red warning, and the system sends an alert to the HR Admin.
 
 Notice: only the **Attendance domain** was involved in the core action. The other domains (payroll, time-off, scheduling…) didn't need to do anything — but they're not separate apps that had to be left out; they're just folders in the same app that weren't needed for this request.
 
 ### What if the kiosk gets it wrong?
 
-Sometimes the punch itself is the problem — someone genuinely worked past the end of their shift, or the kiosk simply failed to record a tap. That's what **Corrections** (still inside Attendance) is for: the employee opens a correction request, states what actually happened, and attaches a photo as proof. A Workforce Admin then reviews it side-by-side against the kiosk's own punch records before approving or rejecting it. It's a request-and-review flow, same shape as leave or overtime — nobody can just edit their own attendance record directly.
+Sometimes the punch itself is the problem — someone genuinely worked past the end of their shift, or the kiosk simply failed to record a tap. That's what **Corrections** (still inside Attendance) is for: the employee opens a correction request, states what actually happened, and attaches a photo as proof. A HR Admin then reviews it side-by-side against the kiosk's own punch records before approving or rejecting it. It's a request-and-review flow, same shape as leave or overtime — nobody can just edit their own attendance record directly.
 
 ---
 

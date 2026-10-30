@@ -41,7 +41,7 @@ const statusVariant = {
 };
 
 // ---------------------------------------------------------------------------
-// Workforce Admin view - review every employee's semi-monthly timesheet (1st-15th, 16th-end of
+// HR Admin view - review every employee's semi-monthly timesheet (1st-15th, 16th-end of
 // month). The employee submits (or the system does at the deadline); the admin approves, rejects
 // (with a reason) or reopens; approved timesheets are then sent to payroll, once each. Hours cannot
 // be edited: they come from attendance and freeze when the timesheet is submitted.
@@ -652,7 +652,7 @@ function AdminTimesheetsView() {
 }
 
 // ---------------------------------------------------------------------------
-// Workforce Admin view - review every employee's pay-period timesheet.
+// HR Admin view - review every employee's pay-period timesheet.
 // Admin-only route (employees use My Timesheet), so this is always the admin view.
 // ---------------------------------------------------------------------------
 export default function Timesheets() {

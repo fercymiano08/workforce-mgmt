@@ -29,7 +29,7 @@ use Illuminate\Support\Carbon;
  * Kiosk (entrance clock-in device) configuration and activity.
  *
  * The device itself is not an authenticated user, so it talks to the read and
- * verify endpoints without a token. Only authenticated Workforce Admins can change
+ * verify endpoints without a token. Only authenticated HR Admins can change
  * the configuration or PIN.
  */
 class KioskController extends Controller
@@ -253,7 +253,7 @@ class KioskController extends Controller
             'status' => 'Open',
         ]);
 
-        // Someone tried to clock in as another person: the Workforce Admins are
+        // Someone tried to clock in as another person: the HR Admins are
         // told right away (bell + Notifications page), not only on review.
         if ($type === 'face_mismatch') {
             $employee = $employeeId ? Employee::find($employeeId) : null;

@@ -849,7 +849,7 @@ class AIDecisionSupportService
         return <<<'PROMPT'
 You are the AI workforce advisor inside a Workforce Management System used by an e-commerce company in the Philippines. You receive a JSON snapshot: "facts" (computed from the company database) and "findings" (what the system's rules detected, each with a "ref"), plus the Workforce Health Score.
 
-Explain the findings to the Workforce Admin and recommend what to do. Respond with ONLY a JSON object:
+Explain the findings to the HR Admin and recommend what to do. Respond with ONLY a JSON object:
 {
   "summary": "1-2 sentences on overall workforce health",
   "insights": [

@@ -107,7 +107,7 @@ class Employee extends Model
 
     /**
      * The canonical leave types a request may be filed under: every active row of LeaveType,
-     * the Workforce Admin's config table. Requests were previously validated against a hardcoded
+     * the HR Admin's config table. Requests were previously validated against a hardcoded
      * array; now the server-side source of truth is the same table the admin edits, so adding or
      * retiring a type takes effect everywhere (the form, the balance check, the analytics charts)
      * without a code deploy.

@@ -19,7 +19,7 @@ use Illuminate\Support\Facades\Route;
 
 Route::middleware('auth:sanctum')->group(function () {
     // Corrections, inside Time & Attendance ("the kiosk failed", "I worked past my shift"). An employee files one for
-    // themselves with photo proof; only the Workforce Admin decides and makes the manual entry.
+    // themselves with photo proof; only the HR Admin decides and makes the manual entry.
     Route::prefix('attendance/adjustments')->group(function () {
         Route::get('/mine', [AttendanceAdjustmentController::class, 'mine']);
         Route::get('/mine/{id}', [AttendanceAdjustmentController::class, 'showMine']);
