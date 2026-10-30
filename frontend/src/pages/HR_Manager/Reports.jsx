@@ -21,6 +21,7 @@ const reportCategories = [
     color: 'emerald',
     icon: Clock,
     reports: [
+      { name: 'Daily Time Record (DTR)', desc: 'Formal per-employee daily clock-in/out record for a period - the document DOLE and payroll ask for', icon: ClipboardList },
       { name: 'Monthly Attendance Summary', desc: 'Individual clock-in/out records with hours and status per day', icon: ClipboardList },
       { name: 'Department Attendance Breakdown', desc: 'Present/late/absent counts and attendance rate by department', icon: BarChart3 },
       { name: 'Absenteeism Trend Report', desc: 'Absence count and rate per employee over time', icon: AlertTriangle },
@@ -58,6 +59,7 @@ const reportCategories = [
     color: 'pink',
     icon: Users,
     reports: [
+      { name: 'Consolidated Workforce Summary', desc: 'One-page cross-module summary: headcount, attendance, leave, overtime and absenteeism', icon: BarChart3 },
       { name: 'Workforce Headcount Report', desc: 'Active and on-leave headcount per department', icon: Users },
       { name: 'Employee Turnover Analysis', desc: 'Hire dates, tenure, and current status for all employees', icon: UserCheck },
     ],
@@ -78,6 +80,7 @@ export default function Reports() {
   const [dateRange, setDateRange] = useState({ startDate: '', endDate: '' });
   const [generating, setGenerating] = useState(false);
   const [recentReports, setRecentReports] = useState([]);
+  const [selectedEmployee, setSelectedEmployee] = useState('');
 
   const { data: employeesData } = useApiData(() => employeeService.getAll(), []);
 
@@ -105,7 +108,7 @@ export default function Reports() {
   const handleGenerate = async (reportName) => {
     setGenerating(true);
     try {
-      const result = await buildReport(reportName, dateRange, nameOf);
+      const result = await buildReport(reportName, dateRange, nameOf, selectedEmployee);
       setReport(result);
       setRecentReports((prev) => [reportName, ...prev.filter((r) => r !== reportName)].slice(0, 5));
     } catch {
@@ -143,6 +146,17 @@ export default function Reports() {
                   <button onClick={() => setDateRange({ startDate: '', endDate: '' })} className="ml-2 text-gray-400 hover:text-gray-600 underline">Clear</button>
                 </span>
               )}
+              <span className="text-sm font-semibold text-gray-700 ml-2">Employee:</span>
+              <select
+                value={selectedEmployee}
+                onChange={(e) => setSelectedEmployee(e.target.value)}
+                className="px-3 py-1.5 text-xs rounded-lg border border-gray-200 text-gray-600 focus:border-blue-300 focus:ring-2 focus:ring-blue-100 outline-none"
+              >
+                <option value="">All employees</option>
+                {(employeesData || []).map((e) => (
+                  <option key={e.id} value={e.id}>{e.firstName} {e.lastName}</option>
+                ))}
+              </select>
             </div>
           </Card>
 

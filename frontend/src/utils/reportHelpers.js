@@ -23,7 +23,7 @@ function summarize(range) {
   return `Until ${formatDate(range.endDate)}`;
 }
 
-export async function buildReport(reportName, dateRange, nameOf) {
+export async function buildReport(reportName, dateRange, nameOf, employeeId = '') {
   const period = summarize(dateRange);
   const inRange = (date) => {
     if (!date) return true;
@@ -34,6 +34,53 @@ export async function buildReport(reportName, dateRange, nameOf) {
   };
 
   switch (reportName) {
+
+    case 'Daily Time Record (DTR)': {
+      const records = await attendanceService.getAll();
+      const filtered = records.filter((r) => inRange(r.date) && (!employeeId || r.employeeId === employeeId));
+      const empName = employeeId ? (nameOf(employeeId) || employeeId) : 'All Employees';
+      const rows = filtered
+        .slice()
+        .sort((a, b) => String(a.date).localeCompare(String(b.date)))
+        .map((r) => [
+          formatDate(r.date) || r.date,
+          r.clockIn || '-',
+          r.clockOut || '-',
+          fmtH(r.regularHours),
+          fmtH(r.overtime),
+          String(r.lateMinutes || 0),
+          String(r.undertimeMinutes || 0),
+          r.status || '-',
+        ]);
+      const present = filtered.filter((r) => r.status === 'Present').length;
+      const late = filtered.filter((r) => r.status === 'Late').length;
+      const absent = filtered.filter((r) => r.status === 'Absent').length;
+      const totalReg = filtered.reduce((s, r) => s + Number(r.regularHours || 0), 0);
+      const totalOt = filtered.reduce((s, r) => s + Number(r.overtime || 0), 0);
+      return {
+        title: 'Daily Time Record (DTR)',
+        subtitle: 'Formal daily attendance record for ' + empName,
+        summary: [
+          { label: 'Employee', value: empName, color: 'blue' },
+          { label: 'Days Recorded', value: String(filtered.length), color: 'blue' },
+          { label: 'Present', value: String(present), color: 'green' },
+          { label: 'Late', value: String(late), color: late > 0 ? 'amber' : 'green' },
+          { label: 'Absent', value: String(absent), color: absent > 0 ? 'red' : 'green' },
+          { label: 'Total Regular Hrs', value: fmtH(totalReg), color: 'blue' },
+          { label: 'Total OT Hrs', value: fmtH(totalOt), color: 'blue' },
+        ],
+        charts: [],
+        insights: [
+          filtered.length > 0 ? 'Attendance rate: ' + pct(present + late, filtered.length) + '.' : 'No attendance records found for this period.',
+          late > 0 ? late + ' late arrival' + (late > 1 ? 's' : '') + ' recorded.' : null,
+          absent > 0 ? absent + ' absent day' + (absent > 1 ? 's' : '') + ' recorded.' : null,
+        ].filter(Boolean),
+        recommendations: [],
+        cols: ['Date', 'Clock In', 'Clock Out', 'Regular Hrs', 'OT Hrs', 'Late (min)', 'Undertime (min)', 'Status'],
+        rows,
+        period,
+      };
+    }
 
     case 'Monthly Attendance Summary': {
       const records = await attendanceService.getAll();
@@ -393,6 +440,75 @@ export async function buildReport(reportName, dateRange, nameOf) {
         ].filter(Boolean),
         cols: ['Employee', ...allShiftTypes.map((sid) => shiftNames[sid] || sid), 'Total'],
         rows: empArr.map(([name, data]) => [name, ...allShiftTypes.map((sid) => String(data.shifts[sid] || 0)), String(data.total)]),
+        period,
+      };
+    }
+
+    case 'Consolidated Workforce Summary': {
+      const [employees, records, leaves, timesheets, otRecords] = await Promise.all([
+        employeeService.getAll(), attendanceService.getAll(), leaveService.getAll(),
+        timesheetService.getAll(), overtimeService.getAll(),
+      ]);
+      const attFiltered = (records || []).filter((r) => inRange(r.date));
+      const present = attFiltered.filter((r) => r.status === 'Present').length;
+      const late = attFiltered.filter((r) => r.status === 'Late').length;
+      const absent = attFiltered.filter((r) => r.status === 'Absent').length;
+      const attRate = attFiltered.length ? Math.round(((present + late) / attFiltered.length) * 100) : 0;
+      const leaveFiltered = (leaves || []).filter((r) => inRange(r.startDate));
+      const approvedLeaves = leaveFiltered.filter((r) => r.status === 'Approved').length;
+      const pendingLeaves = leaveFiltered.filter((r) => r.status === 'Pending').length;
+      const tsFiltered = (timesheets || []).filter((r) => inRange(r.weekStart || r.periodStart));
+      const totalOt = tsFiltered.reduce((s, r) => s + Number(r.overtimeHours || 0), 0);
+      const totalReg = tsFiltered.reduce((s, r) => s + Number(r.regularHours || 0), 0);
+      const otFiltered = (otRecords || []).filter((r) => inRange(r.date));
+      const otApproved = otFiltered.filter((r) => r.status === 'Approved').length;
+      const totalHeadcount = (employees || []).length;
+      const activeEmps = (employees || []).filter((e) => e.status === 'Active').length;
+      const onLeaveEmps = (employees || []).filter((e) => e.status === 'On Leave').length;
+      return {
+        title: 'Consolidated Workforce Summary',
+        subtitle: 'Cross-module snapshot: headcount, attendance, leave, overtime and absenteeism',
+        summary: [
+          { label: 'Total Headcount', value: String(totalHeadcount), color: 'blue' },
+          { label: 'Active Employees', value: String(activeEmps), color: 'green' },
+          { label: 'On Leave', value: String(onLeaveEmps), color: onLeaveEmps > 0 ? 'amber' : 'green' },
+          { label: 'Attendance Rate', value: attRate + '%', color: attRate >= 90 ? 'green' : 'amber' },
+          { label: 'Absent Records', value: String(absent), color: absent > 0 ? 'red' : 'green' },
+          { label: 'Leave Requests', value: String(leaveFiltered.length), color: 'blue' },
+          { label: 'Pending Leaves', value: String(pendingLeaves), color: pendingLeaves > 0 ? 'amber' : 'green' },
+          { label: 'Total OT Hours', value: fmtH(totalOt), color: totalOt > 0 ? 'amber' : 'green' },
+        ],
+        charts: [],
+        insights: [
+          'Workforce of ' + totalHeadcount + ' employees across ' + new Set((employees || []).map((e) => e.department || 'Unassigned')).size + ' department(s).',
+          'Attendance rate is ' + attRate + '% (' + present + ' present, ' + late + ' late, ' + absent + ' absent) over ' + attFiltered.length + ' records.',
+          leaveFiltered.length > 0 ? pct(approvedLeaves, leaveFiltered.length) + ' of leave requests approved (' + pendingLeaves + ' pending).' : 'No leave requests in this period.',
+          totalOt > 0 ? 'Overtime totals ' + fmtH(totalOt) + ' hours across ' + tsFiltered.length + ' timesheet entries.' : 'No overtime recorded in this period.',
+          otFiltered.length > 0 ? otApproved + ' of ' + otFiltered.length + ' overtime requests approved.' : null,
+        ].filter(Boolean),
+        recommendations: [
+          attRate < 90 ? 'Attendance rate below 90% - review absence patterns.' : null,
+          pendingLeaves > 5 ? pendingLeaves + ' pending leave requests - expedite approvals.' : null,
+          totalOt > totalReg * 0.15 ? 'Overtime exceeds 15% of regular hours - evaluate staffing.' : null,
+        ].filter(Boolean),
+        cols: ['Metric', 'Value'],
+        rows: [
+          ['Total Headcount', String(totalHeadcount)],
+          ['Active Employees', String(activeEmps)],
+          ['On Leave', String(onLeaveEmps)],
+          ['Attendance Rate', attRate + '%'],
+          ['Present Records', String(present)],
+          ['Late Records', String(late)],
+          ['Absent Records', String(absent)],
+          ['Leave Requests', String(leaveFiltered.length)],
+          ['Approved Leaves', String(approvedLeaves)],
+          ['Pending Leaves', String(pendingLeaves)],
+          ['Timesheet Entries', String(tsFiltered.length)],
+          ['Total Regular Hours', fmtH(totalReg)],
+          ['Total Overtime Hours', fmtH(totalOt)],
+          ['Overtime Requests', String(otFiltered.length)],
+          ['Approved OT Requests', String(otApproved)],
+        ],
         period,
       };
     }
