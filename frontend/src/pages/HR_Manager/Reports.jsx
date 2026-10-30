@@ -81,6 +81,11 @@ export default function Reports() {
   const [generating, setGenerating] = useState(false);
   const [recentReports, setRecentReports] = useState([]);
   const [selectedEmployee, setSelectedEmployee] = useState('');
+  const [selectedDepartment, setSelectedDepartment] = useState('');
+  const [selectedStatus, setSelectedStatus] = useState('');
+  const [savedReports, setSavedReports] = useState(() => {
+    try { return JSON.parse(localStorage.getItem('savedReports') || '[]'); } catch { return []; }
+  });
 
   const { data: employeesData } = useApiData(() => employeeService.getAll(), []);
 
@@ -108,7 +113,13 @@ export default function Reports() {
   const handleGenerate = async (reportName) => {
     setGenerating(true);
     try {
-      const result = await buildReport(reportName, dateRange, nameOf, selectedEmployee);
+      const result = await buildReport(reportName, dateRange, nameOf, selectedEmployee, selectedDepartment, selectedStatus);
+      setSavedReports((prev) => {
+        const entry = { name: reportName, period: result.period, savedAt: new Date().toISOString(), report: result };
+        const next = [entry, ...prev.filter((r) => r.name !== reportName)].slice(0, 10);
+        try { localStorage.setItem('savedReports', JSON.stringify(next)); } catch { /* ignore */ }
+        return next;
+      });
       setReport(result);
       setRecentReports((prev) => [reportName, ...prev.filter((r) => r !== reportName)].slice(0, 5));
     } catch {
@@ -157,6 +168,31 @@ export default function Reports() {
                   <option key={e.id} value={e.id}>{e.firstName} {e.lastName}</option>
                 ))}
               </select>
+              <span className="text-sm font-semibold text-gray-700 ml-2">Department:</span>
+              <select
+                value={selectedDepartment}
+                onChange={(e) => setSelectedDepartment(e.target.value)}
+                className="px-3 py-1.5 text-xs rounded-lg border border-gray-200 text-gray-600 focus:border-blue-300 focus:ring-2 focus:ring-blue-100 outline-none"
+              >
+                <option value="">All departments</option>
+                {[...new Set((employeesData || []).map((e) => e.department).filter(Boolean))].map((d) => (
+                  <option key={d} value={d}>{d}</option>
+                ))}
+              </select>
+              <span className="text-sm font-semibold text-gray-700 ml-2">Status:</span>
+              <select
+                value={selectedStatus}
+                onChange={(e) => setSelectedStatus(e.target.value)}
+                className="px-3 py-1.5 text-xs rounded-lg border border-gray-200 text-gray-600 focus:border-blue-300 focus:ring-2 focus:ring-blue-100 outline-none"
+              >
+                <option value="">All statuses</option>
+                <option value="Present">Present</option>
+                <option value="Late">Late</option>
+                <option value="Absent">Absent</option>
+                <option value="Approved">Approved</option>
+                <option value="Pending">Pending</option>
+                <option value="Rejected">Rejected</option>
+              </select>
             </div>
           </Card>
 
@@ -199,6 +235,34 @@ export default function Reports() {
               </div>
             );
           })}
+
+          {/* Saved Reports (re-open without re-generating) */}
+          {savedReports.length > 0 && (
+            <Card>
+              <div className="flex items-center gap-2 mb-3">
+                <FileText className="w-4 h-4 text-gray-400" />
+                <span className="text-sm font-semibold text-gray-700">Saved Reports</span>
+                <button
+                  onClick={() => { setSavedReports([]); try { localStorage.removeItem('savedReports'); } catch { /* ignore */ } }}
+                  className="ml-auto text-xs text-gray-400 hover:text-red-500 transition-colors"
+                >
+                  Clear all
+                </button>
+              </div>
+              <div className="space-y-2">
+                {savedReports.map((r, i) => (
+                  <button
+                    key={i}
+                    onClick={() => setReport(r.report)}
+                    className="w-full text-left px-3 py-2 text-xs rounded-lg bg-gray-50 hover:bg-blue-50 hover:text-blue-600 transition-colors flex items-center justify-between"
+                  >
+                    <span className="font-medium">{r.name}</span>
+                    <span className="text-gray-400">{new Date(r.savedAt).toLocaleString()}</span>
+                  </button>
+                ))}
+              </div>
+            </Card>
+          )}
 
           {/* Recently Generated */}
           {recentReports.length > 0 && (

@@ -23,7 +23,7 @@ function summarize(range) {
   return `Until ${formatDate(range.endDate)}`;
 }
 
-export async function buildReport(reportName, dateRange, nameOf, employeeId = '') {
+export async function buildReport(reportName, dateRange, nameOf, employeeId = '', department = '', status = '') {
   const period = summarize(dateRange);
   const inRange = (date) => {
     if (!date) return true;
@@ -37,7 +37,12 @@ export async function buildReport(reportName, dateRange, nameOf, employeeId = ''
 
     case 'Daily Time Record (DTR)': {
       const records = await attendanceService.getAll();
-      const filtered = records.filter((r) => inRange(r.date) && (!employeeId || r.employeeId === employeeId));
+      const filtered = records.filter((r) => {
+        if (!inRange(r.date)) return false;
+        if (employeeId && r.employeeId !== employeeId) return false;
+        if (status && r.status !== status) return false;
+        return true;
+      });
       const empName = employeeId ? (nameOf(employeeId) || employeeId) : 'All Employees';
       const rows = filtered
         .slice()
