@@ -225,8 +225,14 @@ export const kioskService = {
     return data;
   },
 
-  async getAttendanceByEmployee(employeeId) {
-    const { data } = await http.get(`/kiosk/attendance/${employeeId}`);
+  // Attendance for one employee. Passing a date (YYYY-MM-DD) returns just that day - which is all
+  // the terminal needs to know whether this person already clocked in/out. Without it the endpoint
+  // returns the employee's whole history, which grows every month and is wasted bandwidth on a
+  // device that only ever asks about today.
+  async getAttendanceByEmployee(employeeId, date) {
+    const { data } = await http.get(`/kiosk/attendance/${employeeId}`, {
+      params: date ? { date } : undefined,
+    });
     return data;
   },
 

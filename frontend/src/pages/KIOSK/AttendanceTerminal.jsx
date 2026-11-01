@@ -26,7 +26,7 @@ import { ATTENDANCE_CONFIG } from '../../utils/attendanceConfig';
 // not while the keypad is still on screen.
 const FaceRecognitionModal = lazy(() => import('../../components/attendance/FaceRecognitionModal'));
 
-const RESET_DELAY_MS = 2000;
+const RESET_DELAY_MS = 1200;
 const TAP_WINDOW_MS = 2500;
 const TAP_COUNT = 5;
 // Face reader patience. The count is enforced by the server (KioskFaceLockout) and only mirrored
@@ -103,8 +103,6 @@ const idForms = (id) => {
   const digits = full.replace(/\D/g, '');
   return digits && digits !== full ? [full, digits] : [full];
 };
-
-const matchesFullId = (id, typed) => idForms(id).includes(normalizeId(typed));
 
 export default function AttendanceTerminal() {
   const navigate = useNavigate();
@@ -198,12 +196,18 @@ export default function AttendanceTerminal() {
     };
   }, []);
 
-  // The face models (~7 MB plus the shader warm-up, which blocks the page for a moment) are only needed once
-  // someone is past the PIN screen, so they load then, when the browser is idle, instead of competing with the
-  // first paint and the PIN keypad.
+  // The face models (~7 MB plus the shader warm-up, which blocks the page for a moment) are what the
+  // first scan needs, not the PIN keypad. Load them in the background as soon as kiosk mode is on -
+  // including while the terminal sits locked waiting for the next person - so the first scan of the
+  // day, and the first scan after the midnight relock, start with everything already warm. The delay
+  // keeps the download and warm-up away from the first paint and the keypad.
   useEffect(() => {
-    if (enabled && unlocked) import('../../services/faceMatchService').then((m) => m.preloadFaceModels());
-  }, [enabled, unlocked]);
+    if (!enabled) return undefined;
+    const timer = setTimeout(() => {
+      import('../../services/faceMatchService').then((m) => m.preloadFaceModels());
+    }, 6000);
+    return () => clearTimeout(timer);
+  }, [enabled]);
 
   useEffect(() => {
     if (phase !== 'locked') return undefined;
@@ -322,43 +326,59 @@ export default function AttendanceTerminal() {
   // The local directory is consulted first; if it was never loaded (a one-shot fetch that can fail
   // silently) the server-side fallbacks below keep ID entry working.
 
-  // Shortest number part across the directory, used to decide when input is long enough to be worth
-  // asking the server about. Falls back to 8 (the current number-part width) before the directory
-  // has loaded.
-  const minIdLength = useMemo(() => {
-    const lengths = directory
-      .map((e) => idForms(e.id)[1].length)
-      .filter((n) => Number.isFinite(n) && n > 0);
-    return lengths.length ? Math.min(...lengths) : 8;
+  // Every ID form in the directory, indexed once per directory load instead of on every keystroke.
+  // Typing used to re-split every employee's ID into its forms on each character press - hundreds
+  // of array allocations per key on a full roster, which is exactly the kind of work that makes a
+  // tablet's input feel laggy while a queue waits.
+  const directoryIndex = useMemo(() => {
+    const byForm = new Map();
+    const allForms = [];
+    let minDigitLength = 0;
+
+    for (const employee of directory) {
+      const forms = idForms(employee.id);
+      for (const form of forms) {
+        if (!byForm.has(form)) byForm.set(form, employee);
+        allForms.push(form);
+      }
+      const digits = normalizeId(employee.id).replace(/\D/g, '').length;
+      if (digits > 0 && (minDigitLength === 0 || digits < minDigitLength)) minDigitLength = digits;
+    }
+
+    return { byForm, allForms, minDigitLength: minDigitLength || 8 };
   }, [directory]);
+
+  const minIdLength = directoryIndex.minDigitLength;
 
   const entryInfo = useMemo(() => {
     if (phase !== 'entry') return null;
     const typed = normalizeId(query);
     if (!typed) return null;
-    if (directory.some((e) => matchesFullId(e.id, typed))) return { type: 'match' };
+    if (directoryIndex.byForm.has(typed)) return { type: 'match' };
 
     // How much is still missing, counting only complete IDs this could still become. Never used to
     // choose an employee.
-    const remaining = directory
-      .map((e) => idForms(e.id))
-      .flat()
-      .filter((form) => form.length > typed.length && form.startsWith(typed))
-      .map((form) => form.length - typed.length);
-    if (remaining.length) return { type: 'more', remaining: Math.min(...remaining) };
+    let smallestRemaining = Infinity;
+    for (const form of directoryIndex.allForms) {
+      if (form.length > typed.length && form.startsWith(typed)) {
+        const missing = form.length - typed.length;
+        if (missing < smallestRemaining) smallestRemaining = missing;
+      }
+    }
+    if (smallestRemaining !== Infinity) return { type: 'more', remaining: smallestRemaining };
 
     // Only call it unknown once there is enough typed to be a whole ID that simply is not in the
     // directory; before that the employee is still mid-code.
     if (typed.length >= minIdLength) return { type: 'none' };
     return { type: 'keep' };
-  }, [query, phase, directory, minIdLength]);
+  }, [query, phase, directoryIndex, minIdLength]);
 
   const exactMatch = useMemo(() => {
     if (phase !== 'entry') return null;
     const typed = normalizeId(query);
     if (!typed) return null;
-    return directory.find((e) => matchesFullId(e.id, typed)) || null;
-  }, [query, phase, directory]);
+    return directoryIndex.byForm.get(typed) || null;
+  }, [query, phase, directoryIndex]);
 
   // Self-heal: if the one-shot directory fetch failed at mount, retry it the
   // moment an employee starts typing instead of reporting every ID as unknown.
@@ -376,7 +396,7 @@ export default function AttendanceTerminal() {
   useEffect(() => {
     const typed = normalizeId(query);
     if (phase !== 'entry' || typed.length < minIdLength) return;
-    if (directory.some((e) => matchesFullId(e.id, typed))) return;
+    if (directoryIndex.byForm.has(typed)) return;
 
     let cancelled = false;
     const timer = setTimeout(async () => {
@@ -399,7 +419,7 @@ export default function AttendanceTerminal() {
       clearTimeout(timer);
       setServerCheckPending(false);
     };
-  }, [query, phase, directory, minIdLength]);
+  }, [query, phase, directoryIndex, minIdLength]);
 
   if (exactMatch && !candidate) {
     setCandidate(exactMatch);
@@ -416,21 +436,17 @@ export default function AttendanceTerminal() {
     setEmployee(candidate);
     setQuery('');
 
-    let today;
-    try {
-      const records = (await kioskService.getAttendanceByEmployee(candidate.id)) || [];
-      today = records.find((r) => r.date === toDateKey(nowInTimezone(timezone))) || null;
-    } catch {
-      today = null;
-    }
-    setTodayRecord(today);
+    // Both lookups are independent and each one costs a full server round-trip, so they run
+    // together instead of one after the other - this is the gap between "employee confirmed" and
+    // the camera opening, and at a busy entrance it is dead time for the whole queue.
+    const todayKey = toDateKey(nowInTimezone(timezone));
+    const [records, shift] = await Promise.all([
+      kioskService.getAttendanceByEmployee(candidate.id, todayKey).catch(() => []),
+      kioskService.getTodaySchedule(candidate.id).catch(() => null),
+    ]);
 
-    let shift;
-    try {
-      shift = await kioskService.getTodaySchedule(candidate.id);
-    } catch {
-      shift = null;
-    }
+    const today = (records || []).find((r) => r.date === todayKey) || null;
+    setTodayRecord(today);
     setShiftInfo(shift || null);
 
     // Approved leave = no attendance at all. The backend enforces this too,

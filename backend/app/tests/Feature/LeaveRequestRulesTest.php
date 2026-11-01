@@ -262,7 +262,7 @@ class LeaveRequestRulesTest extends TestCase
     {
         $types = Employee::leaveTypes();
 
-        $this->assertSame(['Vacation', 'Sick', 'Bereavement', 'Maternity', 'Paternity', 'Unpaid'], $types);
+        $this->assertSame(['Vacation', 'Sick', 'Bereavement', 'Maternity', 'Paternity', 'Unpaid', 'SoloParent', 'VAWC', 'SpecialLeaveWomen', 'SIL'], $types);
         $this->assertSame($types, LeaveType::activeCodes());
     }
 

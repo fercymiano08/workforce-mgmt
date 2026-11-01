@@ -35,8 +35,15 @@ RUN sed -i 's/\r$//' /usr/local/bin/backend-entrypoint /usr/local/bin/backend-st
 # been sent, and Symfony then fails to send them - a 500 with no useful message. The official php
 # image has display_errors on, so turn it off and send errors to stderr, which is what the host
 # collects as the service log.
+#
+# opcache.enable_cli is the important line: this image serves HTTP through `php -S` (the CLI SAPI),
+# where opcache is OFF by default. Without it every kiosk request recompiled the whole framework
+# from source before running a single query - on a tablet's clock-in that is pure waiting.
+# validate_timestamps=0 is safe because the code is baked into the image; a code change is a rebuild.
 RUN printf 'display_errors=0\ndisplay_startup_errors=0\nlog_errors=1\nerror_log=/proc/self/fd/2\n' \
-    > /usr/local/etc/php/conf.d/zz-production.ini
+    > /usr/local/etc/php/conf.d/zz-production.ini \
+    && printf 'opcache.enable=1\nopcache.enable_cli=1\nopcache.memory_consumption=128\nopcache.interned_strings_buffer=16\nopcache.max_accelerated_files=20000\nopcache.validate_timestamps=0\nrealpath_cache_size=4096K\nrealpath_cache_ttl=600\n' \
+    > /usr/local/etc/php/conf.d/zz-opcache.ini
 
 USER www-data
 ENTRYPOINT ["backend-entrypoint"]

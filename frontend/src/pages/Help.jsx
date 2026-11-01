@@ -5,7 +5,7 @@ import Card from '../components/ui/Card';
 import Button from '../components/ui/Button';
 import {
   HelpCircle, BookOpen, Mail, ChevronDown, ChevronUp, Info, LifeBuoy, ShieldCheck,
-  Users, GraduationCap, ExternalLink, Layers, Clock, CalendarDays, FileText, BarChart3,
+  Users, ExternalLink, Layers, Clock, CalendarDays, FileText, BarChart3,
 } from 'lucide-react';
 
 const APP_NAME = 'WorkForce Pro';

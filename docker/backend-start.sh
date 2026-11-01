@@ -30,6 +30,10 @@ is_off() {
 
 cd /var/www/html
 
+# Cache the merged config once so every request does not re-read .env and config/*.php. Non-fatal:
+# without it the API is simply slower, which is exactly the wrong trade on a kiosk's clock-in.
+php artisan config:cache >/dev/null 2>&1 || echo "==> config:cache skipped (running uncached)"
+
 # The HTTP server binds the port FIRST, before migrate/seed/refresh, and those run after in the
 # background. Render only waits on the port - it does not care whether the app underneath can
 # already serve a correct response - so running the slow stuff first (migrate -> seed ->

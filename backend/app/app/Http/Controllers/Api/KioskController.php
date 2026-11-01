@@ -584,12 +584,22 @@ class KioskController extends Controller
      * A single employee's attendance history - needed so the kiosk can tell
      * whether they're already clocked in/out today. Scoped to one employee
      * at a time; never exposes the full attendance table.
+     *
+     * `?date=YYYY-MM-DD` narrows it to one day, which is what the terminal asks
+     * for. Returning the whole history meant every clock-in shipped months of
+     * rows to the tablet and filtered them there, growing slower every month.
      */
-    public function attendanceByEmployee(string $employeeId): JsonResponse
+    public function attendanceByEmployee(Request $request, string $employeeId): JsonResponse
     {
-        $records = Attendance::where('employee_id', $employeeId)
-            ->orderBy('date', 'desc')
-            ->get();
+        $request->validate(['date' => 'nullable|date_format:Y-m-d']);
+
+        $query = Attendance::where('employee_id', $employeeId);
+
+        if ($date = $request->query('date')) {
+            $query->where('date', $date);
+        }
+
+        $records = $query->orderBy('date', 'desc')->get();
 
         return response()->json(['data' => $records->map->toApiArray()->values()]);
     }

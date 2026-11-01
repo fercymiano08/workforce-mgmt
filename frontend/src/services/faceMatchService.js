@@ -28,8 +28,11 @@ const MAX_DETECTION_DIMENSION = 800;
 
 // Live scanning never needs the full camera resolution - the face nets all
 // operate on a small fixed crop, and a lower-res snapshot is drawn faster,
-// inferred faster, and kinder to weak kiosk hardware.
-const LIVE_FRAME_MAX_DIMENSION = 480;
+// inferred faster, and kinder to weak kiosk hardware. 320 is the point where a
+// kiosk tablet stops spending more time resizing pixels than running the nets:
+// the detector's own input is 160/320, the landmark net reads 112 and the
+// recognition net 150, so anything above this is work that is thrown away.
+const LIVE_FRAME_MAX_DIMENSION = 320;
 
 let modelsPromise = null;
 
@@ -168,6 +171,12 @@ function detectorOptions(inputSize) {
   });
 }
 
+// One scratch canvas for the whole session. Allocating a fresh canvas per frame made a
+// multi-frame scan churn through several MB of GPU-backed surfaces per employee; on a tablet
+// that pressure is exactly what turns into stutter after a few dozen clock-ins. Detection is
+// always awaited before the next frame is drawn, so reuse is safe.
+let scratchCanvas = null;
+
 function snapshotToCanvas(video) {
   const vw = video.videoWidth;
   const vh = video.videoHeight;
@@ -176,11 +185,11 @@ function snapshotToCanvas(video) {
   const cw = Math.round(vw * scale);
   const ch = Math.round(vh * scale);
   try {
-    const canvas = document.createElement('canvas');
-    canvas.width = cw;
-    canvas.height = ch;
-    canvas.getContext('2d').drawImage(video, 0, 0, cw, ch);
-    return canvas;
+    if (!scratchCanvas) scratchCanvas = document.createElement('canvas');
+    if (scratchCanvas.width !== cw) scratchCanvas.width = cw;
+    if (scratchCanvas.height !== ch) scratchCanvas.height = ch;
+    scratchCanvas.getContext('2d').drawImage(video, 0, 0, cw, ch);
+    return scratchCanvas;
   } catch {
     return null;
   }
@@ -188,12 +197,16 @@ function snapshotToCanvas(video) {
 
 // Estimate how "black" a snapshot is (0-255 average luminance) so a machine
 // whose camera never paints a frame can be told apart from a real no-face.
+let luminanceThumb = null;
+
 function frameMeanLuminance(canvas) {
   try {
-    const thumb = document.createElement('canvas');
-    thumb.width = 8;
-    thumb.height = 8;
-    const thumbCtx = thumb.getContext('2d', { willReadFrequently: true });
+    if (!luminanceThumb) {
+      luminanceThumb = document.createElement('canvas');
+      luminanceThumb.width = 8;
+      luminanceThumb.height = 8;
+    }
+    const thumbCtx = luminanceThumb.getContext('2d', { willReadFrequently: true });
     thumbCtx.drawImage(canvas, 0, 0, 8, 8);
     const { data } = thumbCtx.getImageData(0, 0, 8, 8);
     let sum = 0;
@@ -222,6 +235,10 @@ function eyeAspectRatio(points) {
 }
 
 async function detectOnce(source, inputSize) {
+  // Scope every pass: any tensor the nets leave behind is disposed when the pass ends. Without
+  // this a kiosk that scans all day slowly accumulates GPU memory and gets visibly slower.
+  const engine = tf.engine?.();
+  const scope = engine?.startScope?.();
   try {
     const detection = await faceapi
       .detectSingleFace(source, detectorOptions(inputSize))
@@ -238,9 +255,41 @@ async function detectOnce(source, inputSize) {
     const right = eyeAspectRatio(detection.landmarks?.getRightEye());
     const ear = left != null && right != null ? (left + right) / 2 : null;
 
-    return { descriptor: Array.from(descriptor), ear };
+    // The detector's own confidence for this frame. A sharp, well-lit, front-on face scores
+    // higher than a blurred or half-turned one, so callers can keep the best frames instead of
+    // whatever happened to be captured first.
+    const score = Number(detection.detection?.score) || 0;
+
+    return { descriptor: Array.from(descriptor), ear, score };
   } catch {
     return null;
+  } finally {
+    if (scope) engine.endScope(scope);
+  }
+}
+
+// Landmarks only - no 128-d descriptor. The liveness burst only needs the eye points, and
+// skipping the recognition net there removes the single most expensive inference from every
+// blink frame (that net is 6.3 MB of weights and runs on a 150x150 crop).
+async function detectLandmarksOnce(source, inputSize) {
+  const engine = tf.engine?.();
+  const scope = engine?.startScope?.();
+  try {
+    const detection = await faceapi
+      .detectSingleFace(source, detectorOptions(inputSize))
+      .withFaceLandmarks();
+
+    if (!detection) return null;
+
+    const left = eyeAspectRatio(detection.landmarks?.getLeftEye());
+    const right = eyeAspectRatio(detection.landmarks?.getRightEye());
+    if (left == null || right == null) return null;
+
+    return { ear: (left + right) / 2, score: Number(detection.detection?.score) || 0 };
+  } catch {
+    return null;
+  } finally {
+    if (scope) engine.endScope(scope);
   }
 }
 
@@ -302,6 +351,31 @@ export async function getFaceSample(mediaElement) {
 }
 
 /**
+ * Liveness-only sample: one landmark pass on a downscaled live frame, with no descriptor.
+ * Used for the blink burst, where the 128-d identity vector is never looked at - this is
+ * several times cheaper than getFaceSample() and is what keeps the burst from stalling the
+ * tablet. Returns { ear, score } or null.
+ */
+export async function getLivenessSample(mediaElement) {
+  await loadModels();
+  if (!mediaElement) return null;
+
+  const isVideo = mediaElement?.tagName === 'VIDEO';
+  const snapshot = isVideo ? snapshotToCanvas(mediaElement) : null;
+  const source = snapshot || mediaElement;
+  if (!source) return null;
+
+  // Same fast-then-thorough order as the identity scan: the small input finds a close-up face on
+  // the first try, and the larger one only runs when it does not. Landmark-only, so even the
+  // fallback is far cheaper than a descriptor pass.
+  for (const inputSize of DETECTOR_INPUT_SIZES) {
+    const sample = await detectLandmarksOnce(source, inputSize);
+    if (sample) return sample;
+  }
+  return null;
+}
+
+/**
  * Loads an uploaded image file into a canvas, downscaling it if it's larger
  * than MAX_DETECTION_DIMENSION. The returned canvas can be passed straight to
  * getFaceDescriptor() and also read via canvas.toDataURL() for a preview.
@@ -327,4 +401,4 @@ export function loadImageFileToCanvas(file) {
   });
 }
 
-export const faceMatchService = { loadModels, preloadFaceModels, getFaceDescriptor, getFaceSample, loadImageFileToCanvas };
+export const faceMatchService = { loadModels, preloadFaceModels, getFaceDescriptor, getFaceSample, getLivenessSample, loadImageFileToCanvas };

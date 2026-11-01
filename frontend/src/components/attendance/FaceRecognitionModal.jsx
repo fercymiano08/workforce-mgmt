@@ -13,26 +13,37 @@ import {
   FACE_VERIFICATION_STEPS,
   verifyFace,
 } from '../../services/faceVerificationService';
-import { getFaceDescriptor, getFaceSample, loadModels } from '../../services/faceMatchService';
+import { getFaceSample, getLivenessSample, loadModels } from '../../services/faceMatchService';
 
 // Frames sent per scan (the server needs them all to agree), and how many tries to get them.
+// Four attempts is enough to survive a blink or a head turn, and the frames are ranked by the
+// detector's own confidence so the three that are sent are the sharpest of the batch.
 const SCAN_FRAMES = 3;
-const SCAN_ATTEMPTS = 6;
+const SCAN_ATTEMPTS = 4;
+// A detection below this score is a weak frame (blurred, half-turned, badly lit). One weak
+// frame in the batch earns the scan a fourth look so a better one can replace it.
+const CONFIDENT_FRAME_SCORE = 0.6;
+// Spacing between identity frames. Back-to-back frames are nearly the same image; a short gap
+// makes them independent samples, which is what the server's "all frames must agree" check and
+// its averaging actually benefit from.
+const FRAME_GAP_MS = 160;
 // A short, dedicated window just for the liveness check, after identity frames are captured: long
 // enough that a person who actually blinks on cue almost certainly gets caught doing it, short
-// enough that it is not a noticeable delay added to clocking in.
-const LIVENESS_FRAMES = 8;
-const LIVENESS_INTERVAL_MS = 120;
+// enough that it is not a noticeable delay added to clocking in. The burst ends the moment a blink
+// is seen, and is skipped entirely if one already happened while the identity frames were taken.
+const LIVENESS_FRAMES = 6;
+const LIVENESS_INTERVAL_MS = 100;
+// Mirrors KioskController::EAR_OPEN / EAR_CLOSED so the terminal can stop the burst early
+// instead of waiting out the whole window. Advisory only - the server still decides.
+const EAR_OPEN = 0.28;
+const EAR_CLOSED = 0.22;
 // How long the "Verified" result stays up: long enough for the person to SEE that their face was
-// checked and whose it matched (at 0.2 s it was invisible, and people thought no scan had happened).
-const RESULT_HOLD_MS = 1500;
-// A beat to get ready before anything is read from the camera. The scan itself is quick, which is
-// the point - but it used to begin the instant the preview appeared, so the first frames were taken
-// while the person was still walking up, turning their face, or looking at the screen to see what
-// was happening. Those frames are the ones most likely to be a blur, and a blur is either a wasted
-// retry or a false "that is not you". Three seconds of visible countdown, showing their own face,
-// fixes that without making the check itself any slower.
-const PREP_SECONDS = 3;
+// checked and whose it matched, short enough not to hold up the queue behind them.
+const RESULT_HOLD_MS = 1000;
+// A beat to get ready before anything is read from the camera. The person has already walked up
+// and tapped their name by the time this opens, so this is a centring cue, not a walking-up
+// allowance - at a busy entrance every extra second here is a second of queue.
+const PREP_SECONDS = 1;
 
 const STEP_ICONS = {
   camera: Camera,
@@ -165,16 +176,24 @@ export default function FaceRecognitionModal({ isOpen, employeeName, employeeId,
         setPhase('verifying');
 
         // Several separate frames, not one snapshot: the server averages them and
-        // checks they all show the same face, so one lucky frame cannot pass.
-        const descriptors = [];
+        // checks they all show the same face, so one lucky frame cannot pass. Frames are
+        // ranked by detection confidence, so a blurred or half-turned frame is dropped in
+        // favour of a sharper one instead of dragging the average down.
+        const samples = [];
         try {
           await loadModels();
-          // getFaceDescriptor never throws (it resolves null when no face is found).
-          for (let attempt = 0; attempt < SCAN_ATTEMPTS && descriptors.length < SCAN_FRAMES; attempt += 1) {
+          // getFaceSample never throws (it resolves null when no face is found).
+          for (let attempt = 0; attempt < SCAN_ATTEMPTS; attempt += 1) {
             if (cancelled) return;
-            const descriptor = await getFaceDescriptor(videoRef.current);
-            if (descriptor) descriptors.push(Array.from(descriptor));
-            await new Promise((resolve) => setTimeout(resolve, 150));
+            const sample = await getFaceSample(videoRef.current);
+            if (sample?.descriptor) samples.push(sample);
+
+            // Enough frames, and all of them clean - no reason to keep scanning.
+            if (samples.length >= SCAN_FRAMES) {
+              if (samples.length > SCAN_FRAMES) break;
+              if (samples.every((s) => s.score >= CONFIDENT_FRAME_SCORE)) break;
+            }
+            await new Promise((resolve) => setTimeout(resolve, FRAME_GAP_MS));
           }
         } catch {
           setVerifyError('Face recognition models could not be loaded. Please try again.');
@@ -182,6 +201,12 @@ export default function FaceRecognitionModal({ isOpen, employeeName, employeeId,
           return;
         }
         if (cancelled) return;
+
+        const descriptors = samples
+          .slice()
+          .sort((a, b) => b.score - a.score)
+          .slice(0, SCAN_FRAMES)
+          .map((s) => Array.from(s.descriptor));
 
         if (descriptors.length < SCAN_FRAMES) {
           setVerifyError('No face detected. Make sure your face is well-lit, centered, and close enough to fill most of the camera frame, then try again.');
@@ -193,11 +218,19 @@ export default function FaceRecognitionModal({ isOpen, employeeName, employeeId,
         // command - its "eyes" stay frozen for the whole window - while a real blink shows up as a
         // dip in eye-aspect-ratio between two open readings. Advisory only (see the server): a
         // camera that cannot read eye landmarks well must never be the reason someone cannot clock in.
+        //
+        // The burst runs on landmark-only passes (no 128-d descriptor) and stops as soon as a blink
+        // is seen. Many people blink while the identity frames are being taken, in which case this
+        // whole phase costs nothing.
         setPhase('liveness');
-        const earSamples = [];
-        for (let i = 0; i < LIVENESS_FRAMES; i += 1) {
+        const earSamples = samples.map((s) => s.ear).filter((v) => v != null);
+        const hasBlinked = () => earSamples.length >= 2
+          && Math.min(...earSamples) < EAR_CLOSED
+          && Math.max(...earSamples) > EAR_OPEN;
+
+        for (let i = 0; i < LIVENESS_FRAMES && !hasBlinked(); i += 1) {
           if (cancelled) return;
-          const sample = await getFaceSample(videoRef.current);
+          const sample = await getLivenessSample(videoRef.current);
           if (sample?.ear != null) earSamples.push(sample.ear);
           await new Promise((resolve) => setTimeout(resolve, LIVENESS_INTERVAL_MS));
         }
