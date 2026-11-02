@@ -1,21 +1,10 @@
--- ============================================================
--- Workforce Management System -- Full schema, ONE database ("workforce_mgnt")
--- Regenerated directly from the live PostgreSQL server (127.0.0.1:5432) after
--- the system was consolidated from 8 microservice databases into a single
--- Laravel monolith backend. Schema only (no data).
---
--- Refreshed 2026-10-19: adds leave_types and leave_balance_ledger (the leave
--- management rules engine), pay_type/paid_days/unpaid_days on leaves, and
--- two_factor_challenges, which the previous copy of this file predated.
--- ============================================================
---
 --
 -- PostgreSQL database dump
 --
 
-\restrict wOeWT1SwL6ecBNX5pJcZyLLLFYdmlF9aHNxZH4OvnLKqy5PsVyebUEf9op7DupE
+\restrict 0rjqhJ3G7ekBJcViZcYXAiAfNKQ9H9V8hj8SWTtQmsJ0GbqqA3oZP1zO4g5opEQ
 
--- Dumped from database version 18.4
+-- Dumped from database version 18.6
 -- Dumped by pg_dump version 18.4
 
 SET statement_timeout = 0;
@@ -29,8 +18,6 @@ SET check_function_bodies = false;
 SET xmloption = content;
 SET client_min_messages = warning;
 SET row_security = off;
-
-SET default_tablespace = '';
 
 SET default_table_access_method = heap;
 
@@ -88,7 +75,12 @@ CREATE TABLE public.attendance (
     notes text,
     created_at timestamp(0) without time zone,
     updated_at timestamp(0) without time zone,
-    actual_clock_out time(0) without time zone
+    actual_clock_out time(0) without time zone,
+    regular_holiday_hours numeric(6,2) DEFAULT '0'::numeric NOT NULL,
+    special_holiday_hours numeric(6,2) DEFAULT '0'::numeric NOT NULL,
+    late_minutes integer DEFAULT 0 NOT NULL,
+    undertime_minutes integer DEFAULT 0 NOT NULL,
+    is_rest_day boolean DEFAULT false NOT NULL
 );
 
 
@@ -308,7 +300,8 @@ CREATE TABLE public.holidays (
     date date NOT NULL,
     name character varying(120) NOT NULL,
     created_at timestamp(0) without time zone,
-    updated_at timestamp(0) without time zone
+    updated_at timestamp(0) without time zone,
+    type character varying(20) DEFAULT 'regular'::character varying NOT NULL
 );
 
 
@@ -443,7 +436,8 @@ CREATE TABLE public.leave_types (
     proof_threshold_days integer DEFAULT 0 NOT NULL,
     active boolean DEFAULT true NOT NULL,
     created_at timestamp(0) without time zone,
-    updated_at timestamp(0) without time zone
+    updated_at timestamp(0) without time zone,
+    locked_to_today boolean DEFAULT false NOT NULL
 );
 
 
@@ -753,7 +747,11 @@ CREATE TABLE public.timesheets (
     reminded_at timestamp(0) without time zone,
     nudged_at timestamp(0) without time zone,
     exported_at timestamp(0) without time zone,
-    history json
+    history json,
+    regular_holiday_hours numeric(6,2) DEFAULT '0'::numeric NOT NULL,
+    special_holiday_hours numeric(6,2) DEFAULT '0'::numeric NOT NULL,
+    late_minutes integer DEFAULT 0 NOT NULL,
+    undertime_minutes integer DEFAULT 0 NOT NULL
 );
 
 
@@ -1479,5 +1477,5 @@ ALTER TABLE ONLY public.two_factor_challenges
 -- PostgreSQL database dump complete
 --
 
-\unrestrict wOeWT1SwL6ecBNX5pJcZyLLLFYdmlF9aHNxZH4OvnLKqy5PsVyebUEf9op7DupE
+\unrestrict 0rjqhJ3G7ekBJcViZcYXAiAfNKQ9H9V8hj8SWTtQmsJ0GbqqA3oZP1zO4g5opEQ
 
