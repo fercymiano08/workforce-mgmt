@@ -1,0 +1,492 @@
+<mxfile host="app.diagrams.net" modified="2026-11-04T10:00:00.000Z" agent="draw.io" version="21.0.0" type="device">
+  <diagram id="flowchart-diagram" name="BPM Flowchart">
+    <mxGraphModel dx="1422" dy="762" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="3000" pageHeight="2500" math="0" shadow="0">
+      <root>
+        <mxCell id="0" />
+        <mxCell id="1" parent="0" />
+
+        <!-- ==================== SECTION 1: SYSTEM ARCHITECTURE (TOP) ==================== -->
+
+        <mxCell id="2" value="SYSTEM ARCHITECTURE LAYER" style="swimlane;fillColor=#f5f5f5;strokeColor=#666666;fontStyle=1;fontSize=12;startSize=30;" vertex="1" parent="1">
+          <mxGeometry x="20" y="10" width="2960" height="250" as="geometry" />
+        </mxCell>
+
+        <!-- Hosting Platforms -->
+        <mxCell id="3" value="Render Static Site&#xa;(Frontend Hosting)" style="rounded=1;fillColor=#fff2cc;strokeColor=#d6b656;fontSize=10;fontStyle=1;" vertex="1" parent="2">
+          <mxGeometry x="20" y="50" width="160" height="60" as="geometry" />
+        </mxCell>
+        <mxCell id="4" value="Render Docker&#xa;(API Hosting)" style="rounded=1;fillColor=#fff2cc;strokeColor=#d6b656;fontSize=10;fontStyle=1;" vertex="1" parent="2">
+          <mxGeometry x="700" y="50" width="160" height="60" as="geometry" />
+        </mxCell>
+        <mxCell id="5" value="Aiven Cloud&#xa;(PostgreSQL Hosting)" style="rounded=1;fillColor=#fff2cc;strokeColor=#d6b656;fontSize=10;fontStyle=1;" vertex="1" parent="2">
+          <mxGeometry x="1480" y="50" width="160" height="60" as="geometry" />
+        </mxCell>
+        <mxCell id="6" value="GitHub Actions&#xa;(CI/CD + Keep-alive Ping)" style="rounded=1;fillColor=#e1d5e7;strokeColor=#9673a6;fontSize=10;" vertex="1" parent="2">
+          <mxGeometry x="2200" y="50" width="160" height="60" as="geometry" />
+        </mxCell>
+
+        <!-- Frontend -->
+        <mxCell id="7" value="React Frontend (Vite)&#xa;TypeScript + Tailwind CSS&#xa;face-api.js (from /public/models)" style="rounded=1;fillColor=#dae8fc;strokeColor=#6c8ebf;fontSize=10;fontStyle=1;" vertex="1" parent="2">
+          <mxGeometry x="20" y="150" width="200" height="70" as="geometry" />
+        </mxCell>
+
+        <!-- HTTP Layer -->
+        <mxCell id="8" value="Axios HTTP Client&#xa;(REST Requests)" style="rounded=1;fillColor=#f5f5f5;strokeColor=#666666;fontSize=10;" vertex="1" parent="2">
+          <mxGeometry x="300" y="165" width="180" height="50" as="geometry" />
+        </mxCell>
+
+        <!-- Laravel API -->
+        <mxCell id="9" value="Laravel API (PHP 8.3)&#xa;Sanctum Auth | Queue Jobs&#xa;RESTful Controllers" style="rounded=1;fillColor=#dae8fc;strokeColor=#6c8ebf;fontSize=10;fontStyle=1;" vertex="1" parent="2">
+          <mxGeometry x="560" y="150" width="200" height="70" as="geometry" />
+        </mxCell>
+
+        <!-- PostgreSQL DB -->
+        <mxCell id="10" value="PostgreSQL Database&#xa;(Aiven Cloud)" style="shape=mxgraph.flowchart.database;fillColor=#d5e8d4;strokeColor=#82b366;fontSize=10;fontStyle=1;" vertex="1" parent="2">
+          <mxGeometry x="850" y="150" width="130" height="70" as="geometry" />
+        </mxCell>
+
+        <!-- face-api models -->
+        <mxCell id="11" value="face-api.js Models&#xa;(/public/models)" style="rounded=1;fillColor=#e1d5e7;strokeColor=#9673a6;fontSize=10;" vertex="1" parent="2">
+          <mxGeometry x="1050" y="165" width="150" height="50" as="geometry" />
+        </mxCell>
+
+        <!-- Architecture edges -->
+        <mxCell id="50" value="" style="edgeStyle=orthogonalEdgeStyle;" edge="1" source="7" target="8" parent="2">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="51" value="" style="edgeStyle=orthogonalEdgeStyle;" edge="1" source="8" target="9" parent="2">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="52" value="" style="edgeStyle=orthogonalEdgeStyle;" edge="1" source="9" target="10" parent="2">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="53" value="" style="edgeStyle=orthogonalEdgeStyle;dashed=1;" edge="1" source="3" target="7" parent="2">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="54" value="" style="edgeStyle=orthogonalEdgeStyle;dashed=1;" edge="1" source="4" target="9" parent="2">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="55" value="" style="edgeStyle=orthogonalEdgeStyle;dashed=1;" edge="1" source="5" target="10" parent="2">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="56" value="keep-alive ping" style="edgeStyle=orthogonalEdgeStyle;dashed=1;fontSize=9;" edge="1" source="6" target="9" parent="2">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="57" value="loads" style="edgeStyle=orthogonalEdgeStyle;dashed=1;fontSize=9;" edge="1" source="7" target="11" parent="2">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+
+        <!-- ==================== SECTION 2: USER ENTRY POINTS ==================== -->
+
+        <mxCell id="100" value="USER ENTRY POINTS (3 Portals)" style="swimlane;fillColor=#f5f5f5;strokeColor=#666666;fontStyle=1;fontSize=12;startSize=30;" vertex="1" parent="1">
+          <mxGeometry x="20" y="280" width="2960" height="230" as="geometry" />
+        </mxCell>
+
+        <!-- HR Admin Portal -->
+        <mxCell id="101" value="HR Admin Portal" style="swimlane;fillColor=#d5e8d4;strokeColor=#82b366;fontStyle=1;fontSize=11;startSize=25;" vertex="1" parent="100">
+          <mxGeometry x="20" y="40" width="880" height="170" as="geometry" />
+        </mxCell>
+        <mxCell id="102" value="Dashboard" style="rounded=1;fillColor=#dae8fc;strokeColor=#6c8ebf;fontSize=9;" vertex="1" parent="101">
+          <mxGeometry x="10" y="35" width="90" height="40" as="geometry" />
+        </mxCell>
+        <mxCell id="103" value="Analytics" style="rounded=1;fillColor=#dae8fc;strokeColor=#6c8ebf;fontSize=9;" vertex="1" parent="101">
+          <mxGeometry x="110" y="35" width="90" height="40" as="geometry" />
+        </mxCell>
+        <mxCell id="104" value="Employees" style="rounded=1;fillColor=#dae8fc;strokeColor=#6c8ebf;fontSize=9;" vertex="1" parent="101">
+          <mxGeometry x="210" y="35" width="90" height="40" as="geometry" />
+        </mxCell>
+        <mxCell id="105" value="Attendance" style="rounded=1;fillColor=#dae8fc;strokeColor=#6c8ebf;fontSize=9;" vertex="1" parent="101">
+          <mxGeometry x="310" y="35" width="90" height="40" as="geometry" />
+        </mxCell>
+        <mxCell id="106" value="Shifts" style="rounded=1;fillColor=#dae8fc;strokeColor=#6c8ebf;fontSize=9;" vertex="1" parent="101">
+          <mxGeometry x="410" y="35" width="90" height="40" as="geometry" />
+        </mxCell>
+        <mxCell id="107" value="Timesheets" style="rounded=1;fillColor=#dae8fc;strokeColor=#6c8ebf;fontSize=9;" vertex="1" parent="101">
+          <mxGeometry x="510" y="35" width="90" height="40" as="geometry" />
+        </mxCell>
+        <mxCell id="108" value="Leave Mgmt" style="rounded=1;fillColor=#dae8fc;strokeColor=#6c8ebf;fontSize=9;" vertex="1" parent="101">
+          <mxGeometry x="610" y="35" width="90" height="40" as="geometry" />
+        </mxCell>
+        <mxCell id="109" value="Reports" style="rounded=1;fillColor=#dae8fc;strokeColor=#6c8ebf;fontSize=9;" vertex="1" parent="101">
+          <mxGeometry x="710" y="35" width="80" height="40" as="geometry" />
+        </mxCell>
+        <mxCell id="110" value="Audit Logs" style="rounded=1;fillColor=#dae8fc;strokeColor=#6c8ebf;fontSize=9;" vertex="1" parent="101">
+          <mxGeometry x="10" y="90" width="90" height="40" as="geometry" />
+        </mxCell>
+        <mxCell id="111" value="Settings" style="rounded=1;fillColor=#dae8fc;strokeColor=#6c8ebf;fontSize=9;" vertex="1" parent="101">
+          <mxGeometry x="110" y="90" width="90" height="40" as="geometry" />
+        </mxCell>
+
+        <!-- Employee Self-Service Portal -->
+        <mxCell id="120" value="Employee Self-Service Portal" style="swimlane;fillColor=#dae8fc;strokeColor=#6c8ebf;fontStyle=1;fontSize=11;startSize=25;" vertex="1" parent="100">
+          <mxGeometry x="920" y="40" width="740" height="170" as="geometry" />
+        </mxCell>
+        <mxCell id="121" value="My Dashboard" style="rounded=1;fillColor=#fff2cc;strokeColor=#d6b656;fontSize=9;" vertex="1" parent="120">
+          <mxGeometry x="10" y="35" width="110" height="40" as="geometry" />
+        </mxCell>
+        <mxCell id="122" value="My Attendance" style="rounded=1;fillColor=#fff2cc;strokeColor=#d6b656;fontSize=9;" vertex="1" parent="120">
+          <mxGeometry x="130" y="35" width="110" height="40" as="geometry" />
+        </mxCell>
+        <mxCell id="123" value="My Schedule" style="rounded=1;fillColor=#fff2cc;strokeColor=#d6b656;fontSize=9;" vertex="1" parent="120">
+          <mxGeometry x="250" y="35" width="110" height="40" as="geometry" />
+        </mxCell>
+        <mxCell id="124" value="My Leave" style="rounded=1;fillColor=#fff2cc;strokeColor=#d6b656;fontSize=9;" vertex="1" parent="120">
+          <mxGeometry x="370" y="35" width="110" height="40" as="geometry" />
+        </mxCell>
+        <mxCell id="125" value="My Timesheet" style="rounded=1;fillColor=#fff2cc;strokeColor=#d6b656;fontSize=9;" vertex="1" parent="120">
+          <mxGeometry x="490" y="35" width="110" height="40" as="geometry" />
+        </mxCell>
+        <mxCell id="126" value="My Profile" style="rounded=1;fillColor=#fff2cc;strokeColor=#d6b656;fontSize=9;" vertex="1" parent="120">
+          <mxGeometry x="610" y="35" width="110" height="40" as="geometry" />
+        </mxCell>
+
+        <!-- Kiosk Terminal -->
+        <mxCell id="130" value="Kiosk Terminal" style="swimlane;fillColor=#f8cecc;strokeColor=#b85450;fontStyle=1;fontSize=11;startSize=25;" vertex="1" parent="100">
+          <mxGeometry x="1680" y="40" width="440" height="170" as="geometry" />
+        </mxCell>
+        <mxCell id="131" value="Face Scan&#xa;(face-api.js)" style="rounded=1;fillColor=#fff2cc;strokeColor=#d6b656;fontSize=9;" vertex="1" parent="130">
+          <mxGeometry x="10" y="35" width="120" height="50" as="geometry" />
+        </mxCell>
+        <mxCell id="132" value="PIN Auth&#xa;+ Device Token" style="rounded=1;fillColor=#fff2cc;strokeColor=#d6b656;fontSize=9;" vertex="1" parent="130">
+          <mxGeometry x="150" y="35" width="130" height="50" as="geometry" />
+        </mxCell>
+        <mxCell id="133" value="Clock In / Out&#xa;(Records Attendance)" style="rounded=1;fillColor=#fff2cc;strokeColor=#d6b656;fontSize=9;" vertex="1" parent="130">
+          <mxGeometry x="295" y="35" width="130" height="50" as="geometry" />
+        </mxCell>
+
+        <!-- ==================== SECTION 3: AUTH GATEWAY ==================== -->
+
+        <!-- User Access -->
+        <mxCell id="200" value="User Access Request" style="rounded=1;fillColor=#dae8fc;strokeColor=#6c8ebf;fontSize=11;fontStyle=1;" vertex="1" parent="1">
+          <mxGeometry x="1340" y="540" width="200" height="60" as="geometry" />
+        </mxCell>
+
+        <!-- Laravel Sanctum Auth -->
+        <mxCell id="201" value="Laravel Sanctum Authentication" style="rounded=1;fillColor=#fff2cc;strokeColor=#d6b656;fontSize=11;fontStyle=1;" vertex="1" parent="1">
+          <mxGeometry x="1340" y="640" width="200" height="60" as="geometry" />
+        </mxCell>
+
+        <!-- Role Gateway -->
+        <mxCell id="202" value="Role Check?" style="rhombus;fillColor=#fff2cc;strokeColor=#d6b656;fontSize=11;fontStyle=1;" vertex="1" parent="1">
+          <mxGeometry x="1340" y="740" width="200" height="80" as="geometry" />
+        </mxCell>
+
+        <!-- Role Labels -->
+        <mxCell id="203" value="Admin" style="text;fontSize=10;fontStyle=1;fillColor=none;strokeColor=none;" vertex="1" parent="1">
+          <mxGeometry x="980" y="820" width="80" height="30" as="geometry" />
+        </mxCell>
+        <mxCell id="204" value="Employee" style="text;fontSize=10;fontStyle=1;fillColor=none;strokeColor=none;" vertex="1" parent="1">
+          <mxGeometry x="1390" y="860" width="100" height="30" as="geometry" />
+        </mxCell>
+        <mxCell id="205" value="Kiosk" style="text;fontSize=10;fontStyle=1;fillColor=none;strokeColor=none;" vertex="1" parent="1">
+          <mxGeometry x="1800" y="820" width="80" height="30" as="geometry" />
+        </mxCell>
+
+        <!-- Auth edges -->
+        <mxCell id="250" value="" style="edgeStyle=orthogonalEdgeStyle;" edge="1" source="200" target="201" parent="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="251" value="" style="edgeStyle=orthogonalEdgeStyle;" edge="1" source="201" target="202" parent="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+
+        <!-- ==================== SECTION 4: SERVICE MODULES (HORIZONTAL ROW 1) ==================== -->
+
+        <!-- Row 1 Services -->
+        <mxCell id="300" value="ATTENDANCE SERVICE&#xa;─────────────────&#xa;• attendance records&#xa;• attendance_adjustments&#xa;• early_clock_outs&#xa;• Face-API clock-in/out" style="rounded=1;fillColor=#dae8fc;strokeColor=#6c8ebf;fontSize=10;fontStyle=1;align=left;spacingLeft=8;" vertex="1" parent="1">
+          <mxGeometry x="300" y="910" width="230" height="130" as="geometry" />
+        </mxCell>
+
+        <mxCell id="301" value="TIMEOFF SERVICE&#xa;─────────────────&#xa;• leaves + leave_types&#xa;• overtime_requests&#xa;• leave_balance_ledger&#xa;• leave type rules engine" style="rounded=1;fillColor=#f8cecc;strokeColor=#b85450;fontSize=10;fontStyle=1;align=left;spacingLeft=8;" vertex="1" parent="1">
+          <mxGeometry x="980" y="910" width="230" height="130" as="geometry" />
+        </mxCell>
+
+        <mxCell id="302" value="PAYROLL SERVICE&#xa;─────────────────&#xa;• timesheets (weekly)&#xa;• payroll export endpoint&#xa;• OT hours calculation&#xa;• paid_ot_hours tracking" style="rounded=1;fillColor=#d5e8d4;strokeColor=#82b366;fontSize=10;fontStyle=1;align=left;spacingLeft=8;" vertex="1" parent="1">
+          <mxGeometry x="1700" y="910" width="230" height="130" as="geometry" />
+        </mxCell>
+
+        <!-- Row 2 Services -->
+        <mxCell id="310" value="SCHEDULING SERVICE&#xa;─────────────────&#xa;• shift_definitions&#xa;• shift_schedules&#xa;• schedule_settings&#xa;• holidays calendar" style="rounded=1;fillColor=#e1d5e7;strokeColor=#9673a6;fontSize=10;fontStyle=1;align=left;spacingLeft=8;" vertex="1" parent="1">
+          <mxGeometry x="300" y="1090" width="230" height="130" as="geometry" />
+        </mxCell>
+
+        <mxCell id="311" value="IDENTITY SERVICE&#xa;─────────────────&#xa;• employees (profiles)&#xa;• departments + roles&#xa;• users (auth accounts)&#xa;• face descriptors" style="rounded=1;fillColor=#d5e8d4;strokeColor=#82b366;fontSize=10;fontStyle=1;align=left;spacingLeft=8;" vertex="1" parent="1">
+          <mxGeometry x="980" y="1090" width="230" height="130" as="geometry" />
+        </mxCell>
+
+        <mxCell id="312" value="INTELLIGENCE SERVICE&#xa;─────────────────&#xa;• analytics aggregation&#xa;• AI Decision Support&#xa;• punctuality scoring&#xa;• department productivity" style="rounded=1;fillColor=#fff2cc;strokeColor=#d6b656;fontSize=10;fontStyle=1;align=left;spacingLeft=8;" vertex="1" parent="1">
+          <mxGeometry x="1700" y="1090" width="230" height="130" as="geometry" />
+        </mxCell>
+
+        <!-- Row 3 Services -->
+        <mxCell id="320" value="COMMUNICATIONS&#xa;─────────────────&#xa;• notifications (in-app)&#xa;• push alerts&#xa;• email (password reset)&#xa;• 2FA code delivery" style="rounded=1;fillColor=#dae8fc;strokeColor=#6c8ebf;fontSize=10;fontStyle=1;align=left;spacingLeft=8;" vertex="1" parent="1">
+          <mxGeometry x="300" y="1270" width="230" height="130" as="geometry" />
+        </mxCell>
+
+        <mxCell id="321" value="AUDIT SERVICE&#xa;─────────────────&#xa;• audit_events (all writes)&#xa;• security_events&#xa;• IP tracking&#xa;• before/after snapshots" style="rounded=1;fillColor=#ffe6cc;strokeColor=#d79b00;fontSize=10;fontStyle=1;align=left;spacingLeft=8;" vertex="1" parent="1">
+          <mxGeometry x="980" y="1270" width="230" height="130" as="geometry" />
+        </mxCell>
+
+        <mxCell id="322" value="CONFIGURATION&#xa;─────────────────&#xa;• settings (global)&#xa;• schedule_settings&#xa;• kiosk config&#xa;• company profile" style="rounded=1;fillColor=#f5f5f5;strokeColor=#666666;fontSize=10;fontStyle=1;align=left;spacingLeft=8;" vertex="1" parent="1">
+          <mxGeometry x="1700" y="1270" width="230" height="130" as="geometry" />
+        </mxCell>
+
+        <!-- Service connections from Auth Gateway -->
+        <mxCell id="400" value="Admin" style="edgeStyle=orthogonalEdgeStyle;fontSize=9;" edge="1" source="202" target="300" parent="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="401" value="Employee" style="edgeStyle=orthogonalEdgeStyle;fontSize=9;" edge="1" source="202" target="301" parent="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="402" value="Kiosk" style="edgeStyle=orthogonalEdgeStyle;fontSize=9;" edge="1" source="202" target="302" parent="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+
+        <!-- Cross-service data flows -->
+
+        <!-- Attendance → Timesheets -->
+        <mxCell id="410" value="Attendance data&#xa;feeds timesheet" style="edgeStyle=orthogonalEdgeStyle;dashed=1;strokeColor=#82b366;fontSize=9;" edge="1" source="300" target="302" parent="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+
+        <!-- OT Requests → Timesheets -->
+        <mxCell id="411" value="Approved OT hours" style="edgeStyle=orthogonalEdgeStyle;dashed=1;strokeColor=#b85450;fontSize=9;" edge="1" source="301" target="302" parent="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+
+        <!-- Scheduling → Attendance -->
+        <mxCell id="412" value="Shift schedule&#xa;defines work hours" style="edgeStyle=orthogonalEdgeStyle;dashed=1;strokeColor=#9673a6;fontSize=9;" edge="1" source="310" target="300" parent="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+
+        <!-- Leave Balance Ledger sync -->
+        <mxCell id="413" value="Syncs leave_balances JSON" style="edgeStyle=orthogonalEdgeStyle;dashed=1;strokeColor=#b85450;fontSize=9;" edge="1" source="301" target="311" parent="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+
+        <!-- All → Audit -->
+        <mxCell id="414" value="All writes → audit log" style="edgeStyle=orthogonalEdgeStyle;dashed=1;strokeColor=#d79b00;fontSize=9;" edge="1" source="300" target="321" parent="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="415" value="" style="edgeStyle=orthogonalEdgeStyle;dashed=1;strokeColor=#d79b00;" edge="1" source="301" target="321" parent="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="416" value="" style="edgeStyle=orthogonalEdgeStyle;dashed=1;strokeColor=#d79b00;" edge="1" source="302" target="321" parent="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+
+        <!-- System events → Notifications -->
+        <mxCell id="417" value="Triggers notifications" style="edgeStyle=orthogonalEdgeStyle;dashed=1;strokeColor=#6c8ebf;fontSize=9;" edge="1" source="300" target="320" parent="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="418" value="" style="edgeStyle=orthogonalEdgeStyle;dashed=1;strokeColor=#6c8ebf;" edge="1" source="301" target="320" parent="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="419" value="" style="edgeStyle=orthogonalEdgeStyle;dashed=1;strokeColor=#6c8ebf;" edge="1" source="302" target="320" parent="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+
+        <!-- Timesheets → Analytics -->
+        <mxCell id="420" value="Feeds analytics" style="edgeStyle=orthogonalEdgeStyle;dashed=1;strokeColor=#d6b656;fontSize=9;" edge="1" source="302" target="312" parent="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+
+        <!-- Attendance → Analytics -->
+        <mxCell id="421" value="Trend data" style="edgeStyle=orthogonalEdgeStyle;dashed=1;strokeColor=#d6b656;fontSize=9;" edge="1" source="300" target="312" parent="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+
+        <!-- Identity → Attendance, TimeOff, Payroll -->
+        <mxCell id="422" value="Employee ref" style="edgeStyle=orthogonalEdgeStyle;dashed=1;strokeColor=#82b366;fontSize=9;" edge="1" source="311" target="300" parent="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="423" value="" style="edgeStyle=orthogonalEdgeStyle;dashed=1;strokeColor=#82b366;" edge="1" source="311" target="301" parent="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="424" value="" style="edgeStyle=orthogonalEdgeStyle;dashed=1;strokeColor=#82b366;" edge="1" source="311" target="302" parent="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+
+        <!-- Config → all services -->
+        <mxCell id="425" value="" style="edgeStyle=orthogonalEdgeStyle;dashed=1;strokeColor=#666666;" edge="1" source="322" target="300" parent="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="426" value="" style="edgeStyle=orthogonalEdgeStyle;dashed=1;strokeColor=#666666;" edge="1" source="322" target="310" parent="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+
+        <!-- Portal access → Services -->
+        <mxCell id="430" value="" style="edgeStyle=orthogonalEdgeStyle;" edge="1" source="101" target="200" parent="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="431" value="" style="edgeStyle=orthogonalEdgeStyle;" edge="1" source="120" target="200" parent="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="432" value="" style="edgeStyle=orthogonalEdgeStyle;" edge="1" source="130" target="200" parent="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+
+        <!-- ==================== SECTION 5: DATA FLOW DIAGRAM ==================== -->
+
+        <mxCell id="500" value="INTERNAL DATA FLOW" style="swimlane;fillColor=#f5f5f5;strokeColor=#666666;fontStyle=1;fontSize=12;startSize=30;" vertex="1" parent="1">
+          <mxGeometry x="20" y="1450" width="2960" height="320" as="geometry" />
+        </mxCell>
+
+        <!-- Data Flow Nodes -->
+        <mxCell id="501" value="Kiosk Clock-In/Out" style="rounded=1;fillColor=#f8cecc;strokeColor=#b85450;fontSize=9;" vertex="1" parent="500">
+          <mxGeometry x="30" y="80" width="130" height="50" as="geometry" />
+        </mxCell>
+        <mxCell id="502" value="attendance&#xa;(records)" style="shape=mxgraph.flowchart.database;fillColor=#dae8fc;strokeColor=#6c8ebf;fontSize=9;" vertex="1" parent="500">
+          <mxGeometry x="210" y="70" width="110" height="60" as="geometry" />
+        </mxCell>
+        <mxCell id="503" value="Overtime&#xa;Requests" style="rounded=1;fillColor=#fff2cc;strokeColor=#d6b656;fontSize=9;" vertex="1" parent="500">
+          <mxGeometry x="210" y="160" width="110" height="50" as="geometry" />
+        </mxCell>
+        <mxCell id="504" value="timesheets&#xa;(weekly)" style="shape=mxgraph.flowchart.database;fillColor=#d5e8d4;strokeColor=#82b366;fontSize=9;" vertex="1" parent="500">
+          <mxGeometry x="380" y="70" width="120" height="60" as="geometry" />
+        </mxCell>
+        <mxCell id="505" value="analytics&#xa;(aggregated)" style="shape=mxgraph.flowchart.database;fillColor=#fff2cc;strokeColor=#d6b656;fontSize=9;" vertex="1" parent="500">
+          <mxGeometry x="560" y="70" width="120" height="60" as="geometry" />
+        </mxCell>
+        <mxCell id="506" value="Leave&#xa;Requests" style="rounded=1;fillColor=#f8cecc;strokeColor=#b85450;fontSize=9;" vertex="1" parent="500">
+          <mxGeometry x="30" y="175" width="130" height="50" as="geometry" />
+        </mxCell>
+        <mxCell id="507" value="leave_balance&#xa;_ledger" style="shape=mxgraph.flowchart.database;fillColor=#f8cecc;strokeColor=#b85450;fontSize=9;" vertex="1" parent="500">
+          <mxGeometry x="210" y="240" width="120" height="60" as="geometry" />
+        </mxCell>
+        <mxCell id="508" value="employees.leave&#xa;_balances JSON" style="shape=mxgraph.flowchart.database;fillColor=#d5e8d4;strokeColor=#82b366;fontSize=9;" vertex="1" parent="500">
+          <mxGeometry x="380" y="230" width="130" height="60" as="geometry" />
+        </mxCell>
+        <mxCell id="509" value="All Service&#xa;Write Actions" style="rounded=1;fillColor=#ffe6cc;strokeColor=#d79b00;fontSize=9;" vertex="1" parent="500">
+          <mxGeometry x="740" y="80" width="130" height="50" as="geometry" />
+        </mxCell>
+        <mxCell id="510" value="audit_events&#xa;(immutable log)" style="shape=mxgraph.flowchart.database;fillColor=#ffe6cc;strokeColor=#d79b00;fontSize=9;" vertex="1" parent="500">
+          <mxGeometry x="930" y="70" width="130" height="60" as="geometry" />
+        </mxCell>
+        <mxCell id="511" value="System Events&#xa;(state changes)" style="rounded=1;fillColor=#e1d5e7;strokeColor=#9673a6;fontSize=9;" vertex="1" parent="500">
+          <mxGeometry x="740" y="175" width="130" height="50" as="geometry" />
+        </mxCell>
+        <mxCell id="512" value="notifications&#xa;(in-app)" style="shape=mxgraph.flowchart.database;fillColor=#dae8fc;strokeColor=#6c8ebf;fontSize=9;" vertex="1" parent="500">
+          <mxGeometry x="930" y="165" width="130" height="60" as="geometry" />
+        </mxCell>
+
+        <!-- Data flow edges -->
+        <mxCell id="560" value="" style="edgeStyle=orthogonalEdgeStyle;" edge="1" source="501" target="502" parent="500">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="561" value="feeds" style="edgeStyle=orthogonalEdgeStyle;fontSize=9;" edge="1" source="502" target="504" parent="500">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="562" value="approved OT" style="edgeStyle=orthogonalEdgeStyle;fontSize=9;" edge="1" source="503" target="504" parent="500">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="563" value="aggregates" style="edgeStyle=orthogonalEdgeStyle;fontSize=9;" edge="1" source="504" target="505" parent="500">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="564" value="aggregates" style="edgeStyle=orthogonalEdgeStyle;fontSize=9;" edge="1" source="502" target="505" parent="500">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="565" value="debit entry" style="edgeStyle=orthogonalEdgeStyle;fontSize=9;" edge="1" source="506" target="507" parent="500">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="566" value="syncs balance" style="edgeStyle=orthogonalEdgeStyle;fontSize=9;" edge="1" source="507" target="508" parent="500">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="567" value="logs all writes" style="edgeStyle=orthogonalEdgeStyle;fontSize=9;" edge="1" source="509" target="510" parent="500">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="568" value="triggers" style="edgeStyle=orthogonalEdgeStyle;fontSize=9;" edge="1" source="511" target="512" parent="500">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+
+        <!-- ==================== SECTION 6: INTEGRATION LAYER ==================== -->
+
+        <mxCell id="600" value="INTEGRATION LAYER — External System" style="swimlane;fillColor=#e1d5e7;strokeColor=#9673a6;fontStyle=1;fontSize=12;startSize=30;" vertex="1" parent="1">
+          <mxGeometry x="20" y="1800" width="2960" height="230" as="geometry" />
+        </mxCell>
+
+        <!-- Laravel API Integration endpoint -->
+        <mxCell id="601" value="Laravel API&#xa;Integration Endpoint&#xa;(/api/export, /api/sync)" style="rounded=1;fillColor=#dae8fc;strokeColor=#6c8ebf;fontSize=10;fontStyle=1;" vertex="1" parent="600">
+          <mxGeometry x="20" y="60" width="200" height="80" as="geometry" />
+        </mxCell>
+
+        <!-- Payroll Export -->
+        <mxCell id="602" value="Payroll Data Export&#xa;(approved timesheets&#xa;+ OT hours)" style="rounded=1;fillColor=#d5e8d4;strokeColor=#82b366;fontSize=10;" vertex="1" parent="600">
+          <mxGeometry x="300" y="60" width="180" height="80" as="geometry" />
+        </mxCell>
+
+        <!-- Employee Sync -->
+        <mxCell id="603" value="Employee Records Sync&#xa;(onboarding/offboarding&#xa;+ status updates)" style="rounded=1;fillColor=#d5e8d4;strokeColor=#82b366;fontSize=10;" vertex="1" parent="600">
+          <mxGeometry x="560" y="60" width="180" height="80" as="geometry" />
+        </mxCell>
+
+        <!-- Analytics Feed -->
+        <mxCell id="604" value="Analytics Feed&#xa;(productivity &amp; leave&#xa;trend reports)" style="rounded=1;fillColor=#d5e8d4;strokeColor=#82b366;fontSize=10;" vertex="1" parent="600">
+          <mxGeometry x="820" y="60" width="180" height="80" as="geometry" />
+        </mxCell>
+
+        <!-- E-Commerce Parent System -->
+        <mxCell id="605" value="E-Commerce Parent System&#xa;(External Integration Target)" style="shape=mxgraph.flowchart.start_2;fillColor=#f8cecc;strokeColor=#b85450;fontSize=10;fontStyle=1;" vertex="1" parent="600">
+          <mxGeometry x="1100" y="55" width="230" height="90" as="geometry" />
+        </mxCell>
+
+        <!-- Integration Edges -->
+        <mxCell id="650" value="" style="edgeStyle=orthogonalEdgeStyle;" edge="1" source="601" target="602" parent="600">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="651" value="" style="edgeStyle=orthogonalEdgeStyle;" edge="1" source="601" target="603" parent="600">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="652" value="" style="edgeStyle=orthogonalEdgeStyle;" edge="1" source="601" target="604" parent="600">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="653" value="Payroll export" style="edgeStyle=orthogonalEdgeStyle;fontSize=9;" edge="1" source="602" target="605" parent="600">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="654" value="Employee sync" style="edgeStyle=orthogonalEdgeStyle;fontSize=9;" edge="1" source="603" target="605" parent="600">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="655" value="Analytics feed" style="edgeStyle=orthogonalEdgeStyle;fontSize=9;" edge="1" source="604" target="605" parent="600">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+
+        <!-- Connect Services to Integration -->
+        <mxCell id="660" value="Payroll export trigger" style="edgeStyle=orthogonalEdgeStyle;dashed=1;strokeColor=#82b366;fontSize=9;" edge="1" source="302" target="601" parent="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="661" value="Analytics export" style="edgeStyle=orthogonalEdgeStyle;dashed=1;strokeColor=#d6b656;fontSize=9;" edge="1" source="312" target="601" parent="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="662" value="Employee sync" style="edgeStyle=orthogonalEdgeStyle;dashed=1;strokeColor=#82b366;fontSize=9;" edge="1" source="311" target="601" parent="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+
+        <!-- ==================== LEGEND ==================== -->
+
+        <mxCell id="700" value="LEGEND" style="swimlane;fillColor=#f5f5f5;strokeColor=#666666;fontStyle=1;fontSize=11;startSize=25;" vertex="1" parent="1">
+          <mxGeometry x="20" y="2060" width="800" height="180" as="geometry" />
+        </mxCell>
+        <mxCell id="701" value="Service Module" style="rounded=1;fillColor=#dae8fc;strokeColor=#6c8ebf;fontSize=9;" vertex="1" parent="700">
+          <mxGeometry x="20" y="40" width="130" height="35" as="geometry" />
+        </mxCell>
+        <mxCell id="702" value="Database Table" style="shape=mxgraph.flowchart.database;fillColor=#d5e8d4;strokeColor=#82b366;fontSize=9;" vertex="1" parent="700">
+          <mxGeometry x="170" y="35" width="120" height="40" as="geometry" />
+        </mxCell>
+        <mxCell id="703" value="Decision" style="rhombus;fillColor=#fff2cc;strokeColor=#d6b656;fontSize=9;" vertex="1" parent="700">
+          <mxGeometry x="310" y="30" width="100" height="50" as="geometry" />
+        </mxCell>
+        <mxCell id="704" value="External System" style="shape=mxgraph.flowchart.start_2;fillColor=#f8cecc;strokeColor=#b85450;fontSize=9;" vertex="1" parent="700">
+          <mxGeometry x="430" y="30" width="140" height="50" as="geometry" />
+        </mxCell>
+        <mxCell id="705" value="Hosting / Infra" style="rounded=1;fillColor=#fff2cc;strokeColor=#d6b656;fontSize=9;" vertex="1" parent="700">
+          <mxGeometry x="590" y="40" width="130" height="35" as="geometry" />
+        </mxCell>
+        <mxCell id="706" value="Solid arrow = primary data flow    |    Dashed arrow = secondary / event-driven flow" style="text;fontSize=9;fillColor=none;strokeColor=none;" vertex="1" parent="700">
+          <mxGeometry x="20" y="110" width="560" height="30" as="geometry" />
+        </mxCell>
+
+      </root>
+    </mxGraphModel>
+  </diagram>
+</mxfile>
+
