@@ -8,848 +8,848 @@
         <!-- ==================== CLUSTER 1: AUTH (top-left) ==================== -->
 
         <!-- TABLE: users -->
-        <mxCell id="2" value="users" style="shape=swimlane;startSize=20;fillColor=#dae8fc;strokeColor=#6c8ebf;fontStyle=1;fontSize=11;" vertex="1" parent="1">
+        <mxCell id="2" value="users" style="shape=swimlane;startSize=20;fillColor=#1e3a8a;strokeColor=#3b82f6;fontStyle=1;fontSize=11;fontColor=#ffffff;" vertex="1" parent="1">
           <mxGeometry x="20" y="20" width="200" height="164" as="geometry" />
         </mxCell>
-        <mxCell id="3" value="🔑 id: bigint (PK)" style="text;strokeColor=none;fillColor=#fff2cc;align=left;spacingLeft=4;fontSize=10;fontStyle=1;" vertex="1" parent="2">
+        <mxCell id="3" value="🔑 id: bigint (PK)" style="text;strokeColor=none;fillColor=#334155;fontColor=#fde047;align=left;spacingLeft=4;fontSize=10;fontStyle=1;" vertex="1" parent="2">
           <mxGeometry y="20" width="200" height="18" as="geometry" />
         </mxCell>
-        <mxCell id="4" value="employee_id (FK→employees)" style="text;strokeColor=none;fillColor=#f8cecc;align=left;spacingLeft=4;fontSize=10;" vertex="1" parent="2">
+        <mxCell id="4" value="employee_id (FK→employees)" style="text;strokeColor=none;fillColor=#1e293b;fontColor=#fca5a5;align=left;spacingLeft=4;fontSize=10;" vertex="1" parent="2">
           <mxGeometry y="38" width="200" height="18" as="geometry" />
         </mxCell>
-        <mxCell id="5" value="name: varchar" style="text;strokeColor=none;fillColor=none;align=left;spacingLeft=4;fontSize=10;" vertex="1" parent="2">
+        <mxCell id="5" value="name: varchar" style="text;strokeColor=none;fillColor=#0f172a;fontColor=#f1f5f9;align=left;spacingLeft=4;fontSize=10;" vertex="1" parent="2">
           <mxGeometry y="56" width="200" height="18" as="geometry" />
         </mxCell>
-        <mxCell id="6" value="email: varchar" style="text;strokeColor=none;fillColor=none;align=left;spacingLeft=4;fontSize=10;" vertex="1" parent="2">
+        <mxCell id="6" value="email: varchar" style="text;strokeColor=none;fillColor=#0f172a;fontColor=#f1f5f9;align=left;spacingLeft=4;fontSize=10;" vertex="1" parent="2">
           <mxGeometry y="74" width="200" height="18" as="geometry" />
         </mxCell>
-        <mxCell id="7" value="password: varchar" style="text;strokeColor=none;fillColor=none;align=left;spacingLeft=4;fontSize=10;" vertex="1" parent="2">
+        <mxCell id="7" value="password: varchar" style="text;strokeColor=none;fillColor=#0f172a;fontColor=#f1f5f9;align=left;spacingLeft=4;fontSize=10;" vertex="1" parent="2">
           <mxGeometry y="92" width="200" height="18" as="geometry" />
         </mxCell>
-        <mxCell id="8" value="role: varchar" style="text;strokeColor=none;fillColor=none;align=left;spacingLeft=4;fontSize=10;" vertex="1" parent="2">
+        <mxCell id="8" value="role: varchar" style="text;strokeColor=none;fillColor=#0f172a;fontColor=#f1f5f9;align=left;spacingLeft=4;fontSize=10;" vertex="1" parent="2">
           <mxGeometry y="110" width="200" height="18" as="geometry" />
         </mxCell>
-        <mxCell id="9" value="role_label: varchar" style="text;strokeColor=none;fillColor=none;align=left;spacingLeft=4;fontSize=10;" vertex="1" parent="2">
+        <mxCell id="9" value="role_label: varchar" style="text;strokeColor=none;fillColor=#0f172a;fontColor=#f1f5f9;align=left;spacingLeft=4;fontSize=10;" vertex="1" parent="2">
           <mxGeometry y="128" width="200" height="18" as="geometry" />
         </mxCell>
-        <mxCell id="10" value="two_factor_enabled: boolean" style="text;strokeColor=none;fillColor=none;align=left;spacingLeft=4;fontSize=10;" vertex="1" parent="2">
+        <mxCell id="10" value="two_factor_enabled: boolean" style="text;strokeColor=none;fillColor=#0f172a;fontColor=#f1f5f9;align=left;spacingLeft=4;fontSize=10;" vertex="1" parent="2">
           <mxGeometry y="146" width="200" height="18" as="geometry" />
         </mxCell>
 
         <!-- TABLE: personal_access_tokens -->
-        <mxCell id="11" value="personal_access_tokens" style="shape=swimlane;startSize=20;fillColor=#dae8fc;strokeColor=#6c8ebf;fontStyle=1;fontSize=11;" vertex="1" parent="1">
+        <mxCell id="11" value="personal_access_tokens" style="shape=swimlane;startSize=20;fillColor=#1e3a8a;strokeColor=#3b82f6;fontStyle=1;fontSize=11;fontColor=#ffffff;" vertex="1" parent="1">
           <mxGeometry x="240" y="20" width="210" height="110" as="geometry" />
         </mxCell>
-        <mxCell id="12" value="🔑 id: bigint (PK)" style="text;strokeColor=none;fillColor=#fff2cc;align=left;spacingLeft=4;fontSize=10;fontStyle=1;" vertex="1" parent="11">
+        <mxCell id="12" value="🔑 id: bigint (PK)" style="text;strokeColor=none;fillColor=#334155;fontColor=#fde047;align=left;spacingLeft=4;fontSize=10;fontStyle=1;" vertex="1" parent="11">
           <mxGeometry y="20" width="210" height="18" as="geometry" />
         </mxCell>
-        <mxCell id="13" value="tokenable_id (FK→users)" style="text;strokeColor=none;fillColor=#f8cecc;align=left;spacingLeft=4;fontSize=10;" vertex="1" parent="11">
+        <mxCell id="13" value="tokenable_id (FK→users)" style="text;strokeColor=none;fillColor=#1e293b;fontColor=#fca5a5;align=left;spacingLeft=4;fontSize=10;" vertex="1" parent="11">
           <mxGeometry y="38" width="210" height="18" as="geometry" />
         </mxCell>
-        <mxCell id="14" value="name: varchar" style="text;strokeColor=none;fillColor=none;align=left;spacingLeft=4;fontSize=10;" vertex="1" parent="11">
+        <mxCell id="14" value="name: varchar" style="text;strokeColor=none;fillColor=#0f172a;fontColor=#f1f5f9;align=left;spacingLeft=4;fontSize=10;" vertex="1" parent="11">
           <mxGeometry y="56" width="210" height="18" as="geometry" />
         </mxCell>
-        <mxCell id="15" value="token: varchar" style="text;strokeColor=none;fillColor=none;align=left;spacingLeft=4;fontSize=10;" vertex="1" parent="11">
+        <mxCell id="15" value="token: varchar" style="text;strokeColor=none;fillColor=#0f172a;fontColor=#f1f5f9;align=left;spacingLeft=4;fontSize=10;" vertex="1" parent="11">
           <mxGeometry y="74" width="210" height="18" as="geometry" />
         </mxCell>
-        <mxCell id="16" value="abilities: json | expires_at: timestamp" style="text;strokeColor=none;fillColor=none;align=left;spacingLeft=4;fontSize=10;" vertex="1" parent="11">
+        <mxCell id="16" value="abilities: json | expires_at: timestamp" style="text;strokeColor=none;fillColor=#0f172a;fontColor=#f1f5f9;align=left;spacingLeft=4;fontSize=10;" vertex="1" parent="11">
           <mxGeometry y="92" width="210" height="18" as="geometry" />
         </mxCell>
 
         <!-- TABLE: two_factor_challenges -->
-        <mxCell id="17" value="two_factor_challenges" style="shape=swimlane;startSize=20;fillColor=#dae8fc;strokeColor=#6c8ebf;fontStyle=1;fontSize=11;" vertex="1" parent="1">
+        <mxCell id="17" value="two_factor_challenges" style="shape=swimlane;startSize=20;fillColor=#1e3a8a;strokeColor=#3b82f6;fontStyle=1;fontSize=11;fontColor=#ffffff;" vertex="1" parent="1">
           <mxGeometry x="240" y="150" width="210" height="110" as="geometry" />
         </mxCell>
-        <mxCell id="18" value="🔑 id: bigint (PK)" style="text;strokeColor=none;fillColor=#fff2cc;align=left;spacingLeft=4;fontSize=10;fontStyle=1;" vertex="1" parent="17">
+        <mxCell id="18" value="🔑 id: bigint (PK)" style="text;strokeColor=none;fillColor=#334155;fontColor=#fde047;align=left;spacingLeft=4;fontSize=10;fontStyle=1;" vertex="1" parent="17">
           <mxGeometry y="20" width="210" height="18" as="geometry" />
         </mxCell>
-        <mxCell id="19" value="user_id (FK→users)" style="text;strokeColor=none;fillColor=#f8cecc;align=left;spacingLeft=4;fontSize=10;" vertex="1" parent="17">
+        <mxCell id="19" value="user_id (FK→users)" style="text;strokeColor=none;fillColor=#1e293b;fontColor=#fca5a5;align=left;spacingLeft=4;fontSize=10;" vertex="1" parent="17">
           <mxGeometry y="38" width="210" height="18" as="geometry" />
         </mxCell>
-        <mxCell id="20" value="code: varchar" style="text;strokeColor=none;fillColor=none;align=left;spacingLeft=4;fontSize=10;" vertex="1" parent="17">
+        <mxCell id="20" value="code: varchar" style="text;strokeColor=none;fillColor=#0f172a;fontColor=#f1f5f9;align=left;spacingLeft=4;fontSize=10;" vertex="1" parent="17">
           <mxGeometry y="56" width="210" height="18" as="geometry" />
         </mxCell>
-        <mxCell id="21" value="attempts: integer" style="text;strokeColor=none;fillColor=none;align=left;spacingLeft=4;fontSize=10;" vertex="1" parent="17">
+        <mxCell id="21" value="attempts: integer" style="text;strokeColor=none;fillColor=#0f172a;fontColor=#f1f5f9;align=left;spacingLeft=4;fontSize=10;" vertex="1" parent="17">
           <mxGeometry y="74" width="210" height="18" as="geometry" />
         </mxCell>
-        <mxCell id="22" value="expires_at: timestamp" style="text;strokeColor=none;fillColor=none;align=left;spacingLeft=4;fontSize=10;" vertex="1" parent="17">
+        <mxCell id="22" value="expires_at: timestamp" style="text;strokeColor=none;fillColor=#0f172a;fontColor=#f1f5f9;align=left;spacingLeft=4;fontSize=10;" vertex="1" parent="17">
           <mxGeometry y="92" width="210" height="18" as="geometry" />
         </mxCell>
 
         <!-- TABLE: sessions -->
-        <mxCell id="23" value="sessions" style="shape=swimlane;startSize=20;fillColor=#dae8fc;strokeColor=#6c8ebf;fontStyle=1;fontSize=11;" vertex="1" parent="1">
+        <mxCell id="23" value="sessions" style="shape=swimlane;startSize=20;fillColor=#1e3a8a;strokeColor=#3b82f6;fontStyle=1;fontSize=11;fontColor=#ffffff;" vertex="1" parent="1">
           <mxGeometry x="20" y="210" width="200" height="92" as="geometry" />
         </mxCell>
-        <mxCell id="24" value="user_id (FK→users)" style="text;strokeColor=none;fillColor=#f8cecc;align=left;spacingLeft=4;fontSize=10;" vertex="1" parent="23">
+        <mxCell id="24" value="user_id (FK→users)" style="text;strokeColor=none;fillColor=#1e293b;fontColor=#fca5a5;align=left;spacingLeft=4;fontSize=10;" vertex="1" parent="23">
           <mxGeometry y="20" width="200" height="18" as="geometry" />
         </mxCell>
-        <mxCell id="25" value="ip_address: varchar" style="text;strokeColor=none;fillColor=none;align=left;spacingLeft=4;fontSize=10;" vertex="1" parent="23">
+        <mxCell id="25" value="ip_address: varchar" style="text;strokeColor=none;fillColor=#0f172a;fontColor=#f1f5f9;align=left;spacingLeft=4;fontSize=10;" vertex="1" parent="23">
           <mxGeometry y="38" width="200" height="18" as="geometry" />
         </mxCell>
-        <mxCell id="26" value="payload: text" style="text;strokeColor=none;fillColor=none;align=left;spacingLeft=4;fontSize=10;" vertex="1" parent="23">
+        <mxCell id="26" value="payload: text" style="text;strokeColor=none;fillColor=#0f172a;fontColor=#f1f5f9;align=left;spacingLeft=4;fontSize=10;" vertex="1" parent="23">
           <mxGeometry y="56" width="200" height="18" as="geometry" />
         </mxCell>
-        <mxCell id="27" value="last_activity: integer" style="text;strokeColor=none;fillColor=none;align=left;spacingLeft=4;fontSize=10;" vertex="1" parent="23">
+        <mxCell id="27" value="last_activity: integer" style="text;strokeColor=#3b82f6;fillColor=#1e3a8a;fontColor=#ffffff;align=left;spacingLeft=4;fontSize=10;" vertex="1" parent="23">
           <mxGeometry y="74" width="200" height="18" as="geometry" />
         </mxCell>
 
         <!-- TABLE: password_reset_tokens -->
-        <mxCell id="28" value="password_reset_tokens" style="shape=swimlane;startSize=20;fillColor=#dae8fc;strokeColor=#6c8ebf;fontStyle=1;fontSize=11;" vertex="1" parent="1">
+        <mxCell id="28" value="password_reset_tokens" style="shape=swimlane;startSize=20;fillColor=#1e3a8a;strokeColor=#60a5fa;fontStyle=1;fontSize=11;fontColor=#ffffff;" vertex="1" parent="1">
           <mxGeometry x="20" y="320" width="200" height="74" as="geometry" />
         </mxCell>
-        <mxCell id="29" value="email: varchar" style="text;strokeColor=none;fillColor=none;align=left;spacingLeft=4;fontSize=10;" vertex="1" parent="28">
+        <mxCell id="29" value="email: varchar" style="text;strokeColor=none;fillColor=#0f172a;fontColor=#f1f5f9;align=left;spacingLeft=4;fontSize=10;" vertex="1" parent="28">
           <mxGeometry y="20" width="200" height="18" as="geometry" />
         </mxCell>
-        <mxCell id="30" value="token: varchar" style="text;strokeColor=none;fillColor=none;align=left;spacingLeft=4;fontSize=10;" vertex="1" parent="28">
+        <mxCell id="30" value="token: varchar" style="text;strokeColor=none;fillColor=#0f172a;fontColor=#f1f5f9;align=left;spacingLeft=4;fontSize=10;" vertex="1" parent="28">
           <mxGeometry y="38" width="200" height="18" as="geometry" />
         </mxCell>
-        <mxCell id="31" value="created_at: timestamp" style="text;strokeColor=none;fillColor=none;align=left;spacingLeft=4;fontSize=10;" vertex="1" parent="28">
+        <mxCell id="31" value="created_at: timestamp" style="text;strokeColor=none;fillColor=#0f172a;fontColor=#f1f5f9;align=left;spacingLeft=4;fontSize=10;" vertex="1" parent="28">
           <mxGeometry y="56" width="200" height="18" as="geometry" />
         </mxCell>
 
         <!-- ==================== CLUSTER 2: CORE (top-center) ==================== -->
 
         <!-- TABLE: employees -->
-        <mxCell id="32" value="employees" style="shape=swimlane;startSize=20;fillColor=#d5e8d4;strokeColor=#82b366;fontStyle=1;fontSize=11;" vertex="1" parent="1">
+        <mxCell id="32" value="employees" style="shape=swimlane;startSize=20;fillColor=#064e3b;strokeColor=#10b981;fontStyle=1;fontSize=11;fontColor=#ffffff;" vertex="1" parent="1">
           <mxGeometry x="700" y="20" width="210" height="236" as="geometry" />
         </mxCell>
-        <mxCell id="33" value="🔑 id: varchar (PK)" style="text;strokeColor=none;fillColor=#fff2cc;align=left;spacingLeft=4;fontSize=10;fontStyle=1;" vertex="1" parent="32">
+        <mxCell id="33" value="🔑 id: varchar (PK)" style="text;strokeColor=none;fillColor=#334155;fontColor=#fde047;align=left;spacingLeft=4;fontSize=10;fontStyle=1;" vertex="1" parent="32">
           <mxGeometry y="20" width="210" height="18" as="geometry" />
         </mxCell>
-        <mxCell id="34" value="first_name: varchar" style="text;strokeColor=none;fillColor=none;align=left;spacingLeft=4;fontSize=10;" vertex="1" parent="32">
+        <mxCell id="34" value="first_name: varchar" style="text;strokeColor=none;fillColor=#0f172a;fontColor=#f1f5f9;align=left;spacingLeft=4;fontSize=10;" vertex="1" parent="32">
           <mxGeometry y="38" width="210" height="18" as="geometry" />
         </mxCell>
-        <mxCell id="35" value="last_name: varchar" style="text;strokeColor=none;fillColor=none;align=left;spacingLeft=4;fontSize=10;" vertex="1" parent="32">
+        <mxCell id="35" value="last_name: varchar" style="text;strokeColor=none;fillColor=#0f172a;fontColor=#f1f5f9;align=left;spacingLeft=4;fontSize=10;" vertex="1" parent="32">
           <mxGeometry y="56" width="210" height="18" as="geometry" />
         </mxCell>
-        <mxCell id="36" value="email: varchar" style="text;strokeColor=none;fillColor=none;align=left;spacingLeft=4;fontSize=10;" vertex="1" parent="32">
+        <mxCell id="36" value="email: varchar" style="text;strokeColor=none;fillColor=#0f172a;fontColor=#f1f5f9;align=left;spacingLeft=4;fontSize=10;" vertex="1" parent="32">
           <mxGeometry y="74" width="210" height="18" as="geometry" />
         </mxCell>
-        <mxCell id="37" value="phone: varchar" style="text;strokeColor=none;fillColor=none;align=left;spacingLeft=4;fontSize=10;" vertex="1" parent="32">
+        <mxCell id="37" value="phone: varchar" style="text;strokeColor=none;fillColor=#0f172a;fontColor=#f1f5f9;align=left;spacingLeft=4;fontSize=10;" vertex="1" parent="32">
           <mxGeometry y="92" width="210" height="18" as="geometry" />
         </mxCell>
-        <mxCell id="38" value="department (FK→departments.name)" style="text;strokeColor=none;fillColor=#f8cecc;align=left;spacingLeft=4;fontSize=10;" vertex="1" parent="32">
+        <mxCell id="38" value="department (FK→departments.name)" style="text;strokeColor=none;fillColor=#1e293b;fontColor=#fca5a5;align=left;spacingLeft=4;fontSize=10;" vertex="1" parent="32">
           <mxGeometry y="110" width="210" height="18" as="geometry" />
         </mxCell>
-        <mxCell id="39" value="position: varchar" style="text;strokeColor=none;fillColor=none;align=left;spacingLeft=4;fontSize=10;" vertex="1" parent="32">
+        <mxCell id="39" value="position: varchar" style="text;strokeColor=none;fillColor=#0f172a;fontColor=#f1f5f9;align=left;spacingLeft=4;fontSize=10;" vertex="1" parent="32">
           <mxGeometry y="128" width="210" height="18" as="geometry" />
         </mxCell>
-        <mxCell id="40" value="employment_type: varchar" style="text;strokeColor=none;fillColor=none;align=left;spacingLeft=4;fontSize=10;" vertex="1" parent="32">
+        <mxCell id="40" value="employment_type: varchar" style="text;strokeColor=none;fillColor=#0f172a;fontColor=#f1f5f9;align=left;spacingLeft=4;fontSize=10;" vertex="1" parent="32">
           <mxGeometry y="146" width="210" height="18" as="geometry" />
         </mxCell>
-        <mxCell id="41" value="status: varchar" style="text;strokeColor=none;fillColor=none;align=left;spacingLeft=4;fontSize=10;" vertex="1" parent="32">
+        <mxCell id="41" value="status: varchar" style="text;strokeColor=none;fillColor=#0f172a;fontColor=#f1f5f9;align=left;spacingLeft=4;fontSize=10;" vertex="1" parent="32">
           <mxGeometry y="164" width="210" height="18" as="geometry" />
         </mxCell>
-        <mxCell id="42" value="hire_date: date" style="text;strokeColor=none;fillColor=none;align=left;spacingLeft=4;fontSize=10;" vertex="1" parent="32">
+        <mxCell id="42" value="hire_date: date" style="text;strokeColor=none;fillColor=#0f172a;fontColor=#f1f5f9;align=left;spacingLeft=4;fontSize=10;" vertex="1" parent="32">
           <mxGeometry y="182" width="210" height="18" as="geometry" />
         </mxCell>
-        <mxCell id="43" value="face_registered: boolean" style="text;strokeColor=none;fillColor=none;align=left;spacingLeft=4;fontSize=10;" vertex="1" parent="32">
+        <mxCell id="43" value="face_registered: boolean" style="text;strokeColor=none;fillColor=#0f172a;fontColor=#f1f5f9;align=left;spacingLeft=4;fontSize=10;" vertex="1" parent="32">
           <mxGeometry y="200" width="210" height="18" as="geometry" />
         </mxCell>
-        <mxCell id="44" value="leave_balances: json" style="text;strokeColor=none;fillColor=none;align=left;spacingLeft=4;fontSize=10;" vertex="1" parent="32">
+        <mxCell id="44" value="leave_balances: json" style="text;strokeColor=none;fillColor=#0f172a;fontColor=#f1f5f9;align=left;spacingLeft=4;fontSize=10;" vertex="1" parent="32">
           <mxGeometry y="218" width="210" height="18" as="geometry" />
         </mxCell>
 
         <!-- TABLE: departments -->
-        <mxCell id="45" value="departments" style="shape=swimlane;startSize=20;fillColor=#d5e8d4;strokeColor=#82b366;fontStyle=1;fontSize=11;" vertex="1" parent="1">
+        <mxCell id="45" value="departments" style="shape=swimlane;startSize=20;fillColor=#064e3b;strokeColor=#10b981;fontStyle=1;fontSize=11;fontColor=#ffffff;" vertex="1" parent="1">
           <mxGeometry x="930" y="20" width="210" height="146" as="geometry" />
         </mxCell>
-        <mxCell id="46" value="🔑 id: varchar (PK)" style="text;strokeColor=none;fillColor=#fff2cc;align=left;spacingLeft=4;fontSize=10;fontStyle=1;" vertex="1" parent="45">
+        <mxCell id="46" value="🔑 id: varchar (PK)" style="text;strokeColor=none;fillColor=#334155;fontColor=#fde047;align=left;spacingLeft=4;fontSize=10;fontStyle=1;" vertex="1" parent="45">
           <mxGeometry y="20" width="210" height="18" as="geometry" />
         </mxCell>
-        <mxCell id="47" value="name: varchar" style="text;strokeColor=none;fillColor=none;align=left;spacingLeft=4;fontSize=10;" vertex="1" parent="45">
+        <mxCell id="47" value="name: varchar" style="text;strokeColor=none;fillColor=#0f172a;fontColor=#f1f5f9;align=left;spacingLeft=4;fontSize=10;" vertex="1" parent="45">
           <mxGeometry y="38" width="210" height="18" as="geometry" />
         </mxCell>
-        <mxCell id="48" value="head: varchar" style="text;strokeColor=none;fillColor=none;align=left;spacingLeft=4;fontSize=10;" vertex="1" parent="45">
+        <mxCell id="48" value="head: varchar" style="text;strokeColor=none;fillColor=#0f172a;fontColor=#f1f5f9;align=left;spacingLeft=4;fontSize=10;" vertex="1" parent="45">
           <mxGeometry y="56" width="210" height="18" as="geometry" />
         </mxCell>
-        <mxCell id="49" value="head_id (FK→employees)" style="text;strokeColor=none;fillColor=#f8cecc;align=left;spacingLeft=4;fontSize=10;" vertex="1" parent="45">
+        <mxCell id="49" value="head_id (FK→employees)" style="text;strokeColor=none;fillColor=#1e293b;fontColor=#fca5a5;align=left;spacingLeft=4;fontSize=10;" vertex="1" parent="45">
           <mxGeometry y="74" width="210" height="18" as="geometry" />
         </mxCell>
-        <mxCell id="50" value="employee_count: integer" style="text;strokeColor=none;fillColor=none;align=left;spacingLeft=4;fontSize=10;" vertex="1" parent="45">
+        <mxCell id="50" value="employee_count: integer" style="text;strokeColor=none;fillColor=#0f172a;fontColor=#f1f5f9;align=left;spacingLeft=4;fontSize=10;" vertex="1" parent="45">
           <mxGeometry y="92" width="210" height="18" as="geometry" />
         </mxCell>
-        <mxCell id="51" value="budget: decimal" style="text;strokeColor=none;fillColor=none;align=left;spacingLeft=4;fontSize=10;" vertex="1" parent="45">
+        <mxCell id="51" value="budget: decimal" style="text;strokeColor=none;fillColor=#0f172a;fontColor=#f1f5f9;align=left;spacingLeft=4;fontSize=10;" vertex="1" parent="45">
           <mxGeometry y="110" width="210" height="18" as="geometry" />
         </mxCell>
-        <mxCell id="52" value="location: varchar" style="text;strokeColor=none;fillColor=none;align=left;spacingLeft=4;fontSize=10;" vertex="1" parent="45">
+        <mxCell id="52" value="location: varchar" style="text;strokeColor=#10b981;fillColor=#064e3b;fontColor=#ffffff;align=left;spacingLeft=4;fontSize=10;" vertex="1" parent="45">
           <mxGeometry y="128" width="210" height="18" as="geometry" />
         </mxCell>
 
         <!-- TABLE: roles -->
-        <mxCell id="53" value="roles" style="shape=swimlane;startSize=20;fillColor=#d5e8d4;strokeColor=#82b366;fontStyle=1;fontSize=11;" vertex="1" parent="1">
+        <mxCell id="53" value="roles" style="shape=swimlane;startSize=20;fillColor=#064e3b;strokeColor=#34d399;fontStyle=1;fontSize=11;fontColor=#ffffff;" vertex="1" parent="1">
           <mxGeometry x="930" y="186" width="210" height="92" as="geometry" />
         </mxCell>
-        <mxCell id="54" value="🔑 id: varchar (PK)" style="text;strokeColor=none;fillColor=#fff2cc;align=left;spacingLeft=4;fontSize=10;fontStyle=1;" vertex="1" parent="53">
+        <mxCell id="54" value="🔑 id: varchar (PK)" style="text;strokeColor=none;fillColor=#334155;fontColor=#fde047;align=left;spacingLeft=4;fontSize=10;fontStyle=1;" vertex="1" parent="53">
           <mxGeometry y="20" width="210" height="18" as="geometry" />
         </mxCell>
-        <mxCell id="55" value="department_id (FK→departments)" style="text;strokeColor=none;fillColor=#f8cecc;align=left;spacingLeft=4;fontSize=10;" vertex="1" parent="53">
+        <mxCell id="55" value="department_id (FK→departments)" style="text;strokeColor=#f59e0b;fillColor=#78350f;fontColor=#ffffff;align=left;spacingLeft=4;fontSize=10;" vertex="1" parent="53">
           <mxGeometry y="38" width="210" height="18" as="geometry" />
         </mxCell>
-        <mxCell id="56" value="name: varchar" style="text;strokeColor=none;fillColor=none;align=left;spacingLeft=4;fontSize=10;" vertex="1" parent="53">
+        <mxCell id="56" value="name: varchar" style="text;strokeColor=none;fillColor=#0f172a;fontColor=#f1f5f9;align=left;spacingLeft=4;fontSize=10;" vertex="1" parent="53">
           <mxGeometry y="56" width="210" height="18" as="geometry" />
         </mxCell>
-        <mxCell id="57" value="created_at: timestamp" style="text;strokeColor=none;fillColor=none;align=left;spacingLeft=4;fontSize=10;" vertex="1" parent="53">
+        <mxCell id="57" value="created_at: timestamp" style="text;strokeColor=none;fillColor=#0f172a;fontColor=#f1f5f9;align=left;spacingLeft=4;fontSize=10;" vertex="1" parent="53">
           <mxGeometry y="74" width="210" height="18" as="geometry" />
         </mxCell>
 
         <!-- ==================== CLUSTER 3: ATTENDANCE (middle-left) ==================== -->
 
         <!-- TABLE: attendance -->
-        <mxCell id="58" value="attendance" style="shape=swimlane;startSize=20;fillColor=#ffe6cc;strokeColor=#d79b00;fontStyle=1;fontSize=11;" vertex="1" parent="1">
+        <mxCell id="58" value="attendance" style="shape=swimlane;startSize=20;fillColor=#78350f;strokeColor=#fbbf24;fontStyle=1;fontSize=11;fontColor=#ffffff;" vertex="1" parent="1">
           <mxGeometry x="20" y="470" width="210" height="326" as="geometry" />
         </mxCell>
-        <mxCell id="59" value="🔑 id: varchar (PK)" style="text;strokeColor=none;fillColor=#fff2cc;align=left;spacingLeft=4;fontSize=10;fontStyle=1;" vertex="1" parent="58">
+        <mxCell id="59" value="🔑 id: varchar (PK)" style="text;strokeColor=none;fillColor=#334155;fontColor=#fde047;align=left;spacingLeft=4;fontSize=10;fontStyle=1;" vertex="1" parent="58">
           <mxGeometry y="20" width="210" height="18" as="geometry" />
         </mxCell>
-        <mxCell id="60" value="employee_id (FK→employees)" style="text;strokeColor=none;fillColor=#f8cecc;align=left;spacingLeft=4;fontSize=10;" vertex="1" parent="58">
+        <mxCell id="60" value="employee_id (FK→employees)" style="text;strokeColor=none;fillColor=#1e293b;fontColor=#fca5a5;align=left;spacingLeft=4;fontSize=10;" vertex="1" parent="58">
           <mxGeometry y="38" width="210" height="18" as="geometry" />
         </mxCell>
-        <mxCell id="61" value="date: date" style="text;strokeColor=none;fillColor=none;align=left;spacingLeft=4;fontSize=10;" vertex="1" parent="58">
+        <mxCell id="61" value="date: date" style="text;strokeColor=none;fillColor=#0f172a;fontColor=#f1f5f9;align=left;spacingLeft=4;fontSize=10;" vertex="1" parent="58">
           <mxGeometry y="56" width="210" height="18" as="geometry" />
         </mxCell>
-        <mxCell id="62" value="clock_in: timestamp" style="text;strokeColor=none;fillColor=none;align=left;spacingLeft=4;fontSize=10;" vertex="1" parent="58">
+        <mxCell id="62" value="clock_in: timestamp" style="text;strokeColor=none;fillColor=#0f172a;fontColor=#f1f5f9;align=left;spacingLeft=4;fontSize=10;" vertex="1" parent="58">
           <mxGeometry y="74" width="210" height="18" as="geometry" />
         </mxCell>
-        <mxCell id="63" value="clock_out: timestamp" style="text;strokeColor=none;fillColor=none;align=left;spacingLeft=4;fontSize=10;" vertex="1" parent="58">
+        <mxCell id="63" value="clock_out: timestamp" style="text;strokeColor=none;fillColor=#0f172a;fontColor=#f1f5f9;align=left;spacingLeft=4;fontSize=10;" vertex="1" parent="58">
           <mxGeometry y="92" width="210" height="18" as="geometry" />
         </mxCell>
-        <mxCell id="64" value="actual_clock_out: timestamp" style="text;strokeColor=none;fillColor=none;align=left;spacingLeft=4;fontSize=10;" vertex="1" parent="58">
+        <mxCell id="64" value="actual_clock_out: timestamp" style="text;strokeColor=none;fillColor=#0f172a;fontColor=#f1f5f9;align=left;spacingLeft=4;fontSize=10;" vertex="1" parent="58">
           <mxGeometry y="110" width="210" height="18" as="geometry" />
         </mxCell>
-        <mxCell id="65" value="status: varchar" style="text;strokeColor=none;fillColor=none;align=left;spacingLeft=4;fontSize=10;" vertex="1" parent="58">
+        <mxCell id="65" value="status: varchar" style="text;strokeColor=none;fillColor=#0f172a;fontColor=#f1f5f9;align=left;spacingLeft=4;fontSize=10;" vertex="1" parent="58">
           <mxGeometry y="128" width="210" height="18" as="geometry" />
         </mxCell>
-        <mxCell id="66" value="overtime: decimal" style="text;strokeColor=none;fillColor=none;align=left;spacingLeft=4;fontSize=10;" vertex="1" parent="58">
+        <mxCell id="66" value="overtime: decimal" style="text;strokeColor=none;fillColor=#0f172a;fontColor=#f1f5f9;align=left;spacingLeft=4;fontSize=10;" vertex="1" parent="58">
           <mxGeometry y="146" width="210" height="18" as="geometry" />
         </mxCell>
-        <mxCell id="67" value="regular_hours: decimal" style="text;strokeColor=none;fillColor=none;align=left;spacingLeft=4;fontSize=10;" vertex="1" parent="58">
+        <mxCell id="67" value="regular_hours: decimal" style="text;strokeColor=none;fillColor=#0f172a;fontColor=#f1f5f9;align=left;spacingLeft=4;fontSize=10;" vertex="1" parent="58">
           <mxGeometry y="164" width="210" height="18" as="geometry" />
         </mxCell>
-        <mxCell id="68" value="total_hours: decimal" style="text;strokeColor=none;fillColor=none;align=left;spacingLeft=4;fontSize=10;" vertex="1" parent="58">
+        <mxCell id="68" value="total_hours: decimal" style="text;strokeColor=none;fillColor=#0f172a;fontColor=#f1f5f9;align=left;spacingLeft=4;fontSize=10;" vertex="1" parent="58">
           <mxGeometry y="182" width="210" height="18" as="geometry" />
         </mxCell>
-        <mxCell id="69" value="break_hours: decimal" style="text;strokeColor=none;fillColor=none;align=left;spacingLeft=4;fontSize=10;" vertex="1" parent="58">
+        <mxCell id="69" value="break_hours: decimal" style="text;strokeColor=none;fillColor=#0f172a;fontColor=#f1f5f9;align=left;spacingLeft=4;fontSize=10;" vertex="1" parent="58">
           <mxGeometry y="200" width="210" height="18" as="geometry" />
         </mxCell>
-        <mxCell id="70" value="late_minutes: integer" style="text;strokeColor=none;fillColor=none;align=left;spacingLeft=4;fontSize=10;" vertex="1" parent="58">
+        <mxCell id="70" value="late_minutes: integer" style="text;strokeColor=#f59e0b;fillColor=#78350f;fontColor=#ffffff;align=left;spacingLeft=4;fontSize=10;" vertex="1" parent="58">
           <mxGeometry y="218" width="210" height="18" as="geometry" />
         </mxCell>
-        <mxCell id="71" value="undertime_minutes: integer" style="text;strokeColor=none;fillColor=none;align=left;spacingLeft=4;fontSize=10;" vertex="1" parent="58">
+        <mxCell id="71" value="undertime_minutes: integer" style="text;strokeColor=none;fillColor=#0f172a;fontColor=#f1f5f9;align=left;spacingLeft=4;fontSize=10;" vertex="1" parent="58">
           <mxGeometry y="236" width="210" height="18" as="geometry" />
         </mxCell>
-        <mxCell id="72" value="is_rest_day: boolean" style="text;strokeColor=none;fillColor=none;align=left;spacingLeft=4;fontSize=10;" vertex="1" parent="58">
+        <mxCell id="72" value="is_rest_day: boolean" style="text;strokeColor=none;fillColor=#0f172a;fontColor=#f1f5f9;align=left;spacingLeft=4;fontSize=10;" vertex="1" parent="58">
           <mxGeometry y="254" width="210" height="18" as="geometry" />
         </mxCell>
-        <mxCell id="73" value="location: varchar" style="text;strokeColor=none;fillColor=none;align=left;spacingLeft=4;fontSize=10;" vertex="1" parent="58">
+        <mxCell id="73" value="location: varchar" style="text;strokeColor=none;fillColor=#0f172a;fontColor=#f1f5f9;align=left;spacingLeft=4;fontSize=10;" vertex="1" parent="58">
           <mxGeometry y="272" width="210" height="18" as="geometry" />
         </mxCell>
-        <mxCell id="74" value="created_at: timestamp" style="text;strokeColor=none;fillColor=none;align=left;spacingLeft=4;fontSize=10;" vertex="1" parent="58">
+        <mxCell id="74" value="created_at: timestamp" style="text;strokeColor=none;fillColor=#0f172a;fontColor=#f1f5f9;align=left;spacingLeft=4;fontSize=10;" vertex="1" parent="58">
           <mxGeometry y="290" width="210" height="18" as="geometry" />
         </mxCell>
-        <mxCell id="75" value="updated_at: timestamp" style="text;strokeColor=none;fillColor=none;align=left;spacingLeft=4;fontSize=10;" vertex="1" parent="58">
+        <mxCell id="75" value="updated_at: timestamp" style="text;strokeColor=none;fillColor=#0f172a;fontColor=#f1f5f9;align=left;spacingLeft=4;fontSize=10;" vertex="1" parent="58">
           <mxGeometry y="308" width="210" height="18" as="geometry" />
         </mxCell>
 
         <!-- TABLE: attendance_adjustments -->
-        <mxCell id="76" value="attendance_adjustments" style="shape=swimlane;startSize=20;fillColor=#ffe6cc;strokeColor=#d79b00;fontStyle=1;fontSize=11;" vertex="1" parent="1">
+        <mxCell id="76" value="attendance_adjustments" style="shape=swimlane;startSize=20;fillColor=#78350f;strokeColor=#fbbf24;fontStyle=1;fontSize=11;fontColor=#ffffff;" vertex="1" parent="1">
           <mxGeometry x="250" y="470" width="210" height="236" as="geometry" />
         </mxCell>
-        <mxCell id="77" value="🔑 id: varchar (PK)" style="text;strokeColor=none;fillColor=#fff2cc;align=left;spacingLeft=4;fontSize=10;fontStyle=1;" vertex="1" parent="76">
+        <mxCell id="77" value="🔑 id: varchar (PK)" style="text;strokeColor=none;fillColor=#334155;fontColor=#fde047;align=left;spacingLeft=4;fontSize=10;fontStyle=1;" vertex="1" parent="76">
           <mxGeometry y="20" width="210" height="18" as="geometry" />
         </mxCell>
-        <mxCell id="78" value="employee_id (FK→employees)" style="text;strokeColor=none;fillColor=#f8cecc;align=left;spacingLeft=4;fontSize=10;" vertex="1" parent="76">
+        <mxCell id="78" value="employee_id (FK→employees)" style="text;strokeColor=none;fillColor=#1e293b;fontColor=#fca5a5;align=left;spacingLeft=4;fontSize=10;" vertex="1" parent="76">
           <mxGeometry y="38" width="210" height="18" as="geometry" />
         </mxCell>
-        <mxCell id="79" value="date: date" style="text;strokeColor=none;fillColor=none;align=left;spacingLeft=4;fontSize=10;" vertex="1" parent="76">
+        <mxCell id="79" value="date: date" style="text;strokeColor=none;fillColor=#0f172a;fontColor=#f1f5f9;align=left;spacingLeft=4;fontSize=10;" vertex="1" parent="76">
           <mxGeometry y="56" width="210" height="18" as="geometry" />
         </mxCell>
-        <mxCell id="80" value="type: varchar" style="text;strokeColor=none;fillColor=none;align=left;spacingLeft=4;fontSize=10;" vertex="1" parent="76">
+        <mxCell id="80" value="type: varchar" style="text;strokeColor=none;fillColor=#0f172a;fontColor=#f1f5f9;align=left;spacingLeft=4;fontSize=10;" vertex="1" parent="76">
           <mxGeometry y="74" width="210" height="18" as="geometry" />
         </mxCell>
-        <mxCell id="81" value="claimed_time: timestamp" style="text;strokeColor=none;fillColor=none;align=left;spacingLeft=4;fontSize=10;" vertex="1" parent="76">
+        <mxCell id="81" value="claimed_time: timestamp" style="text;strokeColor=none;fillColor=#0f172a;fontColor=#f1f5f9;align=left;spacingLeft=4;fontSize=10;" vertex="1" parent="76">
           <mxGeometry y="92" width="210" height="18" as="geometry" />
         </mxCell>
-        <mxCell id="82" value="reason: text" style="text;strokeColor=none;fillColor=none;align=left;spacingLeft=4;fontSize=10;" vertex="1" parent="76">
+        <mxCell id="82" value="reason: text" style="text;strokeColor=none;fillColor=#0f172a;fontColor=#f1f5f9;align=left;spacingLeft=4;fontSize=10;" vertex="1" parent="76">
           <mxGeometry y="110" width="210" height="18" as="geometry" />
         </mxCell>
-        <mxCell id="83" value="proof: json" style="text;strokeColor=none;fillColor=none;align=left;spacingLeft=4;fontSize=10;" vertex="1" parent="76">
+        <mxCell id="83" value="proof: json" style="text;strokeColor=none;fillColor=#0f172a;fontColor=#f1f5f9;align=left;spacingLeft=4;fontSize=10;" vertex="1" parent="76">
           <mxGeometry y="128" width="210" height="18" as="geometry" />
         </mxCell>
-        <mxCell id="84" value="status: varchar" style="text;strokeColor=none;fillColor=none;align=left;spacingLeft=4;fontSize=10;" vertex="1" parent="76">
+        <mxCell id="84" value="status: varchar" style="text;strokeColor=#f59e0b;fillColor=#78350f;fontColor=#ffffff;align=left;spacingLeft=4;fontSize=10;" vertex="1" parent="76">
           <mxGeometry y="146" width="210" height="18" as="geometry" />
         </mxCell>
-        <mxCell id="85" value="decided_by: varchar" style="text;strokeColor=none;fillColor=none;align=left;spacingLeft=4;fontSize=10;" vertex="1" parent="76">
+        <mxCell id="85" value="decided_by: varchar" style="text;strokeColor=none;fillColor=#0f172a;fontColor=#f1f5f9;align=left;spacingLeft=4;fontSize=10;" vertex="1" parent="76">
           <mxGeometry y="164" width="210" height="18" as="geometry" />
         </mxCell>
-        <mxCell id="86" value="final_time: timestamp" style="text;strokeColor=none;fillColor=none;align=left;spacingLeft=4;fontSize=10;" vertex="1" parent="76">
+        <mxCell id="86" value="final_time: timestamp" style="text;strokeColor=none;fillColor=#0f172a;fontColor=#f1f5f9;align=left;spacingLeft=4;fontSize=10;" vertex="1" parent="76">
           <mxGeometry y="182" width="210" height="18" as="geometry" />
         </mxCell>
-        <mxCell id="87" value="created_at: timestamp" style="text;strokeColor=none;fillColor=none;align=left;spacingLeft=4;fontSize=10;" vertex="1" parent="76">
+        <mxCell id="87" value="created_at: timestamp" style="text;strokeColor=none;fillColor=#0f172a;fontColor=#f1f5f9;align=left;spacingLeft=4;fontSize=10;" vertex="1" parent="76">
           <mxGeometry y="200" width="210" height="18" as="geometry" />
         </mxCell>
-        <mxCell id="88" value="updated_at: timestamp" style="text;strokeColor=none;fillColor=none;align=left;spacingLeft=4;fontSize=10;" vertex="1" parent="76">
+        <mxCell id="88" value="updated_at: timestamp" style="text;strokeColor=none;fillColor=#0f172a;fontColor=#f1f5f9;align=left;spacingLeft=4;fontSize=10;" vertex="1" parent="76">
           <mxGeometry y="218" width="210" height="18" as="geometry" />
         </mxCell>
 
         <!-- TABLE: early_clock_outs -->
-        <mxCell id="89" value="early_clock_outs" style="shape=swimlane;startSize=20;fillColor=#ffe6cc;strokeColor=#d79b00;fontStyle=1;fontSize=11;" vertex="1" parent="1">
+        <mxCell id="89" value="early_clock_outs" style="shape=swimlane;startSize=20;fillColor=#78350f;strokeColor=#fbbf24;fontStyle=1;fontSize=11;fontColor=#ffffff;" vertex="1" parent="1">
           <mxGeometry x="480" y="470" width="210" height="236" as="geometry" />
         </mxCell>
-        <mxCell id="90" value="🔑 id: varchar (PK)" style="text;strokeColor=none;fillColor=#fff2cc;align=left;spacingLeft=4;fontSize=10;fontStyle=1;" vertex="1" parent="89">
+        <mxCell id="90" value="🔑 id: varchar (PK)" style="text;strokeColor=none;fillColor=#334155;fontColor=#fde047;align=left;spacingLeft=4;fontSize=10;fontStyle=1;" vertex="1" parent="89">
           <mxGeometry y="20" width="210" height="18" as="geometry" />
         </mxCell>
-        <mxCell id="91" value="attendance_id (FK→attendance)" style="text;strokeColor=none;fillColor=#f8cecc;align=left;spacingLeft=4;fontSize=10;" vertex="1" parent="89">
+        <mxCell id="91" value="attendance_id (FK→attendance)" style="text;strokeColor=none;fillColor=#1e293b;fontColor=#fca5a5;align=left;spacingLeft=4;fontSize=10;" vertex="1" parent="89">
           <mxGeometry y="38" width="210" height="18" as="geometry" />
         </mxCell>
-        <mxCell id="92" value="employee_id (FK→employees)" style="text;strokeColor=none;fillColor=#f8cecc;align=left;spacingLeft=4;fontSize=10;" vertex="1" parent="89">
+        <mxCell id="92" value="employee_id (FK→employees)" style="text;strokeColor=none;fillColor=#1e293b;fontColor=#fca5a5;align=left;spacingLeft=4;fontSize=10;" vertex="1" parent="89">
           <mxGeometry y="56" width="210" height="18" as="geometry" />
         </mxCell>
-        <mxCell id="93" value="date: date" style="text;strokeColor=none;fillColor=none;align=left;spacingLeft=4;fontSize=10;" vertex="1" parent="89">
+        <mxCell id="93" value="date: date" style="text;strokeColor=none;fillColor=#0f172a;fontColor=#f1f5f9;align=left;spacingLeft=4;fontSize=10;" vertex="1" parent="89">
           <mxGeometry y="74" width="210" height="18" as="geometry" />
         </mxCell>
-        <mxCell id="94" value="scheduled_end_time: timestamp" style="text;strokeColor=none;fillColor=none;align=left;spacingLeft=4;fontSize=10;" vertex="1" parent="89">
+        <mxCell id="94" value="scheduled_end_time: timestamp" style="text;strokeColor=none;fillColor=#0f172a;fontColor=#f1f5f9;align=left;spacingLeft=4;fontSize=10;" vertex="1" parent="89">
           <mxGeometry y="92" width="210" height="18" as="geometry" />
         </mxCell>
-        <mxCell id="95" value="actual_clock_out_time: timestamp" style="text;strokeColor=none;fillColor=none;align=left;spacingLeft=4;fontSize=10;" vertex="1" parent="89">
+        <mxCell id="95" value="actual_clock_out_time: timestamp" style="text;strokeColor=none;fillColor=#0f172a;fontColor=#f1f5f9;align=left;spacingLeft=4;fontSize=10;" vertex="1" parent="89">
           <mxGeometry y="110" width="210" height="18" as="geometry" />
         </mxCell>
-        <mxCell id="96" value="minutes_early: integer" style="text;strokeColor=none;fillColor=none;align=left;spacingLeft=4;fontSize=10;" vertex="1" parent="89">
+        <mxCell id="96" value="minutes_early: integer" style="text;strokeColor=none;fillColor=#0f172a;fontColor=#f1f5f9;align=left;spacingLeft=4;fontSize=10;" vertex="1" parent="89">
           <mxGeometry y="128" width="210" height="18" as="geometry" />
         </mxCell>
-        <mxCell id="97" value="reason_code: varchar" style="text;strokeColor=none;fillColor=none;align=left;spacingLeft=4;fontSize=10;" vertex="1" parent="89">
+        <mxCell id="97" value="reason_code: varchar" style="text;strokeColor=none;fillColor=#0f172a;fontColor=#f1f5f9;align=left;spacingLeft=4;fontSize=10;" vertex="1" parent="89">
           <mxGeometry y="146" width="210" height="18" as="geometry" />
         </mxCell>
-        <mxCell id="98" value="reason_status: varchar" style="text;strokeColor=none;fillColor=none;align=left;spacingLeft=4;fontSize=10;" vertex="1" parent="89">
+        <mxCell id="98" value="reason_status: varchar" style="text;strokeColor=#8b5cf6;fillColor=#4c1d95;fontColor=#ffffff;align=left;spacingLeft=4;fontSize=10;" vertex="1" parent="89">
           <mxGeometry y="164" width="210" height="18" as="geometry" />
         </mxCell>
-        <mxCell id="99" value="classification: varchar" style="text;strokeColor=none;fillColor=none;align=left;spacingLeft=4;fontSize=10;" vertex="1" parent="89">
+        <mxCell id="99" value="classification: varchar" style="text;strokeColor=none;fillColor=#0f172a;fontColor=#f1f5f9;align=left;spacingLeft=4;fontSize=10;" vertex="1" parent="89">
           <mxGeometry y="182" width="210" height="18" as="geometry" />
         </mxCell>
-        <mxCell id="100" value="classified_by: varchar" style="text;strokeColor=none;fillColor=none;align=left;spacingLeft=4;fontSize=10;" vertex="1" parent="89">
+        <mxCell id="100" value="classified_by: varchar" style="text;strokeColor=none;fillColor=#0f172a;fontColor=#f1f5f9;align=left;spacingLeft=4;fontSize=10;" vertex="1" parent="89">
           <mxGeometry y="200" width="210" height="18" as="geometry" />
         </mxCell>
-        <mxCell id="101" value="created_at: timestamp" style="text;strokeColor=none;fillColor=none;align=left;spacingLeft=4;fontSize=10;" vertex="1" parent="89">
+        <mxCell id="101" value="created_at: timestamp" style="text;strokeColor=none;fillColor=#0f172a;fontColor=#f1f5f9;align=left;spacingLeft=4;fontSize=10;" vertex="1" parent="89">
           <mxGeometry y="218" width="210" height="18" as="geometry" />
         </mxCell>
 
         <!-- ==================== CLUSTER 4: SCHEDULING (middle-center) ==================== -->
 
         <!-- TABLE: shift_definitions -->
-        <mxCell id="102" value="shift_definitions" style="shape=swimlane;startSize=20;fillColor=#e1d5e7;strokeColor=#9673a6;fontStyle=1;fontSize=11;" vertex="1" parent="1">
+        <mxCell id="102" value="shift_definitions" style="shape=swimlane;startSize=20;fillColor=#4c1d95;strokeColor=#c084fc;fontStyle=1;fontSize=11;fontColor=#ffffff;" vertex="1" parent="1">
           <mxGeometry x="700" y="470" width="210" height="110" as="geometry" />
         </mxCell>
-        <mxCell id="103" value="🔑 id: varchar (PK)" style="text;strokeColor=none;fillColor=#fff2cc;align=left;spacingLeft=4;fontSize=10;fontStyle=1;" vertex="1" parent="102">
+        <mxCell id="103" value="🔑 id: varchar (PK)" style="text;strokeColor=#8b5cf6;fillColor=#4c1d95;fontColor=#ffffff;align=left;spacingLeft=4;fontSize=10;fontStyle=1;" vertex="1" parent="102">
           <mxGeometry y="20" width="210" height="18" as="geometry" />
         </mxCell>
-        <mxCell id="104" value="name: varchar" style="text;strokeColor=none;fillColor=none;align=left;spacingLeft=4;fontSize=10;" vertex="1" parent="102">
+        <mxCell id="104" value="name: varchar" style="text;strokeColor=none;fillColor=#0f172a;fontColor=#f1f5f9;align=left;spacingLeft=4;fontSize=10;" vertex="1" parent="102">
           <mxGeometry y="38" width="210" height="18" as="geometry" />
         </mxCell>
-        <mxCell id="105" value="start_time: time" style="text;strokeColor=none;fillColor=none;align=left;spacingLeft=4;fontSize=10;" vertex="1" parent="102">
+        <mxCell id="105" value="start_time: time" style="text;strokeColor=none;fillColor=#0f172a;fontColor=#f1f5f9;align=left;spacingLeft=4;fontSize=10;" vertex="1" parent="102">
           <mxGeometry y="56" width="210" height="18" as="geometry" />
         </mxCell>
-        <mxCell id="106" value="end_time: time" style="text;strokeColor=none;fillColor=none;align=left;spacingLeft=4;fontSize=10;" vertex="1" parent="102">
+        <mxCell id="106" value="end_time: time" style="text;strokeColor=none;fillColor=#0f172a;fontColor=#f1f5f9;align=left;spacingLeft=4;fontSize=10;" vertex="1" parent="102">
           <mxGeometry y="74" width="210" height="18" as="geometry" />
         </mxCell>
-        <mxCell id="107" value="color: varchar" style="text;strokeColor=none;fillColor=none;align=left;spacingLeft=4;fontSize=10;" vertex="1" parent="102">
+        <mxCell id="107" value="color: varchar" style="text;strokeColor=none;fillColor=#0f172a;fontColor=#f1f5f9;align=left;spacingLeft=4;fontSize=10;" vertex="1" parent="102">
           <mxGeometry y="92" width="210" height="18" as="geometry" />
         </mxCell>
 
         <!-- TABLE: shift_schedules -->
-        <mxCell id="108" value="shift_schedules" style="shape=swimlane;startSize=20;fillColor=#e1d5e7;strokeColor=#9673a6;fontStyle=1;fontSize=11;" vertex="1" parent="1">
+        <mxCell id="108" value="shift_schedules" style="shape=swimlane;startSize=20;fillColor=#4c1d95;strokeColor=#c084fc;fontStyle=1;fontSize=11;fontColor=#ffffff;" vertex="1" parent="1">
           <mxGeometry x="930" y="470" width="210" height="128" as="geometry" />
         </mxCell>
-        <mxCell id="109" value="🔑 id: varchar (PK)" style="text;strokeColor=none;fillColor=#fff2cc;align=left;spacingLeft=4;fontSize=10;fontStyle=1;" vertex="1" parent="108">
+        <mxCell id="109" value="🔑 id: varchar (PK)" style="text;strokeColor=none;fillColor=#334155;fontColor=#fde047;align=left;spacingLeft=4;fontSize=10;fontStyle=1;" vertex="1" parent="108">
           <mxGeometry y="20" width="210" height="18" as="geometry" />
         </mxCell>
-        <mxCell id="110" value="employee_id (FK→employees)" style="text;strokeColor=none;fillColor=#f8cecc;align=left;spacingLeft=4;fontSize=10;" vertex="1" parent="108">
+        <mxCell id="110" value="employee_id (FK→employees)" style="text;strokeColor=none;fillColor=#1e293b;fontColor=#fca5a5;align=left;spacingLeft=4;fontSize=10;" vertex="1" parent="108">
           <mxGeometry y="38" width="210" height="18" as="geometry" />
         </mxCell>
-        <mxCell id="111" value="shift_id (FK→shift_definitions)" style="text;strokeColor=none;fillColor=#f8cecc;align=left;spacingLeft=4;fontSize=10;" vertex="1" parent="108">
+        <mxCell id="111" value="shift_id (FK→shift_definitions)" style="text;strokeColor=#8b5cf6;fillColor=#4c1d95;fontColor=#ffffff;align=left;spacingLeft=4;fontSize=10;" vertex="1" parent="108">
           <mxGeometry y="56" width="210" height="18" as="geometry" />
         </mxCell>
-        <mxCell id="112" value="date: date" style="text;strokeColor=none;fillColor=none;align=left;spacingLeft=4;fontSize=10;" vertex="1" parent="108">
+        <mxCell id="112" value="date: date" style="text;strokeColor=none;fillColor=#0f172a;fontColor=#f1f5f9;align=left;spacingLeft=4;fontSize=10;" vertex="1" parent="108">
           <mxGeometry y="74" width="210" height="18" as="geometry" />
         </mxCell>
-        <mxCell id="113" value="status: varchar" style="text;strokeColor=none;fillColor=none;align=left;spacingLeft=4;fontSize=10;" vertex="1" parent="108">
+        <mxCell id="113" value="status: varchar" style="text;strokeColor=none;fillColor=#0f172a;fontColor=#f1f5f9;align=left;spacingLeft=4;fontSize=10;" vertex="1" parent="108">
           <mxGeometry y="92" width="210" height="18" as="geometry" />
         </mxCell>
-        <mxCell id="114" value="created_at: timestamp" style="text;strokeColor=none;fillColor=none;align=left;spacingLeft=4;fontSize=10;" vertex="1" parent="108">
+        <mxCell id="114" value="created_at: timestamp" style="text;strokeColor=none;fillColor=#0f172a;fontColor=#f1f5f9;align=left;spacingLeft=4;fontSize=10;" vertex="1" parent="108">
           <mxGeometry y="110" width="210" height="18" as="geometry" />
         </mxCell>
 
         <!-- TABLE: schedule_settings -->
-        <mxCell id="115" value="schedule_settings" style="shape=swimlane;startSize=20;fillColor=#e1d5e7;strokeColor=#9673a6;fontStyle=1;fontSize=11;" vertex="1" parent="1">
+        <mxCell id="115" value="schedule_settings" style="shape=swimlane;startSize=20;fillColor=#4c1d95;strokeColor=#8b5cf6;fontStyle=1;fontSize=11;fontColor=#ffffff;" vertex="1" parent="1">
           <mxGeometry x="700" y="600" width="210" height="92" as="geometry" />
         </mxCell>
-        <mxCell id="116" value="🔑 id: smallint (PK)" style="text;strokeColor=none;fillColor=#fff2cc;align=left;spacingLeft=4;fontSize=10;fontStyle=1;" vertex="1" parent="115">
+        <mxCell id="116" value="🔑 id: smallint (PK)" style="text;strokeColor=none;fillColor=#334155;fontColor=#fde047;align=left;spacingLeft=4;fontSize=10;fontStyle=1;" vertex="1" parent="115">
           <mxGeometry y="20" width="210" height="18" as="geometry" />
         </mxCell>
-        <mxCell id="117" value="default_work_days: json" style="text;strokeColor=none;fillColor=none;align=left;spacingLeft=4;fontSize=10;" vertex="1" parent="115">
+        <mxCell id="117" value="default_work_days: json" style="text;strokeColor=none;fillColor=#0f172a;fontColor=#f1f5f9;align=left;spacingLeft=4;fontSize=10;" vertex="1" parent="115">
           <mxGeometry y="38" width="210" height="18" as="geometry" />
         </mxCell>
-        <mxCell id="118" value="max_weekly_hours: decimal" style="text;strokeColor=none;fillColor=none;align=left;spacingLeft=4;fontSize=10;" vertex="1" parent="115">
+        <mxCell id="118" value="max_weekly_hours: decimal" style="text;strokeColor=none;fillColor=#0f172a;fontColor=#f1f5f9;align=left;spacingLeft=4;fontSize=10;" vertex="1" parent="115">
           <mxGeometry y="56" width="210" height="18" as="geometry" />
         </mxCell>
-        <mxCell id="119" value="updated_at: timestamp" style="text;strokeColor=none;fillColor=none;align=left;spacingLeft=4;fontSize=10;" vertex="1" parent="115">
+        <mxCell id="119" value="updated_at: timestamp" style="text;strokeColor=none;fillColor=#0f172a;fontColor=#f1f5f9;align=left;spacingLeft=4;fontSize=10;" vertex="1" parent="115">
           <mxGeometry y="74" width="210" height="18" as="geometry" />
         </mxCell>
 
         <!-- TABLE: holidays -->
-        <mxCell id="120" value="holidays" style="shape=swimlane;startSize=20;fillColor=#e1d5e7;strokeColor=#9673a6;fontStyle=1;fontSize=11;" vertex="1" parent="1">
+        <mxCell id="120" value="holidays" style="shape=swimlane;startSize=20;fillColor=#4c1d95;strokeColor=#c084fc;fontStyle=1;fontSize=11;fontColor=#ffffff;" vertex="1" parent="1">
           <mxGeometry x="930" y="618" width="210" height="92" as="geometry" />
         </mxCell>
-        <mxCell id="121" value="🔑 id: bigint (PK)" style="text;strokeColor=none;fillColor=#fff2cc;align=left;spacingLeft=4;fontSize=10;fontStyle=1;" vertex="1" parent="120">
+        <mxCell id="121" value="🔑 id: bigint (PK)" style="text;strokeColor=none;fillColor=#334155;fontColor=#fde047;align=left;spacingLeft=4;fontSize=10;fontStyle=1;" vertex="1" parent="120">
           <mxGeometry y="20" width="210" height="18" as="geometry" />
         </mxCell>
-        <mxCell id="122" value="date: date" style="text;strokeColor=none;fillColor=none;align=left;spacingLeft=4;fontSize=10;" vertex="1" parent="120">
+        <mxCell id="122" value="date: date" style="text;strokeColor=none;fillColor=#0f172a;fontColor=#f1f5f9;align=left;spacingLeft=4;fontSize=10;" vertex="1" parent="120">
           <mxGeometry y="38" width="210" height="18" as="geometry" />
         </mxCell>
-        <mxCell id="123" value="name: varchar" style="text;strokeColor=none;fillColor=none;align=left;spacingLeft=4;fontSize=10;" vertex="1" parent="120">
+        <mxCell id="123" value="name: varchar" style="text;strokeColor=none;fillColor=#0f172a;fontColor=#f1f5f9;align=left;spacingLeft=4;fontSize=10;" vertex="1" parent="120">
           <mxGeometry y="56" width="210" height="18" as="geometry" />
         </mxCell>
-        <mxCell id="124" value="type: varchar" style="text;strokeColor=none;fillColor=none;align=left;spacingLeft=4;fontSize=10;" vertex="1" parent="120">
+        <mxCell id="124" value="type: varchar" style="text;strokeColor=none;fillColor=#0f172a;fontColor=#f1f5f9;align=left;spacingLeft=4;fontSize=10;" vertex="1" parent="120">
           <mxGeometry y="74" width="210" height="18" as="geometry" />
         </mxCell>
 
         <!-- ==================== CLUSTER 5: LEAVES (middle-right) ==================== -->
 
         <!-- TABLE: leave_types -->
-        <mxCell id="125" value="leave_types" style="shape=swimlane;startSize=20;fillColor=#f8cecc;strokeColor=#b85450;fontStyle=1;fontSize=11;" vertex="1" parent="1">
+        <mxCell id="125" value="leave_types" style="shape=swimlane;startSize=20;fillColor=#881337;strokeColor=#f43f5e;fontStyle=1;fontSize=11;fontColor=#ffffff;" vertex="1" parent="1">
           <mxGeometry x="1600" y="20" width="210" height="236" as="geometry" />
         </mxCell>
-        <mxCell id="126" value="🔑 id: varchar (PK)" style="text;strokeColor=none;fillColor=#fff2cc;align=left;spacingLeft=4;fontSize=10;fontStyle=1;" vertex="1" parent="125">
+        <mxCell id="126" value="🔑 id: varchar (PK)" style="text;strokeColor=none;fillColor=#334155;fontColor=#fde047;align=left;spacingLeft=4;fontSize=10;fontStyle=1;" vertex="1" parent="125">
           <mxGeometry y="20" width="210" height="18" as="geometry" />
         </mxCell>
-        <mxCell id="127" value="code: varchar" style="text;strokeColor=none;fillColor=none;align=left;spacingLeft=4;fontSize=10;" vertex="1" parent="125">
+        <mxCell id="127" value="code: varchar" style="text;strokeColor=none;fillColor=#0f172a;fontColor=#f1f5f9;align=left;spacingLeft=4;fontSize=10;" vertex="1" parent="125">
           <mxGeometry y="38" width="210" height="18" as="geometry" />
         </mxCell>
-        <mxCell id="128" value="name: varchar" style="text;strokeColor=none;fillColor=none;align=left;spacingLeft=4;fontSize=10;" vertex="1" parent="125">
+        <mxCell id="128" value="name: varchar" style="text;strokeColor=none;fillColor=#0f172a;fontColor=#f1f5f9;align=left;spacingLeft=4;fontSize=10;" vertex="1" parent="125">
           <mxGeometry y="56" width="210" height="18" as="geometry" />
         </mxCell>
-        <mxCell id="129" value="applicable_gender: varchar" style="text;strokeColor=none;fillColor=none;align=left;spacingLeft=4;fontSize=10;" vertex="1" parent="125">
+        <mxCell id="129" value="applicable_gender: varchar" style="text;strokeColor=none;fillColor=#0f172a;fontColor=#f1f5f9;align=left;spacingLeft=4;fontSize=10;" vertex="1" parent="125">
           <mxGeometry y="74" width="210" height="18" as="geometry" />
         </mxCell>
-        <mxCell id="130" value="min_tenure_months: integer" style="text;strokeColor=none;fillColor=none;align=left;spacingLeft=4;fontSize=10;" vertex="1" parent="125">
+        <mxCell id="130" value="min_tenure_months: integer" style="text;strokeColor=none;fillColor=#0f172a;fontColor=#f1f5f9;align=left;spacingLeft=4;fontSize=10;" vertex="1" parent="125">
           <mxGeometry y="92" width="210" height="18" as="geometry" />
         </mxCell>
-        <mxCell id="131" value="pay_type: varchar" style="text;strokeColor=none;fillColor=none;align=left;spacingLeft=4;fontSize=10;" vertex="1" parent="125">
+        <mxCell id="131" value="pay_type: varchar" style="text;strokeColor=none;fillColor=#0f172a;fontColor=#f1f5f9;align=left;spacingLeft=4;fontSize=10;" vertex="1" parent="125">
           <mxGeometry y="110" width="210" height="18" as="geometry" />
         </mxCell>
-        <mxCell id="132" value="requires_balance: boolean" style="text;strokeColor=none;fillColor=none;align=left;spacingLeft=4;fontSize=10;" vertex="1" parent="125">
+        <mxCell id="132" value="requires_balance: boolean" style="text;strokeColor=none;fillColor=#0f172a;fontColor=#f1f5f9;align=left;spacingLeft=4;fontSize=10;" vertex="1" parent="125">
           <mxGeometry y="128" width="210" height="18" as="geometry" />
         </mxCell>
-        <mxCell id="133" value="accrual_policy: varchar" style="text;strokeColor=none;fillColor=none;align=left;spacingLeft=4;fontSize=10;" vertex="1" parent="125">
+        <mxCell id="133" value="accrual_policy: varchar" style="text;strokeColor=none;fillColor=#0f172a;fontColor=#f1f5f9;align=left;spacingLeft=4;fontSize=10;" vertex="1" parent="125">
           <mxGeometry y="146" width="210" height="18" as="geometry" />
         </mxCell>
-        <mxCell id="134" value="accrual_rate: decimal" style="text;strokeColor=none;fillColor=none;align=left;spacingLeft=4;fontSize=10;" vertex="1" parent="125">
+        <mxCell id="134" value="accrual_rate: decimal" style="text;strokeColor=none;fillColor=#0f172a;fontColor=#f1f5f9;align=left;spacingLeft=4;fontSize=10;" vertex="1" parent="125">
           <mxGeometry y="164" width="210" height="18" as="geometry" />
         </mxCell>
-        <mxCell id="135" value="requires_proof: boolean" style="text;strokeColor=none;fillColor=none;align=left;spacingLeft=4;fontSize=10;" vertex="1" parent="125">
+        <mxCell id="135" value="requires_proof: boolean" style="text;strokeColor=none;fillColor=#0f172a;fontColor=#f1f5f9;align=left;spacingLeft=4;fontSize=10;" vertex="1" parent="125">
           <mxGeometry y="182" width="210" height="18" as="geometry" />
         </mxCell>
-        <mxCell id="136" value="active: boolean" style="text;strokeColor=none;fillColor=none;align=left;spacingLeft=4;fontSize=10;" vertex="1" parent="125">
+        <mxCell id="136" value="active: boolean" style="text;strokeColor=none;fillColor=#0f172a;fontColor=#f1f5f9;align=left;spacingLeft=4;fontSize=10;" vertex="1" parent="125">
           <mxGeometry y="200" width="210" height="18" as="geometry" />
         </mxCell>
-        <mxCell id="137" value="created_at: timestamp" style="text;strokeColor=none;fillColor=none;align=left;spacingLeft=4;fontSize=10;" vertex="1" parent="125">
+        <mxCell id="137" value="created_at: timestamp" style="text;strokeColor=none;fillColor=#0f172a;fontColor=#f1f5f9;align=left;spacingLeft=4;fontSize=10;" vertex="1" parent="125">
           <mxGeometry y="218" width="210" height="18" as="geometry" />
         </mxCell>
 
         <!-- TABLE: leaves -->
-        <mxCell id="138" value="leaves" style="shape=swimlane;startSize=20;fillColor=#f8cecc;strokeColor=#b85450;fontStyle=1;fontSize=11;" vertex="1" parent="1">
+        <mxCell id="138" value="leaves" style="shape=swimlane;startSize=20;fillColor=#881337;strokeColor=#f43f5e;fontStyle=1;fontSize=11;fontColor=#ffffff;" vertex="1" parent="1">
           <mxGeometry x="1830" y="20" width="210" height="236" as="geometry" />
         </mxCell>
-        <mxCell id="139" value="🔑 id: varchar (PK)" style="text;strokeColor=none;fillColor=#fff2cc;align=left;spacingLeft=4;fontSize=10;fontStyle=1;" vertex="1" parent="138">
+        <mxCell id="139" value="🔑 id: varchar (PK)" style="text;strokeColor=none;fillColor=#334155;fontColor=#fde047;align=left;spacingLeft=4;fontSize=10;fontStyle=1;" vertex="1" parent="138">
           <mxGeometry y="20" width="210" height="18" as="geometry" />
         </mxCell>
-        <mxCell id="140" value="employee_id (FK→employees)" style="text;strokeColor=none;fillColor=#f8cecc;align=left;spacingLeft=4;fontSize=10;" vertex="1" parent="138">
+        <mxCell id="140" value="employee_id (FK→employees)" style="text;strokeColor=none;fillColor=#1e293b;fontColor=#fca5a5;align=left;spacingLeft=4;fontSize=10;" vertex="1" parent="138">
           <mxGeometry y="38" width="210" height="18" as="geometry" />
         </mxCell>
-        <mxCell id="141" value="leave_type (FK→leave_types.code)" style="text;strokeColor=none;fillColor=#f8cecc;align=left;spacingLeft=4;fontSize=10;" vertex="1" parent="138">
+        <mxCell id="141" value="leave_type (FK→leave_types.code)" style="text;strokeColor=none;fillColor=#1e293b;fontColor=#fca5a5;align=left;spacingLeft=4;fontSize=10;" vertex="1" parent="138">
           <mxGeometry y="56" width="210" height="18" as="geometry" />
         </mxCell>
-        <mxCell id="142" value="start_date: date" style="text;strokeColor=none;fillColor=none;align=left;spacingLeft=4;fontSize=10;" vertex="1" parent="138">
+        <mxCell id="142" value="start_date: date" style="text;strokeColor=none;fillColor=#0f172a;fontColor=#f1f5f9;align=left;spacingLeft=4;fontSize=10;" vertex="1" parent="138">
           <mxGeometry y="74" width="210" height="18" as="geometry" />
         </mxCell>
-        <mxCell id="143" value="end_date: date" style="text;strokeColor=none;fillColor=none;align=left;spacingLeft=4;fontSize=10;" vertex="1" parent="138">
+        <mxCell id="143" value="end_date: date" style="text;strokeColor=none;fillColor=#0f172a;fontColor=#f1f5f9;align=left;spacingLeft=4;fontSize=10;" vertex="1" parent="138">
           <mxGeometry y="92" width="210" height="18" as="geometry" />
         </mxCell>
-        <mxCell id="144" value="reason: text" style="text;strokeColor=none;fillColor=none;align=left;spacingLeft=4;fontSize=10;" vertex="1" parent="138">
+        <mxCell id="144" value="reason: text" style="text;strokeColor=none;fillColor=#0f172a;fontColor=#f1f5f9;align=left;spacingLeft=4;fontSize=10;" vertex="1" parent="138">
           <mxGeometry y="110" width="210" height="18" as="geometry" />
         </mxCell>
-        <mxCell id="145" value="status: varchar" style="text;strokeColor=none;fillColor=none;align=left;spacingLeft=4;fontSize=10;" vertex="1" parent="138">
+        <mxCell id="145" value="status: varchar" style="text;strokeColor=none;fillColor=#0f172a;fontColor=#f1f5f9;align=left;spacingLeft=4;fontSize=10;" vertex="1" parent="138">
           <mxGeometry y="128" width="210" height="18" as="geometry" />
         </mxCell>
-        <mxCell id="146" value="applied_date: date" style="text;strokeColor=none;fillColor=none;align=left;spacingLeft=4;fontSize=10;" vertex="1" parent="138">
+        <mxCell id="146" value="applied_date: date" style="text;strokeColor=none;fillColor=#0f172a;fontColor=#f1f5f9;align=left;spacingLeft=4;fontSize=10;" vertex="1" parent="138">
           <mxGeometry y="146" width="210" height="18" as="geometry" />
         </mxCell>
-        <mxCell id="147" value="approved_by: varchar" style="text;strokeColor=none;fillColor=none;align=left;spacingLeft=4;fontSize=10;" vertex="1" parent="138">
+        <mxCell id="147" value="approved_by: varchar" style="text;strokeColor=none;fillColor=#0f172a;fontColor=#f1f5f9;align=left;spacingLeft=4;fontSize=10;" vertex="1" parent="138">
           <mxGeometry y="164" width="210" height="18" as="geometry" />
         </mxCell>
-        <mxCell id="148" value="days: decimal" style="text;strokeColor=none;fillColor=none;align=left;spacingLeft=4;fontSize=10;" vertex="1" parent="138">
+        <mxCell id="148" value="days: decimal" style="text;strokeColor=none;fillColor=#0f172a;fontColor=#f1f5f9;align=left;spacingLeft=4;fontSize=10;" vertex="1" parent="138">
           <mxGeometry y="182" width="210" height="18" as="geometry" />
         </mxCell>
-        <mxCell id="149" value="pay_type: varchar" style="text;strokeColor=none;fillColor=none;align=left;spacingLeft=4;fontSize=10;" vertex="1" parent="138">
+        <mxCell id="149" value="pay_type: varchar" style="text;strokeColor=none;fillColor=#0f172a;fontColor=#f1f5f9;align=left;spacingLeft=4;fontSize=10;" vertex="1" parent="138">
           <mxGeometry y="200" width="210" height="18" as="geometry" />
         </mxCell>
-        <mxCell id="150" value="created_at: timestamp" style="text;strokeColor=none;fillColor=none;align=left;spacingLeft=4;fontSize=10;" vertex="1" parent="138">
+        <mxCell id="150" value="created_at: timestamp" style="text;strokeColor=none;fillColor=#0f172a;fontColor=#f1f5f9;align=left;spacingLeft=4;fontSize=10;" vertex="1" parent="138">
           <mxGeometry y="218" width="210" height="18" as="geometry" />
         </mxCell>
 
         <!-- TABLE: leave_balance_ledger -->
-        <mxCell id="151" value="leave_balance_ledger" style="shape=swimlane;startSize=20;fillColor=#f8cecc;strokeColor=#b85450;fontStyle=1;fontSize=11;" vertex="1" parent="1">
+        <mxCell id="151" value="leave_balance_ledger" style="shape=swimlane;startSize=20;fillColor=#881337;strokeColor=#f43f5e;fontStyle=1;fontSize=11;fontColor=#ffffff;" vertex="1" parent="1">
           <mxGeometry x="1600" y="280" width="210" height="182" as="geometry" />
         </mxCell>
-        <mxCell id="152" value="🔑 id: bigint (PK)" style="text;strokeColor=none;fillColor=#fff2cc;align=left;spacingLeft=4;fontSize=10;fontStyle=1;" vertex="1" parent="151">
+        <mxCell id="152" value="🔑 id: bigint (PK)" style="text;strokeColor=none;fillColor=#334155;fontColor=#fde047;align=left;spacingLeft=4;fontSize=10;fontStyle=1;" vertex="1" parent="151">
           <mxGeometry y="20" width="210" height="18" as="geometry" />
         </mxCell>
-        <mxCell id="153" value="employee_id (FK→employees)" style="text;strokeColor=none;fillColor=#f8cecc;align=left;spacingLeft=4;fontSize=10;" vertex="1" parent="151">
+        <mxCell id="153" value="employee_id (FK→employees)" style="text;strokeColor=none;fillColor=#1e293b;fontColor=#fca5a5;align=left;spacingLeft=4;fontSize=10;" vertex="1" parent="151">
           <mxGeometry y="38" width="210" height="18" as="geometry" />
         </mxCell>
-        <mxCell id="154" value="leave_type_code (FK→leave_types.code)" style="text;strokeColor=none;fillColor=#f8cecc;align=left;spacingLeft=4;fontSize=10;" vertex="1" parent="151">
+        <mxCell id="154" value="leave_type_code (FK→leave_types.code)" style="text;strokeColor=none;fillColor=#1e293b;fontColor=#fca5a5;align=left;spacingLeft=4;fontSize=10;" vertex="1" parent="151">
           <mxGeometry y="56" width="210" height="18" as="geometry" />
         </mxCell>
-        <mxCell id="155" value="entry_type: varchar" style="text;strokeColor=none;fillColor=none;align=left;spacingLeft=4;fontSize=10;" vertex="1" parent="151">
+        <mxCell id="155" value="entry_type: varchar" style="text;strokeColor=none;fillColor=#0f172a;fontColor=#f1f5f9;align=left;spacingLeft=4;fontSize=10;" vertex="1" parent="151">
           <mxGeometry y="74" width="210" height="18" as="geometry" />
         </mxCell>
-        <mxCell id="156" value="days_delta: decimal" style="text;strokeColor=none;fillColor=none;align=left;spacingLeft=4;fontSize=10;" vertex="1" parent="151">
+        <mxCell id="156" value="days_delta: decimal" style="text;strokeColor=none;fillColor=#0f172a;fontColor=#f1f5f9;align=left;spacingLeft=4;fontSize=10;" vertex="1" parent="151">
           <mxGeometry y="92" width="210" height="18" as="geometry" />
         </mxCell>
-        <mxCell id="157" value="balance_after: decimal" style="text;strokeColor=none;fillColor=none;align=left;spacingLeft=4;fontSize=10;" vertex="1" parent="151">
+        <mxCell id="157" value="balance_after: decimal" style="text;strokeColor=none;fillColor=#0f172a;fontColor=#f1f5f9;align=left;spacingLeft=4;fontSize=10;" vertex="1" parent="151">
           <mxGeometry y="110" width="210" height="18" as="geometry" />
         </mxCell>
-        <mxCell id="158" value="reference_id: varchar" style="text;strokeColor=none;fillColor=none;align=left;spacingLeft=4;fontSize=10;" vertex="1" parent="151">
+        <mxCell id="158" value="reference_id: varchar" style="text;strokeColor=none;fillColor=#0f172a;fontColor=#f1f5f9;align=left;spacingLeft=4;fontSize=10;" vertex="1" parent="151">
           <mxGeometry y="128" width="210" height="18" as="geometry" />
         </mxCell>
-        <mxCell id="159" value="performed_by: varchar" style="text;strokeColor=none;fillColor=none;align=left;spacingLeft=4;fontSize=10;" vertex="1" parent="151">
+        <mxCell id="159" value="performed_by: varchar" style="text;strokeColor=none;fillColor=#0f172a;fontColor=#f1f5f9;align=left;spacingLeft=4;fontSize=10;" vertex="1" parent="151">
           <mxGeometry y="146" width="210" height="18" as="geometry" />
         </mxCell>
-        <mxCell id="160" value="created_at: timestamp" style="text;strokeColor=none;fillColor=none;align=left;spacingLeft=4;fontSize=10;" vertex="1" parent="151">
+        <mxCell id="160" value="created_at: timestamp" style="text;strokeColor=none;fillColor=#0f172a;fontColor=#f1f5f9;align=left;spacingLeft=4;fontSize=10;" vertex="1" parent="151">
           <mxGeometry y="164" width="210" height="18" as="geometry" />
         </mxCell>
 
         <!-- TABLE: overtime_requests -->
-        <mxCell id="161" value="overtime_requests" style="shape=swimlane;startSize=20;fillColor=#f8cecc;strokeColor=#b85450;fontStyle=1;fontSize=11;" vertex="1" parent="1">
+        <mxCell id="161" value="overtime_requests" style="shape=swimlane;startSize=20;fillColor=#881337;strokeColor=#f43f5e;fontStyle=1;fontSize=11;fontColor=#ffffff;" vertex="1" parent="1">
           <mxGeometry x="1830" y="280" width="210" height="182" as="geometry" />
         </mxCell>
-        <mxCell id="162" value="🔑 id: varchar (PK)" style="text;strokeColor=none;fillColor=#fff2cc;align=left;spacingLeft=4;fontSize=10;fontStyle=1;" vertex="1" parent="161">
+        <mxCell id="162" value="🔑 id: varchar (PK)" style="text;strokeColor=none;fillColor=#334155;fontColor=#fde047;align=left;spacingLeft=4;fontSize=10;fontStyle=1;" vertex="1" parent="161">
           <mxGeometry y="20" width="210" height="18" as="geometry" />
         </mxCell>
-        <mxCell id="163" value="employee_id (FK→employees)" style="text;strokeColor=none;fillColor=#f8cecc;align=left;spacingLeft=4;fontSize=10;" vertex="1" parent="161">
+        <mxCell id="163" value="employee_id (FK→employees)" style="text;strokeColor=none;fillColor=#1e293b;fontColor=#fca5a5;align=left;spacingLeft=4;fontSize=10;" vertex="1" parent="161">
           <mxGeometry y="38" width="210" height="18" as="geometry" />
         </mxCell>
-        <mxCell id="164" value="date: date" style="text;strokeColor=none;fillColor=none;align=left;spacingLeft=4;fontSize=10;" vertex="1" parent="161">
+        <mxCell id="164" value="date: date" style="text;strokeColor=none;fillColor=#0f172a;fontColor=#f1f5f9;align=left;spacingLeft=4;fontSize=10;" vertex="1" parent="161">
           <mxGeometry y="56" width="210" height="18" as="geometry" />
         </mxCell>
-        <mxCell id="165" value="expected_hours: decimal" style="text;strokeColor=none;fillColor=none;align=left;spacingLeft=4;fontSize=10;" vertex="1" parent="161">
+        <mxCell id="165" value="expected_hours: decimal" style="text;strokeColor=none;fillColor=#0f172a;fontColor=#f1f5f9;align=left;spacingLeft=4;fontSize=10;" vertex="1" parent="161">
           <mxGeometry y="74" width="210" height="18" as="geometry" />
         </mxCell>
-        <mxCell id="166" value="reason: text" style="text;strokeColor=none;fillColor=none;align=left;spacingLeft=4;fontSize=10;" vertex="1" parent="161">
+        <mxCell id="166" value="reason: text" style="text;strokeColor=none;fillColor=#0f172a;fontColor=#f1f5f9;align=left;spacingLeft=4;fontSize=10;" vertex="1" parent="161">
           <mxGeometry y="92" width="210" height="18" as="geometry" />
         </mxCell>
-        <mxCell id="167" value="status: varchar" style="text;strokeColor=none;fillColor=none;align=left;spacingLeft=4;fontSize=10;" vertex="1" parent="161">
+        <mxCell id="167" value="status: varchar" style="text;strokeColor=none;fillColor=#0f172a;fontColor=#f1f5f9;align=left;spacingLeft=4;fontSize=10;" vertex="1" parent="161">
           <mxGeometry y="110" width="210" height="18" as="geometry" />
         </mxCell>
-        <mxCell id="168" value="approved_by: varchar" style="text;strokeColor=none;fillColor=none;align=left;spacingLeft=4;fontSize=10;" vertex="1" parent="161">
+        <mxCell id="168" value="approved_by: varchar" style="text;strokeColor=none;fillColor=#0f172a;fontColor=#f1f5f9;align=left;spacingLeft=4;fontSize=10;" vertex="1" parent="161">
           <mxGeometry y="128" width="210" height="18" as="geometry" />
         </mxCell>
-        <mxCell id="169" value="approved_hours: decimal" style="text;strokeColor=none;fillColor=none;align=left;spacingLeft=4;fontSize=10;" vertex="1" parent="161">
+        <mxCell id="169" value="approved_hours: decimal" style="text;strokeColor=none;fillColor=#0f172a;fontColor=#f1f5f9;align=left;spacingLeft=4;fontSize=10;" vertex="1" parent="161">
           <mxGeometry y="146" width="210" height="18" as="geometry" />
         </mxCell>
-        <mxCell id="170" value="created_at: timestamp" style="text;strokeColor=none;fillColor=none;align=left;spacingLeft=4;fontSize=10;" vertex="1" parent="161">
+        <mxCell id="170" value="created_at: timestamp" style="text;strokeColor=none;fillColor=#0f172a;fontColor=#f1f5f9;align=left;spacingLeft=4;fontSize=10;" vertex="1" parent="161">
           <mxGeometry y="164" width="210" height="18" as="geometry" />
         </mxCell>
 
         <!-- ==================== CLUSTER 6: BOTTOM ==================== -->
 
         <!-- TABLE: timesheets -->
-        <mxCell id="171" value="timesheets" style="shape=swimlane;startSize=20;fillColor=#d5e8d4;strokeColor=#82b366;fontStyle=1;fontSize=11;" vertex="1" parent="1">
+        <mxCell id="171" value="timesheets" style="shape=swimlane;startSize=20;fillColor=#0f172a;strokeColor=#64748b;fontStyle=1;fontSize=11;fontColor=#ffffff;" vertex="1" parent="1">
           <mxGeometry x="20" y="830" width="210" height="236" as="geometry" />
         </mxCell>
-        <mxCell id="172" value="🔑 id: varchar (PK)" style="text;strokeColor=none;fillColor=#fff2cc;align=left;spacingLeft=4;fontSize=10;fontStyle=1;" vertex="1" parent="171">
+        <mxCell id="172" value="🔑 id: varchar (PK)" style="text;strokeColor=none;fillColor=#334155;fontColor=#fde047;align=left;spacingLeft=4;fontSize=10;fontStyle=1;" vertex="1" parent="171">
           <mxGeometry y="20" width="210" height="18" as="geometry" />
         </mxCell>
-        <mxCell id="173" value="employee_id (FK→employees)" style="text;strokeColor=none;fillColor=#f8cecc;align=left;spacingLeft=4;fontSize=10;" vertex="1" parent="171">
+        <mxCell id="173" value="employee_id (FK→employees)" style="text;strokeColor=none;fillColor=#1e293b;fontColor=#fca5a5;align=left;spacingLeft=4;fontSize=10;" vertex="1" parent="171">
           <mxGeometry y="38" width="210" height="18" as="geometry" />
         </mxCell>
-        <mxCell id="174" value="date: date" style="text;strokeColor=none;fillColor=none;align=left;spacingLeft=4;fontSize=10;" vertex="1" parent="171">
+        <mxCell id="174" value="date: date" style="text;strokeColor=none;fillColor=#0f172a;fontColor=#f1f5f9;align=left;spacingLeft=4;fontSize=10;" vertex="1" parent="171">
           <mxGeometry y="56" width="210" height="18" as="geometry" />
         </mxCell>
-        <mxCell id="175" value="week_start: date" style="text;strokeColor=none;fillColor=none;align=left;spacingLeft=4;fontSize=10;" vertex="1" parent="171">
+        <mxCell id="175" value="week_start: date" style="text;strokeColor=none;fillColor=#0f172a;fontColor=#f1f5f9;align=left;spacingLeft=4;fontSize=10;" vertex="1" parent="171">
           <mxGeometry y="74" width="210" height="18" as="geometry" />
         </mxCell>
-        <mxCell id="176" value="week_end: date" style="text;strokeColor=none;fillColor=none;align=left;spacingLeft=4;fontSize=10;" vertex="1" parent="171">
+        <mxCell id="176" value="week_end: date" style="text;strokeColor=none;fillColor=#0f172a;fontColor=#f1f5f9;align=left;spacingLeft=4;fontSize=10;" vertex="1" parent="171">
           <mxGeometry y="92" width="210" height="18" as="geometry" />
         </mxCell>
-        <mxCell id="177" value="regular_hours: decimal" style="text;strokeColor=none;fillColor=none;align=left;spacingLeft=4;fontSize=10;" vertex="1" parent="171">
+        <mxCell id="177" value="regular_hours: decimal" style="text;strokeColor=none;fillColor=#0f172a;fontColor=#f1f5f9;align=left;spacingLeft=4;fontSize=10;" vertex="1" parent="171">
           <mxGeometry y="110" width="210" height="18" as="geometry" />
         </mxCell>
-        <mxCell id="178" value="overtime_hours: decimal" style="text;strokeColor=none;fillColor=none;align=left;spacingLeft=4;fontSize=10;" vertex="1" parent="171">
+        <mxCell id="178" value="overtime_hours: decimal" style="text;strokeColor=none;fillColor=#0f172a;fontColor=#f1f5f9;align=left;spacingLeft=4;fontSize=10;" vertex="1" parent="171">
           <mxGeometry y="128" width="210" height="18" as="geometry" />
         </mxCell>
-        <mxCell id="179" value="break_hours: decimal" style="text;strokeColor=none;fillColor=none;align=left;spacingLeft=4;fontSize=10;" vertex="1" parent="171">
+        <mxCell id="179" value="break_hours: decimal" style="text;strokeColor=none;fillColor=#0f172a;fontColor=#f1f5f9;align=left;spacingLeft=4;fontSize=10;" vertex="1" parent="171">
           <mxGeometry y="146" width="210" height="18" as="geometry" />
         </mxCell>
-        <mxCell id="180" value="total_hours: decimal" style="text;strokeColor=none;fillColor=none;align=left;spacingLeft=4;fontSize=10;" vertex="1" parent="171">
+        <mxCell id="180" value="total_hours: decimal" style="text;strokeColor=none;fillColor=#0f172a;fontColor=#f1f5f9;align=left;spacingLeft=4;fontSize=10;" vertex="1" parent="171">
           <mxGeometry y="164" width="210" height="18" as="geometry" />
         </mxCell>
-        <mxCell id="181" value="status: varchar" style="text;strokeColor=none;fillColor=none;align=left;spacingLeft=4;fontSize=10;" vertex="1" parent="171">
+        <mxCell id="181" value="status: varchar" style="text;strokeColor=none;fillColor=#0f172a;fontColor=#f1f5f9;align=left;spacingLeft=4;fontSize=10;" vertex="1" parent="171">
           <mxGeometry y="182" width="210" height="18" as="geometry" />
         </mxCell>
-        <mxCell id="182" value="submitted_date: date" style="text;strokeColor=none;fillColor=none;align=left;spacingLeft=4;fontSize=10;" vertex="1" parent="171">
+        <mxCell id="182" value="submitted_date: date" style="text;strokeColor=none;fillColor=#0f172a;fontColor=#f1f5f9;align=left;spacingLeft=4;fontSize=10;" vertex="1" parent="171">
           <mxGeometry y="200" width="210" height="18" as="geometry" />
         </mxCell>
-        <mxCell id="183" value="approved_by: varchar" style="text;strokeColor=none;fillColor=none;align=left;spacingLeft=4;fontSize=10;" vertex="1" parent="171">
+        <mxCell id="183" value="approved_by: varchar" style="text;strokeColor=none;fillColor=#0f172a;fontColor=#f1f5f9;align=left;spacingLeft=4;fontSize=10;" vertex="1" parent="171">
           <mxGeometry y="218" width="210" height="18" as="geometry" />
         </mxCell>
 
         <!-- TABLE: notifications -->
-        <mxCell id="184" value="notifications" style="shape=swimlane;startSize=20;fillColor=#d5e8d4;strokeColor=#82b366;fontStyle=1;fontSize=11;" vertex="1" parent="1">
+        <mxCell id="184" value="notifications" style="shape=swimlane;startSize=20;fillColor=#0f172a;strokeColor=#64748b;fontStyle=1;fontSize=11;fontColor=#ffffff;" vertex="1" parent="1">
           <mxGeometry x="250" y="830" width="210" height="164" as="geometry" />
         </mxCell>
-        <mxCell id="185" value="🔑 id: varchar (PK)" style="text;strokeColor=none;fillColor=#fff2cc;align=left;spacingLeft=4;fontSize=10;fontStyle=1;" vertex="1" parent="184">
+        <mxCell id="185" value="🔑 id: varchar (PK)" style="text;strokeColor=none;fillColor=#334155;fontColor=#fde047;align=left;spacingLeft=4;fontSize=10;fontStyle=1;" vertex="1" parent="184">
           <mxGeometry y="20" width="210" height="18" as="geometry" />
         </mxCell>
-        <mxCell id="186" value="employee_id (FK→employees)" style="text;strokeColor=none;fillColor=#f8cecc;align=left;spacingLeft=4;fontSize=10;" vertex="1" parent="184">
+        <mxCell id="186" value="employee_id (FK→employees)" style="text;strokeColor=none;fillColor=#1e293b;fontColor=#fca5a5;align=left;spacingLeft=4;fontSize=10;" vertex="1" parent="184">
           <mxGeometry y="38" width="210" height="18" as="geometry" />
         </mxCell>
-        <mxCell id="187" value="type: varchar" style="text;strokeColor=none;fillColor=none;align=left;spacingLeft=4;fontSize=10;" vertex="1" parent="184">
+        <mxCell id="187" value="type: varchar" style="text;strokeColor=none;fillColor=#0f172a;fontColor=#f1f5f9;align=left;spacingLeft=4;fontSize=10;" vertex="1" parent="184">
           <mxGeometry y="56" width="210" height="18" as="geometry" />
         </mxCell>
-        <mxCell id="188" value="title: varchar" style="text;strokeColor=none;fillColor=none;align=left;spacingLeft=4;fontSize=10;" vertex="1" parent="184">
+        <mxCell id="188" value="title: varchar" style="text;strokeColor=none;fillColor=#0f172a;fontColor=#f1f5f9;align=left;spacingLeft=4;fontSize=10;" vertex="1" parent="184">
           <mxGeometry y="74" width="210" height="18" as="geometry" />
         </mxCell>
-        <mxCell id="189" value="message: text" style="text;strokeColor=none;fillColor=none;align=left;spacingLeft=4;fontSize=10;" vertex="1" parent="184">
+        <mxCell id="189" value="message: text" style="text;strokeColor=none;fillColor=#0f172a;fontColor=#f1f5f9;align=left;spacingLeft=4;fontSize=10;" vertex="1" parent="184">
           <mxGeometry y="92" width="210" height="18" as="geometry" />
         </mxCell>
-        <mxCell id="190" value="read: boolean" style="text;strokeColor=none;fillColor=none;align=left;spacingLeft=4;fontSize=10;" vertex="1" parent="184">
+        <mxCell id="190" value="read: boolean" style="text;strokeColor=none;fillColor=#0f172a;fontColor=#f1f5f9;align=left;spacingLeft=4;fontSize=10;" vertex="1" parent="184">
           <mxGeometry y="110" width="210" height="18" as="geometry" />
         </mxCell>
-        <mxCell id="191" value="priority: varchar" style="text;strokeColor=none;fillColor=none;align=left;spacingLeft=4;fontSize=10;" vertex="1" parent="184">
+        <mxCell id="191" value="priority: varchar" style="text;strokeColor=none;fillColor=#0f172a;fontColor=#f1f5f9;align=left;spacingLeft=4;fontSize=10;" vertex="1" parent="184">
           <mxGeometry y="128" width="210" height="18" as="geometry" />
         </mxCell>
-        <mxCell id="192" value="action_url: varchar" style="text;strokeColor=none;fillColor=none;align=left;spacingLeft=4;fontSize=10;" vertex="1" parent="184">
+        <mxCell id="192" value="action_url: varchar" style="text;strokeColor=#64748b;fillColor=#0f172a;fontColor=#ffffff;align=left;spacingLeft=4;fontSize=10;" vertex="1" parent="184">
           <mxGeometry y="146" width="210" height="18" as="geometry" />
         </mxCell>
 
         <!-- TABLE: audit_events -->
-        <mxCell id="193" value="audit_events" style="shape=swimlane;startSize=20;fillColor=#d5e8d4;strokeColor=#82b366;fontStyle=1;fontSize=11;" vertex="1" parent="1">
+        <mxCell id="193" value="audit_events" style="shape=swimlane;startSize=20;fillColor=#064e3b;strokeColor=#34d399;fontStyle=1;fontSize=11;fontColor=#ffffff;" vertex="1" parent="1">
           <mxGeometry x="480" y="830" width="210" height="218" as="geometry" />
         </mxCell>
-        <mxCell id="194" value="🔑 id: bigint (PK)" style="text;strokeColor=none;fillColor=#fff2cc;align=left;spacingLeft=4;fontSize=10;fontStyle=1;" vertex="1" parent="193">
+        <mxCell id="194" value="🔑 id: bigint (PK)" style="text;strokeColor=none;fillColor=#334155;fontColor=#fde047;align=left;spacingLeft=4;fontSize=10;fontStyle=1;" vertex="1" parent="193">
           <mxGeometry y="20" width="210" height="18" as="geometry" />
         </mxCell>
-        <mxCell id="195" value="service: varchar" style="text;strokeColor=none;fillColor=none;align=left;spacingLeft=4;fontSize=10;" vertex="1" parent="193">
+        <mxCell id="195" value="service: varchar" style="text;strokeColor=none;fillColor=#0f172a;fontColor=#f1f5f9;align=left;spacingLeft=4;fontSize=10;" vertex="1" parent="193">
           <mxGeometry y="38" width="210" height="18" as="geometry" />
         </mxCell>
-        <mxCell id="196" value="event: varchar" style="text;strokeColor=none;fillColor=none;align=left;spacingLeft=4;fontSize=10;" vertex="1" parent="193">
+        <mxCell id="196" value="event: varchar" style="text;strokeColor=none;fillColor=#0f172a;fontColor=#f1f5f9;align=left;spacingLeft=4;fontSize=10;" vertex="1" parent="193">
           <mxGeometry y="56" width="210" height="18" as="geometry" />
         </mxCell>
-        <mxCell id="197" value="entity_type: varchar" style="text;strokeColor=none;fillColor=none;align=left;spacingLeft=4;fontSize=10;" vertex="1" parent="193">
+        <mxCell id="197" value="entity_type: varchar" style="text;strokeColor=none;fillColor=#0f172a;fontColor=#f1f5f9;align=left;spacingLeft=4;fontSize=10;" vertex="1" parent="193">
           <mxGeometry y="74" width="210" height="18" as="geometry" />
         </mxCell>
-        <mxCell id="198" value="entity_id: varchar" style="text;strokeColor=none;fillColor=none;align=left;spacingLeft=4;fontSize=10;" vertex="1" parent="193">
+        <mxCell id="198" value="entity_id: varchar" style="text;strokeColor=none;fillColor=#0f172a;fontColor=#f1f5f9;align=left;spacingLeft=4;fontSize=10;" vertex="1" parent="193">
           <mxGeometry y="92" width="210" height="18" as="geometry" />
         </mxCell>
-        <mxCell id="199" value="actor: varchar" style="text;strokeColor=none;fillColor=none;align=left;spacingLeft=4;fontSize=10;" vertex="1" parent="193">
+        <mxCell id="199" value="actor: varchar" style="text;strokeColor=none;fillColor=#0f172a;fontColor=#f1f5f9;align=left;spacingLeft=4;fontSize=10;" vertex="1" parent="193">
           <mxGeometry y="110" width="210" height="18" as="geometry" />
         </mxCell>
-        <mxCell id="200" value="actor_id: varchar" style="text;strokeColor=none;fillColor=none;align=left;spacingLeft=4;fontSize=10;" vertex="1" parent="193">
+        <mxCell id="200" value="actor_id: varchar" style="text;strokeColor=none;fillColor=#0f172a;fontColor=#f1f5f9;align=left;spacingLeft=4;fontSize=10;" vertex="1" parent="193">
           <mxGeometry y="128" width="210" height="18" as="geometry" />
         </mxCell>
-        <mxCell id="201" value="before: json" style="text;strokeColor=none;fillColor=none;align=left;spacingLeft=4;fontSize=10;" vertex="1" parent="193">
+        <mxCell id="201" value="before: json" style="text;strokeColor=none;fillColor=#0f172a;fontColor=#f1f5f9;align=left;spacingLeft=4;fontSize=10;" vertex="1" parent="193">
           <mxGeometry y="146" width="210" height="18" as="geometry" />
         </mxCell>
-        <mxCell id="202" value="after: json" style="text;strokeColor=none;fillColor=none;align=left;spacingLeft=4;fontSize=10;" vertex="1" parent="193">
+        <mxCell id="202" value="after: json" style="text;strokeColor=none;fillColor=#0f172a;fontColor=#f1f5f9;align=left;spacingLeft=4;fontSize=10;" vertex="1" parent="193">
           <mxGeometry y="164" width="210" height="18" as="geometry" />
         </mxCell>
-        <mxCell id="203" value="ip_address: varchar" style="text;strokeColor=none;fillColor=none;align=left;spacingLeft=4;fontSize=10;" vertex="1" parent="193">
+        <mxCell id="203" value="ip_address: varchar" style="text;strokeColor=none;fillColor=#0f172a;fontColor=#f1f5f9;align=left;spacingLeft=4;fontSize=10;" vertex="1" parent="193">
           <mxGeometry y="182" width="210" height="18" as="geometry" />
         </mxCell>
-        <mxCell id="204" value="created_at: timestamp" style="text;strokeColor=none;fillColor=none;align=left;spacingLeft=4;fontSize=10;" vertex="1" parent="193">
+        <mxCell id="204" value="created_at: timestamp" style="text;strokeColor=none;fillColor=#0f172a;fontColor=#f1f5f9;align=left;spacingLeft=4;fontSize=10;" vertex="1" parent="193">
           <mxGeometry y="200" width="210" height="18" as="geometry" />
         </mxCell>
 
         <!-- TABLE: security_events -->
-        <mxCell id="205" value="security_events" style="shape=swimlane;startSize=20;fillColor=#d5e8d4;strokeColor=#82b366;fontStyle=1;fontSize=11;" vertex="1" parent="1">
+        <mxCell id="205" value="security_events" style="shape=swimlane;startSize=20;fillColor=#0f172a;strokeColor=#64748b;fontStyle=1;fontSize=11;fontColor=#ffffff;" vertex="1" parent="1">
           <mxGeometry x="710" y="830" width="210" height="146" as="geometry" />
         </mxCell>
-        <mxCell id="206" value="🔑 id: varchar (PK)" style="text;strokeColor=none;fillColor=#fff2cc;align=left;spacingLeft=4;fontSize=10;fontStyle=1;" vertex="1" parent="205">
+        <mxCell id="206" value="🔑 id: varchar (PK)" style="text;strokeColor=none;fillColor=#334155;fontColor=#fde047;align=left;spacingLeft=4;fontSize=10;fontStyle=1;" vertex="1" parent="205">
           <mxGeometry y="20" width="210" height="18" as="geometry" />
         </mxCell>
-        <mxCell id="207" value="employee_id (FK→employees)" style="text;strokeColor=none;fillColor=#f8cecc;align=left;spacingLeft=4;fontSize=10;" vertex="1" parent="205">
+        <mxCell id="207" value="employee_id (FK→employees)" style="text;strokeColor=none;fillColor=#1e293b;fontColor=#fca5a5;align=left;spacingLeft=4;fontSize=10;" vertex="1" parent="205">
           <mxGeometry y="38" width="210" height="18" as="geometry" />
         </mxCell>
-        <mxCell id="208" value="type: varchar" style="text;strokeColor=none;fillColor=none;align=left;spacingLeft=4;fontSize=10;" vertex="1" parent="205">
+        <mxCell id="208" value="type: varchar" style="text;strokeColor=none;fillColor=#0f172a;fontColor=#f1f5f9;align=left;spacingLeft=4;fontSize=10;" vertex="1" parent="205">
           <mxGeometry y="56" width="210" height="18" as="geometry" />
         </mxCell>
-        <mxCell id="209" value="message: text" style="text;strokeColor=none;fillColor=none;align=left;spacingLeft=4;fontSize=10;" vertex="1" parent="205">
+        <mxCell id="209" value="message: text" style="text;strokeColor=none;fillColor=#0f172a;fontColor=#f1f5f9;align=left;spacingLeft=4;fontSize=10;" vertex="1" parent="205">
           <mxGeometry y="74" width="210" height="18" as="geometry" />
         </mxCell>
-        <mxCell id="210" value="status: varchar" style="text;strokeColor=none;fillColor=none;align=left;spacingLeft=4;fontSize=10;" vertex="1" parent="205">
+        <mxCell id="210" value="status: varchar" style="text;strokeColor=none;fillColor=#0f172a;fontColor=#f1f5f9;align=left;spacingLeft=4;fontSize=10;" vertex="1" parent="205">
           <mxGeometry y="92" width="210" height="18" as="geometry" />
         </mxCell>
-        <mxCell id="211" value="resolved_by: varchar" style="text;strokeColor=none;fillColor=none;align=left;spacingLeft=4;fontSize=10;" vertex="1" parent="205">
+        <mxCell id="211" value="resolved_by: varchar" style="text;strokeColor=#64748b;fillColor=#0f172a;fontColor=#ffffff;align=left;spacingLeft=4;fontSize=10;" vertex="1" parent="205">
           <mxGeometry y="110" width="210" height="18" as="geometry" />
         </mxCell>
-        <mxCell id="212" value="created_at: timestamp" style="text;strokeColor=none;fillColor=none;align=left;spacingLeft=4;fontSize=10;" vertex="1" parent="205">
+        <mxCell id="212" value="created_at: timestamp" style="text;strokeColor=none;fillColor=#0f172a;fontColor=#f1f5f9;align=left;spacingLeft=4;fontSize=10;" vertex="1" parent="205">
           <mxGeometry y="128" width="210" height="18" as="geometry" />
         </mxCell>
 
         <!-- TABLE: settings -->
-        <mxCell id="213" value="settings" style="shape=swimlane;startSize=20;fillColor=#d5e8d4;strokeColor=#82b366;fontStyle=1;fontSize=11;" vertex="1" parent="1">
+        <mxCell id="213" value="settings" style="shape=swimlane;startSize=20;fillColor=#064e3b;strokeColor=#34d399;fontStyle=1;fontSize=11;fontColor=#ffffff;" vertex="1" parent="1">
           <mxGeometry x="940" y="830" width="210" height="164" as="geometry" />
         </mxCell>
-        <mxCell id="214" value="🔑 id: bigint (PK)" style="text;strokeColor=none;fillColor=#fff2cc;align=left;spacingLeft=4;fontSize=10;fontStyle=1;" vertex="1" parent="213">
+        <mxCell id="214" value="🔑 id: bigint (PK)" style="text;strokeColor=none;fillColor=#334155;fontColor=#fde047;align=left;spacingLeft=4;fontSize=10;fontStyle=1;" vertex="1" parent="213">
           <mxGeometry y="20" width="210" height="18" as="geometry" />
         </mxCell>
-        <mxCell id="215" value="profile: json" style="text;strokeColor=none;fillColor=none;align=left;spacingLeft=4;fontSize=10;" vertex="1" parent="213">
+        <mxCell id="215" value="profile: json" style="text;strokeColor=none;fillColor=#0f172a;fontColor=#f1f5f9;align=left;spacingLeft=4;fontSize=10;" vertex="1" parent="213">
           <mxGeometry y="38" width="210" height="18" as="geometry" />
         </mxCell>
-        <mxCell id="216" value="appearance: json" style="text;strokeColor=none;fillColor=none;align=left;spacingLeft=4;fontSize=10;" vertex="1" parent="213">
+        <mxCell id="216" value="appearance: json" style="text;strokeColor=none;fillColor=#0f172a;fontColor=#f1f5f9;align=left;spacingLeft=4;fontSize=10;" vertex="1" parent="213">
           <mxGeometry y="56" width="210" height="18" as="geometry" />
         </mxCell>
-        <mxCell id="217" value="notifications: json" style="text;strokeColor=none;fillColor=none;align=left;spacingLeft=4;fontSize=10;" vertex="1" parent="213">
+        <mxCell id="217" value="notifications: json" style="text;strokeColor=none;fillColor=#0f172a;fontColor=#f1f5f9;align=left;spacingLeft=4;fontSize=10;" vertex="1" parent="213">
           <mxGeometry y="74" width="210" height="18" as="geometry" />
         </mxCell>
-        <mxCell id="218" value="security: json" style="text;strokeColor=none;fillColor=none;align=left;spacingLeft=4;fontSize=10;" vertex="1" parent="213">
+        <mxCell id="218" value="security: json" style="text;strokeColor=none;fillColor=#0f172a;fontColor=#f1f5f9;align=left;spacingLeft=4;fontSize=10;" vertex="1" parent="213">
           <mxGeometry y="92" width="210" height="18" as="geometry" />
         </mxCell>
-        <mxCell id="219" value="system: json" style="text;strokeColor=none;fillColor=none;align=left;spacingLeft=4;fontSize=10;" vertex="1" parent="213">
+        <mxCell id="219" value="system: json" style="text;strokeColor=#64748b;fillColor=#0f172a;fontColor=#ffffff;align=left;spacingLeft=4;fontSize=10;" vertex="1" parent="213">
           <mxGeometry y="110" width="210" height="18" as="geometry" />
         </mxCell>
-        <mxCell id="220" value="company: json" style="text;strokeColor=none;fillColor=none;align=left;spacingLeft=4;fontSize=10;" vertex="1" parent="213">
+        <mxCell id="220" value="company: json" style="text;strokeColor=none;fillColor=#0f172a;fontColor=#f1f5f9;align=left;spacingLeft=4;fontSize=10;" vertex="1" parent="213">
           <mxGeometry y="128" width="210" height="18" as="geometry" />
         </mxCell>
-        <mxCell id="221" value="kiosk: json" style="text;strokeColor=none;fillColor=none;align=left;spacingLeft=4;fontSize=10;" vertex="1" parent="213">
+        <mxCell id="221" value="kiosk: json" style="text;strokeColor=none;fillColor=#0f172a;fontColor=#f1f5f9;align=left;spacingLeft=4;fontSize=10;" vertex="1" parent="213">
           <mxGeometry y="146" width="210" height="18" as="geometry" />
         </mxCell>
 
         <!-- TABLE: analytics -->
-        <mxCell id="222" value="analytics" style="shape=swimlane;startSize=20;fillColor=#d5e8d4;strokeColor=#82b366;fontStyle=1;fontSize=11;" vertex="1" parent="1">
+        <mxCell id="222" value="analytics" style="shape=swimlane;startSize=20;fillColor=#064e3b;strokeColor=#34d399;fontStyle=1;fontSize=11;fontColor=#ffffff;" vertex="1" parent="1">
           <mxGeometry x="1170" y="830" width="210" height="146" as="geometry" />
         </mxCell>
-        <mxCell id="223" value="🔑 id: bigint (PK)" style="text;strokeColor=none;fillColor=#fff2cc;align=left;spacingLeft=4;fontSize=10;fontStyle=1;" vertex="1" parent="222">
+        <mxCell id="223" value="🔑 id: bigint (PK)" style="text;strokeColor=none;fillColor=#334155;fontColor=#fde047;align=left;spacingLeft=4;fontSize=10;fontStyle=1;" vertex="1" parent="222">
           <mxGeometry y="20" width="210" height="18" as="geometry" />
         </mxCell>
-        <mxCell id="224" value="attendance_trend: json" style="text;strokeColor=none;fillColor=none;align=left;spacingLeft=4;fontSize=10;" vertex="1" parent="222">
+        <mxCell id="224" value="attendance_trend: json" style="text;strokeColor=none;fillColor=#0f172a;fontColor=#f1f5f9;align=left;spacingLeft=4;fontSize=10;" vertex="1" parent="222">
           <mxGeometry y="38" width="210" height="18" as="geometry" />
         </mxCell>
-        <mxCell id="225" value="department_productivity: json" style="text;strokeColor=none;fillColor=none;align=left;spacingLeft=4;fontSize=10;" vertex="1" parent="222">
+        <mxCell id="225" value="department_productivity: json" style="text;strokeColor=none;fillColor=#0f172a;fontColor=#f1f5f9;align=left;spacingLeft=4;fontSize=10;" vertex="1" parent="222">
           <mxGeometry y="56" width="210" height="18" as="geometry" />
         </mxCell>
-        <mxCell id="226" value="leave_trend: json" style="text;strokeColor=none;fillColor=none;align=left;spacingLeft=4;fontSize=10;" vertex="1" parent="222">
+        <mxCell id="226" value="leave_trend: json" style="text;strokeColor=none;fillColor=#0f172a;fontColor=#f1f5f9;align=left;spacingLeft=4;fontSize=10;" vertex="1" parent="222">
           <mxGeometry y="74" width="210" height="18" as="geometry" />
         </mxCell>
-        <mxCell id="227" value="overtime_summary: json" style="text;strokeColor=none;fillColor=none;align=left;spacingLeft=4;fontSize=10;" vertex="1" parent="222">
+        <mxCell id="227" value="overtime_summary: json" style="text;strokeColor=none;fillColor=#0f172a;fontColor=#f1f5f9;align=left;spacingLeft=4;fontSize=10;" vertex="1" parent="222">
           <mxGeometry y="92" width="210" height="18" as="geometry" />
         </mxCell>
-        <mxCell id="228" value="punctuality_score: json" style="text;strokeColor=none;fillColor=none;align=left;spacingLeft=4;fontSize=10;" vertex="1" parent="222">
+        <mxCell id="228" value="punctuality_score: json" style="text;strokeColor=none;fillColor=#0f172a;fontColor=#f1f5f9;align=left;spacingLeft=4;fontSize=10;" vertex="1" parent="222">
           <mxGeometry y="110" width="210" height="18" as="geometry" />
         </mxCell>
-        <mxCell id="229" value="updated_at: timestamp" style="text;strokeColor=none;fillColor=none;align=left;spacingLeft=4;fontSize=10;" vertex="1" parent="222">
+        <mxCell id="229" value="updated_at: timestamp" style="text;strokeColor=none;fillColor=#0f172a;fontColor=#f1f5f9;align=left;spacingLeft=4;fontSize=10;" vertex="1" parent="222">
           <mxGeometry y="128" width="210" height="18" as="geometry" />
         </mxCell>
 
         <!-- ==================== RELATIONSHIP EDGES ==================== -->
 
         <!-- users → employees (employee_id FK) -->
-        <mxCell id="300" style="edgeStyle=orthogonalEdgeStyle;endArrow=ERmany;startArrow=ERone;exitX=1;exitY=0.5;entryX=0;entryY=0.5;strokeColor=#6c8ebf;" edge="1" source="2" target="32" parent="1">
+        <mxCell id="300" style="edgeStyle=orthogonalEdgeStyle;endArrow=ERmany;startArrow=ERone;exitX=1;exitY=0.5;entryX=0;entryY=0.5;strokeColor=#60a5fa;" edge="1" source="2" target="32" parent="1">
           <mxGeometry relative="1" as="geometry" />
         </mxCell>
 
         <!-- employees → departments (department FK) -->
-        <mxCell id="301" style="edgeStyle=orthogonalEdgeStyle;endArrow=ERmany;startArrow=ERone;exitX=1;exitY=0.5;entryX=0;entryY=0.5;strokeColor=#82b366;" edge="1" source="32" target="45" parent="1">
+        <mxCell id="301" style="edgeStyle=orthogonalEdgeStyle;endArrow=ERmany;startArrow=ERone;exitX=1;exitY=0.5;entryX=0;entryY=0.5;strokeColor=#34d399;" edge="1" source="32" target="45" parent="1">
           <mxGeometry relative="1" as="geometry" />
         </mxCell>
 
         <!-- roles → departments (department_id FK) -->
-        <mxCell id="302" style="edgeStyle=orthogonalEdgeStyle;endArrow=ERmany;startArrow=ERone;exitX=0;exitY=0.5;entryX=1;entryY=0.5;strokeColor=#9673a6;" edge="1" source="53" target="45" parent="1">
+        <mxCell id="302" style="edgeStyle=orthogonalEdgeStyle;endArrow=ERmany;startArrow=ERone;exitX=0;exitY=0.5;entryX=1;entryY=0.5;strokeColor=#c084fc;" edge="1" source="53" target="45" parent="1">
           <mxGeometry relative="1" as="geometry" />
         </mxCell>
 
         <!-- attendance → employees (employee_id FK) -->
-        <mxCell id="303" style="edgeStyle=orthogonalEdgeStyle;endArrow=ERmany;startArrow=ERone;exitX=1;exitY=0.3;entryX=0;entryY=0.8;strokeColor=#d79b00;" edge="1" source="58" target="32" parent="1">
+        <mxCell id="303" style="edgeStyle=orthogonalEdgeStyle;endArrow=ERmany;startArrow=ERone;exitX=1;exitY=0.3;entryX=0;entryY=0.8;strokeColor=#fbbf24;" edge="1" source="58" target="32" parent="1">
           <mxGeometry relative="1" as="geometry" />
         </mxCell>
 
         <!-- attendance_adjustments → employees -->
-        <mxCell id="304" style="edgeStyle=orthogonalEdgeStyle;endArrow=ERmany;startArrow=ERone;exitX=1;exitY=0.3;entryX=0;entryY=0.9;strokeColor=#d79b00;" edge="1" source="76" target="32" parent="1">
+        <mxCell id="304" style="edgeStyle=orthogonalEdgeStyle;endArrow=ERmany;startArrow=ERone;exitX=1;exitY=0.3;entryX=0;entryY=0.9;strokeColor=#fbbf24;" edge="1" source="76" target="32" parent="1">
           <mxGeometry relative="1" as="geometry" />
         </mxCell>
 
         <!-- early_clock_outs → attendance -->
-        <mxCell id="305" style="edgeStyle=orthogonalEdgeStyle;endArrow=ERmany;startArrow=ERone;exitX=0;exitY=0.5;entryX=1;entryY=0.5;strokeColor=#d79b00;" edge="1" source="89" target="58" parent="1">
+        <mxCell id="305" style="edgeStyle=orthogonalEdgeStyle;endArrow=ERmany;startArrow=ERone;exitX=0;exitY=0.5;entryX=1;entryY=0.5;strokeColor=#fbbf24;" edge="1" source="89" target="58" parent="1">
           <mxGeometry relative="1" as="geometry" />
         </mxCell>
 
         <!-- early_clock_outs → employees -->
-        <mxCell id="306" style="edgeStyle=orthogonalEdgeStyle;endArrow=ERmany;startArrow=ERone;exitX=1;exitY=0.3;entryX=0;entryY=1;strokeColor=#d79b00;" edge="1" source="89" target="32" parent="1">
+        <mxCell id="306" style="edgeStyle=orthogonalEdgeStyle;endArrow=ERmany;startArrow=ERone;exitX=1;exitY=0.3;entryX=0;entryY=1;strokeColor=#fbbf24;" edge="1" source="89" target="32" parent="1">
           <mxGeometry relative="1" as="geometry" />
         </mxCell>
 
         <!-- shift_schedules → employees -->
-        <mxCell id="307" style="edgeStyle=orthogonalEdgeStyle;endArrow=ERmany;startArrow=ERone;exitX=0;exitY=0.5;entryX=1;entryY=0.5;strokeColor=#9673a6;" edge="1" source="108" target="32" parent="1">
+        <mxCell id="307" style="edgeStyle=orthogonalEdgeStyle;endArrow=ERmany;startArrow=ERone;exitX=0;exitY=0.5;entryX=1;entryY=0.5;strokeColor=#c084fc;" edge="1" source="108" target="32" parent="1">
           <mxGeometry relative="1" as="geometry" />
         </mxCell>
 
         <!-- shift_schedules → shift_definitions -->
-        <mxCell id="308" style="edgeStyle=orthogonalEdgeStyle;endArrow=ERmany;startArrow=ERone;exitX=0;exitY=0.8;entryX=1;entryY=0.5;strokeColor=#9673a6;" edge="1" source="108" target="102" parent="1">
+        <mxCell id="308" style="edgeStyle=orthogonalEdgeStyle;endArrow=ERmany;startArrow=ERone;exitX=0;exitY=0.8;entryX=1;entryY=0.5;strokeColor=#c084fc;" edge="1" source="108" target="102" parent="1">
           <mxGeometry relative="1" as="geometry" />
         </mxCell>
 
         <!-- leaves → employees -->
-        <mxCell id="309" style="edgeStyle=orthogonalEdgeStyle;endArrow=ERmany;startArrow=ERone;exitX=0;exitY=0.3;entryX=1;entryY=0.3;strokeColor=#b85450;" edge="1" source="138" target="32" parent="1">
+        <mxCell id="309" style="edgeStyle=orthogonalEdgeStyle;endArrow=ERmany;startArrow=ERone;exitX=0;exitY=0.3;entryX=1;entryY=0.3;strokeColor=#f87171;" edge="1" source="138" target="32" parent="1">
           <mxGeometry relative="1" as="geometry" />
         </mxCell>
 
         <!-- leave_balance_ledger → employees -->
-        <mxCell id="310" style="edgeStyle=orthogonalEdgeStyle;endArrow=ERmany;startArrow=ERone;exitX=0;exitY=0.3;entryX=1;entryY=0.5;strokeColor=#b85450;" edge="1" source="151" target="32" parent="1">
+        <mxCell id="310" style="edgeStyle=orthogonalEdgeStyle;endArrow=ERmany;startArrow=ERone;exitX=0;exitY=0.3;entryX=1;entryY=0.5;strokeColor=#f87171;" edge="1" source="151" target="32" parent="1">
           <mxGeometry relative="1" as="geometry" />
         </mxCell>
 
         <!-- leave_balance_ledger → leave_types -->
-        <mxCell id="311" style="edgeStyle=orthogonalEdgeStyle;endArrow=ERmany;startArrow=ERone;exitX=0.5;exitY=0;entryX=0.5;entryY=1;strokeColor=#b85450;" edge="1" source="151" target="125" parent="1">
+        <mxCell id="311" style="edgeStyle=orthogonalEdgeStyle;endArrow=ERmany;startArrow=ERone;exitX=0.5;exitY=0;entryX=0.5;entryY=1;strokeColor=#f87171;" edge="1" source="151" target="125" parent="1">
           <mxGeometry relative="1" as="geometry" />
         </mxCell>
 
         <!-- leaves → leave_types -->
-        <mxCell id="312" style="edgeStyle=orthogonalEdgeStyle;endArrow=ERmany;startArrow=ERone;exitX=0;exitY=0.3;entryX=1;entryY=0.3;strokeColor=#b85450;" edge="1" source="138" target="125" parent="1">
+        <mxCell id="312" style="edgeStyle=orthogonalEdgeStyle;endArrow=ERmany;startArrow=ERone;exitX=0;exitY=0.3;entryX=1;entryY=0.3;strokeColor=#f87171;" edge="1" source="138" target="125" parent="1">
           <mxGeometry relative="1" as="geometry" />
         </mxCell>
 
         <!-- overtime_requests → employees -->
-        <mxCell id="313" style="edgeStyle=orthogonalEdgeStyle;endArrow=ERmany;startArrow=ERone;exitX=0;exitY=0.3;entryX=1;entryY=0.7;strokeColor=#b85450;" edge="1" source="161" target="32" parent="1">
+        <mxCell id="313" style="edgeStyle=orthogonalEdgeStyle;endArrow=ERmany;startArrow=ERone;exitX=0;exitY=0.3;entryX=1;entryY=0.7;strokeColor=#f87171;" edge="1" source="161" target="32" parent="1">
           <mxGeometry relative="1" as="geometry" />
         </mxCell>
 
         <!-- timesheets → employees -->
-        <mxCell id="314" style="edgeStyle=orthogonalEdgeStyle;endArrow=ERmany;startArrow=ERone;exitX=1;exitY=0.3;entryX=0;entryY=1;strokeColor=#82b366;" edge="1" source="171" target="32" parent="1">
+        <mxCell id="314" style="edgeStyle=orthogonalEdgeStyle;endArrow=ERmany;startArrow=ERone;exitX=1;exitY=0.3;entryX=0;entryY=1;strokeColor=#34d399;" edge="1" source="171" target="32" parent="1">
           <mxGeometry relative="1" as="geometry" />
         </mxCell>
 
         <!-- notifications → employees -->
-        <mxCell id="315" style="edgeStyle=orthogonalEdgeStyle;endArrow=ERmany;startArrow=ERone;exitX=1;exitY=0.3;entryX=0;entryY=0.95;strokeColor=#82b366;" edge="1" source="184" target="32" parent="1">
+        <mxCell id="315" style="edgeStyle=orthogonalEdgeStyle;endArrow=ERmany;startArrow=ERone;exitX=1;exitY=0.3;entryX=0;entryY=0.95;strokeColor=#34d399;" edge="1" source="184" target="32" parent="1">
           <mxGeometry relative="1" as="geometry" />
         </mxCell>
 
         <!-- security_events → employees -->
-        <mxCell id="316" style="edgeStyle=orthogonalEdgeStyle;endArrow=ERmany;startArrow=ERone;exitX=0.5;exitY=0;entryX=0.5;entryY=1;strokeColor=#82b366;" edge="1" source="205" target="32" parent="1">
+        <mxCell id="316" style="edgeStyle=orthogonalEdgeStyle;endArrow=ERmany;startArrow=ERone;exitX=0.5;exitY=0;entryX=0.5;entryY=1;strokeColor=#34d399;" edge="1" source="205" target="32" parent="1">
           <mxGeometry relative="1" as="geometry" />
         </mxCell>
 
         <!-- personal_access_tokens → users -->
-        <mxCell id="317" style="edgeStyle=orthogonalEdgeStyle;endArrow=ERmany;startArrow=ERone;exitX=0;exitY=0.5;entryX=1;entryY=0.3;strokeColor=#6c8ebf;" edge="1" source="11" target="2" parent="1">
+        <mxCell id="317" style="edgeStyle=orthogonalEdgeStyle;endArrow=ERmany;startArrow=ERone;exitX=0;exitY=0.5;entryX=1;entryY=0.3;strokeColor=#60a5fa;" edge="1" source="11" target="2" parent="1">
           <mxGeometry relative="1" as="geometry" />
         </mxCell>
 
         <!-- two_factor_challenges → users -->
-        <mxCell id="318" style="edgeStyle=orthogonalEdgeStyle;endArrow=ERmany;startArrow=ERone;exitX=0;exitY=0.5;entryX=1;entryY=0.6;strokeColor=#6c8ebf;" edge="1" source="17" target="2" parent="1">
+        <mxCell id="318" style="edgeStyle=orthogonalEdgeStyle;endArrow=ERmany;startArrow=ERone;exitX=0;exitY=0.5;entryX=1;entryY=0.6;strokeColor=#60a5fa;" edge="1" source="17" target="2" parent="1">
           <mxGeometry relative="1" as="geometry" />
         </mxCell>
 
         <!-- sessions → users -->
-        <mxCell id="319" style="edgeStyle=orthogonalEdgeStyle;endArrow=ERmany;startArrow=ERone;exitX=1;exitY=0.3;entryX=0;entryY=0.8;strokeColor=#6c8ebf;" edge="1" source="23" target="2" parent="1">
+        <mxCell id="319" style="edgeStyle=orthogonalEdgeStyle;endArrow=ERmany;startArrow=ERone;exitX=1;exitY=0.3;entryX=0;entryY=0.8;strokeColor=#60a5fa;" edge="1" source="23" target="2" parent="1">
           <mxGeometry relative="1" as="geometry" />
         </mxCell>
 

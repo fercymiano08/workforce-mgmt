@@ -6,104 +6,104 @@
         <mxCell id="1" parent="0" />
 
         <!-- ==================== POOL CONTAINER ==================== -->
-        <mxCell id="2" value="Workforce Management System — Business Processes" style="shape=pool;startSize=30;horizontal=1;fillColor=#f5f5f5;strokeColor=#666666;fontStyle=1;fontSize=13;fontColor=#333333;" vertex="1" parent="1">
+        <mxCell id="2" value="Workforce Management System — Business Processes" style="shape=pool;startSize=30;horizontal=1;fillColor=#0b0f19;strokeColor=#334155;fontStyle=1;fontSize=13;fontColor=#f8fafc;" vertex="1" parent="1">
           <mxGeometry x="10" y="10" width="3960" height="1360" as="geometry" />
         </mxCell>
 
         <!-- ==================== SWIM LANES ==================== -->
 
         <!-- Lane 1: Employee -->
-        <mxCell id="3" value="Employee" style="swimlane;startSize=30;horizontal=0;fillColor=#dae8fc;strokeColor=#6c8ebf;fontStyle=1;fontSize=11;fontColor=#003366;" vertex="1" parent="2">
+        <mxCell id="3" value="Employee" style="swimlane;startSize=30;horizontal=0;fillColor=#111827;strokeColor=#3b82f6;fontStyle=1;fontSize=11;fontColor=#93c5fd;" vertex="1" parent="2">
           <mxGeometry x="30" y="0" width="3930" height="220" as="geometry" />
         </mxCell>
 
         <!-- Lane 2: HR Admin -->
-        <mxCell id="4" value="HR Admin" style="swimlane;startSize=30;horizontal=0;fillColor=#d5e8d4;strokeColor=#82b366;fontStyle=1;fontSize=11;fontColor=#003300;" vertex="1" parent="2">
+        <mxCell id="4" value="HR Admin" style="swimlane;startSize=30;horizontal=0;fillColor=#111827;strokeColor=#10b981;fontStyle=1;fontSize=11;fontColor=#6ee7b7;" vertex="1" parent="2">
           <mxGeometry x="30" y="220" width="3930" height="220" as="geometry" />
         </mxCell>
 
         <!-- Lane 3: System / Backend -->
-        <mxCell id="5" value="System / Backend" style="swimlane;startSize=30;horizontal=0;fillColor=#fff2cc;strokeColor=#d6b656;fontStyle=1;fontSize=11;fontColor=#664400;" vertex="1" parent="2">
+        <mxCell id="5" value="System / Backend" style="swimlane;startSize=30;horizontal=0;fillColor=#111827;strokeColor=#f59e0b;fontStyle=1;fontSize=11;fontColor=#fcd34d;" vertex="1" parent="2">
           <mxGeometry x="30" y="440" width="3930" height="220" as="geometry" />
         </mxCell>
 
         <!-- Lane 4: Kiosk Terminal -->
-        <mxCell id="6" value="Kiosk Terminal" style="swimlane;startSize=30;horizontal=0;fillColor=#f8cecc;strokeColor=#b85450;fontStyle=1;fontSize=11;fontColor=#660000;" vertex="1" parent="2">
+        <mxCell id="6" value="Kiosk Terminal" style="swimlane;startSize=30;horizontal=0;fillColor=#111827;strokeColor=#ef4444;fontStyle=1;fontSize=11;fontColor=#fca5a5;" vertex="1" parent="2">
           <mxGeometry x="30" y="660" width="3930" height="220" as="geometry" />
         </mxCell>
 
         <!-- Lane 5: External System -->
-        <mxCell id="7" value="External (E-Commerce Parent System)" style="swimlane;startSize=30;horizontal=0;fillColor=#e1d5e7;strokeColor=#9673a6;fontStyle=1;fontSize=11;fontColor=#330033;" vertex="1" parent="2">
+        <mxCell id="7" value="External (E-Commerce Parent System)" style="swimlane;startSize=30;horizontal=0;fillColor=#111827;strokeColor=#8b5cf6;fontStyle=1;fontSize=11;fontColor=#c4b5fd;" vertex="1" parent="2">
           <mxGeometry x="30" y="880" width="3930" height="220" as="geometry" />
         </mxCell>
 
         <!-- ==================== PROCESS LABELS ==================== -->
-        <mxCell id="8" value="Process A: Auth" style="text;fontStyle=1;fontSize=10;fillColor=none;strokeColor=none;fontColor=#003366;" vertex="1" parent="2">
+        <mxCell id="8" value="Process A: Auth" style="text;fontStyle=1;fontSize=10;fillColor=none;strokeColor=none;fontColor=#93c5fd;" vertex="1" parent="2">
           <mxGeometry x="40" y="1120" width="140" height="20" as="geometry" />
         </mxCell>
-        <mxCell id="9" value="Process B: Kiosk" style="text;fontStyle=1;fontSize=10;fillColor=none;strokeColor=none;fontColor=#660000;" vertex="1" parent="2">
+        <mxCell id="9" value="Process B: Kiosk" style="text;fontStyle=1;fontSize=10;fillColor=none;strokeColor=none;fontColor=#fca5a5;" vertex="1" parent="2">
           <mxGeometry x="560" y="1120" width="140" height="20" as="geometry" />
         </mxCell>
-        <mxCell id="10" value="Process C: Leave" style="text;fontStyle=1;fontSize=10;fillColor=none;strokeColor=none;fontColor=#003300;" vertex="1" parent="2">
+        <mxCell id="10" value="Process C: Leave" style="text;fontStyle=1;fontSize=10;fillColor=none;strokeColor=none;fontColor=#6ee7b7;" vertex="1" parent="2">
           <mxGeometry x="1140" y="1120" width="140" height="20" as="geometry" />
         </mxCell>
-        <mxCell id="11" value="Process D: OT" style="text;fontStyle=1;fontSize=10;fillColor=none;strokeColor=none;fontColor=#664400;" vertex="1" parent="2">
+        <mxCell id="11" value="Process D: OT" style="text;fontStyle=1;fontSize=10;fillColor=none;strokeColor=none;fontColor=#fcd34d;" vertex="1" parent="2">
           <mxGeometry x="1700" y="1120" width="140" height="20" as="geometry" />
         </mxCell>
-        <mxCell id="12" value="Process E: Timesheet" style="text;fontStyle=1;fontSize=10;fillColor=none;strokeColor=none;fontColor=#330033;" vertex="1" parent="2">
+        <mxCell id="12" value="Process E: Timesheet" style="text;fontStyle=1;fontSize=10;fillColor=none;strokeColor=none;fontColor=#c4b5fd;" vertex="1" parent="2">
           <mxGeometry x="2200" y="1120" width="160" height="20" as="geometry" />
         </mxCell>
-        <mxCell id="13" value="Process F: Adj." style="text;fontStyle=1;fontSize=10;fillColor=none;strokeColor=none;fontColor=#664400;" vertex="1" parent="2">
+        <mxCell id="13" value="Process F: Adj." style="text;fontStyle=1;fontSize=10;fillColor=none;strokeColor=none;fontColor=#fcd34d;" vertex="1" parent="2">
           <mxGeometry x="2900" y="1120" width="140" height="20" as="geometry" />
         </mxCell>
-        <mxCell id="14" value="Process G: Early Out" style="text;fontStyle=1;fontSize=10;fillColor=none;strokeColor=none;fontColor=#660000;" vertex="1" parent="2">
+        <mxCell id="14" value="Process G: Early Out" style="text;fontStyle=1;fontSize=10;fillColor=none;strokeColor=none;fontColor=#fca5a5;" vertex="1" parent="2">
           <mxGeometry x="3450" y="1120" width="160" height="20" as="geometry" />
         </mxCell>
 
         <!-- ==================== PROCESS A: AUTHENTICATION ==================== -->
 
         <!-- A1: Start Event - Login -->
-        <mxCell id="100" value="Start: Open Login" style="ellipse;fillColor=#d5e8d4;strokeColor=#82b366;fontSize=9;fontStyle=1;" vertex="1" parent="3">
+        <mxCell id="100" value="Start: Open Login" style="ellipse;fillColor=#064e3b;strokeColor=#10b981;fontSize=9;fontStyle=1;fontColor=#ffffff;" vertex="1" parent="3">
           <mxGeometry x="40" y="80" width="80" height="60" as="geometry" />
         </mxCell>
 
         <!-- A2: Employee - Enter Credentials -->
-        <mxCell id="101" value="Enter Credentials" style="rounded=1;whiteSpace=wrap;fillColor=#dae8fc;strokeColor=#6c8ebf;fontSize=9;" vertex="1" parent="3">
+        <mxCell id="101" value="Enter Credentials" style="rounded=1;whiteSpace=wrap;fillColor=#1e3a8a;strokeColor=#60a5fa;fontSize=9;fontColor=#ffffff;" vertex="1" parent="3">
           <mxGeometry x="150" y="80" width="110" height="60" as="geometry" />
         </mxCell>
 
         <!-- A3: System - Validate Credentials -->
-        <mxCell id="102" value="Validate Credentials (Sanctum)" style="rounded=1;whiteSpace=wrap;fillColor=#fff2cc;strokeColor=#d6b656;fontSize=9;" vertex="1" parent="5">
+        <mxCell id="102" value="Validate Credentials (Sanctum)" style="rounded=1;whiteSpace=wrap;fillColor=#1e293b;strokeColor=#fbbf24;fontSize=9;fontColor=#ffffff;" vertex="1" parent="5">
           <mxGeometry x="150" y="80" width="110" height="60" as="geometry" />
         </mxCell>
 
         <!-- A4: Gateway - 2FA Enabled? -->
-        <mxCell id="103" value="2FA Enabled?" style="rhombus;fillColor=#fff2cc;strokeColor=#d6b656;fontSize=9;" vertex="1" parent="5">
+        <mxCell id="103" value="2FA Enabled?" style="rhombus;fillColor=#1e293b;strokeColor=#fbbf24;fontSize=9;fontColor=#ffffff;" vertex="1" parent="5">
           <mxGeometry x="300" y="70" width="100" height="80" as="geometry" />
         </mxCell>
 
         <!-- A5: System - Send 2FA Code -->
-        <mxCell id="104" value="Send 2FA Code" style="rounded=1;whiteSpace=wrap;fillColor=#fff2cc;strokeColor=#d6b656;fontSize=9;" vertex="1" parent="5">
+        <mxCell id="104" value="Send 2FA Code" style="rounded=1;whiteSpace=wrap;fillColor=#1e293b;strokeColor=#fbbf24;fontSize=9;fontColor=#ffffff;" vertex="1" parent="5">
           <mxGeometry x="430" y="80" width="100" height="60" as="geometry" />
         </mxCell>
 
         <!-- A6: Employee - Enter 2FA Code -->
-        <mxCell id="105" value="Enter 2FA Code" style="rounded=1;whiteSpace=wrap;fillColor=#dae8fc;strokeColor=#6c8ebf;fontSize=9;" vertex="1" parent="3">
+        <mxCell id="105" value="Enter 2FA Code" style="rounded=1;whiteSpace=wrap;fillColor=#1e3a8a;strokeColor=#60a5fa;fontSize=9;fontColor=#ffffff;" vertex="1" parent="3">
           <mxGeometry x="430" y="80" width="100" height="60" as="geometry" />
         </mxCell>
 
         <!-- A7: System - Verify 2FA -->
-        <mxCell id="106" value="Verify 2FA Code" style="rounded=1;whiteSpace=wrap;fillColor=#fff2cc;strokeColor=#d6b656;fontSize=9;" vertex="1" parent="5">
+        <mxCell id="106" value="Verify 2FA Code" style="rounded=1;whiteSpace=wrap;fillColor=#1e293b;strokeColor=#fbbf24;fontSize=9;fontColor=#ffffff;" vertex="1" parent="5">
           <mxGeometry x="430" y="160" width="100" height="60" as="geometry" />
         </mxCell>
 
         <!-- A8: System - Issue Token -->
-        <mxCell id="107" value="Issue Sanctum Token" style="rounded=1;whiteSpace=wrap;fillColor=#fff2cc;strokeColor=#d6b656;fontSize=9;" vertex="1" parent="5">
+        <mxCell id="107" value="Issue Sanctum Token" style="rounded=1;whiteSpace=wrap;fillColor=#1e293b;strokeColor=#fbbf24;fontSize=9;fontColor=#ffffff;" vertex="1" parent="5">
           <mxGeometry x="300" y="160" width="110" height="60" as="geometry" />
         </mxCell>
 
         <!-- A9: End Event - Session Started -->
-        <mxCell id="108" value="Session Started" style="ellipse;fillColor=#f8cecc;strokeColor=#b85450;fontSize=9;fontStyle=1;" vertex="1" parent="3">
+        <mxCell id="108" value="Session Started" style="ellipse;fillColor=#7f1d1d;strokeColor=#ef4444;fontSize=9;fontStyle=1;fontColor=#ffffff;" vertex="1" parent="3">
           <mxGeometry x="300" y="80" width="100" height="60" as="geometry" />
         </mxCell>
 
@@ -139,52 +139,52 @@
         <!-- ==================== PROCESS B: KIOSK ATTENDANCE ==================== -->
 
         <!-- B1: Start - Employee arrives at Kiosk -->
-        <mxCell id="200" value="Start: Employee at Kiosk" style="ellipse;fillColor=#d5e8d4;strokeColor=#82b366;fontSize=9;fontStyle=1;" vertex="1" parent="6">
+        <mxCell id="200" value="Start: Employee at Kiosk" style="ellipse;fillColor=#064e3b;strokeColor=#10b981;fontSize=9;fontStyle=1;fontColor=#ffffff;" vertex="1" parent="6">
           <mxGeometry x="560" y="80" width="90" height="60" as="geometry" />
         </mxCell>
 
         <!-- B2: Kiosk - Scan Face -->
-        <mxCell id="201" value="Scan Face (face-api.js)" style="rounded=1;whiteSpace=wrap;fillColor=#f8cecc;strokeColor=#b85450;fontSize=9;" vertex="1" parent="6">
+        <mxCell id="201" value="Scan Face (face-api.js)" style="rounded=1;whiteSpace=wrap;fillColor=#881337;strokeColor=#ef4444;fontSize=9;fontColor=#ffffff;" vertex="1" parent="6">
           <mxGeometry x="680" y="80" width="110" height="60" as="geometry" />
         </mxCell>
 
         <!-- B3: System - Verify PIN / Device Token -->
-        <mxCell id="202" value="Verify PIN / Device Token" style="rounded=1;whiteSpace=wrap;fillColor=#fff2cc;strokeColor=#d6b656;fontSize=9;" vertex="1" parent="5">
+        <mxCell id="202" value="Verify PIN / Device Token" style="rounded=1;whiteSpace=wrap;fillColor=#1e293b;strokeColor=#fbbf24;fontSize=9;fontColor=#ffffff;" vertex="1" parent="5">
           <mxGeometry x="680" y="80" width="110" height="60" as="geometry" />
         </mxCell>
 
         <!-- B4: System - Match Face Descriptor -->
-        <mxCell id="203" value="Match Face Descriptor (DB lookup)" style="rounded=1;whiteSpace=wrap;fillColor=#fff2cc;strokeColor=#d6b656;fontSize=9;" vertex="1" parent="5">
+        <mxCell id="203" value="Match Face Descriptor (DB lookup)" style="rounded=1;whiteSpace=wrap;fillColor=#1e293b;strokeColor=#fbbf24;fontSize=9;fontColor=#ffffff;" vertex="1" parent="5">
           <mxGeometry x="820" y="80" width="110" height="60" as="geometry" />
         </mxCell>
 
         <!-- B5: Gateway - Match Found? -->
-        <mxCell id="204" value="Match Found?" style="rhombus;fillColor=#fff2cc;strokeColor=#d6b656;fontSize=9;" vertex="1" parent="5">
+        <mxCell id="204" value="Match Found?" style="rhombus;fillColor=#1e293b;strokeColor=#fbbf24;fontSize=9;fontColor=#ffffff;" vertex="1" parent="5">
           <mxGeometry x="960" y="70" width="100" height="80" as="geometry" />
         </mxCell>
 
         <!-- B6: System - Clock-In Recorded -->
-        <mxCell id="205" value="Clock-In Recorded (Attendance Record)" style="rounded=1;whiteSpace=wrap;fillColor=#fff2cc;strokeColor=#d6b656;fontSize=9;" vertex="1" parent="5">
+        <mxCell id="205" value="Clock-In Recorded (Attendance Record)" style="rounded=1;whiteSpace=wrap;fillColor=#1e293b;strokeColor=#fbbf24;fontSize=9;fontColor=#ffffff;" vertex="1" parent="5">
           <mxGeometry x="1090" y="80" width="110" height="60" as="geometry" />
         </mxCell>
 
         <!-- B7: System - Notify Employee -->
-        <mxCell id="206" value="Notify Employee (Push)" style="rounded=1;whiteSpace=wrap;fillColor=#fff2cc;strokeColor=#d6b656;fontSize=9;" vertex="1" parent="5">
+        <mxCell id="206" value="Notify Employee (Push)" style="rounded=1;whiteSpace=wrap;fillColor=#1e293b;strokeColor=#fbbf24;fontSize=9;fontColor=#ffffff;" vertex="1" parent="5">
           <mxGeometry x="1090" y="160" width="110" height="60" as="geometry" />
         </mxCell>
 
         <!-- B8: Kiosk - Show Error -->
-        <mxCell id="207" value="Show Error on Kiosk Screen" style="rounded=1;whiteSpace=wrap;fillColor=#f8cecc;strokeColor=#b85450;fontSize=9;" vertex="1" parent="6">
+        <mxCell id="207" value="Show Error on Kiosk Screen" style="rounded=1;whiteSpace=wrap;fillColor=#881337;strokeColor=#ef4444;fontSize=9;fontColor=#ffffff;" vertex="1" parent="6">
           <mxGeometry x="960" y="80" width="110" height="60" as="geometry" />
         </mxCell>
 
         <!-- B9: Kiosk - Retry / Manual Override -->
-        <mxCell id="208" value="Retry Scan or Manual Override" style="rounded=1;whiteSpace=wrap;fillColor=#f8cecc;strokeColor=#b85450;fontSize=9;" vertex="1" parent="6">
+        <mxCell id="208" value="Retry Scan or Manual Override" style="rounded=1;whiteSpace=wrap;fillColor=#881337;strokeColor=#ef4444;fontSize=9;fontColor=#ffffff;" vertex="1" parent="6">
           <mxGeometry x="1090" y="80" width="110" height="60" as="geometry" />
         </mxCell>
 
         <!-- B10: End - Clock-In Success -->
-        <mxCell id="209" value="End: Clock-In Success" style="ellipse;fillColor=#f8cecc;strokeColor=#b85450;fontSize=9;fontStyle=1;" vertex="1" parent="6">
+        <mxCell id="209" value="End: Clock-In Success" style="ellipse;fillColor=#7f1d1d;strokeColor=#ef4444;fontSize=9;fontStyle=1;fontColor=#ffffff;" vertex="1" parent="6">
           <mxGeometry x="1090" y="150" width="110" height="55" as="geometry" />
         </mxCell>
 
@@ -220,62 +220,62 @@
         <!-- ==================== PROCESS C: LEAVE REQUEST ==================== -->
 
         <!-- C1: Employee - Submit Leave Request -->
-        <mxCell id="300" value="Start: Submit Leave Request" style="ellipse;fillColor=#d5e8d4;strokeColor=#82b366;fontSize=9;fontStyle=1;" vertex="1" parent="3">
+        <mxCell id="300" value="Start: Submit Leave Request" style="ellipse;fillColor=#064e3b;strokeColor=#10b981;fontSize=9;fontStyle=1;fontColor=#ffffff;" vertex="1" parent="3">
           <mxGeometry x="1140" y="80" width="100" height="60" as="geometry" />
         </mxCell>
 
         <!-- C2: System - Check Leave Balance -->
-        <mxCell id="301" value="Check Leave Balance" style="rounded=1;whiteSpace=wrap;fillColor=#fff2cc;strokeColor=#d6b656;fontSize=9;" vertex="1" parent="5">
+        <mxCell id="301" value="Check Leave Balance" style="rounded=1;whiteSpace=wrap;fillColor=#1e293b;strokeColor=#fbbf24;fontSize=9;fontColor=#ffffff;" vertex="1" parent="5">
           <mxGeometry x="1140" y="80" width="100" height="60" as="geometry" />
         </mxCell>
 
         <!-- C3: System - Check Leave Type Rules -->
-        <mxCell id="302" value="Check Leave Type Rules" style="rounded=1;whiteSpace=wrap;fillColor=#fff2cc;strokeColor=#d6b656;fontSize=9;" vertex="1" parent="5">
+        <mxCell id="302" value="Check Leave Type Rules" style="rounded=1;whiteSpace=wrap;fillColor=#1e293b;strokeColor=#fbbf24;fontSize=9;fontColor=#ffffff;" vertex="1" parent="5">
           <mxGeometry x="1270" y="80" width="100" height="60" as="geometry" />
         </mxCell>
 
         <!-- C4: Gateway - Balance Sufficient? -->
-        <mxCell id="303" value="Balance Sufficient?" style="rhombus;fillColor=#fff2cc;strokeColor=#d6b656;fontSize=9;" vertex="1" parent="5">
+        <mxCell id="303" value="Balance Sufficient?" style="rhombus;fillColor=#1e293b;strokeColor=#fbbf24;fontSize=9;fontColor=#ffffff;" vertex="1" parent="5">
           <mxGeometry x="1400" y="70" width="100" height="80" as="geometry" />
         </mxCell>
 
         <!-- C5: System - Reject with reason -->
-        <mxCell id="304" value="Reject Request (Insufficient Balance)" style="rounded=1;whiteSpace=wrap;fillColor=#f8cecc;strokeColor=#b85450;fontSize=9;" vertex="1" parent="5">
+        <mxCell id="304" value="Reject Request (Insufficient Balance)" style="rounded=1;whiteSpace=wrap;fillColor=#881337;strokeColor=#ef4444;fontSize=9;fontColor=#ffffff;" vertex="1" parent="5">
           <mxGeometry x="1400" y="160" width="100" height="60" as="geometry" />
         </mxCell>
 
         <!-- C6: HR Admin - Review Leave Request -->
-        <mxCell id="305" value="Review Leave Request" style="rounded=1;whiteSpace=wrap;fillColor=#d5e8d4;strokeColor=#82b366;fontSize=9;" vertex="1" parent="4">
+        <mxCell id="305" value="Review Leave Request" style="rounded=1;whiteSpace=wrap;fillColor=#064e3b;strokeColor=#10b981;fontSize=9;fontColor=#ffffff;" vertex="1" parent="4">
           <mxGeometry x="1530" y="80" width="100" height="60" as="geometry" />
         </mxCell>
 
         <!-- C7: Gateway - Approved? -->
-        <mxCell id="306" value="Approved?" style="rhombus;fillColor=#fff2cc;strokeColor=#d6b656;fontSize=9;" vertex="1" parent="4">
+        <mxCell id="306" value="Approved?" style="rhombus;fillColor=#1e293b;strokeColor=#fbbf24;fontSize=9;fontColor=#ffffff;" vertex="1" parent="4">
           <mxGeometry x="1660" y="70" width="100" height="80" as="geometry" />
         </mxCell>
 
         <!-- C8: System - Update Leave Balance Ledger -->
-        <mxCell id="307" value="Update Leave Balance Ledger (debit)" style="rounded=1;whiteSpace=wrap;fillColor=#fff2cc;strokeColor=#d6b656;fontSize=9;" vertex="1" parent="5">
+        <mxCell id="307" value="Update Leave Balance Ledger (debit)" style="rounded=1;whiteSpace=wrap;fillColor=#1e293b;strokeColor=#fbbf24;fontSize=9;fontColor=#ffffff;" vertex="1" parent="5">
           <mxGeometry x="1660" y="80" width="110" height="60" as="geometry" />
         </mxCell>
 
         <!-- C9: System - Update employee leave_balances -->
-        <mxCell id="308" value="Sync Employee leave_balances JSON" style="rounded=1;whiteSpace=wrap;fillColor=#fff2cc;strokeColor=#d6b656;fontSize=9;" vertex="1" parent="5">
+        <mxCell id="308" value="Sync Employee leave_balances JSON" style="rounded=1;whiteSpace=wrap;fillColor=#1e293b;strokeColor=#fbbf24;fontSize=9;fontColor=#ffffff;" vertex="1" parent="5">
           <mxGeometry x="1800" y="80" width="110" height="60" as="geometry" />
         </mxCell>
 
         <!-- C10: System - Notify Employee -->
-        <mxCell id="309" value="Notify Employee (Approved)" style="rounded=1;whiteSpace=wrap;fillColor=#fff2cc;strokeColor=#d6b656;fontSize=9;" vertex="1" parent="5">
+        <mxCell id="309" value="Notify Employee (Approved)" style="rounded=1;whiteSpace=wrap;fillColor=#1e293b;strokeColor=#fbbf24;fontSize=9;fontColor=#ffffff;" vertex="1" parent="5">
           <mxGeometry x="1800" y="160" width="110" height="60" as="geometry" />
         </mxCell>
 
         <!-- C11: End - Leave Approved -->
-        <mxCell id="310" value="End: Leave Approved" style="ellipse;fillColor=#f8cecc;strokeColor=#b85450;fontSize=9;fontStyle=1;" vertex="1" parent="3">
+        <mxCell id="310" value="End: Leave Approved" style="ellipse;fillColor=#7f1d1d;strokeColor=#ef4444;fontSize=9;fontStyle=1;fontColor=#ffffff;" vertex="1" parent="3">
           <mxGeometry x="1800" y="80" width="110" height="60" as="geometry" />
         </mxCell>
 
         <!-- C12: End - Rejected -->
-        <mxCell id="311" value="End: Leave Rejected" style="ellipse;fillColor=#f8cecc;strokeColor=#b85450;fontSize=9;fontStyle=1;" vertex="1" parent="3">
+        <mxCell id="311" value="End: Leave Rejected" style="ellipse;fillColor=#7f1d1d;strokeColor=#ef4444;fontSize=9;fontStyle=1;fontColor=#ffffff;" vertex="1" parent="3">
           <mxGeometry x="1660" y="80" width="100" height="60" as="geometry" />
         </mxCell>
 
@@ -320,47 +320,47 @@
         <!-- ==================== PROCESS D: OVERTIME REQUEST ==================== -->
 
         <!-- D1: Employee - Submit OT Request -->
-        <mxCell id="400" value="Start: Submit OT Request" style="ellipse;fillColor=#d5e8d4;strokeColor=#82b366;fontSize=9;fontStyle=1;" vertex="1" parent="3">
+        <mxCell id="400" value="Start: Submit OT Request" style="ellipse;fillColor=#064e3b;strokeColor=#10b981;fontSize=9;fontStyle=1;fontColor=#ffffff;" vertex="1" parent="3">
           <mxGeometry x="1960" y="80" width="100" height="60" as="geometry" />
         </mxCell>
 
         <!-- D2: System - Create OT Record -->
-        <mxCell id="401" value="Create OvertimeRequest Record (pending)" style="rounded=1;whiteSpace=wrap;fillColor=#fff2cc;strokeColor=#d6b656;fontSize=9;" vertex="1" parent="5">
+        <mxCell id="401" value="Create OvertimeRequest Record (pending)" style="rounded=1;whiteSpace=wrap;fillColor=#1e293b;strokeColor=#fbbf24;fontSize=9;fontColor=#ffffff;" vertex="1" parent="5">
           <mxGeometry x="1960" y="80" width="110" height="60" as="geometry" />
         </mxCell>
 
         <!-- D3: HR Admin - Review OT -->
-        <mxCell id="402" value="Review OT Request" style="rounded=1;whiteSpace=wrap;fillColor=#d5e8d4;strokeColor=#82b366;fontSize=9;" vertex="1" parent="4">
+        <mxCell id="402" value="Review OT Request" style="rounded=1;whiteSpace=wrap;fillColor=#064e3b;strokeColor=#10b981;fontSize=9;fontColor=#ffffff;" vertex="1" parent="4">
           <mxGeometry x="1960" y="80" width="100" height="60" as="geometry" />
         </mxCell>
 
         <!-- D4: Gateway - Approved? -->
-        <mxCell id="403" value="Approved?" style="rhombus;fillColor=#fff2cc;strokeColor=#d6b656;fontSize=9;" vertex="1" parent="4">
+        <mxCell id="403" value="Approved?" style="rhombus;fillColor=#1e293b;strokeColor=#fbbf24;fontSize=9;fontColor=#ffffff;" vertex="1" parent="4">
           <mxGeometry x="2090" y="70" width="100" height="80" as="geometry" />
         </mxCell>
 
         <!-- D5: System - Set approved_hours -->
-        <mxCell id="404" value="Set approved_hours in OT Record" style="rounded=1;whiteSpace=wrap;fillColor=#fff2cc;strokeColor=#d6b656;fontSize=9;" vertex="1" parent="5">
+        <mxCell id="404" value="Set approved_hours in OT Record" style="rounded=1;whiteSpace=wrap;fillColor=#1e293b;strokeColor=#fbbf24;fontSize=9;fontColor=#ffffff;" vertex="1" parent="5">
           <mxGeometry x="2090" y="80" width="110" height="60" as="geometry" />
         </mxCell>
 
         <!-- D6: System - Include in Timesheet -->
-        <mxCell id="405" value="Include in Next Timesheet Generation" style="rounded=1;whiteSpace=wrap;fillColor=#fff2cc;strokeColor=#d6b656;fontSize=9;" vertex="1" parent="5">
+        <mxCell id="405" value="Include in Next Timesheet Generation" style="rounded=1;whiteSpace=wrap;fillColor=#1e293b;strokeColor=#fbbf24;fontSize=9;fontColor=#ffffff;" vertex="1" parent="5">
           <mxGeometry x="2090" y="160" width="110" height="60" as="geometry" />
         </mxCell>
 
         <!-- D7: System - Notify (Reject) -->
-        <mxCell id="406" value="Notify Employee (Rejected)" style="rounded=1;whiteSpace=wrap;fillColor=#f8cecc;strokeColor=#b85450;fontSize=9;" vertex="1" parent="5">
+        <mxCell id="406" value="Notify Employee (Rejected)" style="rounded=1;whiteSpace=wrap;fillColor=#881337;strokeColor=#ef4444;fontSize=9;fontColor=#ffffff;" vertex="1" parent="5">
           <mxGeometry x="2200" y="80" width="100" height="60" as="geometry" />
         </mxCell>
 
         <!-- D8: End - OT Approved -->
-        <mxCell id="407" value="End: OT Approved" style="ellipse;fillColor=#f8cecc;strokeColor=#b85450;fontSize=9;fontStyle=1;" vertex="1" parent="3">
+        <mxCell id="407" value="End: OT Approved" style="ellipse;fillColor=#7f1d1d;strokeColor=#ef4444;fontSize=9;fontStyle=1;fontColor=#ffffff;" vertex="1" parent="3">
           <mxGeometry x="2090" y="80" width="110" height="60" as="geometry" />
         </mxCell>
 
         <!-- D9: End - OT Rejected -->
-        <mxCell id="408" value="End: OT Rejected" style="ellipse;fillColor=#f8cecc;strokeColor=#b85450;fontSize=9;fontStyle=1;" vertex="1" parent="3">
+        <mxCell id="408" value="End: OT Rejected" style="ellipse;fillColor=#7f1d1d;strokeColor=#ef4444;fontSize=9;fontStyle=1;fontColor=#ffffff;" vertex="1" parent="3">
           <mxGeometry x="2200" y="80" width="100" height="60" as="geometry" />
         </mxCell>
 
@@ -393,47 +393,47 @@
         <!-- ==================== PROCESS E: TIMESHEET SUBMISSION & PAYROLL ==================== -->
 
         <!-- E1: System - Auto-generate Timesheet -->
-        <mxCell id="500" value="Start: Auto-generate Weekly Timesheet (Scheduler)" style="ellipse;fillColor=#d5e8d4;strokeColor=#82b366;fontSize=9;fontStyle=1;" vertex="1" parent="5">
+        <mxCell id="500" value="Start: Auto-generate Weekly Timesheet (Scheduler)" style="ellipse;fillColor=#064e3b;strokeColor=#10b981;fontSize=9;fontStyle=1;fontColor=#ffffff;" vertex="1" parent="5">
           <mxGeometry x="2360" y="75" width="110" height="70" as="geometry" />
         </mxCell>
 
         <!-- E2: Employee - Review Timesheet -->
-        <mxCell id="501" value="Review Timesheet" style="rounded=1;whiteSpace=wrap;fillColor=#dae8fc;strokeColor=#6c8ebf;fontSize=9;" vertex="1" parent="3">
+        <mxCell id="501" value="Review Timesheet" style="rounded=1;whiteSpace=wrap;fillColor=#1e3a8a;strokeColor=#60a5fa;fontSize=9;fontColor=#ffffff;" vertex="1" parent="3">
           <mxGeometry x="2360" y="80" width="100" height="60" as="geometry" />
         </mxCell>
 
         <!-- E3: Employee - Submit Timesheet -->
-        <mxCell id="502" value="Submit Timesheet" style="rounded=1;whiteSpace=wrap;fillColor=#dae8fc;strokeColor=#6c8ebf;fontSize=9;" vertex="1" parent="3">
+        <mxCell id="502" value="Submit Timesheet" style="rounded=1;whiteSpace=wrap;fillColor=#1e3a8a;strokeColor=#60a5fa;fontSize=9;fontColor=#ffffff;" vertex="1" parent="3">
           <mxGeometry x="2490" y="80" width="100" height="60" as="geometry" />
         </mxCell>
 
         <!-- E4: HR Admin - Review Timesheet -->
-        <mxCell id="503" value="Review Submitted Timesheet" style="rounded=1;whiteSpace=wrap;fillColor=#d5e8d4;strokeColor=#82b366;fontSize=9;" vertex="1" parent="4">
+        <mxCell id="503" value="Review Submitted Timesheet" style="rounded=1;whiteSpace=wrap;fillColor=#064e3b;strokeColor=#10b981;fontSize=9;fontColor=#ffffff;" vertex="1" parent="4">
           <mxGeometry x="2490" y="80" width="110" height="60" as="geometry" />
         </mxCell>
 
         <!-- E5: Gateway - Decision -->
-        <mxCell id="504" value="Approve / Reject / Reopen?" style="rhombus;fillColor=#fff2cc;strokeColor=#d6b656;fontSize=9;" vertex="1" parent="4">
+        <mxCell id="504" value="Approve / Reject / Reopen?" style="rhombus;fillColor=#1e293b;strokeColor=#fbbf24;fontSize=9;fontColor=#ffffff;" vertex="1" parent="4">
           <mxGeometry x="2630" y="65" width="110" height="90" as="geometry" />
         </mxCell>
 
         <!-- E6: HR Admin - Run Payroll Export -->
-        <mxCell id="505" value="Run Payroll Export" style="rounded=1;whiteSpace=wrap;fillColor=#d5e8d4;strokeColor=#82b366;fontSize=9;" vertex="1" parent="4">
+        <mxCell id="505" value="Run Payroll Export" style="rounded=1;whiteSpace=wrap;fillColor=#064e3b;strokeColor=#10b981;fontSize=9;fontColor=#ffffff;" vertex="1" parent="4">
           <mxGeometry x="2770" y="80" width="100" height="60" as="geometry" />
         </mxCell>
 
         <!-- E7: External - Receives Export -->
-        <mxCell id="506" value="Receive Payroll Export Data" style="rounded=1;whiteSpace=wrap;fillColor=#e1d5e7;strokeColor=#9673a6;fontSize=9;" vertex="1" parent="7">
+        <mxCell id="506" value="Receive Payroll Export Data" style="rounded=1;whiteSpace=wrap;fillColor=#4c1d95;strokeColor=#a855f7;fontSize=9;fontColor=#ffffff;" vertex="1" parent="7">
           <mxGeometry x="2770" y="80" width="110" height="60" as="geometry" />
         </mxCell>
 
         <!-- E8: End - Payroll Exported -->
-        <mxCell id="507" value="End: Payroll Exported" style="ellipse;fillColor=#f8cecc;strokeColor=#b85450;fontSize=9;fontStyle=1;" vertex="1" parent="7">
+        <mxCell id="507" value="End: Payroll Exported" style="ellipse;fillColor=#7f1d1d;strokeColor=#ef4444;fontSize=9;fontStyle=1;fontColor=#ffffff;" vertex="1" parent="7">
           <mxGeometry x="2900" y="85" width="100" height="55" as="geometry" />
         </mxCell>
 
         <!-- E9: Employee - Reopen notification -->
-        <mxCell id="508" value="Timesheet Returned (Reopen)" style="rounded=1;whiteSpace=wrap;fillColor=#dae8fc;strokeColor=#6c8ebf;fontSize=9;" vertex="1" parent="3">
+        <mxCell id="508" value="Timesheet Returned (Reopen)" style="rounded=1;whiteSpace=wrap;fillColor=#1e3a8a;strokeColor=#60a5fa;fontSize=9;fontColor=#ffffff;" vertex="1" parent="3">
           <mxGeometry x="2630" y="80" width="110" height="60" as="geometry" />
         </mxCell>
 
@@ -469,42 +469,42 @@
         <!-- ==================== PROCESS F: ATTENDANCE ADJUSTMENT ==================== -->
 
         <!-- F1: Employee - File Adjustment -->
-        <mxCell id="600" value="Start: File Adjustment Request + Upload Proof" style="ellipse;fillColor=#d5e8d4;strokeColor=#82b366;fontSize=9;fontStyle=1;" vertex="1" parent="3">
+        <mxCell id="600" value="Start: File Adjustment Request + Upload Proof" style="ellipse;fillColor=#064e3b;strokeColor=#10b981;fontSize=9;fontStyle=1;fontColor=#ffffff;" vertex="1" parent="3">
           <mxGeometry x="3020" y="75" width="110" height="70" as="geometry" />
         </mxCell>
 
         <!-- F2: HR Admin - Review Adjustment -->
-        <mxCell id="601" value="Review Adjustment Request + Preview Hours" style="rounded=1;whiteSpace=wrap;fillColor=#d5e8d4;strokeColor=#82b366;fontSize=9;" vertex="1" parent="4">
+        <mxCell id="601" value="Review Adjustment Request + Preview Hours" style="rounded=1;whiteSpace=wrap;fillColor=#064e3b;strokeColor=#10b981;fontSize=9;fontColor=#ffffff;" vertex="1" parent="4">
           <mxGeometry x="3020" y="80" width="110" height="60" as="geometry" />
         </mxCell>
 
         <!-- F3: Gateway - Decision -->
-        <mxCell id="602" value="Decision?" style="rhombus;fillColor=#fff2cc;strokeColor=#d6b656;fontSize=9;" vertex="1" parent="4">
+        <mxCell id="602" value="Decision?" style="rhombus;fillColor=#1e293b;strokeColor=#fbbf24;fontSize=9;fontColor=#ffffff;" vertex="1" parent="4">
           <mxGeometry x="3160" y="70" width="100" height="80" as="geometry" />
         </mxCell>
 
         <!-- F4: System - Create/Update Attendance Record -->
-        <mxCell id="603" value="Create/Update Attendance Record" style="rounded=1;whiteSpace=wrap;fillColor=#fff2cc;strokeColor=#d6b656;fontSize=9;" vertex="1" parent="5">
+        <mxCell id="603" value="Create/Update Attendance Record" style="rounded=1;whiteSpace=wrap;fillColor=#1e293b;strokeColor=#fbbf24;fontSize=9;fontColor=#ffffff;" vertex="1" parent="5">
           <mxGeometry x="3160" y="80" width="110" height="60" as="geometry" />
         </mxCell>
 
         <!-- F5: System - Recalculate Timesheet -->
-        <mxCell id="604" value="Recalculate Timesheet Hours" style="rounded=1;whiteSpace=wrap;fillColor=#fff2cc;strokeColor=#d6b656;fontSize=9;" vertex="1" parent="5">
+        <mxCell id="604" value="Recalculate Timesheet Hours" style="rounded=1;whiteSpace=wrap;fillColor=#1e293b;strokeColor=#fbbf24;fontSize=9;fontColor=#ffffff;" vertex="1" parent="5">
           <mxGeometry x="3300" y="80" width="110" height="60" as="geometry" />
         </mxCell>
 
         <!-- F6: System - Notify Reject -->
-        <mxCell id="605" value="Notify Employee (Rejected)" style="rounded=1;whiteSpace=wrap;fillColor=#f8cecc;strokeColor=#b85450;fontSize=9;" vertex="1" parent="5">
+        <mxCell id="605" value="Notify Employee (Rejected)" style="rounded=1;whiteSpace=wrap;fillColor=#881337;strokeColor=#ef4444;fontSize=9;fontColor=#ffffff;" vertex="1" parent="5">
           <mxGeometry x="3160" y="160" width="110" height="60" as="geometry" />
         </mxCell>
 
         <!-- F7: End - Adjustment Done -->
-        <mxCell id="606" value="End: Adjustment Applied" style="ellipse;fillColor=#f8cecc;strokeColor=#b85450;fontSize=9;fontStyle=1;" vertex="1" parent="3">
+        <mxCell id="606" value="End: Adjustment Applied" style="ellipse;fillColor=#7f1d1d;strokeColor=#ef4444;fontSize=9;fontStyle=1;fontColor=#ffffff;" vertex="1" parent="3">
           <mxGeometry x="3300" y="80" width="110" height="60" as="geometry" />
         </mxCell>
 
         <!-- F8: End - Rejected -->
-        <mxCell id="607" value="End: Adjustment Rejected" style="ellipse;fillColor=#f8cecc;strokeColor=#b85450;fontSize=9;fontStyle=1;" vertex="1" parent="3">
+        <mxCell id="607" value="End: Adjustment Rejected" style="ellipse;fillColor=#7f1d1d;strokeColor=#ef4444;fontSize=9;fontStyle=1;fontColor=#ffffff;" vertex="1" parent="3">
           <mxGeometry x="3160" y="80" width="110" height="60" as="geometry" />
         </mxCell>
 
@@ -534,42 +534,42 @@
         <!-- ==================== PROCESS G: EARLY CLOCK-OUT ==================== -->
 
         <!-- G1: Kiosk - Employee Clocks Out Early -->
-        <mxCell id="700" value="Start: Employee Clocks Out Early" style="ellipse;fillColor=#d5e8d4;strokeColor=#82b366;fontSize=9;fontStyle=1;" vertex="1" parent="6">
+        <mxCell id="700" value="Start: Employee Clocks Out Early" style="ellipse;fillColor=#064e3b;strokeColor=#10b981;fontSize=9;fontStyle=1;fontColor=#ffffff;" vertex="1" parent="6">
           <mxGeometry x="3450" y="80" width="110" height="60" as="geometry" />
         </mxCell>
 
         <!-- G2: System - Detect Undertime -->
-        <mxCell id="701" value="Detect Undertime (compare vs scheduled end)" style="rounded=1;whiteSpace=wrap;fillColor=#fff2cc;strokeColor=#d6b656;fontSize=9;" vertex="1" parent="5">
+        <mxCell id="701" value="Detect Undertime (compare vs scheduled end)" style="rounded=1;whiteSpace=wrap;fillColor=#1e293b;strokeColor=#fbbf24;fontSize=9;fontColor=#ffffff;" vertex="1" parent="5">
           <mxGeometry x="3450" y="80" width="120" height="60" as="geometry" />
         </mxCell>
 
         <!-- G3: System - Create early_clock_out Record -->
-        <mxCell id="702" value="Create early_clock_out Record" style="rounded=1;whiteSpace=wrap;fillColor=#fff2cc;strokeColor=#d6b656;fontSize=9;" vertex="1" parent="5">
+        <mxCell id="702" value="Create early_clock_out Record" style="rounded=1;whiteSpace=wrap;fillColor=#1e293b;strokeColor=#fbbf24;fontSize=9;fontColor=#ffffff;" vertex="1" parent="5">
           <mxGeometry x="3600" y="80" width="110" height="60" as="geometry" />
         </mxCell>
 
         <!-- G4: Employee - Submit Reason + Proof -->
-        <mxCell id="703" value="Submit Reason Code + Upload Proof (within deadline)" style="rounded=1;whiteSpace=wrap;fillColor=#dae8fc;strokeColor=#6c8ebf;fontSize=9;" vertex="1" parent="3">
+        <mxCell id="703" value="Submit Reason Code + Upload Proof (within deadline)" style="rounded=1;whiteSpace=wrap;fillColor=#1e3a8a;strokeColor=#60a5fa;fontSize=9;fontColor=#ffffff;" vertex="1" parent="3">
           <mxGeometry x="3600" y="80" width="120" height="60" as="geometry" />
         </mxCell>
 
         <!-- G5: HR Admin - Classify -->
-        <mxCell id="704" value="Classify: Excused / Unexcused" style="rounded=1;whiteSpace=wrap;fillColor=#d5e8d4;strokeColor=#82b366;fontSize=9;" vertex="1" parent="4">
+        <mxCell id="704" value="Classify: Excused / Unexcused" style="rounded=1;whiteSpace=wrap;fillColor=#064e3b;strokeColor=#10b981;fontSize=9;fontColor=#ffffff;" vertex="1" parent="4">
           <mxGeometry x="3600" y="80" width="110" height="60" as="geometry" />
         </mxCell>
 
         <!-- G6: System - Adjust undertime_minutes -->
-        <mxCell id="705" value="Adjust undertime_minutes in Attendance" style="rounded=1;whiteSpace=wrap;fillColor=#fff2cc;strokeColor=#d6b656;fontSize=9;" vertex="1" parent="5">
+        <mxCell id="705" value="Adjust undertime_minutes in Attendance" style="rounded=1;whiteSpace=wrap;fillColor=#1e293b;strokeColor=#fbbf24;fontSize=9;fontColor=#ffffff;" vertex="1" parent="5">
           <mxGeometry x="3740" y="80" width="110" height="60" as="geometry" />
         </mxCell>
 
         <!-- G7: System - Update Timesheet -->
-        <mxCell id="706" value="Update Timesheet Record" style="rounded=1;whiteSpace=wrap;fillColor=#fff2cc;strokeColor=#d6b656;fontSize=9;" vertex="1" parent="5">
+        <mxCell id="706" value="Update Timesheet Record" style="rounded=1;whiteSpace=wrap;fillColor=#1e293b;strokeColor=#fbbf24;fontSize=9;fontColor=#ffffff;" vertex="1" parent="5">
           <mxGeometry x="3740" y="160" width="110" height="60" as="geometry" />
         </mxCell>
 
         <!-- G8: End -->
-        <mxCell id="707" value="End: Undertime Classified" style="ellipse;fillColor=#f8cecc;strokeColor=#b85450;fontSize=9;fontStyle=1;" vertex="1" parent="3">
+        <mxCell id="707" value="End: Undertime Classified" style="ellipse;fillColor=#7f1d1d;strokeColor=#ef4444;fontSize=9;fontStyle=1;fontColor=#ffffff;" vertex="1" parent="3">
           <mxGeometry x="3740" y="80" width="110" height="60" as="geometry" />
         </mxCell>
 
@@ -597,22 +597,22 @@
         </mxCell>
 
         <!-- ==================== PROCESS SEPARATORS ==================== -->
-        <mxCell id="800" value="" style="line;strokeColor=#b0b0b0;strokeWidth=1;dashed=1;" vertex="1" parent="2">
+        <mxCell id="800" value="" style="line;strokeColor=#b0b0b0;strokeWidth=1;dashed=1;fontColor=#ffffff;" vertex="1" parent="2">
           <mxGeometry x="540" y="30" width="1" height="1100" as="geometry" />
         </mxCell>
-        <mxCell id="801" value="" style="line;strokeColor=#b0b0b0;strokeWidth=1;dashed=1;" vertex="1" parent="2">
+        <mxCell id="801" value="" style="line;strokeColor=#b0b0b0;strokeWidth=1;dashed=1;fontColor=#ffffff;" vertex="1" parent="2">
           <mxGeometry x="1120" y="30" width="1" height="1100" as="geometry" />
         </mxCell>
-        <mxCell id="802" value="" style="line;strokeColor=#b0b0b0;strokeWidth=1;dashed=1;" vertex="1" parent="2">
+        <mxCell id="802" value="" style="line;strokeColor=#b0b0b0;strokeWidth=1;dashed=1;fontColor=#ffffff;" vertex="1" parent="2">
           <mxGeometry x="1680" y="30" width="1" height="1100" as="geometry" />
         </mxCell>
-        <mxCell id="803" value="" style="line;strokeColor=#b0b0b0;strokeWidth=1;dashed=1;" vertex="1" parent="2">
+        <mxCell id="803" value="" style="line;strokeColor=#b0b0b0;strokeWidth=1;dashed=1;fontColor=#ffffff;" vertex="1" parent="2">
           <mxGeometry x="2200" y="30" width="1" height="1100" as="geometry" />
         </mxCell>
-        <mxCell id="804" value="" style="line;strokeColor=#b0b0b0;strokeWidth=1;dashed=1;" vertex="1" parent="2">
+        <mxCell id="804" value="" style="line;strokeColor=#b0b0b0;strokeWidth=1;dashed=1;fontColor=#ffffff;" vertex="1" parent="2">
           <mxGeometry x="2900" y="30" width="1" height="1100" as="geometry" />
         </mxCell>
-        <mxCell id="805" value="" style="line;strokeColor=#b0b0b0;strokeWidth=1;dashed=1;" vertex="1" parent="2">
+        <mxCell id="805" value="" style="line;strokeColor=#b0b0b0;strokeWidth=1;dashed=1;fontColor=#ffffff;" vertex="1" parent="2">
           <mxGeometry x="3430" y="30" width="1" height="1100" as="geometry" />
         </mxCell>
 
