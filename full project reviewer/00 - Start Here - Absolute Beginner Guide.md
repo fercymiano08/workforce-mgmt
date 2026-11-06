@@ -103,7 +103,7 @@ Inside that one app, the code IS organized into 8 clear domains — folders/name
 | Attendance | daily clock-ins/outs, the kiosk, and Corrections (an employee's request to fix a missed or wrong punch) |
 | Scheduling | shift templates, who works when |
 | Time-off | leave requests, overtime requests |
-| Payroll | weekly timesheets |
+| Payroll | semi-monthly timesheets (1st–15th / 16th–end of month) |
 | Communications | notifications (the bell icon) |
 | Configuration | app settings, kiosk PIN/config |
 | Intelligence | analytics charts + the AI assistant |
@@ -333,5 +333,5 @@ This is described end-to-end in `render.yaml` (a "Blueprint" Render reads to bui
 
 - It redeploys automatically: a push to `main` on GitHub triggers Render to rebuild and restart the affected service — that's the "automatic deployment pipeline" the local-only setup doesn't have.
 - Production email goes through **Brevo** (`smtp-relay.brevo.com`), on port **2525** specifically — Render's free plan blocks the usual SMTP ports (25, 465, 587) outbound, and 2525 is the one Brevo port left open. Local development can still just use Gmail or the `log` driver (mail "sent" only to a log file).
-- Render's free Postgres database is deleted 30 days after creation — `DEPLOY.md` has the plan for migrating it to a free database that doesn't expire.
+- Render's free Postgres database self-deletes 30 days after creation, so the **deployed** app has since been migrated off it to a free **Aiven** PostgreSQL instance that doesn't expire (`DEPLOY.md` covers the general free-tier-expiry problem and the migration approach). Local dev is unaffected by this and still uses its own local PostgreSQL exactly as Section 10.6 describes — Aiven is only the deployed app's database.
 - Local dev (the PowerShell scripts, or `docker compose` as described above) is still how you'd actually build and test a change — the Render deployment is where the *finished* system lives for anyone without the project on their own computer.

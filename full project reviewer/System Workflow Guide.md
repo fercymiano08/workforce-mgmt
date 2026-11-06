@@ -8,7 +8,7 @@
 > Pair this with **Database System Tutorial And Guideline.md** (table details) and the two `.drawio` flowchart references (visual diagrams).
 
 > **TL;DR — read this file in 60 seconds:**
-> 1. **The system, in one sentence:** face-verified clock-in/out at the door → attendance records → which feed schedules, leave, overtime, weekly timesheets, analytics, and an AI assistant that helps HR run things.
+> 1. **The system, in one sentence:** face-verified clock-in/out at the door → attendance records → which feed schedules, leave, overtime, semi-monthly timesheets, analytics, and an AI assistant that helps HR run things.
 > 2. **The one rule that explains every screen:** the frontend never touches the database. It sends an API request to the **one Laravel backend**, which checks *who you are* (Sanctum, once, on the way in), applies the rules for whichever domain owns that data, and reads/writes the one PostgreSQL database.
 > 3. **If you only read two things:** the diagram in §1 and the clock-in journey in **Module 4**. Those two explain ~80% of the whole system.
 
@@ -60,7 +60,7 @@ The backend is a single Laravel app living at `backend/app/`, with one `vendor/`
 |------|-----------|---------------|------------------|
 | **React** | A JavaScript library for building web screens | 25 page files under `frontend/src/pages/` | Fast, component-based, huge ecosystem; runs in any browser |
 | **Laravel** | A PHP web framework | One Laravel app under `backend/app/app/`, organized into 9 domain folders (routes/controllers/services/models) | Secure by default (hashing, validation), clean layered structure (routes → controllers → services → models) |
-| **PostgreSQL** | A relational database (tables with rows/columns) | One database (`workforce_mgnt`), 29 tables total (20 business + 9 framework). Any domain that needs another domain's data just queries the real table directly — no copies, no sync | Reliable, handles relational + JSON data well, free |
+| **PostgreSQL** | A relational database (tables with rows/columns) | One database (`workforce_mgnt`), 31 tables total (22 business + 9 framework), hosted on a free Aiven instance in production (migrated off Render's own free Postgres, which self-deletes after 30 days). Any domain that needs another domain's data just queries the real table directly — no copies, no sync | Reliable, handles relational + JSON data well, free |
 
 > If a panelist asks "why PostgreSQL instead of MySQL?" — add: "PostgreSQL handles JSON columns and complex reporting cleanly, and it's what our team is consistent with. MySQL would also work; ours was a deliberate choice for reliability."
 
@@ -158,15 +158,15 @@ There are three roles. Each role logs in through the same login page but lands o
 | 7 | Attendance `HR_Manager/Attendance.jsx` | Admin | See and correct everyone's daily clock records; filter the history by a calendar date range |
 | 8 | Leave Management `HR_Manager/LeaveManagement.jsx` | Admin | Approve / reject leave requests |
 | 9 | Shifts `HR_Manager/Shifts.jsx` | Admin | Manage shift templates + build weekly schedules |
-| 10 | Timesheets `HR_Manager/Timesheets.jsx` | Admin | Review each employee's week (summary cards, quick filters, sortable table), open a side panel with the day-by-day attendance, then approve or reject |
-| 11 | Reports `HR_Manager/Reports.jsx` | Admin | Build printable/CSV reports from live data |
+| 10 | Timesheets `HR_Manager/Timesheets.jsx` | Admin | Review each employee's semi-monthly period (summary cards, quick filters, sortable table), open a side panel with the day-by-day attendance, then approve or reject |
+| 11 | Reports `HR_Manager/Reports.jsx` | Admin | 13 report types across 5 categories (Attendance, Leave, Timesheet & Payroll, Shift, Workforce), filterable by date range/employee/department/status, built on demand from live data, with a saved recent-reports history |
 | 12-13 | Analytics `HR_Manager/Analytics.jsx` | Admin | Two tabs: **Analytics Overview** (deep charts, a Top Performer ranking built in - `components/analytics/TopPerformersSection.jsx` - rather than a tab of its own, and a per-employee popup - `components/analytics/EmployeeDetailModal.jsx` - opened from a click instead of a "By Employee" destination) and **AI Decision Support** (`components/analytics/AIInsightsPanel.jsx` - AI-generated insights + one-click decision queue, moved here from its own page) |
 | 14 | Settings `HR_Manager/Settings.jsx` | Admin | Company info, kiosk configuration, system options |
 | 15 | Employee Dashboard `Employee/EmployeeDashboard.jsx` | Employee | Personal home: status badges (department, position, employment type, Probationary, a 30-day New Hire flag), a KPI row, a `< >` week-navigable attendance chart, quick-action tiles, an overtime-requests chart, a self-service Punctuality-Based Read, and a recent-notifications feed |
 | 16 | My Attendance `Employee/MyAttendance.jsx` | Employee | Own clock history and hours |
 | 17 | My Schedule `Employee/MySchedule.jsx` | Employee | Upcoming assigned shifts |
 | 18 | Leave `Employee/Leave.jsx` | Employee | Apply for leave, track status, see balances |
-| 19 | My Timesheet `Employee/MyTimesheet.jsx` | Employee | Review own weekly hours and submit them; the current week is a "Live"-badged **Ongoing Timesheet Record** recomputed from attendance (polled every 30s), not the saved snapshot a Draft row only gets resynced to on clock-in/out |
+| 19 | My Timesheet `Employee/MyTimesheet.jsx` | Employee | Review own semi-monthly period hours and submit them; the current period is a "Live"-badged **Ongoing Timesheet Record** recomputed from attendance (polled every 30s), not the saved snapshot a Draft row only gets resynced to on clock-in/out |
 | 20 | My Profile `Employee/MyProfile.jsx` | Employee | Identity, employment, leave balances, face registration status; edit own phone/address/emergency contact/photo |
 | 21 | Settings `Employee/Settings.jsx` | Employee | Change password (live requirements checklist) and font size (the Appearance section) |
 | 22 | Kiosk Setup `KIOSK/KioskSetup.jsx` | Admin (device) | Configure and lock the entrance tablet into kiosk mode |
@@ -556,7 +556,7 @@ When clocking out, the **server** (not the kiosk screen) works out four numbers 
 
 **How the lunch break works.** It is deducted **by duration, not by clock time**, the way most enterprise time systems do it: once the person has worked at least the **minimum hours (default 5)**, the **lunch length (default 60 minutes)** is taken off the day — whenever lunch was really taken. A shorter day (a sick early leave at 12:30, a half day) loses nothing. Nobody has to clock out for lunch. HR can change both numbers (or set the length to 0 to switch it off) on **Settings → Time Manager → Unpaid Lunch Break**; a change applies to days worked from then on, and days already counted keep the lunch they were counted with. This matches the Philippine Labor Code idea that a meal break of at least 60 minutes is unpaid.
 
-The same helper (`ShiftHours`) computes these when a day is re-counted after an overtime approval — one source of truth, so attendance history and weekly timesheets always agree.
+The same helper (`ShiftHours`) computes these when a day is re-counted after an overtime approval — one source of truth, so attendance history and timesheets always agree. It also sorts a day's regular hours into `regular_holiday_hours` or `special_holiday_hours` instead of `regular_hours` when the day falls on a holiday — 200% pay on a `regular` holiday, 130% on `special_non_working`, left alone (100%, no premium) on `special_working` — and tracks `late_minutes`/`undertime_minutes`/`is_rest_day` per day, all of which roll up into the period's timesheet.
 
 ### Module 4a — Clocking Out Early (Early Leave)
 
@@ -618,7 +618,7 @@ A kiosk cannot tell whether "I'm sick" is true — and every employee sees the s
 | My Attendance chart | Bar chart with `< >` week navigation (same pattern the admin dashboard's attendance chart now shares) - opens on the most recent week that actually has a record, not always the current one, so it is never blank just because the current week hasn't logged anything yet |
 | My Shift | Upcoming shifts, newest-first, auto-scrolled to today |
 | Quick Actions | Six app-icon tiles: My Attendance, Leave, My Timesheet, My Schedule, My Profile, Settings |
-| My Timesheet summary | This week's hours; the current week shows as a "Live"-badged **Ongoing Timesheet Record** |
+| My Timesheet summary | This period's hours; the current semi-monthly period shows as a "Live"-badged **Ongoing Timesheet Record** |
 | My Leave Requests | Recent requests with type/status badges and an Apply Leave button |
 | OT Requests | Bar chart of overtime hours requested, by week, last 6 weeks |
 | My Punctuality-Based Read | The same attendance+punctuality read admins see per person in Top Performer, scoped to the signed-in employee's own record - reads their own, now-self-accessible `GET /api/analytics/employee/{employeeId}` |
@@ -832,7 +832,7 @@ Un-approving an Approved request (status moved back to Pending/Rejected), editin
 
 | Step | What happens |
 |------|--------------|
-| 1 | Open the form → the dropdown is fetched live from `GET /api/leave-types/eligible/{employeeId}`, not a hardcoded list. Each of the 7 active types (**Vacation, Sick, Special, Bereavement, Maternity, Paternity, Unpaid**) is annotated per-employee: a gender- or tenure-ineligible type renders disabled with the reason inline — a male employee never even sees Maternity as selectable |
+| 1 | Open the form → the dropdown is fetched live from `GET /api/leave-types/eligible/{employeeId}`, not a hardcoded list. Each of the 10 active types (**Vacation, Sick, Bereavement, Maternity, Paternity, Unpaid**, plus four Philippine statutory types — **Solo Parent, VAWC, Special Leave for Women, Service Incentive Leave (SIL)**) is annotated per-employee: a gender- or tenure-ineligible type renders disabled with the reason inline — a male employee never even sees Maternity as selectable |
 | 2 | Pick a type → the type's own rules show as plain text (advance notice, retroactive window, proof requirement, pay type) |
 | 3 | Pick dates → the live preview (`GET /api/leaves/working-days`, now also passing `leaveTypeCode`) shows working days **and** the pay/split breakdown: paid in full, paid-without-balance, unpaid, or — if a `PaidWithBalance` type's balance is short — an offer to split the request (X days paid from the remaining balance, Y days unpaid) that the employee must explicitly accept before submitting |
 | 4 | `POST /api/leaves` (with `acceptSplit: true` if a split was accepted) — the payload says whose request it is; the backend verifies the caller may only file as themselves |
@@ -844,7 +844,7 @@ Un-approving an Approved request (status moved back to Pending/Rejected), editin
 
 - **Eligibility.** Gender and minimum tenure (in months) come from the type's own config (`LeaveEligibility`), not a hardcoded `if`. An ineligible type is filtered out of the dropdown before the employee can even try selecting it.
 - **Advance notice / retroactive filing.** Each type configures its own `advance_notice_days` (minimum lead time) and, separately, whether it `retroactive_allowed` with its own backdate window — e.g. Sick allows up to 7 days back (nobody predicts being sick) and also allows future filing for a planned medical procedure, which is why it separately requires proof beyond 2 days; Bereavement allows up to 2 days after it starts, for the same "you don't plan this" reason.
-- **Max consecutive days.** Where configured (Maternity 105, Paternity 7, Unpaid 30), measured in **calendar** days to match the statutory RA 11210 / RA 8187 definitions, not working days.
+- **Max consecutive days.** Where configured (Maternity 105, Paternity 7, Unpaid 30, Bereavement 5, Solo Parent 7, VAWC 10, Special Leave for Women 60), measured in **calendar** days to match the statutory RA 11210 / RA 8187 definitions, not working days.
 - **Proof.** Where `requires_proof` is set and the request exceeds `proof_threshold_days`, a document upload is required or the request is refused.
 - **No past dates (outside a type's retroactive window), no duplicate/overlapping requests, no double submit** — unchanged in spirit from before: a new request whose dates overlap one that is still **Pending or Approved** is refused naming the existing request, and the Submit button locks with a spinner while the server is answering.
 
@@ -907,7 +907,7 @@ paid overtime  =  the SMALLER of  (overtime really worked that day)  and  (overt
 | Approved for 2 h, stayed 3 h | 3 h | 2 h | **2 h** (capped at the approval) |
 | Approved for 2 h, stayed 1 h | 1 h | 2 h | 1 h |
 
-- Each weekly timesheet keeps three numbers: `overtime_hours` (worked), `approved_ot_hours` (approved) and **`paid_ot_hours`** (payable — the only overtime that counts). The HR Timesheets screen shows "**Xh not paid**" beside unapproved time, and the employee's timesheet shows "Xh paid · Yh not approved".
+- Each period's timesheet keeps three numbers: `overtime_hours` (worked), `approved_ot_hours` (approved) and **`paid_ot_hours`** (payable — the only overtime that counts). The HR Timesheets screen shows "**Xh not paid**" beside unapproved time, and the employee's timesheet shows "Xh paid · Yh not approved".
 - **The kiosk warns the employee at clock-out**: if they clock out more than 15 minutes after the (approved) end with no approval covering it, an amber **"Overtime Not Approved"** popup says the extra time will **not be counted** unless HR approves it. The punch is still accepted — nobody is trapped at the door.
 - **Approval can come after the fact.** An employee who worked late without asking can file a request for **any day in the past 7 days** (older dates go through HR, who can record any date). HR then decides; if approved, the timesheet is recalculated and the time becomes payable.
 
@@ -918,24 +918,24 @@ paid overtime  =  the SMALLER of  (overtime really worked that day)  and  (overt
 
 ---
 
-## Module 11 — Timesheets (The Weekly Cycle)
+## Module 11 — Timesheets (The Semi-Monthly Cycle)
 
-**What it is:** automatic weekly hour summaries built from attendance, then reviewed by the employee and finalized by HR.
+**What it is:** automatic semi-monthly (1st–15th, 16th–end of month) hour summaries built from attendance, then reviewed by the employee and finalized by HR. (The underlying `week_start`/`week_end` columns and some internal naming still say "week" — a holdover from the original weekly design — but the periods they describe are semi-monthly now.)
 
 **Files:** `Employee/MyTimesheet.jsx`, `HR_Manager/Timesheets.jsx`, `components/timesheets/WorkflowParts.jsx`, backend `TimesheetController.php`, `TimesheetWorkflow.php`, `TimesheetGenerationService.php`, `AutoSubmitTimesheets.php`, `RemindAboutTimesheets.php`
 
 ### The Cycle (Draft → Submitted → Approved → Sent to payroll)
 
 ```
-DURING THE WEEK
+DURING THE PERIOD (1st–15th, or 16th–end of month)
    Every clock-out refreshes the employee's timesheet (status Draft, hours counted by the server)
    │
-   ▼  Sunday 23:59 (Manila) — the week is FINISHED
-EMPLOYEE SUBMITS   (only possible once the week is over)
-   Monday: the employee gets a "your timesheet is ready" notification
+   ▼  23:59 (Manila) on the period's last day — the period is FINISHED
+EMPLOYEE SUBMITS   (only possible once the period is over)
+   The employee gets a "your timesheet is ready" notification
    → submits it → status "Submitted", submitted_at / submitted_by recorded
-   → NOT submitted by Monday 12:00 PM? The system submits it for them ("auto-submitted");
-     weeks with no hours are left alone
+   → NOT submitted by noon (Manila) the day after the period ends? The system submits it for them
+     ("auto-submitted"); periods with no hours are left alone
    │
    ▼
 ADMIN REVIEWS   (the admin's queue opens on "Waiting for review")
@@ -948,7 +948,7 @@ ADMIN REVIEWS   (the admin's queue opens on "Waiting for review")
    │
    ▼
 SENT TO PAYROLL   (admin: "Send to payroll")
-   Approved timesheets are downloaded as a file and marked as sent — each week goes only once,
+   Approved timesheets are downloaded as a file and marked as sent — each period goes only once,
    so it can never be paid twice. After that it can no longer be reopened.
 ```
 
@@ -958,7 +958,7 @@ SENT TO PAYROLL   (admin: "Send to payroll")
 
 | Rule | Enforced by |
 |------|-------------|
-| Only a **finished week** can be submitted, approved or rejected | `TimesheetWorkflow` (server) |
+| Only a **finished period** can be submitted, approved or rejected | `TimesheetWorkflow` (server) |
 | Legal moves only: Draft/Rejected → Submitted (employee) · Submitted → Approved / Rejected (admin) · Submitted/Approved → Draft = reopen (admin) — nothing else | `TimesheetWorkflow` + `updateStatus` |
 | Employee can only submit **their own** row; the admin cannot submit for them | Controller checks caller vs owner |
 | Rejecting and reopening **need a reason** (at least a few words) | `TimesheetWorkflow` |
@@ -966,11 +966,11 @@ SENT TO PAYROLL   (admin: "Send to payroll")
 | **Hours cannot be typed in or edited** — they come from attendance; the admin can only add a note | `TimesheetController::update` |
 | A submitted or approved timesheet **cannot be deleted**; a timesheet **sent to payroll cannot be reopened** | Controller / workflow (409) |
 | Generation never duplicates | Idempotent refresh logic |
-| A change made elsewhere (a punch, an overtime approval) reaches the timesheet within a minute or two: the payroll service rebuilds the last 6 weeks from its copy of attendance right after the copy refreshes | Scheduled command `timesheets:refresh` (every minute) |
-| Unsubmitted finished weeks are submitted automatically at **Monday 12:00 PM (Manila)**; reminders and review nudges are sent once | Scheduled commands `timesheets:auto-submit`, `timesheets:remind` (hourly) |
+| A change made elsewhere (a punch, an overtime approval) reaches the timesheet within a minute or two: the service rebuilds the last 3 periods from attendance right after the change | Scheduled command `timesheets:refresh` (every minute) |
+| Unsubmitted finished periods are submitted automatically at **noon (Manila) the day after the period ends**; reminders and review nudges are sent once | Scheduled commands `timesheets:auto-submit`, `timesheets:remind` (hourly) |
 | Compliance is visible: on-time submissions %, average time to review, number auto-submitted | Admin Timesheets page |
 
-> **What a timesheet actually contains — hours, not money.** The row stores `regular_hours`, `overtime_hours` (what was *actually clocked*), `approved_ot_hours` (what was *approved via requests* — a reconciliation control, see Module 10), `break_hours`, and `total_hours`. There is **no rate, salary, or amount anywhere** — this system's job is to produce a trustworthy weekly block of *payable time*; multiplying it by a rate is the external payroll management system's step.
+> **What a timesheet actually contains — hours, not money.** The row stores `regular_hours`, `regular_holiday_hours`/`special_holiday_hours` (hours worked on a holiday, split out at the DOLE premium rate rather than counted as plain regular time), `overtime_hours` (what was *actually clocked*), `approved_ot_hours` (what was *approved via requests* — a reconciliation control, see Module 10), `break_hours`, `late_minutes`/`undertime_minutes`, and `total_hours`. There is **no rate, salary, or amount anywhere** — this system's job is to produce a trustworthy semi-monthly block of *payable time*; multiplying it by a rate is the external payroll management system's step.
 
 ### Tech Trail
 
@@ -1072,7 +1072,7 @@ Right under the KPI strip sits **Top Performer**: every active employee ranked b
 
 **What it is:** read-only report builder — turn live data into printable documents or CSV exports.
 
-> **Data leaves the system in only a few controlled places:** the Reports page (CSV / Excel / PDF), the timesheets "Send to payroll" file (each approved week only once), and the Audit Logs export (CSV). Attendance and Timesheets have no export buttons of their own; employees can only print their own attendance and timesheets (Print / PDF). Analytics' **Export / Print** button is the same kind of browser print, not a raw data download — it turns the page itself (cards, formulas and all) into a printable handout via `window.print()`, it does not write a CSV/Excel/PDF file.
+> **Data leaves the system in only a few controlled places:** the Reports page (CSV / Excel / PDF), the timesheets "Send to payroll" file (each approved period only once), and the Audit Logs export (CSV). Attendance and Timesheets have no export buttons of their own; employees can only print their own attendance and timesheets (Print / PDF). Analytics' **Export / Print** button is the same kind of browser print, not a raw data download — it turns the page itself (cards, formulas and all) into a printable handout via `window.print()`, it does not write a CSV/Excel/PDF file.
 
 **File:** `HR_Manager/Reports.jsx`, helpers in `utils/reportHelpers.js`
 
@@ -1325,11 +1325,11 @@ Profile and Settings are separate pages. **My Profile** (`/my-profile`) answers 
 | `timesheets:refresh` | every minute | Rebuilds recent timesheets after a punch, overtime approval or correction |
 | `demo:refresh --close-today` | 00:05 Manila (right before `attendance:mark-absent`) | Rebuilds the demo employees' recent schedules, attendance, early leaves, **leave requests and overtime requests** so they roll forward with "today" instead of staying frozen at whenever the database was seeded. Runs first on purpose — if it ran after `attendance:mark-absent`, every demo employee due a day's rebuild would already have been written off as Absent by then. Set `REFRESH_DEMO_DAILY=false` to turn the nightly rebuild off (the Absent-marker still runs) |
 | `attendance:mark-absent` | 00:10 and 12:00 Manila | Writes Absent for finished, scheduled days with no clock-in and no approved leave |
-| `timesheets:auto-submit`, `timesheets:remind` | hourly | Submits unsubmitted finished weeks at Monday 12:00 Manila; sends the one-time reminders |
+| `timesheets:auto-submit`, `timesheets:remind` | hourly | Submits unsubmitted finished periods at noon Manila the day after each period ends; sends the one-time reminders |
 | `early-outs:expire-certificates` | hourly | A SICK early clock-out without a certificate by its deadline becomes unexcused |
 | `notifications:prune` | 02:00 Manila | Deletes notifications older than 30 days (admin and employee bells alike), so the unread badge keeps reflecting what needs acting on now |
 
-Weeks everywhere (timesheets, "this week", schedules) run **Monday to Sunday** (ISO 8601); "today" is always the company's calendar day in Manila, whatever the viewer's computer says.
+Timesheet periods run **semi-monthly** (1st–15th, 16th–end of month), not weekly. "This week" filters elsewhere (schedules, Analytics) are genuinely still week-based and run **Monday to Sunday** (ISO 8601) — don't confuse the two. "Today" is always the company's calendar day in Manila, whatever the viewer's computer says.
 
 **Demo data now rolls forward on its own, including leave and overtime.** The demo employees cannot use the kiosk, so their schedules, attendance, early leaves, leave requests and overtime requests are all rebuilt by `php artisan demo:refresh` (previously this covered only schedules/attendance/timesheets, as static one-time seed data that never advanced with "today"). Leave and overtime are added on a sparse, deterministic per-person schedule (roughly one every few weeks per person — the same inputs always produce the same result, so re-running it never doubles anything up), topped up with a small **guaranteed-recent floor** so the last ~10 days always have at least a little real Approved leave to show — without the floor, Workforce Analytics' This Week filter could legitimately come up empty by chance. This now runs automatically every night at 00:05 Manila time (`routes/console.php`) and once at container boot on the hosted deployment (`docker/backend-start.sh`), in addition to running it by hand (`php artisan demo:refresh --close-today`, see the backend README) right before a presentation to be sure.
 
@@ -1458,9 +1458,9 @@ Workforce MGNT/
 │       │   └── services/             {auth,identity,audit,attendance,scheduling,
 │       │                             timeoff,payroll,communications,configuration,
 │       │                             intelligence}.php   ← one per domain
-│       ├── database/migrations/      53 migration files; 29 live tables today (20 business + 9 framework)
+│       ├── database/migrations/      69 migration files; 31 live tables today (22 business + 9 framework)
 │       ├── database/seeders/         demo workforce data
-│       ├── tests/                    ONE offline test suite — 476 tests (2207 assertions)
+│       ├── tests/                    ONE offline test suite — 511 tests (2342 assertions)
 │       └── .env                      ONE database: workforce_mgnt (PostgreSQL)
 ├── docker-compose.yml               Local Docker: 4 containers (see Start Here §10) — postgres, app,
 │                                   scheduler, frontend/nginx. Render production is NOT this file:
@@ -1474,7 +1474,9 @@ Workforce MGNT/
 │                                   backend-start.sh (Render only: migrate + seed/refresh + scheduler
 │                                   in the background + serve in the foreground, one container)
 ├── render.yaml                       Render Blueprint: declares workforce-api (Docker web service)
-│                                   and workforce-management (static site) plus the free Postgres
+│                                   and workforce-management (static site) plus a free Postgres
+│                                   resource — superseded in practice by a free Aiven PostgreSQL
+│                                   instance (Render's own free Postgres self-deletes after 30 days)
 ├── .env.docker.example              template for the git-ignored .env that holds Docker's secrets
 ├── start-all.ps1                     boots the backend + scheduler + frontend, health-checks /up
 └── stop-all.ps1                      stops everything start-all.ps1 started
@@ -1509,7 +1511,7 @@ Nine times out of ten the bug is one of: stale frontend state (refresh), wrong r
 ## Summary Card
 
 > **Frontend** draws screens, validates for convenience, never touches SQL — and its Vite dev proxy is the only thing that knows where the backend lives (`127.0.0.1:8000` locally, `http://app:8000` in Docker).
-> **The one backend (:8000)** is a single Laravel app containing **8 cleanly-separated domains** — auth/identity, attendance, scheduling, time-off, payroll, communications, configuration, intelligence. One process, one port, one PostgreSQL database, one test suite (476 tests, 2207 assertions). There is no gateway, no service-to-service HTTP, no shared secret token, no internal API.
+> **The one backend (:8000)** is a single Laravel app containing **9 cleanly-separated domains** — auth/identity, attendance, scheduling, time-off, payroll, communications, configuration, intelligence, audit. One process, one port, one PostgreSQL database, one test suite (511 tests, 2342 assertions). There is no gateway, no service-to-service HTTP, no shared secret token, no internal API.
 > **Cross-domain data** moves with plain Eloquent relationships and real foreign keys inside the same database — no snapshot replication, no `*Client` classes. The consolidation deleted all of it: nothing was left needing a replica.
 >
 > **Kiosk** verifies faces in-browser, and its rules are enforced by the attendance domain **server-side** (no shift or finished shift = refused; up to 15 min after start = Present, later = Late with a warning; leaving early needs a reason). A face mismatch is logged and alerts the HR Admins.
