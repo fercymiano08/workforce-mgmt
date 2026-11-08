@@ -153,7 +153,7 @@ Both the HR-facing page (`/attendance`) and the employee-facing page (`/my-atten
 2. Shift already over → **blocked** ("Shift Over").
 3. Earlier than 30 minutes before shift start → **blocked**, with a message saying when the window opens.
 4. Within the 30-minute early window → tap accepted, but paid hours still count only from the shift's official start (no credit for early arrival).
-5. More than the configured grace period (default 15 min) after shift start → amber **"You Are Late"** warning, employee can still "Clock In Anyway" → recorded **Late**, HR Admins notified.
+5. More than the configured grace period (default 15 min) after shift start → amber **"You Are Late"** warning, employee can still tap **"Clock In as Late"** → recorded **Late**, HR Admins notified.
 6. Within the grace period → recorded straight as **Present**, no popup.
 
 **Clock-out rules:**
