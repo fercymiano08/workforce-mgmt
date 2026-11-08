@@ -13,6 +13,39 @@
 - **Employee** — self-service access to their own attendance, schedule, leave, overtime, timesheet, and profile.
 - **Kiosk (Entrance Clocking-In Device)** — not a login/role. A locked-down browser screen at the entrance, unlocked by a 4-digit PIN, used only to clock in/out.
 
+### 1.1 Definitive Route Map
+
+This is the exact, complete route list from `frontend/src/App.jsx`. Nowhere else in this document should be read as implying a different path — if a route isn't in this table, it doesn't exist. Several routes are **role-switched**: one URL renders an entirely different page component depending on whether the signed-in user is an Administrator or an Employee (not tabs — a completely different component tree).
+
+| Route | Renders | Notes |
+|---|---|---|
+| `/login` | Login | Public |
+| `/forgot-password` | ForgotPassword | Public |
+| `/reset-password` | ResetPassword | Public |
+| `/kiosk` | AttendanceTerminal | Public (no login — PIN-gated) |
+| `/kiosk-setup` | KioskSetup | Admin only |
+| `/` | **Dashboard** (admin) or **EmployeeDashboard** (employee) | Role-switched (`HomeRoute`) |
+| `/employees` | Employees | Admin only |
+| `/employee-registration` | EmployeeRegistration | Admin only |
+| `/attendance` | Attendance | Admin only — 4 internal tabs: Attendance Records, Overtime Requests, Early Clock Outs, Corrections |
+| `/shifts` | Shifts | Admin only |
+| `/timesheets` | Timesheets | Admin only |
+| `/my-timesheet` | MyTimesheet | Employee only |
+| `/leave` | **LeaveManagement** (admin) or **Leave** (employee) | Role-switched (`LeaveRoute`) |
+| `/leave-types` | — | Redirects to `/settings?section=leaveRules` |
+| `/my-attendance` | MyAttendance | Employee only — 4 internal tabs: Attendance History, Overtime Requests, Early Clock Outs, Corrections |
+| `/my-schedule` | MySchedule | Employee only |
+| `/analytics` | Analytics | Admin only |
+| `/reports` | Reports | Admin only |
+| `/audit-logs` | AuditLogs | Admin only |
+| `/my-profile` | MyProfile | Employee only |
+| `/help` | Help | Both roles — static FAQ + "About this project" page (team roster, adviser, course section, GitHub link, version) |
+| `/notifications` | Notifications | Both roles |
+| `/settings` | **HRSettings** (admin) or **EmployeeSettings** (employee) | Role-switched (`SettingsRoute`) |
+| anything else | — | Redirects to `/` |
+
+**There is no dedicated Overtime page, Early-Clock-Out page, or Corrections page, and there is no `/leave-management`, `/dashboard`, or `/employee-dashboard` route.** Overtime, Early Clock-Outs, and Corrections are internal tabs of the single Attendance page (admin) / My Attendance page (employee) — see §4. Leave, Dashboard, and Settings are single shared routes that render a different component per role, not tabs.
+
 **Architecture:** one Laravel 13 (PHP 8.4) backend application, organized internally into 9 domains (Identity, Attendance, Scheduling, Time-off, Payroll, Communications, Configuration, Intelligence, Audit) — not split into separate services. One PostgreSQL database (`workforce_mgnt`, 31 tables: 22 business + 9 Laravel framework tables, built from 69 migrations). One React 19 + Vite + Tailwind CSS 4 frontend. This subsystem is itself one microservice inside a larger E-Commerce Enterprise platform under development by the same team; the earlier internal split into 8 separate services/databases was consolidated back into this single application after review.
 
 **Hosting:**
@@ -42,7 +75,7 @@
 - Off by default. Turned on/off from **My Profile → Sign-In Verification** card.
 - **Turning on:** immediate, no confirmation needed.
 - **Turning off:** requires re-entering the current password in a confirmation modal — prevents a stolen-but-unlocked, already-signed-in browser from silently disabling it.
-- **When on:** after the password check succeeds, no token is issued yet. The server emails a fresh 6-digit code; the browser must submit it correctly before a session token is created. Wrong code too many times, or an expired code, requires requesting a new one.
+- **When on:** after the password check succeeds, no token is issued yet. The server emails a fresh 6-digit code; the browser must submit it correctly before a session token is created. 5 wrong guesses on that code, or letting it expire, requires requesting a new one (`TWO_FACTOR_MAX_ATTEMPTS = 5`).
 - Completely separate mechanism from the forgot-password flow — one recovers a lost password, the other adds a second check to an already-correct password.
 - The HR Admin account is intentionally excluded — it's a shared operator account, not tied to one person's mailbox, so it must never risk being locked out by a mail problem.
 
@@ -101,6 +134,8 @@ Only two sections: **Account** (change password, with a live requirements checkl
 
 ## 4. Time & Attendance
 
+Both the HR-facing page (`/attendance`) and the employee-facing page (`/my-attendance`) are a single page component with **4 internal tabs**, not 4 separate pages: **Attendance (Records/History) | Overtime Requests | Early Clock Outs | Corrections**. Switching tabs changes a `?tab=` query param, not the route. Overtime, Early Clock-Outs, and Corrections described below (§4.4–§4.6) live inside these two pages — there is no standalone page for any of them.
+
 ### 4.1 The Kiosk (`/kiosk`, no login — PIN-unlocked device)
 **Unlocking:** tap the clock-in screen 5 times quickly → enter the secret 4-digit PIN → the server issues a signed, expiring device token (valid until midnight kiosk-local time). All kiosk API calls must carry this token; without it, kiosk endpoints return 401. The PIN check itself is rate-limited (10 attempts/minute); failed attempts are logged as security events.
 
@@ -109,7 +144,7 @@ Only two sections: **Account** (change password, with a live requirements checkl
 **Face matching (face-api.js, runs entirely in-browser, offline-capable):**
 - A face is stored as a 128-number descriptor (`face_descriptor`) at registration.
 - At the kiosk, a burst of frames is captured; the best-scoring frames (by detection confidence) are kept, up to a confidence threshold, with an early-exit once enough confident frames are collected.
-- Distance between the live descriptor and the stored one below **0.6** = match; above = mismatch.
+- Match decision (`KioskController` constants): the **average** Euclidean distance across the captured frames must be **≤ 0.5** (`FACE_MATCH_THRESHOLD`) AND no single frame may exceed **0.55** (`FACE_FRAME_LIMIT`) — both conditions, not just one. A looser **0.6** (`FACE_SAME_SCAN_LIMIT`) is a separate same-scan consistency check (that successive frames within one scan are close enough to each other), not the identity-match threshold itself — a distinction every earlier version of this project's documentation got wrong by flattening all of this into "0.6 = match."
 - **Liveness check:** eye-aspect-ratio blink detection across the frame burst (seeded from frames already captured during identity matching, falling back to a dedicated landmark-only burst if no blink was caught) — advisory only, not a hard gate, logged on the Kiosk Activity Logs.
 - A mismatch → red "Identity Verification Failed" warning, a `face_mismatch` security event, and an immediate high-priority notification to every HR Admin. Repeated wrong faces (5) lock the terminal for 60 seconds, tracked server-side per kiosk so a refresh can't reset the count.
 
@@ -137,16 +172,38 @@ Only two sections: **Account** (change password, with a live requirements checkl
 
 **Lunch break:** deducted by duration, not clock time — once the person has worked the configured minimum hours (default 5), the configured lunch length (default 60 min) is subtracted automatically, however long lunch actually took. A shorter day loses nothing. Admin-configurable (Settings → Time Manager); 0 minutes turns the deduction off entirely. Changes apply only to days worked from then on.
 
-**Attendance Corrections (`AttendanceAdjustmentController` / `/attendance` on the employee side):** for exactly two situations — "I worked past my shift" or "the kiosk failed to record a clock-in/out." The employee states what happened, attaches 1–5 photos (≤3MB each, server-validated as real JPEG/PNG/WebP), and the request sits against the kiosk's own recorded punch for that day. HR reviews side-by-side and either approves (typing the actual final time, which is then re-run through the same shift/overtime counting rules a live punch would use) or rejects with a reason. Only one open request per employee/day/reason type at a time.
+### 4.2 HR Attendance page (`/attendance`, HR Admin) — 4 tabs
 
-### 4.2 HR Attendance (`/attendance`, HR Admin)
-- Full attendance history with a calendar date-range filter (so the page never has to download the entire history for "this week" views).
-- Approve/edit/delete rows, review Corrections requests, see computed Present/Late/Absent status per row.
+- **Tab: Attendance Records** — full attendance history with a calendar date-range filter (so the page never has to download the entire history for "this week" views). Approve/edit/delete rows; computed Present/Late/Absent status per row.
+- **Tab: Overtime Requests** — the admin review queue: see every employee's overtime requests, Approve (optionally editing the hours down) or Reject (reason required). See §4.4 for the reconciliation math.
+- **Tab: Early Clock Outs** — the list of early-leave punches with their reason codes, HR's excused/unexcused classification controls, and certificate status for sick claims. See §4.5 for the policy this enforces.
+- **Tab: Corrections** — HR's review queue for employee-filed correction requests (`AttendanceAdjustmentController`). See §4.6.
 
-### 4.3 My Attendance (`/my-attendance`, Employee)
-- Own clock history, filterable by "All / This Week / This Month."
+### 4.3 My Attendance page (`/my-attendance`, Employee) — 4 tabs
 
-### 4.4 Automatic Absence Marking
+- **Tab: Attendance History** — own clock history, filterable by "All / This Week / This Month."
+- **Tab: Overtime Requests** — "My Overtime Requests" list plus a **"Request Overtime"** button that opens the filing modal (date, expected hours, reason). An employee can cancel their own request while it's still Pending.
+- **Tab: Early Clock Outs** — the employee's own early-leave history and classification status.
+- **Tab: Corrections** (`CorrectionsEmployee` component) — where an employee actually files a correction; see §4.6.
+
+### 4.4 Overtime Management
+
+- Employee files a request (date, expected hours, reason) from **My Attendance → Overtime Requests**. HR Admin reviews it from **Attendance → Overtime Requests**: Approve (can edit the approved hours down from what was requested) or Reject (reason required).
+- **Reconciliation:** paid overtime is always the *smaller* of approved and actually worked, computed per day. Approved 2h but left on time → 0 paid. Approved 2h, worked 3h → 2h paid (capped at the approval). Approved 2h, worked 1h → 1h paid.
+- An approved request extends that day's effective shift end for kiosk/attendance purposes — the "shift over" and "unauthorized overtime" checks both use the extended end, and the real punch time is preserved so a later approval can retroactively restore counted hours.
+- A request can be filed for a day in the past week (older dates route through HR, who can record any date) — covers "worked late without asking first, then asked for it afterward."
+
+### 4.5 Early Clock-Out Policy (enforced automatically, not just logged)
+- 2 free early outs per rolling 30 days; the 3rd is automatically marked unexcused.
+- A "Feeling Unwell" (sick) reason needs a medical certificate uploaded within 48 hours or it auto-converts to unexcused.
+- HR can override a classification, but the override is itself audited.
+- Every early clock-out notifies HR Admins with the running count; 3 different employees citing the same reason on the same day triggers a pattern alert.
+- Unexcused early-leave minutes are deducted from pay (`undertime_minutes`); excused ones are not.
+
+### 4.6 Attendance Corrections (`AttendanceAdjustmentController`)
+For exactly two situations — "I worked past my shift" or "the kiosk failed to record a clock-in/out." The employee files this from **My Attendance → Corrections**, stating what happened and attaching 1–5 photos (≤3MB each, server-validated as real JPEG/PNG/WebP). The request sits against the kiosk's own recorded punch for that day. HR reviews it from **Attendance → Corrections**, side-by-side with the kiosk's own data, and either approves (typing the actual final time, which is then re-run through the same shift/overtime counting rules a live punch would use) or rejects with a reason. Only one open request per employee/day/reason type at a time.
+
+### 4.7 Automatic Absence Marking
 - Nightly job (`attendance:mark-absent`, 00:10 Manila, re-run at 12:00 as a safety net) writes an **Absent** record for any finished day that had a shift scheduled, no clock-in, and no approved leave. Never touches today (the shift may still happen), never overwrites an existing record, safe to re-run.
 
 ---
@@ -204,7 +261,7 @@ Only two sections: **Account** (change password, with a live requirements checkl
 - Submission re-validates everything server-side regardless of what the UI already checked: eligibility → advance-notice/retroactive window → duplicate/overlap with an existing Pending or Approved request → at least one real working day in range → max-consecutive-day cap → proof requirement → pay/balance resolution.
 - While Pending, the employee can withdraw/cancel their own request.
 
-### 6.5 Leave Management (`/leave-management`, HR Admin)
+### 6.5 Leave Management (`/leave`, HR Admin — same route as the employee Apply screen, role-switched to a different component)
 - The approval queue: review each Pending request, Approve or Reject (rejection requires a reason). Approving a `PaidWithBalance` request writes the ledger Usage entry at that moment, not at submission time.
 
 ### 6.6 Leave Rules Admin (`Settings → Company Configuration → Leave Rules`, formerly its own `/leave-types` page — that route now redirects here)
@@ -222,11 +279,7 @@ Only two sections: **Account** (change password, with a live requirements checkl
 
 ## 7. Overtime Management
 
-- Employee submits a request: date, expected hours, reason.
-- HR Admin opens each Pending request individually and Approves (optionally editing the approved hours down from what was requested) or Rejects (reason required).
-- **Overtime Reconciliation:** paid overtime is always the *smaller* of approved and actually worked, computed per day. Approved 2h but left on time → 0 paid. Approved 2h, worked 3h → 2h paid (capped at the approval). Approved 2h, worked 1h → 1h paid.
-- An approved request extends that day's effective shift end for attendance/kiosk purposes — the kiosk's "shift over" and "unauthorized overtime" checks both use the extended end, and the real punch time is preserved so a later approval can retroactively bring counted hours back.
-- A request can be filed for a day in the past week (older dates route through HR, who can record any date) — covers "worked late without asking first, then asked for it afterward."
+Fully covered in §4.4 — overtime is a tab inside the Attendance / My Attendance pages, not a module with its own page. See §4.4 for the filing flow, the approval queue, and the reconciliation math.
 
 ---
 
@@ -391,14 +444,22 @@ Four tabs:
 
 ## 16. Dashboards
 
-### 16.1 HR Dashboard (`/dashboard`, Admin)
+### 16.1 HR Dashboard (`/`, Admin — root route, role-switched)
 - Live KPIs: pending leave, timesheets awaiting approval, present-today count, a 30-second-polling **System Health %** tile (the same Workforce Health Score as AI Decision Support, but via the cheap non-AI endpoint — see §10).
 - An animated **Database Health** graph — a genuinely live, timed `SELECT 1` round-trip against Postgres on every ~10-second poll, not a decorative animation; watching it for 30 seconds is enough to see the number actually move.
 - `< >` week-navigable attendance chart, a pending-timesheets "View → Approve/Reject" modal, a Decision Support summary, department headcount, upcoming birthdays/anniversaries, and quick-action tiles.
 - A "Needs your attention" panel surfacing items across modules that require an admin decision right now.
 
-### 16.2 Employee Dashboard (`/employee-dashboard`, Employee)
+### 16.2 Employee Dashboard (`/`, Employee — same root route, role-switched)
 - Status badges (department/position/employment type, Probationary if under 180 days, a 30-day New Hire flag), a KPI row (Hours This Week, Leave Balance, Attendance Rate, Pending Requests), a `< >` week-navigable attendance chart, 6 quick-action tiles (My Attendance, Leave, My Timesheet, My Schedule, My Profile, Settings), a My Timesheet summary widget, recent leave requests with an Apply Leave shortcut, an overtime-requests chart (by week, last 6 weeks), a self-service Punctuality-Based Read (the same read admins see in Top Performer, scoped to the signed-in employee only), and a recent-notifications feed.
+
+### 16.3 Universal Search (topbar, both roles)
+
+A single search box in the topbar, backed entirely by server-side logic (`GlobalSearch` service) so the "who may see what" rule lives in exactly one place:
+- **Administrator** sees matches across People (employees), Attendance, Leave, Overtime, Early Clock-Outs, Corrections, Timesheets, Shifts, Notifications, and the Audit trail — everyone's records.
+- **Employee** sees the same kinds of record, but only their own rows, and never the employee directory or the audit trail.
+- The query is split on spaces; **every word must match at least one searchable column** of a candidate row (e.g. "late sep" finds a row that is both Late and in September). A recognized month name/abbreviation also matches that month's dates (so "sep 24" and "2026-09-24" both work). Each result group is capped at 5 rows.
+- Each result links directly into the right page/tab with a pre-filled search (e.g. clicking an overtime result opens `/attendance?tab=overtime&search=...` for an admin, `/my-attendance?tab=overtime` for an employee).
 
 ---
 
@@ -431,12 +492,12 @@ Key columns worth knowing (not exhaustively listed elsewhere in this document):
 | `attendance:check-alerts` | every minute | No-show, incomplete-record, unauthorized-overtime, staffing-shortage alerts (each once/day) |
 | `attendance:recount-hours` | every minute | Re-counts recent days after an overtime approval/withdrawal |
 | `timesheets:refresh` | every minute | Rebuilds the last 3 periods after a punch/overtime/correction change |
-| `demo:refresh --close-today` | 00:05 Manila | Rolls forward demo employees' schedules/attendance/leave/overtime so the demo never looks stale — runs before `mark-absent` on purpose |
-| `attendance:mark-absent` | 00:10 & 12:00 Manila | Writes Absent for finished days with a shift, no clock-in, no approved leave |
+| `demo:refresh --spare-today` | 00:05 Manila — **only if `REFRESH_DEMO_DAILY=true`** in env (off by default) | Rolls forward demo employees' schedules/attendance/leave/overtime so the demo never looks stale — runs before `mark-absent` on purpose |
+| `attendance:mark-absent` | 00:10 & 12:00 Manila (two separate schedule entries, same command) | Writes Absent for finished days with a shift, no clock-in, no approved leave |
 | `timesheets:auto-submit`, `timesheets:remind` | hourly | Auto-submits overdue periods; sends one-time reminders/nudges |
 | `early-outs:expire-certificates` | hourly | An overdue sick-leave certificate auto-converts the early-out to unexcused |
-| `leave:accrue-monthly` | monthly, 1st at 00:15 | Grants each active, Monthly-accrual, balance-requiring leave type's rate to every eligible employee |
-| `leave:expire-carryover` | (carryover cleanup) | Enforces each type's `max_carryover_days` cap |
+| `leave:accrue-monthly` | monthly, 1st at 00:15 Manila | Grants each active, Monthly-accrual, balance-requiring leave type's rate to every eligible employee |
+| `leave:expire-carryover` | yearly, Jan 1 at 00:20 Manila | Enforces each type's `max_carryover_days` cap |
 | `notifications:prune` | 02:00 Manila | Deletes notifications older than 30 days |
 
 ---
