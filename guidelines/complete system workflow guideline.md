@@ -69,20 +69,20 @@ This is the exact, complete route list from `frontend/src/App.jsx`. Nowhere else
 - Employee enters their email → server emails a 6-digit one-time code.
 - Code expires after **5 minutes** (`auth.password_reset_code.ttl`, config-driven), stored hashed like a password, works once.
 - Throttled: `forgot-password` limited to 3/minute, `reset-password` to 6/minute.
-- After the code is verified, the employee sets a new password (same password-policy regex as above).
+- After the code is verified, the employee sets a new password (same password-policy regex as above). **A successful reset revokes every one of that user's existing session tokens**, not just the one on the current device — the assumption is that a reset happens because the old password may have leaked, so every session that was signed in with it is forced to log in again.
 
 ### 2.3 Two-Factor Sign-In (optional, per-employee toggle — My Profile page)
 - Off by default. Turned on/off from **My Profile → Sign-In Verification** card.
 - **Turning on:** immediate, no confirmation needed.
 - **Turning off:** requires re-entering the current password in a confirmation modal — prevents a stolen-but-unlocked, already-signed-in browser from silently disabling it.
-- **When on:** after the password check succeeds, no token is issued yet. The server emails a fresh 6-digit code; the browser must submit it correctly before a session token is created. 5 wrong guesses on that code, or letting it expire, requires requesting a new one (`TWO_FACTOR_MAX_ATTEMPTS = 5`).
+- **When on:** after the password check succeeds, no token is issued yet. The server emails a fresh 6-digit code, valid **3 minutes** (`auth.two_factor.ttl`, default 180s — deliberately shorter than the 5-minute forgot-password code, since this one only finishes a sign-in that already passed the password check); the browser must submit it correctly before a session token is created. 5 wrong guesses on that code, or letting it expire, requires requesting a new one (`TWO_FACTOR_MAX_ATTEMPTS = 5`). Every failure mode (expired, wrong code, too many guesses, no challenge at all) returns the identical error message on purpose, so an attacker holding a challenge can't learn anything from which error they get.
 - Completely separate mechanism from the forgot-password flow — one recovers a lost password, the other adds a second check to an already-correct password.
 - The HR Admin account is intentionally excluded — it's a shared operator account, not tied to one person's mailbox, so it must never risk being locked out by a mail problem.
 
 ### 2.4 Session Timeout
-- An employee's login token is created with a short expiry and auto-extends only on real user activity (mouse/keyboard/touch) — not on background polling (e.g. notification checks). A browser left open, or a closed laptop lid, eventually has its token expire server-side.
+- An employee's login token is created with a **180-second (3-minute)** expiry (`EMPLOYEE_IDLE_SECONDS`) and auto-extends only on real user activity (mouse/keyboard/touch, via a `keep-alive` call) — not on background polling (e.g. notification checks). A browser left open, or a closed laptop lid, eventually has its token expire server-side.
 - The frontend shows a "still there?" warning in the final seconds before auto-sign-out.
-- Administrators are not subject to this timeout.
+- Administrators are not subject to this timeout at all (no expiry set on their token).
 
 ### 2.5 Role-Based Access Control (RBAC)
 - Every administrator-only backend route sits behind the `admin` middleware — an Employee token calling it gets HTTP 403, enforced server-side regardless of what the frontend UI shows or hides.
@@ -137,16 +137,18 @@ Only two sections: **Account** (change password, with a live requirements checkl
 Both the HR-facing page (`/attendance`) and the employee-facing page (`/my-attendance`) are a single page component with **4 internal tabs**, not 4 separate pages: **Attendance (Records/History) | Overtime Requests | Early Clock Outs | Corrections**. Switching tabs changes a `?tab=` query param, not the route. Overtime, Early Clock-Outs, and Corrections described below (§4.4–§4.6) live inside these two pages — there is no standalone page for any of them.
 
 ### 4.1 The Kiosk (`/kiosk`, no login — PIN-unlocked device)
-**Unlocking:** tap the clock-in screen 5 times quickly → enter the secret 4-digit PIN → the server issues a signed, expiring device token (valid until midnight kiosk-local time). All kiosk API calls must carry this token; without it, kiosk endpoints return 401. The PIN check itself is rate-limited (10 attempts/minute); failed attempts are logged as security events.
+**Unlocking:** tap the clock-in screen 5 times quickly → enter the secret PIN (4–10 digits server-side, `digits_between:4,10`, though the UI always calls it "4-digit") → the server issues a signed, expiring device token (valid until midnight kiosk-local time). All kiosk API calls must carry this token; without it, kiosk endpoints return 401. The PIN check itself is rate-limited (10 attempts/minute); failed attempts are logged as security events. Setting a new PIN (`setPin`) deliberately does **not** also unlock the kiosk — a past bug let an admin's own browser skip the PIN screen entirely because creating the PIN silently issued it a token too.
 
 **Identification:** employee ID entry with directory-based autocomplete/fallback, then a live face scan.
 
-**Face matching (face-api.js, runs entirely in-browser, offline-capable):**
-- A face is stored as a 128-number descriptor (`face_descriptor`) at registration.
-- At the kiosk, a burst of frames is captured; the best-scoring frames (by detection confidence) are kept, up to a confidence threshold, with an early-exit once enough confident frames are collected.
-- Match decision (`KioskController` constants): the **average** Euclidean distance across the captured frames must be **≤ 0.5** (`FACE_MATCH_THRESHOLD`) AND no single frame may exceed **0.55** (`FACE_FRAME_LIMIT`) — both conditions, not just one. A looser **0.6** (`FACE_SAME_SCAN_LIMIT`) is a separate same-scan consistency check (that successive frames within one scan are close enough to each other), not the identity-match threshold itself — a distinction every earlier version of this project's documentation got wrong by flattening all of this into "0.6 = match."
-- **Liveness check:** eye-aspect-ratio blink detection across the frame burst (seeded from frames already captured during identity matching, falling back to a dedicated landmark-only burst if no blink was caught) — advisory only, not a hard gate, logged on the Kiosk Activity Logs.
-- A mismatch → red "Identity Verification Failed" warning, a `face_mismatch` security event, and an immediate high-priority notification to every HR Admin. Repeated wrong faces (5) lock the terminal for 60 seconds, tracked server-side per kiosk so a refresh can't reset the count.
+**Face matching (face-api.js runs client-side to produce the descriptor; the actual match decision is server-side in `KioskController`) — four separate checks, every one of which must pass:**
+1. **Same-scan consistency:** every captured frame (up to 5 per scan, `descriptors` max 5) must be within **0.6** Euclidean distance (`FACE_SAME_SCAN_LIMIT`) of the *first* frame in the burst — catches someone swapping places with another person mid-scan ("The camera saw more than one face during the scan").
+2. **Identity match:** the **average** distance across all frames against the claimed employee's stored descriptor must be **≤ 0.5** (`FACE_MATCH_THRESHOLD`), AND no single frame may exceed **0.55** (`FACE_FRAME_LIMIT`) — both conditions, not just one. (face-api.js's own library default of 0.6 is deliberately not used here — it's tuned for "probably the same person" and lets close relatives through.)
+3. **1:N ambiguity check:** the same frames are also compared against **every other** enrolled employee's descriptor. If someone else is actually closer, it's treated as a straight mismatch. If another employee is merely within **0.08** (`FACE_AMBIGUITY_MARGIN`) of the claimed match, the scan refuses outright with a distinct 409 "too similar to another registered employee — please see HR" response, rather than guessing between look-alikes/siblings/twins.
+4. **Liveness (advisory only, never blocks the punch):** needs an eye-aspect-ratio reading below **0.22** (`EAR_CLOSED`) AND above **0.28** (`EAR_OPEN`) somewhere in the sample burst — a genuine blink. Reports one of three states: `Live`, `Not Detected` (no qualifying blink), or `Not Checked` (fewer than 2 usable samples, e.g. an older kiosk build). Only `Not Detected` is logged (as an informational `liveness` log entry, never a security event) — it never touches the lockout, the AI health score, or the punch itself.
+- A successful scan returns a one-time-use **face ticket**; the actual clock-in/clock-out call must present and "spend" that ticket, or the server refuses the punch outright (403, `face_required`) even if called directly. Verifying your face and recording the punch are two separate API calls on purpose — a client can't skip straight to the punch endpoint.
+- A display-only **confidence %** is shown (`(1 - average distance) × 100`, capped at 0) — a simple linear mapping for the screen, explicitly not a calibrated probability.
+- A mismatch → red "Identity Verification Failed" warning, a `face_mismatch` security event, and an immediate high-priority notification to every HR Admin. Repeated wrong faces (5, tracked by `KioskFaceLockout`) lock the terminal for 60 seconds, tracked server-side per kiosk so a refresh can't reset the count. A single successful scan clears the strike count entirely.
 
 **Clock-in rules, in order (all enforced server-side, using the server's own clock — the screen's popups only explain the rule first):**
 1. No shift scheduled today → **blocked** ("No Shift Scheduled Today").
@@ -203,7 +205,10 @@ Both the HR-facing page (`/attendance`) and the employee-facing page (`/my-atten
 ### 4.6 Attendance Corrections (`AttendanceAdjustmentController`)
 For exactly two situations — "I worked past my shift" or "the kiosk failed to record a clock-in/out." The employee files this from **My Attendance → Corrections**, stating what happened and attaching 1–5 photos (≤3MB each, server-validated as real JPEG/PNG/WebP). The request sits against the kiosk's own recorded punch for that day. HR reviews it from **Attendance → Corrections**, side-by-side with the kiosk's own data, and either approves (typing the actual final time, which is then re-run through the same shift/overtime counting rules a live punch would use) or rejects with a reason. Only one open request per employee/day/reason type at a time.
 
-### 4.7 Automatic Absence Marking
+### 4.7 Self Clock-Out Reminder
+Any signed-in employee can trigger a one-time "time to clock out" nudge for themselves (`POST /api/attendance/remind-clock-out`) — fires a high-priority notification, but only if they're still clocked in today with no clock-out yet, and only once per employee per day (checked server-side against existing `clock_out_reminder` notifications for today, not just trusted from the client).
+
+### 4.8 Automatic Absence Marking
 - Nightly job (`attendance:mark-absent`, 00:10 Manila, re-run at 12:00 as a safety net) writes an **Absent** record for any finished day that had a shift scheduled, no clock-in, and no approved leave. Never touches today (the shift may still happen), never overwrites an existing record, safe to re-run.
 
 ---
@@ -391,7 +396,7 @@ Fully covered in §4.4 — overtime is a tab inside the Attendance / My Attendan
 - `security_face_mismatch` (buddy-punching attempt at the kiosk) and failed-PIN events are written automatically and surface in the AI Decision Support queue (see §10) for Resolve/Flag/Resolve-all actions, in addition to the Audit Log.
 
 ### 13.3 Sensitive-action re-confirmation
-- Exporting a report or the audit log asks the administrator to re-enter their password; the server verifies it and records who confirmed it and for what. The HR Admin account uses its password for this rather than an emailed code, since it's a fixed operator account, not a personal mailbox.
+- **Exporting a Report** (only Reports — not the Audit Log, see §13.1) asks the administrator to re-enter their password first (`POST /api/auth/confirm-password`, rate-limited to 5 attempts/60s lockout); the server verifies it and records who confirmed it and for what. This step was removed once already (it guarded nothing and broke the feel of printing on a phone), then brought back specifically for Reports because those exports can carry salary and personal data. The Audit Log's own export deliberately skips this check — it only re-reads rows an administrator can already see on screen, so a second password check adds nothing. The HR Admin account uses its password for this rather than an emailed code, since it's a fixed operator account, not a personal mailbox.
 
 ---
 
@@ -513,3 +518,5 @@ Key columns worth knowing (not exhaustively listed elsewhere in this document):
 - **`employees.leave_balances` JSON column** still physically exists on the table but nothing reads or writes it anymore — dead weight from before the ledger design, not the source of truth for anything.
 - **`schedule_settings.max_weekly_hours`** is a holdover from the removed "Automated Shift" draft-and-approve wizard — still a real column, read by nothing, since Assign Shift's multi-select has no weekly-hours cap of its own.
 - **`settings.profile`, `settings.notifications`, `settings.security`** columns still exist on the single-row `settings` table but are completely dead — `SettingsController::WRITABLE_SECTIONS` only allows `company`, `system`, and `kiosk`. Real self-service profile data lives on the `employees` record instead (see §3.3). Nothing reads or writes these three columns anymore.
+- **`AnalyticsService::workforceCards()` still computes and returns a `departmentPunctuality` field** in the API response (ranked by department, never by name) — the backend method (`departmentPunctuality()`, documented in its own code as "Card 5") was never removed when the frontend dropped that chart in favor of Top Performer. `Analytics.jsx` simply never reads that field. Not a bug (nothing breaks), just a server doing work nobody displays.
+- **The Leave Trends and Leave Type Composition charts (`AnalyticsService::leaveTrendForPeriod()` / `leaveComposition()`) use a hardcoded 7-type bucket list — `vacation, sick, special, bereavement, maternity, paternity, unpaid`** — left over from before the leave rules engine overhaul. It still includes `special` (removed as an actual leave type years ago in this codebase's history) and has **no dedicated bucket for any of the 4 newer PH statutory types** (SoloParent, VAWC, SpecialLeaveWomen, SIL). Leave of those 4 types is still counted (it falls into a generic `other` bucket/slice, the same catch-all that already exists for any unrecognized type) — so totals stay honest, but those 4 types never get their own named, colored series on either chart.
